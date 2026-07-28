@@ -12,6 +12,10 @@ const rootDir = join(scriptDir, '..');
 const sourceDir = join(rootDir, 'src');
 const outputFile = join(sourceDir, 'domain', 'common', 'registry', 'registry.gen.ts');
 
+function toPosixPath(filePath) {
+  return filePath.replace(/\\/g, '/');
+}
+
 const header = `/**
  * 页面注册清单导入文件，由 pnpm gen:registry 自动生成，禁止手动修改。
  */
@@ -44,13 +48,11 @@ async function main() {
   const lines = [header];
   const moduleNames = [];
   for (const [index, filePath] of files.entries()) {
-    const importPath = relative(dirname(outputFile), filePath)
-      .replace(/\\/g, '/')
-      .replace(/\.tsx?$/, '');
+    const importPath = toPosixPath(relative(dirname(outputFile), filePath)).replace(/\.tsx?$/, '');
     const normalizedImportPath = importPath.startsWith('.') ? importPath : `./${importPath}`;
     const moduleName = `pageRegistrationModule${index + 1}`;
     moduleNames.push(moduleName);
-    lines.push(`// ${relative(rootDir, filePath)}`);
+    lines.push(`// ${toPosixPath(relative(rootDir, filePath))}`);
     lines.push(`import ${moduleName} from '${normalizedImportPath}';`);
     lines.push('');
   }
@@ -64,10 +66,10 @@ async function main() {
   writeFileSync(outputFile, `${lines.join('\n')}\n`, 'utf-8');
 
   console.log(
-    `[gen:registry] 已生成 ${relative(rootDir, outputFile)}，共 ${files.length} 个模块清单`,
+    `[gen:registry] 已生成 ${toPosixPath(relative(rootDir, outputFile))}，共 ${files.length} 个模块清单`,
   );
   for (const filePath of files) {
-    console.log(`  - ${relative(rootDir, filePath)}`);
+    console.log(`  - ${toPosixPath(relative(rootDir, filePath))}`);
   }
 }
 
