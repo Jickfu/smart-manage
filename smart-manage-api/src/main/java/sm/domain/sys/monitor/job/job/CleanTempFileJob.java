@@ -2,6 +2,8 @@ package sm.domain.sys.monitor.job.job;
 
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+import org.quartz.DisallowConcurrentExecution;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +22,7 @@ import java.time.temporal.ChronoUnit;
  */
 @Component
 @Slf4j
+@DisallowConcurrentExecution
 public class CleanTempFileJob extends QuartzJobBean {
 
     /** 默认临时文件目录 */
@@ -29,7 +32,7 @@ public class CleanTempFileJob extends QuartzJobBean {
     private static final int DEFAULT_KEEP_DAYS = 7;
 
     @Override
-    protected void executeInternal(JobExecutionContext context) {
+    protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         String tempDir = context.getMergedJobDataMap().getString("tempDir");
         if (tempDir == null || tempDir.isBlank()) {
             tempDir = DEFAULT_TEMP_DIR;
@@ -52,6 +55,7 @@ public class CleanTempFileJob extends QuartzJobBean {
 
         Instant cutoff = Instant.now().minus(keepDays, ChronoUnit.DAYS);
         int deleted = 0;
+        int failed = 0;
         try (var stream = Files.list(dir)) {
             var files = stream.filter(Files::isRegularFile).toList();
             for (Path file : files) {
@@ -63,12 +67,17 @@ public class CleanTempFileJob extends QuartzJobBean {
                         log.debug("删除过期临时文件: {}", file.getFileName());
                     }
                 } catch (IOException e) {
+                    failed++;
                     log.warn("删除文件失败: {}", file.getFileName(), e);
                 }
             }
         } catch (IOException e) {
             log.error("扫描临时文件目录失败", e);
+            throw new JobExecutionException("扫描临时文件目录失败", e);
         }
         log.info("临时文件清理完成，目录: {}, 保留天数: {}, 删除文件数: {}", tempDir, keepDays, deleted);
+        if (failed > 0) {
+            throw new JobExecutionException("临时文件清理部分失败，失败文件数: " + failed);
+        }
     }
 }

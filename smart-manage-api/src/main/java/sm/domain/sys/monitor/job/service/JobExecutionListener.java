@@ -11,8 +11,10 @@ import sm.domain.sys.monitor.job.model.entity.JobEntity;
 import sm.domain.sys.monitor.job.model.entity.JobLogEntity;
 import sm.domain.sys.monitor.job.mapper.JobLogMapper;
 import sm.domain.sys.monitor.job.mapper.JobMapper;
+import sm.system.util.TraceIdUtil;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Quartz 全局 Job 监听器：记录每次执行到 t_sys_job_log
@@ -34,6 +36,7 @@ public class JobExecutionListener implements JobListener {
 
     @Override
     public void jobToBeExecuted(JobExecutionContext context) {
+        TraceIdUtil.setTraceId("job-" + UUID.randomUUID());
         String jobName = context.getJobDetail().getKey().getName();
         String jobGroup = context.getJobDetail().getKey().getGroup();
 
@@ -48,6 +51,7 @@ public class JobExecutionListener implements JobListener {
         logEntity.setJobGroup(jobGroup);
         logEntity.setStartTime(LocalDateTime.now());
         logEntity.setStatus("RUNNING");
+        logEntity.setTraceId(TraceIdUtil.getTraceId());
         logEntity.setCreateTime(LocalDateTime.now());
         jobLogMapper.insert(logEntity);
 
@@ -56,29 +60,33 @@ public class JobExecutionListener implements JobListener {
 
     @Override
     public void jobExecutionVetoed(JobExecutionContext context) {
-        // 任务被否决，无需处理
+        TraceIdUtil.clear();
     }
 
     @Override
     public void jobWasExecuted(JobExecutionContext context, JobExecutionException jobException) {
-        Long logId = (Long) context.get("__jobLogId__");
-        if (logId == null) {
-            return;
+        try {
+            Long logId = (Long) context.get("__jobLogId__");
+            if (logId == null) {
+                return;
+            }
+            JobLogEntity logEntity = jobLogMapper.selectById(logId);
+            if (logEntity == null) {
+                return;
+            }
+            LocalDateTime now = LocalDateTime.now();
+            logEntity.setEndTime(now);
+            logEntity.setDurationMs(java.time.Duration.between(logEntity.getStartTime(), now).toMillis());
+            if (jobException != null) {
+                logEntity.setStatus("FAILED");
+                logEntity.setErrorMessage(truncate(jobException.getMessage(), 2000));
+            } else {
+                logEntity.setStatus("SUCCESS");
+            }
+            jobLogMapper.updateById(logEntity);
+        } finally {
+            TraceIdUtil.clear();
         }
-        JobLogEntity logEntity = jobLogMapper.selectById(logId);
-        if (logEntity == null) {
-            return;
-        }
-        LocalDateTime now = LocalDateTime.now();
-        logEntity.setEndTime(now);
-        logEntity.setDurationMs(java.time.Duration.between(logEntity.getStartTime(), now).toMillis());
-        if (jobException != null) {
-            logEntity.setStatus("FAILED");
-            logEntity.setErrorMessage(truncate(jobException.getMessage(), 2000));
-        } else {
-            logEntity.setStatus("SUCCESS");
-        }
-        jobLogMapper.updateById(logEntity);
     }
 
     private String truncate(String s, int maxLen) {

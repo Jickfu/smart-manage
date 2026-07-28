@@ -113,11 +113,10 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
         sort: index + 1,
       })),
     };
-    const savedId = await purchaseRequisitionApi.save(form);
-    const savedDetail = await purchaseRequisitionApi.detail(savedId);
-    if (submit) {
-      await purchaseRequisitionApi.submit({ id: savedId, version: savedDetail.version });
-    }
+    // 提交接口接收完整聚合，在一个后端事务中完成保存和状态推进。
+    const savedId = submit
+      ? await purchaseRequisitionApi.submit(form)
+      : await purchaseRequisitionApi.save(form);
     const nextKey = `bill:${props.componentKey}:${savedId}`;
     if (isAddNew || submit) {
       replaceContentTab(appNumber, tabKey, {

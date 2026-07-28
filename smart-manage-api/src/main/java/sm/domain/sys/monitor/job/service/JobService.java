@@ -20,6 +20,7 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.domain.sys.base.common.helper.UserHelper;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -84,6 +85,7 @@ public class JobService {
 
     @BizLog("保存定时任务")
     public Long save(JobSaveForm form) {
+        UserHelper.checkAdmin();
         JobEntity previous = form.getId() == null ? null : mapper.selectById(form.getId());
         Long id = txService.save(form);
         JobEntity current = requireEntity(id);
@@ -97,6 +99,7 @@ public class JobService {
 
     @BizLog("删除定时任务")
     public void deleteById(Long id) {
+        UserHelper.checkAdmin();
         JobEntity entity = requireEntity(id);
         txService.deleteById(id);
         removeQuartzJob(entity.getJobName(), entity.getJobGroup());
@@ -106,12 +109,14 @@ public class JobService {
 
     @BizLog("暂停定时任务")
     public void pause(Long id) {
+        UserHelper.checkAdmin();
         txService.pause(id);
         synchronize(requireEntity(id));
     }
 
     @BizLog("恢复定时任务")
     public void resume(Long id) {
+        UserHelper.checkAdmin();
         txService.resume(id);
         synchronize(requireEntity(id));
     }
@@ -122,6 +127,7 @@ public class JobService {
      */
     @BizLog("重新同步定时任务")
     public void syncAll() {
+        UserHelper.checkAdmin();
         List<JobEntity> entities = mapper.selectList(new LambdaQueryWrapper<>());
         Set<Long> validIds = new HashSet<>();
         for (JobEntity entity : entities) {
@@ -144,6 +150,7 @@ public class JobService {
 
     @BizLog("立即执行定时任务")
     public void trigger(Long id) {
+        UserHelper.checkAdmin();
         JobEntity entity = requireEntity(id);
         try {
             JobKey jobKey = JobKey.jobKey(entity.getJobName(), entity.getJobGroup());

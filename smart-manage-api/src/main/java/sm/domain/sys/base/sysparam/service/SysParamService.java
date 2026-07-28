@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.base.sysparam.model.entity.SysParamEntity;
 import sm.domain.sys.base.sysparam.model.form.SysParamListForm;
 import sm.domain.sys.base.sysparam.model.form.SysParamSaveForm;
@@ -71,14 +72,16 @@ public class SysParamService {
 
     /** 新增/编辑，委托事务服务处理 */
     @BizLog("保存系统参数")
-    @CacheInvalidate(name = "sys-params", key = "'all'")
+    @CacheInvalidate(name = CacheConstant.SYS_PARAM,
+            key = "T(sm.domain.sys.base.common.constant.CacheConstant).ALL_KEY")
     public Long save(SysParamSaveForm form) {
         return txService.save(form);
     }
 
     /** 删除，委托事务服务处理 */
     @BizLog("删除系统参数")
-    @CacheInvalidate(name = "sys-params", key = "'all'")
+    @CacheInvalidate(name = CacheConstant.SYS_PARAM,
+            key = "T(sm.domain.sys.base.common.constant.CacheConstant).ALL_KEY")
     public void deleteById(Long id) {
         txService.deleteById(id);
     }
@@ -86,7 +89,9 @@ public class SysParamService {
     // ==================== 消费端（带缓存） ====================
 
     /** 全量获取 number → value 映射（Caffeine 本地缓存） */
-    @Cached(cacheType = CacheType.LOCAL, name = "sys-params", key = "'all'", expire = 30, timeUnit = TimeUnit.MINUTES)
+    @Cached(cacheType = CacheType.LOCAL, name = CacheConstant.SYS_PARAM,
+            key = "T(sm.domain.sys.base.common.constant.CacheConstant).ALL_KEY",
+            expire = 30, timeUnit = TimeUnit.MINUTES)
     public Map<String, String> getAll() {
         List<SysParamEntity> entityList = mapper.selectList(null);
         Map<String, String> map = new HashMap<>();

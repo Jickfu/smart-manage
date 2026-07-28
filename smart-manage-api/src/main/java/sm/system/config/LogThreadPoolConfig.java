@@ -17,6 +17,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 @Data
 @ConfigurationProperties(prefix = "smart-manage.system.log")
 public class LogThreadPoolConfig {
+	private final TraceIdTaskDecorator traceIdTaskDecorator;
+
 	private int corePoolSize;
 	private int maxPoolSize;
 	private int queueCapacity;
@@ -36,6 +38,8 @@ public class LogThreadPoolConfig {
 		taskExecutor.setKeepAliveSeconds(keepAliveSeconds);
 		// 设置默认线程名称
 		taskExecutor.setThreadNamePrefix(threadNamePrefix);
+		// 显式传播 Trace ID，并在线程复用前恢复上下文。
+		taskExecutor.setTaskDecorator(traceIdTaskDecorator);
 		// 设置拒绝策略
 		taskExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
 		// 等待所有任务结束后再关闭线程池

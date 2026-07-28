@@ -69,6 +69,8 @@ smart-manage:
     cors:
       allowed-origins:
         - ${SMART_MANAGE_CORS_ALLOWED_ORIGIN}
+  security:
+    initial-administrator-password: ${SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD}
   system:
     upload:
       dir: ${SMART_MANAGE_UPLOAD_DIR}

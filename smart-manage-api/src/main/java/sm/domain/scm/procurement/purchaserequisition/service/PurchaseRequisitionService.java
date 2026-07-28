@@ -10,6 +10,7 @@ import sm.domain.scm.procurement.purchaserequisition.model.entity.PurchaseRequis
 import sm.domain.scm.procurement.purchaserequisition.model.entity.PurchaseRequisitionEntryEntity;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionListForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSaveForm;
+import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSubmitForm;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionCreateNewDataVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionDetailVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionEntryVO;
@@ -76,8 +77,8 @@ public class PurchaseRequisitionService {
     }
 
     @BizLog("提交采购申请")
-    public void submit(Long id, Integer version) {
-        txService.submit(id, version);
+    public Long submit(PurchaseRequisitionSubmitForm form) {
+        return txService.submit(form);
     }
 
     @BizLog("删除采购申请")

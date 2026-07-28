@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.stereotype.Service;
+import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.base.fileconfig.model.entity.FileConfigEntity;
 import sm.domain.sys.base.fileconfig.model.form.FileConfigListForm;
 import sm.domain.sys.base.fileconfig.model.form.FileConfigSaveForm;
@@ -71,7 +72,9 @@ public class FileConfigService implements FileStorageConfigProvider {
 
     /** 获取服务端内部使用的活跃配置，敏感字段不得通过 Controller 暴露。 */
     @Override
-    @Cached(cacheType = CacheType.LOCAL, name = "common", key = "'file:config'", expire = 30, timeUnit = TimeUnit.MINUTES)
+    @Cached(cacheType = CacheType.LOCAL, name = CacheConstant.FILE_CONFIG,
+            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY",
+            expire = 30, timeUnit = TimeUnit.MINUTES)
     public FileStorageConfig getFileStorageConfig() {
         List<FileConfigEntity> entityList = mapper.selectList(null);
         if (entityList.isEmpty()) {
@@ -86,13 +89,15 @@ public class FileConfigService implements FileStorageConfigProvider {
     }
 
     @BizLog("保存文件存储配置")
-    @CacheInvalidate(name = "common", key = "'file:config'")
+    @CacheInvalidate(name = CacheConstant.FILE_CONFIG,
+            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY")
     public Long save(FileConfigSaveForm form) {
         return txService.save(form);
     }
 
     @BizLog("删除文件存储配置")
-    @CacheInvalidate(name = "common", key = "'file:config'")
+    @CacheInvalidate(name = CacheConstant.FILE_CONFIG,
+            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY")
     public void deleteById(Long id) {
         txService.deleteById(id);
     }

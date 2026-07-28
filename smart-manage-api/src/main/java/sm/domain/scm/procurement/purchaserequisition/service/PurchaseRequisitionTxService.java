@@ -11,6 +11,7 @@ import sm.domain.scm.procurement.purchaserequisition.model.entity.PurchaseRequis
 import sm.domain.scm.procurement.purchaserequisition.model.entity.PurchaseRequisitionEntryEntity;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionEntryForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSaveForm;
+import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSubmitForm;
 import sm.domain.sys.base.common.helper.UserHelper;
 import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
@@ -75,9 +76,11 @@ class PurchaseRequisitionTxService {
         return entity.getId();
     }
 
-    public void submit(Long id, Integer version) {
+    public Long submit(PurchaseRequisitionSubmitForm form) {
+        // 保存聚合与推进状态必须处于同一事务，支持新增页和未保存修改直接提交。
+        Long id = save(form);
         PurchaseRequisitionEntity entity = requireEntity(id);
-        requireVersion(entity, version);
+        Integer version = entity.getVersion();
         String nextStatus = BillStatusUtil.submit(entity.getBillStatus());
         entity.setBillStatus(nextStatus);
         // version 递增交给 MyBatis-Plus 乐观锁插件，Wrapper 额外保证状态与版本原子匹配。
@@ -88,6 +91,7 @@ class PurchaseRequisitionTxService {
         if (updated != 1) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "采购申请状态或版本已变化，请刷新后重试");
         }
+        return id;
     }
 
     public void deleteById(Long id, Integer version) {

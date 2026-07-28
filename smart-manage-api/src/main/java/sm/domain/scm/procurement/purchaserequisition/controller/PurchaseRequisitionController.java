@@ -55,9 +55,8 @@ public class PurchaseRequisitionController {
 
     @PostMapping("/scm/procurement/purchase-requisition/submit")
     @SaCheckPermission(PurchaseRequisitionPermission.SUBMIT)
-    public Result<String> submit(@RequestBody @Valid PurchaseRequisitionSubmitForm form) {
-        service.submit(form.getId(), form.getVersion());
-        return Result.success();
+    public Result<Long> submit(@RequestBody @Valid PurchaseRequisitionSubmitForm form) {
+        return Result.success(service.submit(form));
     }
 
     @PostMapping("/scm/procurement/purchase-requisition/delete")

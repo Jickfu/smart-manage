@@ -12,6 +12,7 @@ import sm.system.aop.log.BizLog;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
+import sm.system.util.TraceIdUtil;
 import java.util.regex.Pattern;
 
 /**
@@ -81,7 +82,7 @@ public class ArthasService {
         ArthasSession session = new ArthasSession(sessionId, fullCmd);
         sessions.put(sessionId, session);
 
-        executor.submit(() -> runSession(session));
+        executor.submit(TraceIdUtil.wrap(() -> runSession(session)));
         return ArthasResultVO.running(sessionId, "会话已启动，命令: " + fullCmd);
     }
 

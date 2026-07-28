@@ -37,9 +37,6 @@ export default defineConfig({
           if (id.includes('node_modules/react') || id.includes('node_modules/react-router-dom')) {
             return 'react';
           }
-          if (id.includes('node_modules/antd')) {
-            return 'antd';
-          }
           if (
             id.includes('node_modules/@tanstack/') ||
             id.includes('node_modules/axios') ||

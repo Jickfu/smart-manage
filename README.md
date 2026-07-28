@@ -98,6 +98,10 @@ mvn spring-boot:run
 密码：admin
 ```
 
+上述固定凭据只用于开发和演示环境。生产环境使用 `prod` Profile 启动时，必须通过
+`SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD` 提供非 `admin` 的初始管理员密码；
+系统仅在数据库仍保留演示密码时执行一次替换，不会在后续重启时覆盖管理员主动修改的密码。
+
 该账号仅用于本地开发和首次初始化，首次登录后应立即修改密码。
 
 ### 3. 启动前端

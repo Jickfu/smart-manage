@@ -32,11 +32,6 @@ export interface PurchaseRequisitionDeleteForm {
   version: number;
 }
 
-export interface PurchaseRequisitionSubmitForm {
-  id: string;
-  version: number;
-}
-
 export interface PurchaseRequisitionDetailVO {
   id: string;
   version: number;
@@ -71,3 +66,5 @@ export interface PurchaseRequisitionSaveForm {
   reason?: string;
   entrys: PurchaseRequisitionEntry[];
 }
+
+export type PurchaseRequisitionSubmitForm = PurchaseRequisitionSaveForm;

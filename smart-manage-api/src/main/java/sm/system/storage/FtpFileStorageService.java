@@ -34,30 +34,65 @@ public class FtpFileStorageService implements FileStorageService {
 
     private FTPClient connect() throws IOException {
         FileStorageConfig cfg = config();
-        FTPClient ftp = new FTPClient();
+        FTPClient ftp = createClient();
         ftp.connect(cfg.ftpHost(), cfg.ftpPort() != null ? cfg.ftpPort() : 21);
-        ftp.login(cfg.ftpUsername(), cfg.ftpPassword());
+        if (!ftp.login(cfg.ftpUsername(), cfg.ftpPassword())) {
+            disconnect(ftp);
+            throw new IOException("FTP 登录失败: " + ftp.getReplyString());
+        }
         if (Boolean.TRUE.equals(cfg.ftpPassiveMode())) {
             ftp.enterLocalPassiveMode();
         }
-        ftp.setFileType(FTP.BINARY_FILE_TYPE);
+        if (!ftp.setFileType(FTP.BINARY_FILE_TYPE)) {
+            disconnect(ftp);
+            throw new IOException("FTP 二进制模式设置失败: " + ftp.getReplyString());
+        }
         ftp.setBufferSize(1024 * 1024);
         String remoteDir = cfg.ftpDir();
         if (remoteDir != null && !remoteDir.isBlank()) {
-            createDirs(ftp, remoteDir);
-            ftp.changeWorkingDirectory(remoteDir);
+            ensureDirectories(ftp, remoteDir);
+            if (!ftp.changeWorkingDirectory(remoteDir)) {
+                disconnect(ftp);
+                throw new IOException("FTP 根目录切换失败: " + remoteDir + ", " + ftp.getReplyString());
+            }
         }
         return ftp;
     }
 
-    private void createDirs(FTPClient ftp, String path) throws IOException {
-        for (String part : path.split("/")) {
-            if (part.isEmpty()) continue;
-            if (!ftp.changeWorkingDirectory(part)) {
-                ftp.makeDirectory(part);
-                ftp.changeWorkingDirectory(part);
+    /**
+     * 创建相对当前目录的层级目录，结束后恢复调用前工作目录。
+     */
+    private void ensureDirectories(FTPClient ftp, String path) throws IOException {
+        String originalDirectory = ftp.printWorkingDirectory();
+        if (originalDirectory == null) {
+            throw new IOException("FTP 无法读取当前工作目录: " + ftp.getReplyString());
+        }
+        try {
+            for (String part : path.replace('\\', '/').split("/")) {
+                if (part.isEmpty()) {
+                    continue;
+                }
+                if (".".equals(part) || "..".equals(part)) {
+                    throw new IOException("FTP 目录不允许包含相对路径片段: " + path);
+                }
+                if (!ftp.changeWorkingDirectory(part)) {
+                    if (!ftp.makeDirectory(part) || !ftp.changeWorkingDirectory(part)) {
+                        throw new IOException("FTP 目录创建失败: " + path + ", " + ftp.getReplyString());
+                    }
+                }
+            }
+        } finally {
+            if (!ftp.changeWorkingDirectory(originalDirectory)) {
+                throw new IOException("FTP 工作目录恢复失败: " + originalDirectory + ", " + ftp.getReplyString());
             }
         }
+    }
+
+    /**
+     * 允许测试替换 FTP 客户端，不暴露到业务调用层。
+     */
+    protected FTPClient createClient() {
+        return new FTPClient();
     }
 
     private void disconnect(FTPClient ftp) {
@@ -89,8 +124,10 @@ public class FtpFileStorageService implements FileStorageService {
         FTPClient ftp = connect();
         try {
             if (subDir != null && !subDir.isEmpty()) {
-                createDirs(ftp, subDir);
-                ftp.changeWorkingDirectory(subDir);
+                ensureDirectories(ftp, subDir);
+                if (!ftp.changeWorkingDirectory(subDir)) {
+                    throw new IOException("FTP 上传目录切换失败: " + subDir + ", " + ftp.getReplyString());
+                }
             }
             String remotePath = subDir != null && !subDir.isEmpty()
                     ? subDir + "/" + storedName : storedName;
@@ -111,7 +148,7 @@ public class FtpFileStorageService implements FileStorageService {
         String filename = storedPath.contains("/") ? storedPath.substring(storedPath.lastIndexOf("/") + 1) : storedPath;
         FTPClient ftp = connect();
         try {
-            createDirs(ftp, targetSubDir);
+            ensureDirectories(ftp, targetSubDir);
             String targetFull = targetSubDir + "/" + filename;
             if (!ftp.rename(storedPath, targetFull)) {
                 throw new IOException("FTP 文件移动失败: " + ftp.getReplyString());
@@ -128,7 +165,9 @@ public class FtpFileStorageService implements FileStorageService {
         if (storedPath == null) return;
         FTPClient ftp = connect();
         try {
-            ftp.deleteFile(storedPath);
+            if (!ftp.deleteFile(storedPath)) {
+                throw new IOException("FTP 文件删除失败: " + storedPath + ", " + ftp.getReplyString());
+            }
             log.info("FTP 文件删除: {}", storedPath);
         } finally {
             disconnect(ftp);

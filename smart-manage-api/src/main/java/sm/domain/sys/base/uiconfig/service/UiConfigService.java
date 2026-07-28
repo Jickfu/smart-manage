@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.base.uiconfig.model.entity.UiConfigEntity;
 import sm.domain.sys.base.uiconfig.model.form.UiConfigListForm;
 import sm.domain.sys.base.uiconfig.model.form.UiConfigSaveForm;
@@ -64,20 +65,24 @@ public class UiConfigService {
     }
 
     /** 获取活跃配置（Caffeine 本地缓存） */
-    @Cached(cacheType = CacheType.LOCAL, name = "common", key = "'ui:config'", expire = 30, timeUnit = TimeUnit.MINUTES)
+    @Cached(cacheType = CacheType.LOCAL, name = CacheConstant.UI_CONFIG,
+            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY",
+            expire = 30, timeUnit = TimeUnit.MINUTES)
     public UiConfigDetailVO getActiveConfig() {
         List<UiConfigEntity> entityList = mapper.selectList(null);
         return entityList.isEmpty() ? new UiConfigDetailVO() : converter.toDetailVO(entityList.get(0));
     }
 
     @BizLog("保存界面配置")
-    @CacheInvalidate(name = "common", key = "'ui:config'")
+    @CacheInvalidate(name = CacheConstant.UI_CONFIG,
+            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY")
     public Long save(UiConfigSaveForm form) {
         return txService.save(form);
     }
 
     @BizLog("删除界面配置")
-    @CacheInvalidate(name = "common", key = "'ui:config'")
+    @CacheInvalidate(name = CacheConstant.UI_CONFIG,
+            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY")
     public void deleteById(Long id) {
         txService.deleteById(id);
     }

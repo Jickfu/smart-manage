@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.alicp.jetcache.anno.CacheType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.system.helper.CacheHelper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.model.entity.UserRoleEntity;
@@ -22,7 +23,7 @@ public class AuthorizationStateHelper {
 
 	public void invalidateUsers(Collection<Long> userIds) {
 		for (Long userId : userIds.stream().distinct().toList()) {
-			cacheHelper.<Long, Object>getCache("userInfo", CacheType.REMOTE).remove(userId);
+			cacheHelper.<Long, Object>getCache(CacheConstant.USER_INFO, CacheType.REMOTE).remove(userId);
 			StpUtil.logout(userId);
 		}
 	}

@@ -12,6 +12,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import sm.system.helper.CurrentOperatorProvider;
 import sm.system.util.ServletUtil;
+import sm.system.util.TraceIdUtil;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -102,7 +103,8 @@ public class BizLogAspect {
             requestParams,
             responseBody,
             userId,
-            username
+            username,
+            TraceIdUtil.getTraceId()
         );
         operateLogWriter.write(payload);
     }

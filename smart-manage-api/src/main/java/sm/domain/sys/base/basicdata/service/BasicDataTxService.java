@@ -12,7 +12,7 @@ import sm.domain.sys.base.basicdata.model.entity.BasicDataEntryEntity;
 import sm.domain.sys.base.basicdata.model.form.BasicDataEntryForm;
 import sm.domain.sys.base.basicdata.model.form.BasicDataSaveForm;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataOptionVO;
-import sm.domain.sys.base.common.constant.RedisKeyConstant;
+import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
 import sm.system.response.ResultEnum;
@@ -110,8 +110,13 @@ class BasicDataTxService {
     }
 
     public void updateEnabled(List<Long> ids, boolean enabled) {
+        List<String> numbers = mapper.selectByIds(ids)
+                .stream()
+                .map(BasicDataEntity::getNumber)
+                .toList();
         EnabledCommandUtil.update(mapper, BasicDataEntity::getId, BasicDataEntity::getEnabled,
                 ids, enabled, "基础数据");
+        TransactionUtil.afterCommit(() -> numbers.forEach(this::removeOptionsCache));
     }
 
     private void removeOptionsCache(String number) {
@@ -119,6 +124,6 @@ class BasicDataTxService {
             return;
         }
         cacheHelper.<String, List<BasicDataOptionVO>>getCache(
-                RedisKeyConstant.CACHE_BASIC_DATA_OPTIONS, CacheType.LOCAL).remove(number);
+                CacheConstant.BASIC_DATA_OPTIONS, CacheType.LOCAL).remove(number);
     }
 }

@@ -1,13 +1,10 @@
 package sm.domain.scm.procurement.purchaserequisition.model.form;
 
-import jakarta.validation.constraints.NotNull;
-import lombok.Data;
-
-/** 采购申请提交参数，提交命令必须携带客户端读取到的乐观锁版本。 */
-@Data
-public class PurchaseRequisitionSubmitForm {
-    @NotNull
-    private Long id;
-    @NotNull
-    private Integer version;
+/**
+ * 采购申请提交参数。
+ *
+ * <p>提交必须携带页面当前的完整聚合数据，使新增或编辑后的单据可以直接提交，
+ * 不要求用户先执行一次保存。已有单据仍通过继承字段中的 id 和 version 执行并发校验。
+ */
+public class PurchaseRequisitionSubmitForm extends PurchaseRequisitionSaveForm {
 }

@@ -60,7 +60,7 @@
 - **VO 映射边界**：Entity 到列表、选择、明细和基础详情 VO 的纯字段映射使用模块内 `*Converter`（MapStruct）；Converter 禁止依赖
   Mapper、Service、缓存、安全上下文或外部资源。需要查询、权限判断、默认值、状态规则、树结构或主从聚合的转换属于业务组装，保留在公开
   Service 并使用 `assemble*` 命名。MyBatis 联表直接投影 VO 的查询保持不变。
-- 标准业务接口语义：`listPage` 返回分页；`detail` 找不到应抛异常；`createNewData` 只返回新增默认值且不返回 id；`save` 负责新增和暂存修改；`submit` 负责提交并推进单据状态；`delete` 负责删除或作废，具体语义由单据类型明确。
+- 标准业务接口语义：`listPage` 返回分页；`detail` 找不到应抛异常；`createNewData` 只返回新增默认值且不返回 id；`save` 负责新增和暂存修改；`submit` 接收页面当前完整聚合数据，在同一事务内保存并推进单据状态，不要求用户先点击保存；`delete` 负责删除或作废，具体语义由单据类型明确。
 - 修改后端代码后至少执行 `mvn test`；只有文档修改或确认不影响测试代码的简单改动才可以仅执行 `mvn compile`。如果涉及实体、Mapper 或配置变更，也需要确认 MyBatis-Plus 相关代码可以正常编译。
 - **事务分离**：Service 禁止直接写 `@Transactional`。每个含写操作的 Service 必须搭配一个 `*TxService`，将 `@Transactional(rollbackFor = Exception.class)` 放在 TxService 类级别。Service 注入 TxService，写方法（`save`/`deleteById` 等）以委托方式调用 TxService。读写共用的私有辅助方法留在 Service；仅事务内使用的私有方法移入 TxService。TxService 内需要的前置读取（如唯一性校验、存在性检查）直接使用 Mapper，不走 Service 缓存方法。
   - 例：`RoleService`（只读 + 委托） → `RoleTxService`（类级别 @Transactional，包含 save/deleteById 全部逻辑）
@@ -178,7 +178,7 @@ src/
 - 业务单据默认应具备单据状态字段，用于驱动编辑页能力控制。日志、监控记录、单条配置等非业务单据不强制加入单据状态，避免把所有表都套进单据模型。单据状态建议使用 `char(1)` 存储：`A` 暂存（`SAVED`）、`B` 已提交（`SUBMITTED`）、`C` 审核通过（`AUDITED`）、`D` 已关闭（`CLOSED`）。注意使用正确英文拼写 `SUBMITTED`，不要使用 `SUBMITED`。
 - 前端 `EditPage` 需要区分“保存”和“提交”两个按钮。保存仅保存暂存数据，单据保持 `SAVED`，后续仍可修改；提交将单据状态改为 `SUBMITTED`，提交后不可再普通保存或编辑，后续可扩展消息通知、审批流程等业务动作。
 - 后端 `save` 负责新增和修改暂存数据；前端可以只有一个保存按钮触发 `save`，但 Service 内部必须明确区分新增 insert 和修改 update 流程。新增由 `id == null` 判定，修改由 `id != null` 判定，不能相信前端传来的 id 或状态来决定数据库行为。
-- 后端 `submit` 负责提交单据并推进状态。提交时必须以后端数据库当前状态为准校验，通常只允许 `SAVED` 状态提交为 `SUBMITTED`。
+- 后端 `submit` 负责在同一事务中保存页面当前完整聚合并推进状态，不要求用户先执行 `save`。已有单据必须校验数据库当前状态和 `version`，通常只允许 `SAVED` 状态提交为 `SUBMITTED`；新增单据应直接创建为暂存状态后立即推进为已提交。
 - 需要快速限制“只有新增或暂存单据才允许保存”的场景时，可设计注解式校验（如 `@BillSaveCheck`），但校验依据必须来自数据库当前状态；不是所有单据都强制使用该注解。
 - tab key 规则：列表页单实例；编辑页按单据 id 多实例；新增页每次打开新的临时实例。编辑/查看同一单据必须共用同一个 tab key，不能出现同一单据同时打开编辑和查看两个 tab。
 - 新增页使用前端生成的 uuid 作为临时 tab key。`createNewData` 不返回 id；保存成功后，后端返回真实 id，前端立即调用 `detail(id)` 回显完整数据，并把临时 tab key 替换为真实单据 tab key。保存成功后不关闭 `EditPage`，继续留在当前单据页面。

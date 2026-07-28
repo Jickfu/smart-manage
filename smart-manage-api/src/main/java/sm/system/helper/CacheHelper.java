@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class CacheHelper {
     private final CacheManager cacheManager;
-    private final ConcurrentHashMap<String, Cache<?, ?>> map = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<CacheIdentity, Cache<?, ?>> map = new ConcurrentHashMap<>();
 
     /**
      * 按名称和类型获取缓存实例（懒创建，首次调用时才创建）。
@@ -32,8 +32,12 @@ public class CacheHelper {
      */
     @SuppressWarnings("unchecked")
     public <K, V> Cache<K, V> getCache(String name, CacheType cacheType) {
-        return (Cache<K, V>) map.computeIfAbsent(name,
-                n -> cacheManager.getOrCreateCache(
-                        QuickConfig.newBuilder(n).cacheType(cacheType).build()));
+        CacheIdentity identity = new CacheIdentity(name, cacheType);
+        return (Cache<K, V>) map.computeIfAbsent(identity,
+                ignored -> cacheManager.getOrCreateCache(
+                        QuickConfig.newBuilder(name).cacheType(cacheType).build()));
+    }
+
+    private record CacheIdentity(String name, CacheType cacheType) {
     }
 }

@@ -14,6 +14,7 @@ import sm.domain.sys.monitor.operatelog.model.entity.OperateLogEntity;
 import sm.domain.sys.monitor.operatelog.mapper.OperateLogMapper;
 import sm.system.aop.log.OperateLogPayload;
 import sm.system.aop.log.OperateLogWriter;
+import sm.system.util.TraceIdUtil;
 
 import java.time.LocalDateTime;
 
@@ -38,6 +39,9 @@ public class LogWriteService implements OperateLogWriter {
     public void writeLogin(LoginLogEntity e) {
         if (e.getCreateTime() == null) {
             e.setCreateTime(LocalDateTime.now());
+        }
+        if (e.getTraceId() == null) {
+            e.setTraceId(TraceIdUtil.getTraceId());
         }
         runAsync(() -> loginLogMapper.insert(e));
     }
@@ -72,6 +76,7 @@ public class LogWriteService implements OperateLogWriter {
         entity.setResponseBody(payload.responseBody());
         entity.setUserId(payload.userId());
         entity.setUsername(payload.username());
+        entity.setTraceId(payload.traceId());
         writeOper(entity);
     }
 

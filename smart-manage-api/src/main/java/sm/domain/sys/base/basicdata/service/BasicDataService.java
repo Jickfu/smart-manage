@@ -17,7 +17,7 @@ import sm.domain.sys.base.basicdata.model.vo.BasicDataDetailVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataEntryVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataListVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataOptionVO;
-import sm.domain.sys.base.common.constant.RedisKeyConstant;
+import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
@@ -81,7 +81,7 @@ public class BasicDataService {
     }
 
     /** 按基础数据编码提供启用的下拉选项，不开放明细独立写入口。 */
-    @Cached(cacheType = CacheType.LOCAL, name = RedisKeyConstant.CACHE_BASIC_DATA_OPTIONS,
+    @Cached(cacheType = CacheType.LOCAL, name = CacheConstant.BASIC_DATA_OPTIONS,
             key = "#number", expire = 30, timeUnit = java.util.concurrent.TimeUnit.MINUTES)
     public List<BasicDataOptionVO> getOptionsByNumber(String number) {
         BasicDataEntity entity = mapper.selectOne(new LambdaQueryWrapper<BasicDataEntity>()

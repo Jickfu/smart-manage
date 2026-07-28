@@ -43,6 +43,9 @@ public class JobLogEntity {
     /** 错误信息 */
     private String errorMessage;
 
+    /** 本次执行链路追踪ID */
+    private String traceId;
+
     /** 创建时间 */
     private LocalDateTime createTime;
 }

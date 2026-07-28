@@ -10,7 +10,7 @@ import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.common.constant.RedisKeyConstant;
+import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.monitor.cache.model.vo.CacheStatsVO;
 import sm.domain.sys.monitor.cache.model.vo.CaffeineCacheVO;
 import sm.domain.sys.monitor.cache.model.vo.RedisInfoVO;
@@ -40,7 +40,10 @@ public class CacheService {
 
     /** 已知的 JetCache LOCAL 缓存名列表 */
     private static final List<String> LOCAL_CACHE_NAMES = List.of(
-            "sys-params", "common", RedisKeyConstant.CACHE_BASIC_DATA_OPTIONS);
+            CacheConstant.SYS_PARAM,
+            CacheConstant.UI_CONFIG,
+            CacheConstant.FILE_CONFIG,
+            CacheConstant.BASIC_DATA_OPTIONS);
 
     public CacheService(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;

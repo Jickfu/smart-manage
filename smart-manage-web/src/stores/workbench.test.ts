@@ -67,6 +67,34 @@ describe('workbench store', () => {
     ).toBe(true);
   });
 
+  it('成功关闭页签后同时释放关闭回调', async () => {
+    const store = useWorkbenchStore.getState();
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, '采购申请', '101', OperationType.EDIT);
+    const tabKey = createBillTabKey(COMPONENT_KEY, '101');
+    const guard = vi.fn().mockResolvedValue(true);
+    store.registerBeforeClose(APP_NUMBER, tabKey, guard);
+
+    await store.removeContentTab(APP_NUMBER, tabKey);
+
+    const state = useWorkbenchStore.getState();
+    expect(guard).toHaveBeenCalledOnce();
+    expect(state.workspaces[APP_NUMBER]!.contentTabs.some((tab) => tab.key === tabKey)).toBe(false);
+    expect(state.beforeCloseCallbacks[`${APP_NUMBER}:${tabKey}`]).toBeUndefined();
+  });
+
+  it('销毁工作区时释放该应用的全部关闭回调', () => {
+    const store = useWorkbenchStore.getState();
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, '采购申请', '102', OperationType.EDIT);
+    const tabKey = createBillTabKey(COMPONENT_KEY, '102');
+    store.registerBeforeClose(APP_NUMBER, tabKey, vi.fn().mockResolvedValue(true));
+
+    store.destroyWorkspace(APP_NUMBER);
+
+    const state = useWorkbenchStore.getState();
+    expect(state.workspaces[APP_NUMBER]).toBeUndefined();
+    expect(state.beforeCloseCallbacks[`${APP_NUMBER}:${tabKey}`]).toBeUndefined();
+  });
+
   it('达到内容页签上限后拒绝继续打开页签', () => {
     const store = useWorkbenchStore.getState();
     for (let index = 0; index < 20; index += 1) {

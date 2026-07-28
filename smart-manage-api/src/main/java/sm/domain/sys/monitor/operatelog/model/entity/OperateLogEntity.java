@@ -32,4 +32,5 @@ public class OperateLogEntity extends BaseEntity {
 	private String responseBody;
 	private Long userId;
 	private String username;
+	private String traceId;
 }

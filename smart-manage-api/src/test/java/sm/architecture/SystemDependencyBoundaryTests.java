@@ -94,7 +94,8 @@ class SystemDependencyBoundaryTests {
         List<Path> highRiskServices = List.of(
                 Path.of("src/main/java/sm/domain/sys/monitor/sql/service/SqlService.java"),
                 Path.of("src/main/java/sm/domain/sys/monitor/script/service/ScriptService.java"),
-                Path.of("src/main/java/sm/domain/sys/monitor/arthas/service/ArthasService.java")
+                Path.of("src/main/java/sm/domain/sys/monitor/arthas/service/ArthasService.java"),
+                Path.of("src/main/java/sm/domain/sys/monitor/job/service/JobService.java")
         );
         var violations = highRiskServices.stream()
                 .filter(path -> !readSource(path).contains("UserHelper.checkAdmin()"))

@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.*;
+import sm.system.util.TraceIdUtil;
 import java.util.stream.Collectors;
 
 /**
@@ -71,7 +72,8 @@ public class ScriptService {
         int timeoutSeconds = timeoutParam != null && timeoutParam > 0 ? timeoutParam : 60;
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<ScriptResultVO> future = executor.submit(() -> executeScript(content));
+        Future<ScriptResultVO> future = executor.submit(
+                TraceIdUtil.wrap(() -> executeScript(content)));
 
         try {
             ScriptResultVO r = future.get(timeoutSeconds, TimeUnit.SECONDS);

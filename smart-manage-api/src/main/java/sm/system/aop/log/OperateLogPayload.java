@@ -19,5 +19,6 @@ public record OperateLogPayload(
     String requestParams,
     String responseBody,
     Long userId,
-    String username
+    String username,
+    String traceId
 ) {}
