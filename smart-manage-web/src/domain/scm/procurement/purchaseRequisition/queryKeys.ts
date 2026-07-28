@@ -7,5 +7,6 @@ export const purchaseRequisitionQueryKeys = {
     [...purchaseRequisitionQueryKeys.lists(), params] as const,
   details: () => [...purchaseRequisitionQueryKeys.all, 'detail'] as const,
   detail: (id?: string) => [...purchaseRequisitionQueryKeys.details(), id] as const,
-  createNewData: () => [...purchaseRequisitionQueryKeys.all, 'create-new-data'] as const,
+  createNewData: (tabKey: string) =>
+    [...purchaseRequisitionQueryKeys.all, 'create-new-data', tabKey] as const,
 };

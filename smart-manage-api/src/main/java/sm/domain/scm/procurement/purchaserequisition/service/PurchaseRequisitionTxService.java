@@ -42,7 +42,7 @@ class PurchaseRequisitionTxService {
         }
         entity.setNumber(form.getNumber().trim());
         entity.setSubject(form.getSubject().trim());
-        entity.setApplyDate(form.getApplyDate());
+        entity.setBizDate(form.getBizDate());
         entity.setRequiredDate(form.getRequiredDate());
         entity.setReason(form.getReason());
 

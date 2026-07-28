@@ -72,7 +72,7 @@ const PermissionEditPage = ({ open, permissionId, onClose, onSaved }: Props) => 
 
   const initialValues = useMemo(() => {
     if (!detail) return {};
-    // 详情 VO 中 appId 是 number（反序列化 JSON），RefSelector 回显需完整对象
+    // 详情 VO 中 appId 始终保持字符串，RefSelector 回显需要完整对象。
     const appId = detail.appId;
     return {
       number: detail.number ?? '',

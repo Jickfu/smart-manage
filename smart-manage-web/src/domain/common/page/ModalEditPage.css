@@ -43,9 +43,15 @@
   border-bottom: 1px solid var(--ant-color-border-secondary);
 }
 
-/* 字段在 Modal 编辑页居中排列 */
+/* 两列表单整体居中；奇数项保持在左列，避免末项单独居中。 */
 .sm-modal-edit .sm-edit-fields {
+  display: grid;
+  grid-template-columns: repeat(2, 230px);
   justify-content: center;
+}
+
+.sm-modal-edit .sm-edit-field--full {
+  grid-column: 1 / -1;
 }
 
 /* 底部 */

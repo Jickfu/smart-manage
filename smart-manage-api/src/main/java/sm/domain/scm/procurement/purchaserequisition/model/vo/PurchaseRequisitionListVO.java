@@ -11,7 +11,7 @@ public class PurchaseRequisitionListVO {
     private Integer version;
     private String number;
     private String subject;
-    private LocalDate applyDate;
+    private LocalDate bizDate;
     private LocalDate requiredDate;
     private String billStatus;
     private LocalDateTime createTime;

@@ -60,6 +60,7 @@ export type EditField = EditFieldBase &
   (
     | { type: 'text' }
     | { type: 'password' }
+    | { type: 'date' }
     | { type: 'number' }
     | { type: 'switch' }
     | { type: 'textarea' }
@@ -91,6 +92,8 @@ interface EditPageProps {
   headerActions?: PermissionAction[];
   /** 额外的聚合内容，仍处于同一个 Form 中，例如主从单据明细。 */
   detailContent?: (editable: boolean) => ReactNode;
+  /** 明细标题栏右侧操作区。 */
+  detailExtra?: (editable: boolean) => ReactNode;
   /** 注册页签关闭前的脏数据检查。 */
   closeGuard?: { appNumber: string; tabKey: string };
 }
@@ -118,12 +121,17 @@ const EditPage = ({
   access,
   headerActions,
   detailContent,
+  detailExtra,
   closeGuard,
 }: EditPageProps) => {
   const { modal } = App.useApp();
   const [form] = Form.useForm();
   const [dirty, setDirty] = useState(false);
+  const [activeCollapseKeys, setActiveCollapseKeys] = useState<string[]>(
+    detailContent ? ['basic', 'detail'] : ['basic'],
+  );
   const editable = isEditable(operationType, billStatus);
+  const detailExpanded = activeCollapseKeys.includes('detail');
 
   // 后端数据加载完成后同步到 Form
   useEffect(() => {
@@ -221,7 +229,9 @@ const EditPage = ({
       >
         <Collapse
           className="sm-edit-collapse"
-          defaultActiveKey={detailContent ? ['basic', 'detail'] : ['basic']}
+          collapsible="icon"
+          activeKey={activeCollapseKeys}
+          onChange={(keys) => setActiveCollapseKeys(Array.isArray(keys) ? keys : [keys])}
           items={[
             {
               key: 'basic',
@@ -229,7 +239,14 @@ const EditPage = ({
               children: <EditFormFields fields={fields} editable={editable} />,
             },
             ...(detailContent
-              ? [{ key: 'detail', label: '明细信息', children: detailContent(editable) }]
+              ? [
+                  {
+                    key: 'detail',
+                    label: '明细信息',
+                    children: detailContent(editable),
+                    extra: detailExpanded ? detailExtra?.(editable) : undefined,
+                  },
+                ]
               : []),
           ]}
         />

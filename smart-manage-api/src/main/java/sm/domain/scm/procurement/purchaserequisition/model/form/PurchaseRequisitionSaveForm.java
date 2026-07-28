@@ -17,8 +17,8 @@ public class PurchaseRequisitionSaveForm {
     private String number;
     @NotBlank(message = "主题不能为空")
     private String subject;
-    @NotNull(message = "申请日期不能为空")
-    private LocalDate applyDate;
+    @NotNull(message = "业务日期不能为空")
+    private LocalDate bizDate;
     private LocalDate requiredDate;
     private String reason;
     @Valid

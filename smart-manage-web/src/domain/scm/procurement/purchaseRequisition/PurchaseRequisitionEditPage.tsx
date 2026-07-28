@@ -1,11 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { Key } from 'react';
-import { Button, Form, Input, InputNumber, Table } from 'antd';
+import { Button, DatePicker, Form, Input, InputNumber, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import type { FormListFieldData } from 'antd/es/form';
+import type { FormListFieldData, FormListOperation } from 'antd/es/form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
+import {
+  getDatePickerValueProps,
+  normalizeDatePickerValue,
+} from '@/domain/common/page/dateFormValue';
 import { BillStatus, OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -35,17 +39,16 @@ const fields: EditField[] = [
     rules: [{ required: true, message: '主题不能为空' }],
   },
   {
-    label: '申请日期',
-    dataIndex: 'applyDate',
-    type: 'text',
+    label: '业务日期',
+    dataIndex: 'bizDate',
+    type: 'date',
+    disabled: true,
     placeholder: 'YYYY-MM-DD',
-    rules: [{ required: true, message: '申请日期不能为空' }],
+    rules: [{ required: true, message: '业务日期不能为空' }],
   },
-  { label: '需求日期', dataIndex: 'requiredDate', type: 'text', placeholder: 'YYYY-MM-DD' },
-  { label: '申请原因', dataIndex: 'reason', type: 'textarea', fullWidth: true },
+  { label: '需求日期', dataIndex: 'requiredDate', type: 'date', placeholder: 'YYYY-MM-DD' },
   { label: '单据状态', dataIndex: 'billStatusName', type: 'readonly' },
-  { label: '创建时间', dataIndex: 'createTime', type: 'readonly' },
-  { label: '更新时间', dataIndex: 'updateTime', type: 'readonly' },
+  { label: '申请原因', dataIndex: 'reason', type: 'textarea', fullWidth: true },
 ];
 
 function statusName(status?: string) {
@@ -64,6 +67,7 @@ function isDetail(
 
 const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
   const [selectedEntryKeys, setSelectedEntryKeys] = useState<Key[]>([]);
+  const entryOperationsRef = useRef<FormListOperation | null>(null);
   const { appNumber, tabKey, billId, operationType } = props;
   const isAddNew = operationType === OperationType.ADDNEW;
   const queryClient = useQueryClient();
@@ -71,7 +75,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
   const sourceQuery = useQuery<PurchaseRequisitionDetailVO | PurchaseRequisitionCreateNewDataVO>({
     queryKey: isAddNew
-      ? purchaseRequisitionQueryKeys.createNewData()
+      ? purchaseRequisitionQueryKeys.createNewData(tabKey)
       : purchaseRequisitionQueryKeys.detail(billId),
     queryFn: () =>
       isAddNew ? purchaseRequisitionApi.createNewData() : purchaseRequisitionApi.detail(billId!),
@@ -85,12 +89,10 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
         ? {
             number: detail?.number ?? '',
             subject: detail?.subject ?? '',
-            applyDate: source.applyDate,
+            bizDate: source.bizDate,
             requiredDate: detail?.requiredDate ?? '',
             reason: detail?.reason ?? '',
             billStatusName: statusName(source.billStatus),
-            createTime: detail?.createTime ?? '',
-            updateTime: detail?.updateTime ?? '',
             entrys: source.entrys ?? [],
           }
         : {},
@@ -103,7 +105,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
       version: detail?.version,
       number: String(values.number).trim(),
       subject: String(values.subject).trim(),
-      applyDate: String(values.applyDate),
+      bizDate: String(values.bizDate),
       requiredDate: values.requiredDate ? String(values.requiredDate) : undefined,
       reason: values.reason ? String(values.reason) : undefined,
       entrys: (values.entrys as PurchaseRequisitionEntry[]).map((entry, index) => ({
@@ -153,7 +155,8 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
         },
       ]}
     >
-      {(entryFields, { add, remove }, { errors }) => {
+      {(entryFields, { add, remove, move }, { errors }) => {
+        entryOperationsRef.current = { add, remove, move };
         const columns: ColumnsType<FormListFieldData> = [
           {
             title: '物料名称',
@@ -205,8 +208,17 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
             title: '需求日期',
             width: 140,
             render: (_value, field) => (
-              <Form.Item name={[field.name, 'requiredDate']}>
-                <Input placeholder="YYYY-MM-DD" disabled={!editable} />
+              <Form.Item
+                name={[field.name, 'requiredDate']}
+                getValueProps={getDatePickerValueProps}
+                normalize={normalizeDatePickerValue}
+              >
+                <DatePicker
+                  className="sm-purchase-entry-date-picker"
+                  placeholder="YYYY-MM-DD"
+                  variant="borderless"
+                  disabled={!editable}
+                />
               </Form.Item>
             ),
           },
@@ -222,26 +234,8 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
         ];
         return (
           <div className="sm-purchase-requisition-entrys">
-            {editable && (
-              <div className="sm-purchase-entry-actions">
-                <Button onClick={() => add({ quantity: 1 })}>新增</Button>
-                <Button
-                  danger
-                  disabled={selectedEntryKeys.length === 0}
-                  onClick={() => {
-                    const selectedNames = entryFields
-                      .filter((field) => selectedEntryKeys.includes(field.key))
-                      .map((field) => field.name);
-                    remove(selectedNames);
-                    setSelectedEntryKeys([]);
-                  }}
-                >
-                  删除
-                </Button>
-              </div>
-            )}
             <Table
-              rowKey="key"
+              rowKey="name"
               columns={columns}
               dataSource={entryFields}
               pagination={false}
@@ -251,7 +245,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
                 editable
                   ? {
                       selectedRowKeys: selectedEntryKeys,
-                      onChange: setSelectedEntryKeys,
+                      onChange: (keys) => setSelectedEntryKeys(keys),
                     }
                   : undefined
               }
@@ -266,6 +260,26 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
       }}
     </Form.List>
   );
+
+  const renderEntryActions = (editable: boolean) =>
+    editable ? (
+      <div className="sm-purchase-entry-actions">
+        <Button type="link" onClick={() => entryOperationsRef.current?.add({ quantity: 1 })}>
+          新增
+        </Button>
+        <Button
+          type="link"
+          danger
+          disabled={selectedEntryKeys.length === 0}
+          onClick={() => {
+            entryOperationsRef.current?.remove(selectedEntryKeys.map(Number));
+            setSelectedEntryKeys([]);
+          }}
+        >
+          删除
+        </Button>
+      </div>
+    ) : undefined;
 
   return (
     <EditPage
@@ -283,6 +297,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
       onSubmit={submitMutation.mutateAsync}
       saving={saveMutation.isPending || submitMutation.isPending}
       detailContent={renderEntrys}
+      detailExtra={renderEntryActions}
       onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
     />
   );

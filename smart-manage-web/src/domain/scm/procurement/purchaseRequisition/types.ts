@@ -21,7 +21,7 @@ export interface PurchaseRequisitionListVO {
   version: number;
   number: string;
   subject: string;
-  applyDate: string;
+  bizDate: string;
   requiredDate?: string;
   billStatus: string;
   createTime?: string;
@@ -39,7 +39,7 @@ export interface PurchaseRequisitionDetailVO {
   subject: string;
   applyOrgId: string;
   applicantId: string;
-  applyDate: string;
+  bizDate: string;
   requiredDate?: string;
   reason?: string;
   billStatus: string;
@@ -51,7 +51,7 @@ export interface PurchaseRequisitionDetailVO {
 export interface PurchaseRequisitionCreateNewDataVO {
   applyOrgId: string;
   applicantId: string;
-  applyDate: string;
+  bizDate: string;
   billStatus: string;
   entrys: PurchaseRequisitionEntry[];
 }
@@ -61,7 +61,7 @@ export interface PurchaseRequisitionSaveForm {
   version?: number;
   number: string;
   subject: string;
-  applyDate: string;
+  bizDate: string;
   requiredDate?: string;
   reason?: string;
   entrys: PurchaseRequisitionEntry[];

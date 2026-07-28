@@ -77,7 +77,7 @@
 .sm-edit-fields {
   display: flex;
   flex-wrap: wrap;
-  column-gap: 48px;
+  column-gap: 64px;
   margin-top: 8px;
 }
 

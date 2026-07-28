@@ -3,6 +3,8 @@ package sm.system.entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.time.LocalDate;
+
 /**
  * 业务单据实体基类。
  *
@@ -13,6 +15,11 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class BaseBillEntity extends BaseEntity {
+	/**
+	 * 业务日期：单据最核心的业务发生或归属日期。
+	 */
+	private LocalDate bizDate;
+
 	/**
 	 * 单据状态：A 暂存，B 已提交，C 审核通过，D 已关闭
 	 */

@@ -62,7 +62,7 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
       ),
     },
     { title: '主题', dataIndex: 'subject', width: 240 },
-    { title: '申请日期', dataIndex: 'applyDate', width: 120 },
+    { title: '业务日期', dataIndex: 'bizDate', width: 120 },
     { title: '需求日期', dataIndex: 'requiredDate', width: 120 },
     {
       title: '单据状态',

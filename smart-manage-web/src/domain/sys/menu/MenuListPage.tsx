@@ -21,7 +21,7 @@ import { menuAccess } from './permissions';
 const MENU_EDIT_KEY = 'sys/base/menu/edit';
 
 /** 树节点 key 格式：cloud:{cloudId} | app:{appId} */
-function nodeKey(prefix: string, id: string | number) {
+function nodeKey(prefix: string, id: string) {
   return `${prefix}:${id}`;
 }
 

@@ -10,7 +10,7 @@ import java.util.List;
 public class PurchaseRequisitionCreateNewDataVO {
     private Long applyOrgId;
     private Long applicantId;
-    private LocalDate applyDate;
+    private LocalDate bizDate;
     private String billStatus;
     private List<PurchaseRequisitionEntryVO> entrys = new ArrayList<>();
 }

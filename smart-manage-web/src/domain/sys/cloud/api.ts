@@ -23,16 +23,14 @@ export const cloudApi = {
 
   detail: (id: string) =>
     request
-      .post<Result<CloudDetailVO>>('/sys/base/cloud/detail', { id: Number(id) })
+      .post<Result<CloudDetailVO>>('/sys/base/cloud/detail', { id })
       .then((res) => res.data.data),
 
   save: (form: CloudSaveForm) =>
-    request.post<Result<number>>('/sys/base/cloud/save', form).then((res) => res.data.data),
+    request.post<Result<string>>('/sys/base/cloud/save', form).then((res) => res.data.data),
 
   delete: (id: string) =>
-    request
-      .post<Result<string>>('/sys/base/cloud/delete', { id: Number(id) })
-      .then((res) => res.data.data),
+    request.post<Result<string>>('/sys/base/cloud/delete', { id }).then((res) => res.data.data),
 
   setEnabled: (ids: string[], enabled: boolean) =>
     request

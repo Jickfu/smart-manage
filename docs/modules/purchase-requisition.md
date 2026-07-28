@@ -17,6 +17,8 @@
 - 组件键：`scm/procurement/purchase-requisition`
 - 权限前缀：`scm:procurement:purchase-requisition`
 
+采购申请使用标准单据字段 `biz_date` 记录业务日期；需求日期仍作为采购申请的领域专属日期保留。
+
 系统内核不得反向依赖本模块。模块可以依赖用户、组织、权限、日志、异常和通用页面能力。
 
 ## 移除方式

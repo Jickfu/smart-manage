@@ -25,6 +25,7 @@
 | `id` | ID |
 | `number` | 编码 |
 | `name` | 名称 |
+| `biz_date` | 业务日期 |
 | `create_time` | 创建时间 |
 | `update_time` | 更新时间 |
 | `create_user` | 创建人 |

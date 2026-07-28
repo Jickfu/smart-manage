@@ -173,7 +173,7 @@ class PurchaseRequisitionTxServiceTests {
         form.setVersion(2);
         form.setNumber("PR-001");
         form.setSubject("测试采购申请");
-        form.setApplyDate(LocalDate.of(2026, 7, 28));
+        form.setBizDate(LocalDate.of(2026, 7, 28));
         form.setEntrys(List.of(entryForm));
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(mapper, entryMapper);
@@ -195,7 +195,7 @@ class PurchaseRequisitionTxServiceTests {
         form.setVersion(version);
         form.setNumber("PR-001");
         form.setSubject("测试采购申请");
-        form.setApplyDate(LocalDate.of(2026, 7, 28));
+        form.setBizDate(LocalDate.of(2026, 7, 28));
         form.setEntrys(List.of(entryForm));
         return form;
     }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { App } from 'antd';
-import { CloseCircleOutlined, CompressOutlined, HomeOutlined } from '@ant-design/icons';
+import { CloseCircleOutlined, CloseSquareOutlined, HomeOutlined } from '@ant-design/icons';
 import { Tooltip } from 'antd';
 import { useWorkbenchStore } from '@/stores/workbench';
 import './ContentTabsBar.css';
@@ -114,7 +114,7 @@ const ContentTabsBar = ({ appNumber }: Props) => {
             aria-label="关闭其他页签"
             disabled={closing}
           >
-            <CompressOutlined />
+            <CloseSquareOutlined />
           </button>
         </Tooltip>
         <Tooltip title="关闭全部页签" placement="bottomRight" autoAdjustOverflow={false}>
