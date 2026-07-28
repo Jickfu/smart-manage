@@ -47,17 +47,20 @@ const fields: EditField[] = [
     rules: [{ required: true, message: '业务日期不能为空' }],
   },
   { label: '需求日期', dataIndex: 'requiredDate', type: 'date', placeholder: 'YYYY-MM-DD' },
-  { label: '单据状态', dataIndex: 'billStatusName', type: 'readonly' },
+  {
+    label: '单据状态',
+    dataIndex: 'billStatus',
+    type: 'select',
+    disabled: true,
+    options: [
+      { label: '暂存', value: BillStatus.SAVED },
+      { label: '已提交', value: BillStatus.SUBMITTED },
+      { label: '审核通过', value: BillStatus.AUDITED },
+      { label: '已关闭', value: BillStatus.CLOSED },
+    ],
+  },
   { label: '申请原因', dataIndex: 'reason', type: 'textarea', fullWidth: true },
 ];
-
-function statusName(status?: string) {
-  if (status === BillStatus.SAVED) return '暂存';
-  if (status === BillStatus.SUBMITTED) return '已提交';
-  if (status === BillStatus.AUDITED) return '审核通过';
-  if (status === BillStatus.CLOSED) return '已关闭';
-  return '';
-}
 
 function isDetail(
   source: PurchaseRequisitionDetailVO | PurchaseRequisitionCreateNewDataVO,
@@ -92,7 +95,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
             bizDate: source.bizDate,
             requiredDate: detail?.requiredDate ?? '',
             reason: detail?.reason ?? '',
-            billStatusName: statusName(source.billStatus),
+            billStatus: source.billStatus,
             entrys: source.entrys ?? [],
           }
         : {},

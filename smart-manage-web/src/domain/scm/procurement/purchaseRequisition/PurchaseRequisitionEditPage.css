@@ -45,3 +45,17 @@
 .sm-purchase-requisition-entrys .ant-input-number-focused {
   border-color: var(--sm-primary);
 }
+
+/* 查看态仍使用 disabled 阻止交互，但不显示明细数字框的步进按钮。 */
+.sm-edit-form--view
+  .sm-purchase-requisition-entrys
+  .ant-input-number-disabled
+  .ant-input-number-handler-wrap {
+  display: none;
+}
+
+.sm-edit-form--view .sm-purchase-requisition-entrys .ant-input:hover,
+.sm-edit-form--view .sm-purchase-requisition-entrys .ant-input:focus,
+.sm-edit-form--view .sm-purchase-requisition-entrys .ant-input-number:hover {
+  border-color: transparent;
+}

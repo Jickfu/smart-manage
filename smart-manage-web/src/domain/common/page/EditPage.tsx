@@ -224,7 +224,7 @@ const EditPage = ({
       <Form
         form={form}
         layout="vertical"
-        className="sm-edit-form"
+        className={`sm-edit-form${editable ? '' : ' sm-edit-form--view'}`}
         onValuesChange={() => setDirty(true)}
       >
         <Collapse

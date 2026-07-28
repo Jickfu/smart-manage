@@ -113,6 +113,72 @@
   font-size: 14px;
 }
 
+/* === 整单查看态 ===
+ * 保留 disabled 的交互保护，仅恢复控件的正常可读性；
+ * 编辑态中字段自身的 disabled 样式不受影响。
+ */
+
+.sm-edit-form--view .ant-input.ant-input-disabled,
+.sm-edit-form--view textarea.ant-input-disabled,
+.sm-edit-form--view .ant-input-number-disabled input,
+.sm-edit-form--view .ant-picker-disabled input {
+  color: var(--ant-color-text) !important;
+  -webkit-text-fill-color: var(--ant-color-text) !important;
+  cursor: default !important;
+}
+
+.sm-edit-form--view .ant-picker-disabled input::placeholder {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.sm-edit-form--view .ant-input.ant-input-disabled,
+.sm-edit-form--view .ant-input-number-disabled,
+.sm-edit-form--view .ant-picker-disabled {
+  background-color: transparent !important;
+  cursor: default !important;
+}
+
+.sm-edit-form--view .ant-picker-disabled .ant-picker-suffix {
+  color: var(--ant-color-text-secondary) !important;
+}
+
+.sm-edit-form--view .ant-select.ant-select-disabled {
+  background-color: transparent !important;
+  cursor: default !important;
+}
+
+.sm-edit-form--view .ant-select-disabled .ant-select-content {
+  color: var(--ant-color-text) !important;
+  -webkit-text-fill-color: var(--ant-color-text) !important;
+}
+
+.sm-edit-form--view .ant-select-disabled .ant-select-suffix {
+  color: var(--ant-color-text-secondary) !important;
+}
+
+.sm-edit-form--view .ant-switch-disabled {
+  cursor: default !important;
+  opacity: 1 !important;
+}
+
+.sm-edit-form--view .ant-switch-disabled.ant-switch-checked {
+  background-color: var(--ant-color-primary);
+}
+
+.sm-edit-form--view .sm-ref-selector-trigger {
+  cursor: default;
+}
+
+.sm-edit-form--view .sm-ref-selector-trigger:hover {
+  border-bottom-color: var(--ant-color-border);
+}
+
+.sm-edit-form--view .sm-ref-selector-trigger-btn:disabled {
+  color: var(--ant-color-text-tertiary) !important;
+  cursor: default !important;
+}
+
 /* === headerExtra 区域 — 与编辑 body 对齐但无默认间距 === */
 
 .sm-edit-header-extra {
