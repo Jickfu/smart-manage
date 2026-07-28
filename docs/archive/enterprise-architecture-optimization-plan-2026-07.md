@@ -1,4 +1,6 @@
-# Smart Manage 企业级架构优化计划
+# Smart Manage 企业级架构优化计划（历史归档）
+
+> 本文档是 2026 年 7 月的历史快照，不再代表当前架构、项目状态或后续计划。当前架构以 `docs/architecture/` 为准，未完成事项以 `docs/roadmap.md` 为准。
 
 ## 1. 文档定位
 
