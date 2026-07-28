@@ -72,7 +72,7 @@ class AttachmentTxService {
                 }
             }
             log.info("附件上传: id={}, name={}, temp={}", entity.getId(), originalName, isTemp);
-            return toVo(entity);
+            return assembleAttachmentVO(entity);
         } catch (RuntimeException exception) {
             deleteForCompensation(storage, result.getStoredPath(), "附件上传数据库写入失败");
             throw exception;
@@ -157,7 +157,8 @@ class AttachmentTxService {
                 .eq(BizAttachmentEntity::getAttachmentId, attachmentId));
     }
 
-    private AttachmentVO toVo(AttachmentEntity entity) {
+    /** 上传结果需要拼装存储访问地址，因此不交给 MapStruct。 */
+    private AttachmentVO assembleAttachmentVO(AttachmentEntity entity) {
         AttachmentVO vo = new AttachmentVO();
         vo.setId(entity.getId());
         vo.setOriginalName(entity.getOriginalName());

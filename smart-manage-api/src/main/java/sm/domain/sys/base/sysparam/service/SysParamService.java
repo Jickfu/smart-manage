@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 public class SysParamService {
     private final SysParamMapper mapper;
     private final SysParamTxService txService;
+    private final SysParamConverter converter;
 
     /** 管理端分页列表 */
     public PageData<SysParamVO> listPage(SysParamListForm form) {
@@ -47,7 +48,7 @@ public class SysParamService {
         qw.orderByAsc(SysParamEntity::getNumber);
         Page<SysParamEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
         Page<SysParamEntity> result = mapper.selectPage(page, qw);
-        List<SysParamVO> vos = result.getRecords().stream().map(this::toVo).collect(Collectors.toList());
+        List<SysParamVO> vos = result.getRecords().stream().map(converter::toVO).collect(Collectors.toList());
         return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
     }
 
@@ -60,7 +61,7 @@ public class SysParamService {
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "系统参数不存在");
         }
-        return toVo(entity);
+        return converter.toVO(entity);
     }
 
     /** 新增默认值 */
@@ -122,15 +123,4 @@ public class SysParamService {
 
     // ==================== 内部方法 ====================
 
-    private SysParamVO toVo(SysParamEntity entity) {
-        SysParamVO vo = new SysParamVO();
-        vo.setId(entity.getId());
-        vo.setVersion(entity.getVersion());
-        vo.setNumber(entity.getNumber());
-        vo.setName(entity.getName());
-        vo.setValue(entity.getValue());
-        vo.setRemark(entity.getRemark());
-        vo.setIsSystem(entity.getIsSystem());
-        return vo;
-    }
 }

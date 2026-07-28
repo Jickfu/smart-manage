@@ -57,6 +57,9 @@
 - **XML Mapper 表别名**：所有 SQL 中 FROM 主表别名为 `a`，JOIN 表按出现顺序依次为 `b, c, d...`。不使用语义化别名（如 `app`、`user`），保持 SQL 紧凑统一。
 - Service 的公开业务方法禁止用 `return null` 表达业务失败。资源不存在、状态非法、无权限、参数不合法等场景必须抛出明确异常，让 `GlobalExceptionHandler` 统一返回。内部辅助方法确实允许缺省值时，方法命名和注释必须明确可空语义。
 - JSON 反序列化、ID 转换等基础设施禁止静默吞错。比如 Long 解析失败不能返回 `null`，应暴露为参数异常。
+- **VO 映射边界**：Entity 到列表、选择、明细和基础详情 VO 的纯字段映射使用模块内 `*Converter`（MapStruct）；Converter 禁止依赖
+  Mapper、Service、缓存、安全上下文或外部资源。需要查询、权限判断、默认值、状态规则、树结构或主从聚合的转换属于业务组装，保留在公开
+  Service 并使用 `assemble*` 命名。MyBatis 联表直接投影 VO 的查询保持不变。
 - 标准业务接口语义：`listPage` 返回分页；`detail` 找不到应抛异常；`createNewData` 只返回新增默认值且不返回 id；`save` 负责新增和暂存修改；`submit` 负责提交并推进单据状态；`delete` 负责删除或作废，具体语义由单据类型明确。
 - 修改后端代码后至少执行 `mvn test`；只有文档修改或确认不影响测试代码的简单改动才可以仅执行 `mvn compile`。如果涉及实体、Mapper 或配置变更，也需要确认 MyBatis-Plus 相关代码可以正常编译。
 - **事务分离**：Service 禁止直接写 `@Transactional`。每个含写操作的 Service 必须搭配一个 `*TxService`，将 `@Transactional(rollbackFor = Exception.class)` 放在 TxService 类级别。Service 注入 TxService，写方法（`save`/`deleteById` 等）以委托方式调用 TxService。读写共用的私有辅助方法留在 Service；仅事务内使用的私有方法移入 TxService。TxService 内需要的前置读取（如唯一性校验、存在性检查）直接使用 Mapper，不走 Service 缓存方法。
@@ -80,7 +83,7 @@
 ### SQL执行
 - 数据库结构定义以 Flyway 迁移为唯一权威来源；查询数据库实际状态用于排查运行问题和核实迁移结果，不能替代迁移脚本。
 - 如果需要执行 SQL，可以使用 psql 命令直接执行。必须使用当前环境已有的安全凭据方式，例如临时设置 `PGPASSWORD` 或使用受控连接配置；禁止把数据库密码写入代码、文档、提交记录或最终回复。psql 命令在
-  `D:\Programs\PostgreSQL\16\bin`
+  `D:\Program Files\PostgreSQL\16\bin`
 - 客户端和数据库写入默认使用 UTF-8。只有确认 Windows 终端查询结果乱码时，才可以临时调整查询输出的客户端编码；数据库写入不得依赖 GBK。
 - **创建表时必须加上表备注和字段备注**，使用 PostgreSQL `COMMENT ON` 语法。字段注释规范：
   - `id` → `ID`
@@ -103,6 +106,7 @@ cd smart-manage-web
 
 pnpm dev        # 开发（localhost:8000，代理 /smart-manage-api → localhost:8080）
 pnpm build      # tsc 类型检查 + vite build
+pnpm test       # Vitest 关键前端逻辑测试
 pnpm preview    # 预览构建产物
 pnpm lint       # ESLint 检查（max-warnings 0）
 pnpm lint:fix   # ESLint 自动修复
@@ -158,6 +162,7 @@ src/
 
 ### 页面架构
 
+- **页面三层边界**：页面壳层只负责布局、加载、错误、权限和按钮区；表单/列表基础组件负责字段渲染、过滤器、表格和引用选择器；领域业务页面负责状态流转、Mutation、明细聚合和业务命令。禁止把具体单据状态或命令参数继续加入公共页面壳层。
 - 前端业务页面目录与后端保持一致，按 `src/domain/{领域}/{应用}/{单据}` 分层，例如 `src/domain/sys/base/user`。
 - 菜单表中的 `component` 使用稳定业务键，例如 `sys/base/user/list`、`sys/base/file-config/custom`。后端只存菜单元数据，前端通过组件注册表把 `component` 映射为真实组件。
 - 组件注册表是前端白名单，由 `pnpm gen:registry` 发现并导入 `src/domain/**/pageRegistration.ts` 或 `.tsx` 注册清单，禁止根据页面文件名、目录结构或后端字符串推断并任意动态加载组件。每个业务模块或单据目录维护一个 `pageRegistration.ts`，默认导出 `definePageRegistrations([...])` 的结果；一个注册清单可以声明该模块的多个页面，但一个页面组件文件原则上只实现一个页面组件，业务键重复时必须在生成或注册阶段直接报错。
@@ -188,7 +193,8 @@ src/
 - UI 组件仅使用 Ant Design，禁止引入其它 UI 库
 - `id` 必须用字符串存储（后端 Long 雪花 ID 会丢失精度）
 - `package.json` 声明 `"type": "module"`，ESLint 使用 ES module 格式
-- 修改前端代码后至少执行 `pnpm lint`、`pnpm format:check`、`pnpm build`。只有需要自动修复格式或用户明确要求时，才执行 `pnpm lint:fix` 或 `pnpm format`。
+- 修改前端代码后至少执行 `pnpm lint`、`pnpm format:check`、`pnpm test`、`pnpm build`。只有需要自动修复格式或用户明确要求时，才执行
+  `pnpm lint:fix` 或 `pnpm format`。
 - eslint报错时，只有在用户允许的情况下才可以使用注释跳过校验和修改eslint.config.js文件
 
 ### 样式规范

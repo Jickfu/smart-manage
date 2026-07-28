@@ -20,7 +20,6 @@ import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -28,6 +27,7 @@ import java.util.stream.Collectors;
 public class CloudService {
 	private final CloudMapper mapper;
 	private final CloudTxService txService;
+	private final CloudConverter converter;
 
 	public PageData<CloudListVO> listPage(CloudListForm form) {
 		LambdaQueryWrapper<CloudEntity> qw = new LambdaQueryWrapper<CloudEntity>();
@@ -41,7 +41,7 @@ public class CloudService {
 		qw.orderByAsc(CloudEntity::getSeq).orderByAsc(CloudEntity::getId);
 		Page<CloudEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<CloudEntity> result = mapper.selectPage(page, qw);
-		List<CloudListVO> vos = result.getRecords().stream().map(this::toListVo).collect(Collectors.toList());
+		List<CloudListVO> vos = result.getRecords().stream().map(converter::toListVO).toList();
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
 	}
 
@@ -57,29 +57,8 @@ public class CloudService {
 		qw.orderByAsc(CloudEntity::getSeq).orderByAsc(CloudEntity::getId);
 		Page<CloudEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<CloudEntity> result = mapper.selectPage(page, qw);
-		List<CloudSelectVO> vos = result.getRecords().stream().map(this::toSelectVo).collect(Collectors.toList());
+		List<CloudSelectVO> vos = result.getRecords().stream().map(converter::toSelectVO).toList();
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
-	}
-
-	private CloudListVO toListVo(CloudEntity e) {
-		CloudListVO vo = new CloudListVO();
-		vo.setId(e.getId());
-		vo.setName(e.getName());
-		vo.setNumber(e.getNumber());
-		vo.setSeq(e.getSeq());
-		vo.setEnabled(e.getEnabled());
-		vo.setCreateTime(e.getCreateTime());
-		vo.setUpdateTime(e.getUpdateTime());
-		return vo;
-	}
-
-	private CloudSelectVO toSelectVo(CloudEntity e) {
-		CloudSelectVO vo = new CloudSelectVO();
-		vo.setId(e.getId());
-		vo.setName(e.getName());
-		vo.setNumber(e.getNumber());
-		vo.setEnabled(e.getEnabled());
-		return vo;
 	}
 
 	public CloudEntity getById(Long id) {
@@ -94,22 +73,7 @@ public class CloudService {
 		if (entity == null) {
 			throw new BizException(ResultEnum.NOT_FOUND, "云不存在");
 		}
-		return toDetailVo(entity);
-	}
-
-	private CloudDetailVO toDetailVo(CloudEntity e) {
-		CloudDetailVO vo = new CloudDetailVO();
-		vo.setId(String.valueOf(e.getId()));
-		vo.setVersion(e.getVersion());
-		vo.setName(e.getName());
-		vo.setNumber(e.getNumber());
-		vo.setSeq(e.getSeq());
-		vo.setEnabled(e.getEnabled());
-		vo.setCreateTime(e.getCreateTime());
-		vo.setUpdateTime(e.getUpdateTime());
-		vo.setCreateUser(e.getCreateUser());
-		vo.setUpdateUser(e.getUpdateUser());
-		return vo;
+		return converter.toDetailVO(entity);
 	}
 
 	public CloudCreateNewDataVO createNewData() {

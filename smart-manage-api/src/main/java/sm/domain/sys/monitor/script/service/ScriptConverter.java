@@ -1,0 +1,14 @@
+package sm.domain.sys.monitor.script.service;
+
+import org.mapstruct.Mapper;
+import sm.domain.sys.monitor.script.model.entity.ScriptEntity;
+import sm.domain.sys.monitor.script.model.vo.ScriptDetailVO;
+import sm.domain.sys.monitor.script.model.vo.ScriptListVO;
+import sm.framework.mapping.SmMapperConfig;
+
+/** 脚本元数据纯字段转换器。 */
+@Mapper(config = SmMapperConfig.class)
+interface ScriptConverter {
+    ScriptListVO toListVO(ScriptEntity entity);
+    ScriptDetailVO toDetailVO(ScriptEntity entity);
+}

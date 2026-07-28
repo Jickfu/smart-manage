@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class SqlLogDetailVO {
 
 	@Schema(description = "ID")
-	private String id;
+	private Long id;
 
 	@Schema(description = "SQL文本")
 	private String sqlText;

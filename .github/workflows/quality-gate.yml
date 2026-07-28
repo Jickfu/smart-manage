@@ -14,9 +14,9 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Compile backend
+      - name: Test backend
         working-directory: smart-manage-api
-        run: mvn --batch-mode --no-transfer-progress compile
+        run: mvn --batch-mode --no-transfer-progress test
 
   frontend:
     runs-on: ubuntu-latest
@@ -39,9 +39,14 @@ jobs:
       - name: Check formatting
         working-directory: smart-manage-web
         run: pnpm format:check
+      - name: Test
+        working-directory: smart-manage-web
+        run: pnpm test
       - name: Build
         working-directory: smart-manage-web
         run: pnpm build
+      - name: Verify generated registry is committed
+        run: git diff --exit-code -- smart-manage-web/src/domain/common/registry/registry.gen.ts
 
   migrations:
     runs-on: ubuntu-latest

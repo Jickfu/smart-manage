@@ -14,12 +14,12 @@ import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class OperateLogQueryService {
 	private final OperateLogMapper mapper;
+	private final OperateLogConverter converter;
 
 	public PageData<OperateLogListVO> listPage(OperateLogListForm form) {
 		LambdaQueryWrapper<OperateLogEntity> qw = new LambdaQueryWrapper<OperateLogEntity>();
@@ -39,7 +39,7 @@ public class OperateLogQueryService {
 		qw.orderByDesc(OperateLogEntity::getCreateTime);
 		Page<OperateLogEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<OperateLogEntity> result = mapper.selectPage(page, qw);
-		var records = result.getRecords().stream().map(this::toListVo).collect(Collectors.toList());
+		var records = result.getRecords().stream().map(converter::toListVO).toList();
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
 	}
 
@@ -51,44 +51,6 @@ public class OperateLogQueryService {
 		if (entity == null) {
 			throw new BizException(ResultEnum.NOT_FOUND, "操作日志不存在");
 		}
-		return toDetail(entity);
-	}
-
-	private OperateLogListVO toListVo(OperateLogEntity entity) {
-		OperateLogListVO vo = new OperateLogListVO();
-		vo.setId(entity.getId());
-		vo.setBizName(entity.getBizName());
-		vo.setSuccess(entity.getSuccess());
-		vo.setErrorMsg(entity.getErrorMsg());
-		vo.setRequestMethod(entity.getRequestMethod());
-		vo.setRequestUri(entity.getRequestUri());
-		vo.setIp(entity.getIp());
-		vo.setClassName(entity.getClassName());
-		vo.setMethodName(entity.getMethodName());
-		vo.setDurationMs(entity.getDurationMs());
-		vo.setUsername(entity.getUsername());
-		vo.setCreateTime(entity.getCreateTime());
-		return vo;
-	}
-
-	private OperateLogDetailVO toDetail(OperateLogEntity entity) {
-		OperateLogDetailVO vo = new OperateLogDetailVO();
-		vo.setId(entity.getId());
-		vo.setBizName(entity.getBizName());
-		vo.setSuccess(entity.getSuccess());
-		vo.setErrorMsg(entity.getErrorMsg());
-		vo.setRequestMethod(entity.getRequestMethod());
-		vo.setRequestUri(entity.getRequestUri());
-		vo.setIp(entity.getIp());
-		vo.setUserAgent(entity.getUserAgent());
-		vo.setClassName(entity.getClassName());
-		vo.setMethodName(entity.getMethodName());
-		vo.setDurationMs(entity.getDurationMs());
-		vo.setRequestParams(entity.getRequestParams());
-		vo.setResponseBody(entity.getResponseBody());
-		vo.setUserId(entity.getUserId());
-		vo.setUsername(entity.getUsername());
-		vo.setCreateTime(entity.getCreateTime());
-		return vo;
+		return converter.toDetailVO(entity);
 	}
 }

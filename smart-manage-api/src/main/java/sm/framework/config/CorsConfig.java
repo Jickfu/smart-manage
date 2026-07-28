@@ -2,6 +2,7 @@ package sm.framework.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,23 +19,27 @@ import org.springframework.web.filter.CorsFilter;
  */
 @Configuration
 @Slf4j
+@EnableConfigurationProperties(CorsProperties.class)
 public class CorsConfig {
 
-	@Value("${smart-manage.framework.cors.allowed-origins:http://localhost:8000}")
-	private String[] allowedOrigins;
+	private final CorsProperties corsProperties;
 
 	@Value("${sa-token.token-name:smtoken}")
 	private String tokenName;
 
+	public CorsConfig(CorsProperties corsProperties) {
+		this.corsProperties = corsProperties;
+	}
+
 	@Bean
 	public FilterRegistrationBean<CorsFilter> corsFilter() {
-		log.info("初始化CORS配置，允许的源：{}", (Object) allowedOrigins);
+		log.info("初始化 CORS 配置，允许的源：{}", corsProperties.allowedOrigins());
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		CorsConfiguration config = new CorsConfiguration();
 		config.setAllowCredentials(true);
 
 		// 设置允许的源
-		for (String origin : allowedOrigins) {
+		for (String origin : corsProperties.allowedOrigins()) {
 			config.addAllowedOriginPattern(origin);
 		}
 

@@ -2,7 +2,7 @@ import type { ThemeConfig } from 'antd';
 import { normalizeThemeColor, SM_SAFE_LINK_COLOR } from './themePalette';
 
 const SM_FONT_FAMILY =
-    'Roboto, "San Francisco", "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "WenQuanYi Micro Hei", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif';
+  'Roboto, "San Francisco", "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "WenQuanYi Micro Hei", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif';
 
 /** 固定的视觉令牌。换肤时仅 colorPrimary 及其派生色发生变化。 */
 export function createThemeConfig(themeColor?: string | null): ThemeConfig {

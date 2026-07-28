@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class PermissionDetailVO {
 
 	@Schema(description = "ID")
-	private String id;
+	private Long id;
 
 	@Schema(description = "乐观锁版本号")
 	private Integer version;

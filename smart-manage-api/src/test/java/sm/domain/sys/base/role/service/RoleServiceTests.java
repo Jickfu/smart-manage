@@ -21,7 +21,8 @@ class RoleServiceTests {
                 mapper,
                 mock(RolePermissionMapper.class),
                 mock(RoleTxService.class),
-                mock(AuthorizationStateHelper.class));
+                mock(AuthorizationStateHelper.class),
+                new RoleConverterImpl());
 
         assertEquals(List.of("operator", "reviewer"), service.getUserRoleNumbers(10L, 20L));
     }

@@ -12,7 +12,6 @@ import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.system.response.PageData;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @author Chekfu
@@ -22,6 +21,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrgService {
 	private final OrgMapper mapper;
+	private final OrgConverter converter;
 
 	public PageData<OrgListVO> listPage(OrgListForm form) {
 		LambdaQueryWrapper<OrgEntity> qw = new LambdaQueryWrapper<OrgEntity>()
@@ -29,17 +29,8 @@ public class OrgService {
 				.orderByAsc(OrgEntity::getId);
 		Page<OrgEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<OrgEntity> result = mapper.selectPage(page, qw);
-		List<OrgListVO> vos = result.getRecords().stream().map(this::toListVo).collect(Collectors.toList());
+		List<OrgListVO> vos = result.getRecords().stream().map(converter::toListVO).toList();
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
 	}
 
-	private OrgListVO toListVo(OrgEntity e) {
-		OrgListVO vo = new OrgListVO();
-		vo.setId(e.getId());
-		vo.setName(e.getName());
-		vo.setNumber(e.getNumber());
-		vo.setParentId(e.getParentId());
-		vo.setSort(e.getSort());
-		return vo;
-	}
 }

@@ -1,6 +1,7 @@
 package sm.domain.scm.procurement.purchaserequisition.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,11 +75,18 @@ class PurchaseRequisitionTxService {
         return entity.getId();
     }
 
-    public void submit(Long id) {
+    public void submit(Long id, Integer version) {
         PurchaseRequisitionEntity entity = requireEntity(id);
-        entity.setBillStatus(BillStatusUtil.submit(entity.getBillStatus()));
-        if (mapper.updateById(entity) != 1) {
-            throw new BizException(ResultEnum.DATA_CONFLICT, "采购申请已被其他用户修改，请刷新后重试");
+        requireVersion(entity, version);
+        String nextStatus = BillStatusUtil.submit(entity.getBillStatus());
+        entity.setBillStatus(nextStatus);
+        // version 递增交给 MyBatis-Plus 乐观锁插件，Wrapper 额外保证状态与版本原子匹配。
+        int updated = mapper.update(entity, new LambdaUpdateWrapper<PurchaseRequisitionEntity>()
+                .eq(PurchaseRequisitionEntity::getId, id)
+                .eq(PurchaseRequisitionEntity::getBillStatus, BillStatusEnum.SAVED.getValue())
+                .eq(PurchaseRequisitionEntity::getVersion, version));
+        if (updated != 1) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "采购申请状态或版本已变化，请刷新后重试");
         }
     }
 

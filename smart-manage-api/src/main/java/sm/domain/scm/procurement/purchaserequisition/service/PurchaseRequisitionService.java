@@ -31,6 +31,7 @@ public class PurchaseRequisitionService {
     private final PurchaseRequisitionMapper mapper;
     private final PurchaseRequisitionEntryMapper entryMapper;
     private final PurchaseRequisitionTxService txService;
+    private final PurchaseRequisitionConverter converter;
 
     public PageData<PurchaseRequisitionListVO> listPage(PurchaseRequisitionListForm form) {
         LambdaQueryWrapper<PurchaseRequisitionEntity> queryWrapper = new LambdaQueryWrapper<>();
@@ -44,30 +45,19 @@ public class PurchaseRequisitionService {
         queryWrapper.orderByDesc(PurchaseRequisitionEntity::getCreateTime);
         Page<PurchaseRequisitionEntity> page = mapper.selectPage(
                 new Page<>(form.getPageNum(), form.getPageSize()), queryWrapper);
-        List<PurchaseRequisitionListVO> records = page.getRecords().stream().map(this::toListVO).toList();
+        List<PurchaseRequisitionListVO> records = page.getRecords().stream().map(converter::toListVO).toList();
         return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(), records);
     }
 
     public PurchaseRequisitionDetailVO detail(Long id) {
         PurchaseRequisitionEntity entity = requireEntity(id);
-        PurchaseRequisitionDetailVO detailVO = new PurchaseRequisitionDetailVO();
-        detailVO.setId(entity.getId());
-        detailVO.setVersion(entity.getVersion());
-        detailVO.setNumber(entity.getNumber());
-        detailVO.setSubject(entity.getSubject());
-        detailVO.setApplyOrgId(entity.getApplyOrgId());
-        detailVO.setApplicantId(entity.getApplicantId());
-        detailVO.setApplyDate(entity.getApplyDate());
-        detailVO.setRequiredDate(entity.getRequiredDate());
-        detailVO.setReason(entity.getReason());
-        detailVO.setBillStatus(entity.getBillStatus());
-        detailVO.setCreateTime(entity.getCreateTime());
-        detailVO.setUpdateTime(entity.getUpdateTime());
+        PurchaseRequisitionDetailVO detailVO = converter.toDetailVO(entity);
+        // 明细查询属于聚合组装，不放入仅承担纯字段映射的 Converter。
         detailVO.setEntrys(entryMapper.selectList(new LambdaQueryWrapper<PurchaseRequisitionEntryEntity>()
                         .eq(PurchaseRequisitionEntryEntity::getParentId, id)
                         .orderByAsc(PurchaseRequisitionEntryEntity::getSort)
                         .orderByAsc(PurchaseRequisitionEntryEntity::getId))
-                .stream().map(this::toEntryVO).toList());
+                .stream().map(converter::toEntryVO).toList());
         return detailVO;
     }
 
@@ -86,8 +76,8 @@ public class PurchaseRequisitionService {
     }
 
     @BizLog("提交采购申请")
-    public void submit(Long id) {
-        txService.submit(id);
+    public void submit(Long id, Integer version) {
+        txService.submit(id, version);
     }
 
     @BizLog("删除采购申请")
@@ -106,29 +96,4 @@ public class PurchaseRequisitionService {
         return entity;
     }
 
-    private PurchaseRequisitionListVO toListVO(PurchaseRequisitionEntity entity) {
-        PurchaseRequisitionListVO listVO = new PurchaseRequisitionListVO();
-        listVO.setId(entity.getId());
-        listVO.setVersion(entity.getVersion());
-        listVO.setNumber(entity.getNumber());
-        listVO.setSubject(entity.getSubject());
-        listVO.setApplyDate(entity.getApplyDate());
-        listVO.setRequiredDate(entity.getRequiredDate());
-        listVO.setBillStatus(entity.getBillStatus());
-        listVO.setCreateTime(entity.getCreateTime());
-        return listVO;
-    }
-
-    private PurchaseRequisitionEntryVO toEntryVO(PurchaseRequisitionEntryEntity entity) {
-        PurchaseRequisitionEntryVO entryVO = new PurchaseRequisitionEntryVO();
-        entryVO.setId(entity.getId());
-        entryVO.setMaterialName(entity.getMaterialName());
-        entryVO.setSpecification(entity.getSpecification());
-        entryVO.setUnit(entity.getUnit());
-        entryVO.setQuantity(entity.getQuantity());
-        entryVO.setRequiredDate(entity.getRequiredDate());
-        entryVO.setRemark(entity.getRemark());
-        entryVO.setSort(entity.getSort());
-        return entryVO;
-    }
 }

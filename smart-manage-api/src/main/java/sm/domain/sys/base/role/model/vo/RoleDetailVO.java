@@ -16,7 +16,7 @@ import java.util.List;
 public class RoleDetailVO {
 
 	@Schema(description = "ID")
-	private String id;
+	private Long id;
 
 	@Schema(description = "名称")
 	private String name;

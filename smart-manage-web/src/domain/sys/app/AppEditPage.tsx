@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 import { App } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import EditPage from '@/domain/common/page/EditPage';
-import { OperationType } from '@/domain/common/page/types';
 import type { EditField } from '@/domain/common/page/EditPage';
+import EditPage from '@/domain/common/page/EditPage';
+import type { PageComponentProps } from '@/domain/common/page/types';
+import { OperationType } from '@/domain/common/page/types';
 import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { appApi } from './api';
@@ -11,7 +12,6 @@ import { appAccess } from './permissions';
 import { appQueryKeys } from './queryKeys';
 import { cloudApi } from '@/domain/sys/cloud/api';
 import type { CloudSelectVO } from '@/domain/sys/cloud/types';
-import type { PageComponentProps } from '@/domain/common/page/types';
 
 /** 应用编辑字段定义 */
 const fields: EditField[] = [

@@ -48,4 +48,37 @@ class PurchaseRequisitionTxServiceTests {
         BizException exception = assertThrows(BizException.class, () -> service.deleteById(1L, 2));
         assertEquals(ResultEnum.DATA_CONFLICT.getCode(), exception.getCode());
     }
+
+    @Test
+    void submitRejectsStaleVersionBeforeWriting() {
+        PurchaseRequisitionMapper mapper = mock(PurchaseRequisitionMapper.class);
+        PurchaseRequisitionEntity entity = new PurchaseRequisitionEntity();
+        entity.setId(1L);
+        entity.setVersion(2);
+        entity.setBillStatus(BillStatusEnum.SAVED.getValue());
+        when(mapper.selectById(1L)).thenReturn(entity);
+
+        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
+                mapper, mock(PurchaseRequisitionEntryMapper.class));
+
+        BizException exception = assertThrows(BizException.class, () -> service.submit(1L, 1));
+        assertEquals(ResultEnum.DATA_CONFLICT.getCode(), exception.getCode());
+    }
+
+    @Test
+    void submitReportsConflictWhenAtomicConditionNoLongerMatches() {
+        PurchaseRequisitionMapper mapper = mock(PurchaseRequisitionMapper.class);
+        PurchaseRequisitionEntity entity = new PurchaseRequisitionEntity();
+        entity.setId(1L);
+        entity.setVersion(2);
+        entity.setBillStatus(BillStatusEnum.SAVED.getValue());
+        when(mapper.selectById(1L)).thenReturn(entity);
+        when(mapper.update(any(PurchaseRequisitionEntity.class), any())).thenReturn(0);
+
+        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
+                mapper, mock(PurchaseRequisitionEntryMapper.class));
+
+        BizException exception = assertThrows(BizException.class, () -> service.submit(1L, 2));
+        assertEquals(ResultEnum.DATA_CONFLICT.getCode(), exception.getCode());
+    }
 }

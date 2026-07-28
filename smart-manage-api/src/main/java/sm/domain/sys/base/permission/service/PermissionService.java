@@ -20,7 +20,6 @@ import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @author Chekfu
@@ -31,6 +30,7 @@ import java.util.stream.Collectors;
 public class PermissionService {
 	private final PermissionMapper mapper;
 	private final PermissionTxService txService;
+	private final PermissionConverter converter;
 
 	public PageData<PermissionListVO> listPage(PermissionListForm form) {
 		LambdaQueryWrapper<PermissionEntity> qw = new LambdaQueryWrapper<PermissionEntity>();
@@ -42,7 +42,7 @@ public class PermissionService {
 		}
 		qw.orderByAsc(PermissionEntity::getNumber);
 		Page<PermissionEntity> result = mapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), qw);
-		List<PermissionListVO> records = result.getRecords().stream().map(this::toListVo).collect(Collectors.toList());
+		List<PermissionListVO> records = result.getRecords().stream().map(converter::toListVO).toList();
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
 	}
 
@@ -54,17 +54,8 @@ public class PermissionService {
 				.orderByAsc(PermissionEntity::getNumber)
 				.orderByAsc(PermissionEntity::getId))
 				.stream()
-				.map(this::toSelectVo)
+				.map(converter::toSelectVO)
 				.toList();
-	}
-
-	private PermissionListVO toListVo(PermissionEntity entity) {
-		PermissionListVO vo = new PermissionListVO();
-		vo.setId(entity.getId());
-		vo.setName(entity.getName());
-		vo.setNumber(entity.getNumber());
-		vo.setAppId(entity.getAppId());
-		return vo;
 	}
 
 	/**
@@ -81,17 +72,8 @@ public class PermissionService {
 		}
 		qw.orderByAsc(PermissionEntity::getNumber);
 		Page<PermissionEntity> result = mapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), qw);
-		List<PermissionSelectVO> records = result.getRecords().stream().map(this::toSelectVo).collect(Collectors.toList());
+		List<PermissionSelectVO> records = result.getRecords().stream().map(converter::toSelectVO).toList();
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
-	}
-
-	private PermissionSelectVO toSelectVo(PermissionEntity e) {
-		PermissionSelectVO vo = new PermissionSelectVO();
-		vo.setId(e.getId());
-		vo.setNumber(e.getNumber());
-		vo.setName(e.getName());
-		vo.setAppId(e.getAppId());
-		return vo;
 	}
 
 	/**
@@ -126,21 +108,7 @@ public class PermissionService {
 		if (entity == null) {
 			throw new BizException(ResultEnum.NOT_FOUND, "权限不存在");
 		}
-		return toDetailVo(entity);
-	}
-
-	private PermissionDetailVO toDetailVo(PermissionEntity entity) {
-		PermissionDetailVO vo = new PermissionDetailVO();
-		vo.setId(String.valueOf(entity.getId()));
-		vo.setVersion(entity.getVersion());
-		vo.setName(entity.getName());
-		vo.setNumber(entity.getNumber());
-		vo.setAppId(entity.getAppId());
-		vo.setCreateTime(entity.getCreateTime());
-		vo.setUpdateTime(entity.getUpdateTime());
-		vo.setCreateUser(entity.getCreateUser());
-		vo.setUpdateUser(entity.getUpdateUser());
-		return vo;
+		return converter.toDetailVO(entity);
 	}
 
 	public PermissionCreateNewDataVO createNewData() {

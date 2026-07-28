@@ -21,7 +21,6 @@ import sm.system.response.ResultEnum;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * 界面配置服务
@@ -34,6 +33,7 @@ import java.util.stream.Collectors;
 public class UiConfigService {
     private final UiConfigMapper mapper;
     private final UiConfigTxService txService;
+    private final UiConfigConverter converter;
 
     public PageData<UiConfigListVO> listPage(UiConfigListForm form) {
         LambdaQueryWrapper<UiConfigEntity> qw = new LambdaQueryWrapper<UiConfigEntity>();
@@ -44,21 +44,8 @@ public class UiConfigService {
         qw.orderByAsc(UiConfigEntity::getId);
         Page<UiConfigEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
         Page<UiConfigEntity> result = mapper.selectPage(page, qw);
-        List<UiConfigListVO> vos = result.getRecords().stream().map(this::toListVo).collect(Collectors.toList());
+        List<UiConfigListVO> vos = result.getRecords().stream().map(converter::toListVO).toList();
         return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
-    }
-
-    private UiConfigListVO toListVo(UiConfigEntity entity) {
-        UiConfigListVO vo = new UiConfigListVO();
-        vo.setId(entity.getId());
-        vo.setPageTitle(entity.getPageTitle());
-        vo.setSystemName(entity.getSystemName());
-        vo.setLoginBanner(entity.getLoginBanner());
-        vo.setLoginLogo(entity.getLoginLogo());
-        vo.setHeaderLogo(entity.getHeaderLogo());
-        vo.setCreateTime(entity.getCreateTime());
-        vo.setUpdateTime(entity.getUpdateTime());
-        return vo;
     }
 
     public UiConfigEntity getById(Long id) {
@@ -73,25 +60,14 @@ public class UiConfigService {
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "界面配置不存在");
         }
-        return toDetailVo(entity);
+        return converter.toDetailVO(entity);
     }
 
     /** 获取活跃配置（Caffeine 本地缓存） */
     @Cached(cacheType = CacheType.LOCAL, name = "common", key = "'ui:config'", expire = 30, timeUnit = TimeUnit.MINUTES)
     public UiConfigDetailVO getActiveConfig() {
         List<UiConfigEntity> entityList = mapper.selectList(null);
-        return entityList.isEmpty() ? new UiConfigDetailVO() : toDetailVo(entityList.get(0));
-    }
-
-    private UiConfigDetailVO toDetailVo(UiConfigEntity entity) {
-        UiConfigDetailVO vo = new UiConfigDetailVO();
-        vo.setId(entity.getId());
-        vo.setPageTitle(entity.getPageTitle());
-        vo.setSystemName(entity.getSystemName());
-        vo.setLoginBanner(entity.getLoginBanner());
-        vo.setLoginLogo(entity.getLoginLogo());
-        vo.setHeaderLogo(entity.getHeaderLogo());
-        return vo;
+        return entityList.isEmpty() ? new UiConfigDetailVO() : converter.toDetailVO(entityList.get(0));
     }
 
     @BizLog("保存界面配置")

@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class ScriptListVO {
-    private String id;
+    private Long id;
     private String number;
     private String name;
     private String remark;

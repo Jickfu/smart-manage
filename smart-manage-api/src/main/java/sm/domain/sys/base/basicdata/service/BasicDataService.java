@@ -36,6 +36,7 @@ public class BasicDataService {
     private final BasicDataMapper mapper;
     private final BasicDataEntryMapper entryMapper;
     private final BasicDataTxService txService;
+    private final BasicDataConverter converter;
 
     public PageData<BasicDataListVO> listPage(BasicDataListForm form) {
         LambdaQueryWrapper<BasicDataEntity> queryWrapper = new LambdaQueryWrapper<>();
@@ -47,7 +48,7 @@ public class BasicDataService {
         queryWrapper.orderByAsc(BasicDataEntity::getNumber);
         Page<BasicDataEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
         Page<BasicDataEntity> result = mapper.selectPage(page, queryWrapper);
-        List<BasicDataListVO> records = result.getRecords().stream().map(this::toListVO).toList();
+        List<BasicDataListVO> records = result.getRecords().stream().map(converter::toListVO).toList();
         return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
     }
 
@@ -124,28 +125,8 @@ public class BasicDataService {
                         .orderByAsc(BasicDataEntryEntity::getSort)
                         .orderByAsc(BasicDataEntryEntity::getId))
                 .stream()
-                .map(this::toEntryVO)
+                .map(converter::toEntryVO)
                 .toList();
     }
 
-    private BasicDataListVO toListVO(BasicDataEntity entity) {
-        BasicDataListVO listVO = new BasicDataListVO();
-        listVO.setId(entity.getId());
-        listVO.setNumber(entity.getNumber());
-        listVO.setName(entity.getName());
-        listVO.setRemark(entity.getRemark());
-        listVO.setEnabled(entity.getEnabled());
-        listVO.setCreateTime(entity.getCreateTime());
-        return listVO;
-    }
-
-    private BasicDataEntryVO toEntryVO(BasicDataEntryEntity entry) {
-        BasicDataEntryVO entryVO = new BasicDataEntryVO();
-        entryVO.setId(entry.getId());
-        entryVO.setNumber(entry.getNumber());
-        entryVO.setName(entry.getName());
-        entryVO.setSort(entry.getSort());
-        entryVO.setEnabled(entry.getEnabled());
-        return entryVO;
-    }
 }

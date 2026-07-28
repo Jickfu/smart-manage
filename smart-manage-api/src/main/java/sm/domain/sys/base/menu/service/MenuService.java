@@ -36,6 +36,7 @@ public class MenuService {
 	private final MenuMapper mapper;
 	private final AppMapper appMapper;
 	private final MenuTxService txService;
+	private final MenuConverter converter;
 
 	/**
 	 * 前端工作区白名单 key：与路径一致（去前导 /、全小写），例如 "/sys/monitor/home" -> "sys/monitor/home"
@@ -67,7 +68,7 @@ public class MenuService {
 		}
 		qw.orderByAsc(MenuEntity::getSort).orderByAsc(MenuEntity::getId);
 		Page<MenuEntity> result = mapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), qw);
-		List<MenuListVO> records = result.getRecords().stream().map(this::toMenuListVo).collect(Collectors.toList());
+		List<MenuListVO> records = result.getRecords().stream().map(converter::toListVO).collect(Collectors.toList());
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
 	}
 
@@ -80,37 +81,7 @@ public class MenuService {
 				.orderByAsc(MenuEntity::getLevel)
 				.orderByAsc(MenuEntity::getSort)
 				.orderByAsc(MenuEntity::getId));
-		return entityList.stream().map(this::toMenuTreeVo).toList();
-	}
-
-	private MenuTreeVO toMenuTreeVo(MenuEntity entity) {
-		MenuTreeVO vo = new MenuTreeVO();
-		vo.setId(entity.getId());
-		vo.setNumber(entity.getNumber());
-		vo.setName(entity.getName());
-		vo.setLevel(entity.getLevel().getCode());
-		vo.setParentId(entity.getParentId());
-		vo.setPath(entity.getPath());
-		vo.setComponent(entity.getComponent());
-		vo.setSort(entity.getSort());
-		vo.setIcon(entity.getIcon());
-		vo.setEnabled(entity.getEnabled());
-		return vo;
-	}
-
-	private MenuListVO toMenuListVo(MenuEntity e) {
-		MenuListVO vo = new MenuListVO();
-		vo.setId(e.getId());
-		vo.setNumber(e.getNumber());
-		vo.setLevel(e.getLevel());
-		vo.setParentId(e.getParentId());
-		vo.setName(e.getName());
-		vo.setPath(e.getPath());
-		vo.setComponent(e.getComponent());
-		vo.setSort(e.getSort());
-		vo.setIcon(e.getIcon());
-		vo.setEnabled(e.getEnabled());
-		return vo;
+		return entityList.stream().map(converter::toTreeVO).toList();
 	}
 
 	/**
@@ -130,18 +101,8 @@ public class MenuService {
 		}
 		wrapper.orderByAsc(MenuEntity::getSort).orderByAsc(MenuEntity::getId);
 		Page<MenuEntity> result = mapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), wrapper);
-		List<MenuSelectVO> records = result.getRecords().stream().map(this::toMenuSelectVo).collect(Collectors.toList());
+		List<MenuSelectVO> records = result.getRecords().stream().map(converter::toSelectVO).collect(Collectors.toList());
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
-	}
-
-	private MenuSelectVO toMenuSelectVo(MenuEntity e) {
-		MenuSelectVO vo = new MenuSelectVO();
-		vo.setId(e.getId());
-		vo.setNumber(e.getNumber());
-		vo.setName(e.getName());
-		vo.setLevel(e.getLevel());
-		vo.setEnabled(e.getEnabled());
-		return vo;
 	}
 
 
@@ -227,39 +188,18 @@ public class MenuService {
 		if (entity == null) {
 			throw new BizException(ResultEnum.NOT_FOUND, "菜单不存在");
 		}
-		MenuDetailVO vo = toDetailVo(entity);
+		MenuDetailVO vo = converter.toDetailVO(entity);
 		// 填充父菜单信息
 		if (entity.getParentId() != null && entity.getParentId() > 0) {
 			MenuEntity parentEntity = mapper.selectById(entity.getParentId());
 			if (parentEntity != null) {
 				MenuDetailVO.ParentInfo info = new MenuDetailVO.ParentInfo();
-				info.setId(String.valueOf(parentEntity.getId()));
+				info.setId(parentEntity.getId());
 				info.setNumber(parentEntity.getNumber());
 				info.setName(parentEntity.getName());
 				vo.setParent(info);
 			}
 		}
-		return vo;
-	}
-
-	private MenuDetailVO toDetailVo(MenuEntity entity) {
-		MenuDetailVO vo = new MenuDetailVO();
-		vo.setId(String.valueOf(entity.getId()));
-		vo.setNumber(entity.getNumber());
-		vo.setName(entity.getName());
-		vo.setLevel(entity.getLevel());
-		vo.setAppId(entity.getAppId());
-		vo.setPermissionId(entity.getPermissionId());
-		vo.setPath(entity.getPath());
-		vo.setComponent(entity.getComponent());
-		vo.setIcon(entity.getIcon());
-		vo.setDescription(entity.getDescription());
-		vo.setSort(entity.getSort());
-		vo.setEnabled(entity.getEnabled());
-		vo.setCreateTime(entity.getCreateTime());
-		vo.setUpdateTime(entity.getUpdateTime());
-		vo.setCreateUser(entity.getCreateUser());
-		vo.setUpdateUser(entity.getUpdateUser());
 		return vo;
 	}
 

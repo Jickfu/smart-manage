@@ -13,12 +13,12 @@ import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class LoginLogQueryService {
 	private final LoginLogMapper loginLogMapper;
+	private final LoginLogConverter converter;
 
 	public PageData<LoginLogListVO> listPage(LoginLogListForm form) {
 		LambdaQueryWrapper<LoginLogEntity> qw = new LambdaQueryWrapper<LoginLogEntity>();
@@ -38,7 +38,7 @@ public class LoginLogQueryService {
 		qw.orderByDesc(LoginLogEntity::getCreateTime);
 		Page<LoginLogEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<LoginLogEntity> result = loginLogMapper.selectPage(page, qw);
-		var records = result.getRecords().stream().map(this::toVo).collect(Collectors.toList());
+		var records = result.getRecords().stream().map(converter::toListVO).toList();
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
 	}
 
@@ -50,22 +50,6 @@ public class LoginLogQueryService {
 		if (entity == null) {
 			throw new BizException(ResultEnum.NOT_FOUND, "登录日志不存在");
 		}
-		return toVo(entity);
-	}
-
-	private LoginLogListVO toVo(LoginLogEntity entity) {
-		LoginLogListVO vo = new LoginLogListVO();
-		vo.setId(entity.getId());
-		vo.setUserId(entity.getUserId());
-		vo.setUsername(entity.getUsername());
-		vo.setNickname(entity.getNickname());
-		vo.setEventType(entity.getEventType());
-		vo.setSuccess(entity.getSuccess());
-		vo.setFailReason(entity.getFailReason());
-		vo.setIp(entity.getIp());
-		vo.setUserAgent(entity.getUserAgent());
-		vo.setTokenHint(entity.getTokenHint());
-		vo.setCreateTime(entity.getCreateTime());
-		return vo;
+		return converter.toListVO(entity);
 	}
 }

@@ -32,6 +32,11 @@ export interface PurchaseRequisitionDeleteForm {
   version: number;
 }
 
+export interface PurchaseRequisitionSubmitForm {
+  id: string;
+  version: number;
+}
+
 export interface PurchaseRequisitionDetailVO {
   id: string;
   version: number;

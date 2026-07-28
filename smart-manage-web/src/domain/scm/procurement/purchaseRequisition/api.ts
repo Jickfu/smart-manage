@@ -7,6 +7,7 @@ import type {
   PurchaseRequisitionListForm,
   PurchaseRequisitionListVO,
   PurchaseRequisitionSaveForm,
+  PurchaseRequisitionSubmitForm,
 } from './types';
 
 const baseUrl = '/scm/procurement/purchase-requisition';
@@ -26,10 +27,8 @@ export const purchaseRequisitionApi = {
       .then((response) => response.data.data),
   save: (form: PurchaseRequisitionSaveForm) =>
     request.post<Result<string>>(`${baseUrl}/save`, form).then((response) => response.data.data),
-  submit: (id: string) =>
-    request
-      .post<Result<string>>(`${baseUrl}/submit`, { id })
-      .then((response) => response.data.data),
+  submit: (form: PurchaseRequisitionSubmitForm) =>
+    request.post<Result<string>>(`${baseUrl}/submit`, form).then((response) => response.data.data),
   delete: (form: PurchaseRequisitionDeleteForm) =>
     request.post<Result<string>>(`${baseUrl}/delete`, form).then((response) => response.data.data),
 };

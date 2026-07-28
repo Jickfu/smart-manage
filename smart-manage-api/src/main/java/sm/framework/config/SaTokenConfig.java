@@ -36,9 +36,6 @@ public class SaTokenConfig {
 	private final JsonMapper jsonMapper;
 	@Value("${smart-manage.framework.no-need-login}")
 	private String[] noNeedLogin;
-	@Value("${smart-manage.framework.cors.allowed-origins:http://localhost:8888}")
-	private String allowedOrigins;
-
 	@Bean
 	public SaServletFilter getSaServletFilter() {
 		return new SaServletFilter()

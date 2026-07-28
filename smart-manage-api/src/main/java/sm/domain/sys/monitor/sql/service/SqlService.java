@@ -36,11 +36,17 @@ public class SqlService {
     private final DataSource dataSource;
     private final SqlLogMapper mapper;
     private final SqlLogTxService txService;
+    private final SqlLogConverter converter;
 
-    public SqlService(DataSource dataSource, SqlLogMapper mapper, SqlLogTxService txService) {
+    public SqlService(
+            DataSource dataSource,
+            SqlLogMapper mapper,
+            SqlLogTxService txService,
+            SqlLogConverter converter) {
         this.dataSource = dataSource;
         this.mapper = mapper;
         this.txService = txService;
+        this.converter = converter;
     }
 
     @BizLog(value = "执行SQL", saveRequest = false, saveResponse = false)
@@ -137,21 +143,8 @@ public class SqlService {
         qw.orderByDesc(SqlLogEntity::getId);
 
         Page<SqlLogEntity> page = mapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), qw);
-        List<SqlLogListVO> vos = page.getRecords().stream().map(this::toListVo).collect(java.util.stream.Collectors.toList());
+        List<SqlLogListVO> vos = page.getRecords().stream().map(converter::toListVO).toList();
         return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(), vos);
-    }
-
-    private SqlLogListVO toListVo(SqlLogEntity e) {
-        SqlLogListVO vo = new SqlLogListVO();
-        vo.setId(String.valueOf(e.getId()));
-        vo.setSqlText(e.getSqlText());
-        vo.setExecuteDuration(e.getExecuteDuration());
-        vo.setResultType(e.getResultType());
-        vo.setRowCount(e.getRowCount());
-        vo.setCreateName(e.getCreateName());
-        vo.setCreateIp(e.getCreateIp());
-        vo.setCreateTime(e.getCreateTime());
-        return vo;
     }
 
     /**
@@ -172,25 +165,7 @@ public class SqlService {
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "执行日志不存在");
         }
-        return toDetailVo(entity);
-    }
-
-    private SqlLogDetailVO toDetailVo(SqlLogEntity e) {
-        SqlLogDetailVO vo = new SqlLogDetailVO();
-        vo.setId(String.valueOf(e.getId()));
-        vo.setSqlText(e.getSqlText());
-        vo.setExecuteDuration(e.getExecuteDuration());
-        vo.setResultType(e.getResultType());
-        vo.setRowCount(e.getRowCount());
-        vo.setErrorMessage(e.getErrorMessage());
-        vo.setCreateName(e.getCreateName());
-        vo.setCreateIp(e.getCreateIp());
-        vo.setRemark(e.getRemark());
-        vo.setCreateTime(e.getCreateTime());
-        vo.setUpdateTime(e.getUpdateTime());
-        vo.setCreateUser(e.getCreateUser());
-        vo.setUpdateUser(e.getUpdateUser());
-        return vo;
+        return converter.toDetailVO(entity);
     }
 
     // ---- 私有辅助方法 ----

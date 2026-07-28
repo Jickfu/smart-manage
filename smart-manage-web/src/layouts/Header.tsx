@@ -6,7 +6,7 @@ import { useHeaderTabsStore } from '@/stores/headerTabs';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { useUserStore } from '@/stores/user';
 import { openApp, closeAppAndRemove } from '@/services/navigationService';
-import { updateCurrentUserTheme } from '@/api/user';
+import { logoutCurrentUser, updateCurrentUserTheme } from '@/api/user';
 import { normalizeThemeColor, THEME_COLOR_OPTIONS } from '@/styles/themePalette';
 import './Header.css';
 
@@ -38,15 +38,22 @@ const Header = () => {
         okText: '确定退出',
         cancelText: '取消',
         okButtonProps: { danger: true },
-        onOk: () => {
-          clearUser();
-          window.location.href = '/login.html';
-        },
+        onOk: performLogout,
       });
       return;
     }
-    clearUser();
-    window.location.href = '/login.html';
+    await performLogout();
+  };
+
+  /** 先使服务端 token 失效，成功后再清理浏览器认证状态。 */
+  const performLogout = async () => {
+    try {
+      await logoutCurrentUser();
+      clearUser();
+      window.location.href = '/login.html';
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '退出登录失败');
+    }
   };
 
   const userMenuItems: MenuProps['items'] = [

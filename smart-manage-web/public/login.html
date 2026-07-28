@@ -1,378 +1,382 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!-- 登录页仍包含内联初始化脚本，后续外置脚本后可移除 unsafe-inline。 -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    />
     <title>Smart Manage - 登录</title>
     <script src="js/sm2.js"></script>
-    <link rel="stylesheet" href="css/login.css"/>
-</head>
-<body>
-<main class="sm-login">
-    <section id="loginBanner" class="sm-login-banner" aria-label="登录页宣传图"></section>
+    <link rel="stylesheet" href="css/login.css" />
+  </head>
+  <body>
+    <main class="sm-login">
+      <section id="loginBanner" class="sm-login-banner" aria-label="登录页宣传图"></section>
 
-    <section class="sm-login-panel" aria-label="登录表单">
+      <section class="sm-login-panel" aria-label="登录表单">
         <div class="sm-language">简体中文</div>
         <div class="sm-logo-container">
-            <img id="loginLogo" class="sm-logo" src="logo.svg" alt="系统标识"/>
+          <img id="loginLogo" class="sm-logo" src="logo.svg" alt="系统标识" />
         </div>
         <div class="sm-login-card">
-            <div class="sm-login-card-item">
-                <div id="loginTitle" class="sm-login-title">Smart Manage 账号登录</div>
-                <div id="errorMsg" class="sm-error-msg" role="alert">
-                    <svg class="sm-error-icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path
-                                d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM12 8v5M12 16h.01"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="1.8"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                        />
-                    </svg>
-                    <span id="errorMsgText" class="sm-error-text"></span>
-                    <button
-                            id="errorMsgClose"
-                            class="sm-error-close"
-                            type="button"
-                            aria-label="关闭错误提示"
-                    >
-                        ×
-                    </button>
-                </div>
-
-                <form id="loginForm" class="sm-form" autocomplete="on">
-                    <div class="sm-input-wrap">
-                        <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
-                            <path
-                                    d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                            />
-                        </svg>
-                        <input
-                                id="username"
-                                class="sm-input"
-                                type="text"
-                                placeholder="用户名"
-                                autocomplete="username"
-                        />
-                    </div>
-
-                    <div class="sm-input-wrap">
-                        <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
-                            <path
-                                    d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v10H6V11Z"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                            />
-                        </svg>
-                        <input
-                                id="password"
-                                class="sm-input"
-                                type="password"
-                                placeholder="登录密码"
-                                autocomplete="current-password"
-                        />
-                    </div>
-
-                    <div id="captchaGroup" class="sm-captcha-group">
-                        <div class="sm-captcha-row">
-                            <div class="sm-input-wrap">
-                                <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path
-                                            d="M4 7h16v10H4V7ZM8 11h.01M12 11h.01M16 11h.01M8 15h8"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="1.8"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                    />
-                                </svg>
-                                <input
-                                        id="captcha"
-                                        class="sm-input"
-                                        type="text"
-                                        placeholder="图形验证码"
-                                        maxlength="6"
-                                        autocomplete="off"
-                                />
-                            </div>
-                            <img id="captchaImg" class="sm-captcha-img" src="" alt="验证码"/>
-                        </div>
-                    </div>
-
-                    <div class="sm-form-extra">
-                        <label class="sm-checkbox">
-                            <input id="rememberUsername" type="checkbox"/>
-                            <span>记住账号</span>
-                        </label>
-                        <button id="forgotPasswordBtn" class="sm-link-button" type="button">
-                            忘记密码
-                        </button>
-                    </div>
-
-                    <button id="loginBtn" class="sm-login-btn" type="submit">登录</button>
-                </form>
+          <div class="sm-login-card-item">
+            <div id="loginTitle" class="sm-login-title">Smart Manage 账号登录</div>
+            <div id="errorMsg" class="sm-error-msg" role="alert">
+              <svg class="sm-error-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM12 8v5M12 16h.01"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span id="errorMsgText" class="sm-error-text"></span>
+              <button
+                id="errorMsgClose"
+                class="sm-error-close"
+                type="button"
+                aria-label="关闭错误提示"
+              >
+                ×
+              </button>
             </div>
+
+            <form id="loginForm" class="sm-form" autocomplete="on">
+              <div class="sm-input-wrap">
+                <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <input
+                  id="username"
+                  class="sm-input"
+                  type="text"
+                  placeholder="用户名"
+                  autocomplete="username"
+                />
+              </div>
+
+              <div class="sm-input-wrap">
+                <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v10H6V11Z"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <input
+                  id="password"
+                  class="sm-input"
+                  type="password"
+                  placeholder="登录密码"
+                  autocomplete="current-password"
+                />
+              </div>
+
+              <div id="captchaGroup" class="sm-captcha-group">
+                <div class="sm-captcha-row">
+                  <div class="sm-input-wrap">
+                    <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M4 7h16v10H4V7ZM8 11h.01M12 11h.01M16 11h.01M8 15h8"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    <input
+                      id="captcha"
+                      class="sm-input"
+                      type="text"
+                      placeholder="图形验证码"
+                      maxlength="6"
+                      autocomplete="off"
+                    />
+                  </div>
+                  <img id="captchaImg" class="sm-captcha-img" src="" alt="验证码" />
+                </div>
+              </div>
+
+              <div class="sm-form-extra">
+                <label class="sm-checkbox">
+                  <input id="rememberUsername" type="checkbox" />
+                  <span>记住账号</span>
+                </label>
+                <button id="forgotPasswordBtn" class="sm-link-button" type="button">
+                  忘记密码
+                </button>
+              </div>
+
+              <button id="loginBtn" class="sm-login-btn" type="submit">登录</button>
+            </form>
+          </div>
         </div>
         <div class="sm-psv"></div>
         <div class="sm-footer"></div>
-    </section>
-</main>
+      </section>
+    </main>
 
-<script>
-  var SM2_PUBLIC_KEY =
-    '0405102042204d15e802522ea09eb609358e4c72295e0ca44727eef75faac9afb3eeaa3e9df5af87e205e6ce5cb351e4fb30c37602f32aad969d2b222f05f8fa99';
-  var API_BASE = '/smart-manage-api';
-  var USERNAME_STORAGE_KEY = 'sm-login-username';
+    <script>
+      var SM2_PUBLIC_KEY =
+        '0405102042204d15e802522ea09eb609358e4c72295e0ca44727eef75faac9afb3eeaa3e9df5af87e205e6ce5cb351e4fb30c37602f32aad969d2b222f05f8fa99';
+      var API_BASE = '/smart-manage-api';
+      var USERNAME_STORAGE_KEY = 'sm-login-username';
 
-  var captchaId = '';
-  var captchaVisible = false;
-  var captchaLoading = false;
+      var captchaId = '';
+      var captchaVisible = false;
+      var captchaLoading = false;
 
-  var loginLogoEl = document.getElementById('loginLogo');
-  var loginTitleEl = document.getElementById('loginTitle');
-  var usernameEl = document.getElementById('username');
-  var passwordEl = document.getElementById('password');
-  var captchaGroupEl = document.getElementById('captchaGroup');
-  var captchaEl = document.getElementById('captcha');
-  var captchaImgEl = document.getElementById('captchaImg');
-  var rememberUsernameEl = document.getElementById('rememberUsername');
-  var errorMsgEl = document.getElementById('errorMsg');
-  var errorMsgTextEl = document.getElementById('errorMsgText');
-  var errorMsgCloseEl = document.getElementById('errorMsgClose');
-  var loginBtnEl = document.getElementById('loginBtn');
-  var forgotPasswordBtnEl = document.getElementById('forgotPasswordBtn');
-  var loginFormEl = document.getElementById('loginForm');
-  var bannerEl = document.getElementById('loginBanner');
+      var loginLogoEl = document.getElementById('loginLogo');
+      var loginTitleEl = document.getElementById('loginTitle');
+      var usernameEl = document.getElementById('username');
+      var passwordEl = document.getElementById('password');
+      var captchaGroupEl = document.getElementById('captchaGroup');
+      var captchaEl = document.getElementById('captcha');
+      var captchaImgEl = document.getElementById('captchaImg');
+      var rememberUsernameEl = document.getElementById('rememberUsername');
+      var errorMsgEl = document.getElementById('errorMsg');
+      var errorMsgTextEl = document.getElementById('errorMsgText');
+      var errorMsgCloseEl = document.getElementById('errorMsgClose');
+      var loginBtnEl = document.getElementById('loginBtn');
+      var forgotPasswordBtnEl = document.getElementById('forgotPasswordBtn');
+      var loginFormEl = document.getElementById('loginForm');
+      var bannerEl = document.getElementById('loginBanner');
 
-  /** 获取并校验重定向 URL — 使用 URL 解析器严格校验同源，防止开放重定向攻击 */
-  function getSafeRedirectUrl() {
-    var params = new URLSearchParams(window.location.search);
-    var redirect = params.get('redirect');
-    if (!redirect) return '';
-    // URLSearchParams.get() 已执行一次解码，redirect 为原始值
-    try {
-      var target = new URL(redirect, location.origin);
-      // 严格同源校验
-      if (target.origin !== location.origin) {
-        return '';
-      }
-      return target.pathname + target.search + target.hash;
-    } catch (_e) {
-      // 解析异常（非法 URL）返回默认页
-      return '';
-    }
-  }
-
-  function normalizeAssetUrl(url, fallback) {
-    if (!url || !url.trim()) {
-      return fallback;
-    }
-    var value = url.trim();
-    if (
-      /^(https?:)?\/\//.test(value) ||
-      value.indexOf('data:') === 0 ||
-      value.charAt(0) === '/'
-    ) {
-      return value;
-    }
-    return '/' + value;
-  }
-
-  function showError(msg) {
-    errorMsgTextEl.textContent = msg;
-    errorMsgEl.classList.add('is-visible');
-  }
-
-  function hideError() {
-    errorMsgTextEl.textContent = '';
-    errorMsgEl.classList.remove('is-visible');
-  }
-
-  function applyUiConfig(config) {
-    var systemName = config.systemName;
-    var pageTitle = config.pageTitle || systemName;
-    var loginTitle = systemName.indexOf('登录') >= 0 ? systemName : systemName + ' 账号登录';
-    document.title = pageTitle + ' - 登录';
-    loginTitleEl.textContent = loginTitle;
-    loginLogoEl.src = normalizeAssetUrl(config.loginLogo, 'logo.svg');
-    loginLogoEl.alt = systemName;
-    bannerEl.style.backgroundImage =
-      'url("' + normalizeAssetUrl(config.loginBanner, 'default-login-banner.png') + '")';
-  }
-
-  function loadUiConfig() {
-    fetch(API_BASE + '/sys/base/ui-config/active', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: '{}',
-    })
-      .then(function (res) {
-        return res.json();
-      })
-      .then(function (result) {
-        if (result.code === 0 && result.data) {
-          applyUiConfig(result.data);
+      /** 获取并校验重定向 URL — 使用 URL 解析器严格校验同源，防止开放重定向攻击 */
+      function getSafeRedirectUrl() {
+        var params = new URLSearchParams(window.location.search);
+        var redirect = params.get('redirect');
+        if (!redirect) return '';
+        // URLSearchParams.get() 已执行一次解码，redirect 为原始值
+        try {
+          var target = new URL(redirect, location.origin);
+          // 严格同源校验
+          if (target.origin !== location.origin) {
+            return '';
+          }
+          return target.pathname + target.search + target.hash;
+        } catch (_e) {
+          // 解析异常（非法 URL）返回默认页
+          return '';
         }
-      })
-      .catch(function () {
-        // 登录页配置失败不阻断登录，页面保留内置默认品牌资源。
-      });
-  }
-
-  function loadCaptcha() {
-    if (captchaLoading) {
-      return;
-    }
-    captchaLoading = true;
-    fetch(API_BASE + '/sys/base/captcha')
-      .then(function (res) {
-        return res.json();
-      })
-      .then(function (result) {
-        if (result.code === 0) {
-          captchaId = result.data.captchaId;
-          captchaImgEl.src = result.data.imageData;
-        } else {
-          showError(result.msg || '获取验证码失败');
-        }
-      })
-      .catch(function () {
-        showError('网络异常，获取验证码失败');
-      })
-      .finally(function () {
-        captchaLoading = false;
-      });
-  }
-
-  function refreshCaptchaVisible() {
-    var hasUsername = Boolean(usernameEl.value.trim());
-    if (hasUsername) {
-      captchaGroupEl.classList.add('is-visible');
-      if (!captchaVisible || !captchaId) {
-        loadCaptcha();
       }
-      captchaVisible = true;
-    }
-    // 验证码一旦显示就不再因清空用户名而隐藏
-  }
 
-  function restoreRememberedUsername() {
-    var rememberedUsername = localStorage.getItem(USERNAME_STORAGE_KEY);
-    if (rememberedUsername) {
-      usernameEl.value = rememberedUsername;
-      rememberUsernameEl.checked = true;
-      refreshCaptchaVisible();
-    }
-  }
+      function normalizeAssetUrl(url, fallback) {
+        if (!url || !url.trim()) {
+          return fallback;
+        }
+        var value = url.trim();
+        if (
+          /^(https?:)?\/\//.test(value) ||
+          value.indexOf('data:') === 0 ||
+          value.charAt(0) === '/'
+        ) {
+          return value;
+        }
+        return '/' + value;
+      }
 
-  function persistRememberedUsername(username) {
-    if (rememberUsernameEl.checked) {
-      localStorage.setItem(USERNAME_STORAGE_KEY, username);
-    } else {
-      localStorage.removeItem(USERNAME_STORAGE_KEY);
-    }
-  }
+      function showError(msg) {
+        errorMsgTextEl.textContent = msg;
+        errorMsgEl.classList.add('is-visible');
+      }
 
-  function setLoginLoading(loading) {
-    loginBtnEl.disabled = loading;
-    loginBtnEl.textContent = loading ? '登录中...' : '登录';
-  }
+      function hideError() {
+        errorMsgTextEl.textContent = '';
+        errorMsgEl.classList.remove('is-visible');
+      }
 
-  function login() {
-    var username = usernameEl.value.trim();
-    var password = passwordEl.value;
-    var captchaText = captchaEl.value.trim();
+      function applyUiConfig(config) {
+        var systemName = config.systemName;
+        var pageTitle = config.pageTitle || systemName;
+        var loginTitle = systemName.indexOf('登录') >= 0 ? systemName : systemName + ' 账号登录';
+        document.title = pageTitle + ' - 登录';
+        loginTitleEl.textContent = loginTitle;
+        loginLogoEl.src = normalizeAssetUrl(config.loginLogo, 'logo.svg');
+        loginLogoEl.alt = systemName;
+        bannerEl.style.backgroundImage =
+          'url("' + normalizeAssetUrl(config.loginBanner, 'default-login-banner.png') + '")';
+      }
 
-    if (!username) {
-      showError('请输入用户名');
-      usernameEl.focus();
-      return;
-    }
-    if (!password) {
-      showError('请输入密码');
-      passwordEl.focus();
-      return;
-    }
-    if (!captchaText) {
-      showError('请输入验证码');
-      captchaEl.focus();
-      return;
-    }
-    if (!captchaId) {
-      showError('验证码未加载完成，请稍后再试');
-      loadCaptcha();
-      return;
-    }
+      function loadUiConfig() {
+        fetch(API_BASE + '/sys/base/ui-config/active', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (result) {
+            if (result.code === 0 && result.data) {
+              applyUiConfig(result.data);
+            }
+          })
+          .catch(function () {
+            // 登录页配置失败不阻断登录，页面保留内置默认品牌资源。
+          });
+      }
 
-    hideError();
-    setLoginLoading(true);
-
-    // SM2 C1C3C2 模式加密密码和验证码
-    var encryptedPassword = sm2.doEncrypt(password, SM2_PUBLIC_KEY, 1);
-    var encryptedCaptcha = sm2.doEncrypt(captchaText, SM2_PUBLIC_KEY, 1);
-
-    fetch(API_BASE + '/sys/base/login', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        username: username,
-        password: encryptedPassword,
-        captcha: encryptedCaptcha,
-        captchaId: captchaId,
-      }),
-    })
-      .then(function (res) {
-        return res.json();
-      })
-      .then(function (result) {
-        if (result.code === 0 && result.data && result.data.token) {
-          localStorage.setItem('token', result.data.token);
-          persistRememberedUsername(username);
-          var redirect = getSafeRedirectUrl();
-          window.location.href = redirect || '/index.html?app=home';
+      function loadCaptcha() {
+        if (captchaLoading) {
           return;
         }
-        showError(
-          (result.data && result.data.msg) || result.msg || '登录失败',
-        );
-        loadCaptcha();
-      })
-      .catch(function () {
-        showError('网络异常，登录失败');
-        loadCaptcha();
-      })
-      .finally(function () {
-        setLoginLoading(false);
+        captchaLoading = true;
+        fetch(API_BASE + '/sys/base/captcha')
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (result) {
+            if (result.code === 0) {
+              captchaId = result.data.captchaId;
+              captchaImgEl.src = result.data.imageData;
+            } else {
+              showError(result.msg || '获取验证码失败');
+            }
+          })
+          .catch(function () {
+            showError('网络异常，获取验证码失败');
+          })
+          .finally(function () {
+            captchaLoading = false;
+          });
+      }
+
+      function refreshCaptchaVisible() {
+        var hasUsername = Boolean(usernameEl.value.trim());
+        if (hasUsername) {
+          captchaGroupEl.classList.add('is-visible');
+          if (!captchaVisible || !captchaId) {
+            loadCaptcha();
+          }
+          captchaVisible = true;
+        }
+        // 验证码一旦显示就不再因清空用户名而隐藏
+      }
+
+      function restoreRememberedUsername() {
+        var rememberedUsername = localStorage.getItem(USERNAME_STORAGE_KEY);
+        if (rememberedUsername) {
+          usernameEl.value = rememberedUsername;
+          rememberUsernameEl.checked = true;
+          refreshCaptchaVisible();
+        }
+      }
+
+      function persistRememberedUsername(username) {
+        if (rememberUsernameEl.checked) {
+          localStorage.setItem(USERNAME_STORAGE_KEY, username);
+        } else {
+          localStorage.removeItem(USERNAME_STORAGE_KEY);
+        }
+      }
+
+      function setLoginLoading(loading) {
+        loginBtnEl.disabled = loading;
+        loginBtnEl.textContent = loading ? '登录中...' : '登录';
+      }
+
+      function login() {
+        var username = usernameEl.value.trim();
+        var password = passwordEl.value;
+        var captchaText = captchaEl.value.trim();
+
+        if (!username) {
+          showError('请输入用户名');
+          usernameEl.focus();
+          return;
+        }
+        if (!password) {
+          showError('请输入密码');
+          passwordEl.focus();
+          return;
+        }
+        if (!captchaText) {
+          showError('请输入验证码');
+          captchaEl.focus();
+          return;
+        }
+        if (!captchaId) {
+          showError('验证码未加载完成，请稍后再试');
+          loadCaptcha();
+          return;
+        }
+
+        hideError();
+        setLoginLoading(true);
+
+        // SM2 C1C3C2 模式加密密码和验证码
+        var encryptedPassword = sm2.doEncrypt(password, SM2_PUBLIC_KEY, 1);
+        var encryptedCaptcha = sm2.doEncrypt(captchaText, SM2_PUBLIC_KEY, 1);
+
+        fetch(API_BASE + '/sys/base/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: username,
+            password: encryptedPassword,
+            captcha: encryptedCaptcha,
+            captchaId: captchaId,
+          }),
+        })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (result) {
+            if (result.code === 0 && result.data && result.data.token) {
+              localStorage.setItem('token', result.data.token);
+              persistRememberedUsername(username);
+              var redirect = getSafeRedirectUrl();
+              window.location.href = redirect || '/index.html?app=home';
+              return;
+            }
+            showError((result.data && result.data.msg) || result.msg || '登录失败');
+            loadCaptcha();
+          })
+          .catch(function () {
+            showError('网络异常，登录失败');
+            loadCaptcha();
+          })
+          .finally(function () {
+            setLoginLoading(false);
+          });
+      }
+
+      // 页面初始化
+      loadUiConfig();
+      restoreRememberedUsername();
+
+      // 事件绑定
+      usernameEl.addEventListener('input', function () {
+        hideError();
+        refreshCaptchaVisible();
       });
-  }
-
-  // 页面初始化
-  loadUiConfig();
-  restoreRememberedUsername();
-
-  // 事件绑定
-  usernameEl.addEventListener('input', function () {
-    hideError();
-    refreshCaptchaVisible();
-  });
-  captchaImgEl.addEventListener('click', loadCaptcha);
-  errorMsgCloseEl.addEventListener('click', hideError);
-  forgotPasswordBtnEl.addEventListener('click', function () {
-    showError('请联系系统管理员重置密码');
-  });
-  loginFormEl.addEventListener('submit', function (event) {
-    event.preventDefault();
-    login();
-  });
-</script>
-</body>
+      captchaImgEl.addEventListener('click', loadCaptcha);
+      errorMsgCloseEl.addEventListener('click', hideError);
+      forgotPasswordBtnEl.addEventListener('click', function () {
+        showError('请联系系统管理员重置密码');
+      });
+      loginFormEl.addEventListener('submit', function (event) {
+        event.preventDefault();
+        login();
+      });
+    </script>
+  </body>
 </html>

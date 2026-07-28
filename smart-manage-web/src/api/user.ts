@@ -19,3 +19,8 @@ export function updateCurrentUserTheme(themeColor: string) {
     .post<Result<void>>('/sys/base/user/current/theme', { themeColor })
     .then((response) => response.data);
 }
+
+/** 主动注销当前服务端会话。 */
+export function logoutCurrentUser() {
+  return request.post<Result<void>>('/sys/base/logout').then((response) => response.data);
+}

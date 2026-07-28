@@ -114,7 +114,10 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
       })),
     };
     const savedId = await purchaseRequisitionApi.save(form);
-    if (submit) await purchaseRequisitionApi.submit(savedId);
+    const savedDetail = await purchaseRequisitionApi.detail(savedId);
+    if (submit) {
+      await purchaseRequisitionApi.submit({ id: savedId, version: savedDetail.version });
+    }
     const nextKey = `bill:${props.componentKey}:${savedId}`;
     if (isAddNew || submit) {
       replaceContentTab(appNumber, tabKey, {

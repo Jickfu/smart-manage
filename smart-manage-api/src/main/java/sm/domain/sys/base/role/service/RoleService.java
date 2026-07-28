@@ -39,6 +39,7 @@ public class RoleService {
 	private final RolePermissionMapper permissionMapper;
 	private final RoleTxService txService;
 	private final AuthorizationStateHelper authorizationStateHelper;
+	private final RoleConverter converter;
 
 	public PageData<RoleListVO> listPage(RoleListForm form) {
 		LambdaQueryWrapper<RoleEntity> qw = new LambdaQueryWrapper<RoleEntity>()
@@ -49,7 +50,7 @@ public class RoleService {
 		}
 		Page<RoleEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<RoleEntity> result = mapper.selectPage(page, qw);
-		var vos = result.getRecords().stream().map(this::toRoleListVO).collect(Collectors.toList());
+		var vos = result.getRecords().stream().map(converter::toListVO).collect(Collectors.toList());
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
 	}
 
@@ -61,7 +62,7 @@ public class RoleService {
 				.orderByAsc(RoleEntity::getNumber)
 				.orderByAsc(RoleEntity::getId))
 				.stream()
-				.map(this::toRoleSelectVO)
+				.map(converter::toSelectVO)
 				.toList();
 	}
 
@@ -77,24 +78,8 @@ public class RoleService {
 		}
 		Page<RoleEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<RoleEntity> result = mapper.selectPage(page, qw);
-		List<RoleSelectVO> voList = result.getRecords().stream().map(this::toRoleSelectVO).collect(Collectors.toList());
+		List<RoleSelectVO> voList = result.getRecords().stream().map(converter::toSelectVO).collect(Collectors.toList());
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), voList);
-	}
-
-	private RoleSelectVO toRoleSelectVO(RoleEntity e) {
-		RoleSelectVO vo = new RoleSelectVO();
-		vo.setId(e.getId());
-		vo.setNumber(e.getNumber());
-		vo.setName(e.getName());
-		return vo;
-	}
-
-	private RoleListVO toRoleListVO(RoleEntity e) {
-		RoleListVO vo = new RoleListVO();
-		vo.setId(e.getId());
-		vo.setName(e.getName());
-		vo.setNumber(e.getNumber());
-		return vo;
 	}
 
 	public RoleEntity getById(Long id) {
@@ -109,19 +94,12 @@ public class RoleService {
 		if (entity == null) {
 			throw new BizException(ResultEnum.NOT_FOUND, "角色不存在");
 		}
-		return toDetailVo(entity);
+		return assembleDetailVO(entity);
 	}
 
-	private RoleDetailVO toDetailVo(RoleEntity entity) {
-		RoleDetailVO vo = new RoleDetailVO();
-		vo.setId(String.valueOf(entity.getId()));
-		vo.setName(entity.getName());
-		vo.setNumber(entity.getNumber());
-		vo.setCreateTime(entity.getCreateTime());
-		vo.setUpdateTime(entity.getUpdateTime());
-		vo.setCreateUser(entity.getCreateUser());
-		vo.setUpdateUser(entity.getUpdateUser());
-		vo.setVersion(entity.getVersion());
+	/** 详情除纯字段外还需要查询权限关系，因此保持显式业务组装。 */
+	private RoleDetailVO assembleDetailVO(RoleEntity entity) {
+		RoleDetailVO vo = converter.toDetailVO(entity);
 		vo.setPermissionIds(permissionMapper.selectList(new LambdaQueryWrapper<RolePermissionEntity>()
 					.select(RolePermissionEntity::getPermissionId)
 					.eq(RolePermissionEntity::getRoleId, entity.getId()))

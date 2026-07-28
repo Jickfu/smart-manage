@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { Result } from '@/types/api';
+import { useUserStore } from '@/stores/user';
 import { ApiError } from './ApiError';
 
 const SUCCESS_CODE = 0;
@@ -9,6 +10,11 @@ const request = axios.create({
   baseURL: '/smart-manage-api',
   timeout: 30000,
 });
+
+/** 清理浏览器中的失效认证状态，避免 401 后继续携带旧 token。 */
+function clearAuthentication() {
+  useUserStore.getState().clearUser();
+}
 
 /** 请求拦截器 - 注入 Sa-Token */
 request.interceptors.request.use((config) => {
@@ -26,6 +32,7 @@ request.interceptors.response.use(
     if (result.code !== SUCCESS_CODE) {
       // 未登录，跳转登录页。
       if (result.code === UNAUTHORIZED_CODE) {
+        clearAuthentication();
         const redirectUrl = encodeURIComponent(window.location.href);
         window.location.href = `/login.html?redirect=${redirectUrl}`;
       }
@@ -43,6 +50,7 @@ request.interceptors.response.use(
 
       // HTTP 401 - 登录跳转。
       if (httpStatus === 401) {
+        clearAuthentication();
         const redirectUrl = encodeURIComponent(window.location.href);
         window.location.href = `/login.html?redirect=${redirectUrl}`;
       }

@@ -31,7 +31,6 @@ import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
-import sm.system.util.BeanUtil;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +51,7 @@ public class UserService {
 	private final MenuService menuService;
 	private final PermissionService permissionService;
 	private final AuthorizationStateHelper authorizationStateHelper;
+	private final UserConverter converter;
 
 	@Value("${smart-manage.org.default-id:1}")
 	private Long defaultOrgId;
@@ -64,18 +64,8 @@ public class UserService {
 		}
 		Page<UserEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<UserEntity> result = mapper.selectPage(page, qw);
-		var vos = result.getRecords().stream().map(this::toUserListVo).collect(Collectors.toList());
+		var vos = result.getRecords().stream().map(converter::toListVO).collect(Collectors.toList());
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
-	}
-
-	private UserListVO toUserListVo(UserEntity entity) {
-		UserListVO vo = new UserListVO();
-		vo.setId(entity.getId());
-		vo.setUsername(entity.getUsername());
-		vo.setNickname(entity.getNickname());
-		vo.setAvatar(entity.getAvatar());
-		vo.setEnabled(entity.getEnabled());
-		return vo;
 	}
 
 	@BizLog("保存用户")
@@ -114,7 +104,7 @@ public class UserService {
 		if (userEntity == null) {
 			throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
 		}
-		UserInfoVO userInfoVO = BeanUtil.copyProperties(userEntity, UserInfoVO.class);
+		UserInfoVO userInfoVO = converter.toInfoVO(userEntity);
 		userInfoVO.setRoleIds(userRoleMapper.selectList(new LambdaQueryWrapper<UserRoleEntity>()
 					.select(UserRoleEntity::getRoleId)
 					.eq(UserRoleEntity::getUserId, id)
@@ -159,7 +149,7 @@ public class UserService {
 	public UserInfoVO current() {
 		// 直接走 mapper，避免自调用绕过缓存代理
 		UserEntity userEntity = mapper.selectById(UserHelper.getCurrentUserId());
-		return BeanUtil.copyProperties(userEntity, UserInfoVO.class);
+		return converter.toInfoVO(userEntity);
 	}
 
 	@BizLog("修改个人主题")

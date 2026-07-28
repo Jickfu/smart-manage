@@ -13,6 +13,7 @@ import sm.domain.scm.procurement.purchaserequisition.constant.PurchaseRequisitio
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionListForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionDeleteForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSaveForm;
+import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSubmitForm;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionCreateNewDataVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionDetailVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionListVO;
@@ -54,8 +55,8 @@ public class PurchaseRequisitionController {
 
     @PostMapping("/scm/procurement/purchase-requisition/submit")
     @SaCheckPermission(PurchaseRequisitionPermission.SUBMIT)
-    public Result<String> submit(@RequestBody @Valid IdForm form) {
-        service.submit(form.getId());
+    public Result<String> submit(@RequestBody @Valid PurchaseRequisitionSubmitForm form) {
+        service.submit(form.getId(), form.getVersion());
         return Result.success();
     }
 

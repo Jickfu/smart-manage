@@ -26,7 +26,6 @@ import sm.domain.sys.base.common.helper.UserHelper;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * 文件配置服务
@@ -40,6 +39,7 @@ public class FileConfigService implements FileStorageConfigProvider {
     private final FileConfigMapper mapper;
     private final FileConfigTxService txService;
     private final SM4Helper sm4Helper;
+    private final FileConfigConverter converter;
 
     public PageData<FileConfigDetailVO> listPage(FileConfigListForm form) {
         LambdaQueryWrapper<FileConfigEntity> qw = new LambdaQueryWrapper<FileConfigEntity>();
@@ -50,7 +50,7 @@ public class FileConfigService implements FileStorageConfigProvider {
         qw.orderByAsc(FileConfigEntity::getId);
         Page<FileConfigEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
         Page<FileConfigEntity> result = mapper.selectPage(page, qw);
-        List<FileConfigDetailVO> vos = result.getRecords().stream().map(this::toDetailVo).collect(Collectors.toList());
+        List<FileConfigDetailVO> vos = result.getRecords().stream().map(converter::toDetailVO).toList();
         return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
     }
 
@@ -66,7 +66,7 @@ public class FileConfigService implements FileStorageConfigProvider {
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "文件配置不存在");
         }
-        return toDetailVo(entity);
+        return converter.toDetailVO(entity);
     }
 
     /** 获取服务端内部使用的活跃配置，敏感字段不得通过 Controller 暴露。 */
@@ -83,20 +83,6 @@ public class FileConfigService implements FileStorageConfigProvider {
         return new FileStorageConfig(
                 entity.getStorageType(), entity.getLocalDir(), entity.getFtpHost(), entity.getFtpPort(),
                 entity.getFtpUsername(), ftpPassword, entity.getFtpDir(), entity.getFtpPassiveMode());
-    }
-
-    private FileConfigDetailVO toDetailVo(FileConfigEntity entity) {
-        FileConfigDetailVO vo = new FileConfigDetailVO();
-        vo.setId(entity.getId());
-        vo.setStorageType(entity.getStorageType());
-        vo.setLocalDir(entity.getLocalDir());
-        vo.setFtpHost(entity.getFtpHost());
-        vo.setFtpPort(entity.getFtpPort());
-        vo.setFtpUsername(entity.getFtpUsername());
-        vo.setFtpPasswordConfigured(entity.getFtpPasswordCipher() != null);
-        vo.setFtpDir(entity.getFtpDir());
-        vo.setFtpPassiveMode(entity.getFtpPassiveMode());
-        return vo;
     }
 
     @BizLog("保存文件存储配置")

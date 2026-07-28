@@ -40,11 +40,17 @@ public class ScriptService {
     private final ScriptMapper mapper;
     private final SysParamService sysParamService;
     private final ScriptTxService txService;
+    private final ScriptConverter converter;
 
-    public ScriptService(ScriptMapper mapper, SysParamService sysParamService, ScriptTxService txService) {
+    public ScriptService(
+            ScriptMapper mapper,
+            SysParamService sysParamService,
+            ScriptTxService txService,
+            ScriptConverter converter) {
         this.mapper = mapper;
         this.sysParamService = sysParamService;
         this.txService = txService;
+        this.converter = converter;
     }
 
     // ---- 脚本执行 ----
@@ -173,7 +179,7 @@ public class ScriptService {
         qw.orderByDesc(ScriptEntity::getCreateTime);
 
         Page<ScriptEntity> page = mapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), qw);
-        List<ScriptListVO> vos = page.getRecords().stream().map(this::toListVo).collect(Collectors.toList());
+        List<ScriptListVO> vos = page.getRecords().stream().map(converter::toListVO).collect(Collectors.toList());
         return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(), vos);
     }
 
@@ -183,7 +189,7 @@ public class ScriptService {
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "脚本不存在");
         }
-        return toDetailVo(entity);
+        return converter.toDetailVO(entity);
     }
 
     @BizLog(value = "保存脚本", saveRequest = false)
@@ -198,27 +204,4 @@ public class ScriptService {
         txService.delete(id);
     }
 
-    // ---- 转换方法 ----
-
-    private ScriptListVO toListVo(ScriptEntity entity) {
-        ScriptListVO vo = new ScriptListVO();
-        vo.setId(String.valueOf(entity.getId()));
-        vo.setNumber(entity.getNumber());
-        vo.setName(entity.getName());
-        vo.setRemark(entity.getRemark());
-        vo.setCreateTime(entity.getCreateTime());
-        return vo;
-    }
-
-    private ScriptDetailVO toDetailVo(ScriptEntity entity) {
-        ScriptDetailVO vo = new ScriptDetailVO();
-        vo.setId(String.valueOf(entity.getId()));
-        vo.setNumber(entity.getNumber());
-        vo.setName(entity.getName());
-        vo.setContent(entity.getContent());
-        vo.setRemark(entity.getRemark());
-        vo.setCreateTime(entity.getCreateTime());
-        vo.setUpdateTime(entity.getUpdateTime());
-        return vo;
-    }
 }

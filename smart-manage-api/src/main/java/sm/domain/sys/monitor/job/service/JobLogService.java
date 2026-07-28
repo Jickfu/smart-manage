@@ -12,7 +12,6 @@ import sm.domain.sys.monitor.job.mapper.JobLogMapper;
 import sm.system.response.PageData;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 执行实例/执行日志 Service
@@ -25,6 +24,7 @@ import java.util.stream.Collectors;
 public class JobLogService {
 
     private final JobLogMapper mapper;
+    private final JobLogConverter converter;
 
     public PageData<JobLogListVO> listPage(JobLogListForm form) {
         LambdaQueryWrapper<JobLogEntity> qw = new LambdaQueryWrapper<JobLogEntity>();
@@ -41,7 +41,7 @@ public class JobLogService {
 
         Page<JobLogEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
         Page<JobLogEntity> result = mapper.selectPage(page, qw);
-        List<JobLogListVO> vos = result.getRecords().stream().map(this::toVo).collect(Collectors.toList());
+        List<JobLogListVO> vos = result.getRecords().stream().map(converter::toListVO).toList();
         return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
     }
 
@@ -50,21 +50,6 @@ public class JobLogService {
                 .eq(JobLogEntity::getStatus, "RUNNING")
                 .orderByDesc(JobLogEntity::getStartTime);
         List<JobLogEntity> list = mapper.selectList(qw);
-        return list.stream().map(this::toVo).collect(Collectors.toList());
-    }
-
-    private JobLogListVO toVo(JobLogEntity entity) {
-        JobLogListVO vo = new JobLogListVO();
-        vo.setId(entity.getId());
-        vo.setJobId(entity.getJobId());
-        vo.setJobName(entity.getJobName());
-        vo.setJobGroup(entity.getJobGroup());
-        vo.setStartTime(entity.getStartTime());
-        vo.setEndTime(entity.getEndTime());
-        vo.setDurationMs(entity.getDurationMs());
-        vo.setStatus(entity.getStatus());
-        vo.setErrorMessage(entity.getErrorMessage());
-        vo.setCreateTime(entity.getCreateTime());
-        return vo;
+        return list.stream().map(converter::toListVO).toList();
     }
 }

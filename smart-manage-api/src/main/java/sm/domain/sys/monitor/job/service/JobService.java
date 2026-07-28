@@ -48,6 +48,7 @@ public class JobService {
     private final ApplicationContext applicationContext;
     private final JobTxService txService;
     private final JsonMapper jsonMapper;
+    private final JobConverter converter;
 
     // ==================== 查询 ====================
 
@@ -64,7 +65,7 @@ public class JobService {
 
         Page<JobEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
         Page<JobEntity> result = mapper.selectPage(page, qw);
-        List<JobListVO> vos = result.getRecords().stream().map(this::toListVo).collect(Collectors.toList());
+        List<JobListVO> vos = result.getRecords().stream().map(this::assembleListVO).collect(Collectors.toList());
         return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
     }
 
@@ -76,7 +77,7 @@ public class JobService {
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "任务不存在");
         }
-        return toDetailVo(entity);
+        return assembleDetailVO(entity);
     }
 
     // ==================== 增删改 ====================
@@ -273,19 +274,8 @@ public class JobService {
         return page.getRecords().isEmpty() ? null : page.getRecords().get(0);
     }
 
-    private JobListVO toListVo(JobEntity entity) {
-        JobListVO vo = new JobListVO();
-        vo.setId(entity.getId());
-        vo.setNumber(entity.getNumber());
-        vo.setJobName(entity.getJobName());
-        vo.setJobGroup(entity.getJobGroup());
-        vo.setJobClassName(entity.getJobClassName());
-        vo.setCronExpression(entity.getCronExpression());
-        vo.setStatus(entity.getStatus());
-        vo.setRemark(entity.getRemark());
-        vo.setIsSystem(entity.getIsSystem());
-        vo.setCreateTime(entity.getCreateTime());
-        vo.setUpdateTime(entity.getUpdateTime());
+    private JobListVO assembleListVO(JobEntity entity) {
+        JobListVO vo = converter.toListVO(entity);
         JobLogEntity lastLog = getLastLog(entity.getId());
         if (lastLog != null) {
             vo.setLastExecuteTime(lastLog.getStartTime());
@@ -294,20 +284,8 @@ public class JobService {
         return vo;
     }
 
-    private JobDetailVO toDetailVo(JobEntity entity) {
-        JobDetailVO vo = new JobDetailVO();
-        vo.setId(entity.getId());
-        vo.setNumber(entity.getNumber());
-        vo.setJobName(entity.getJobName());
-        vo.setJobGroup(entity.getJobGroup());
-        vo.setJobClassName(entity.getJobClassName());
-        vo.setCronExpression(entity.getCronExpression());
-        vo.setJobData(entity.getJobData());
-        vo.setStatus(entity.getStatus());
-        vo.setRemark(entity.getRemark());
-        vo.setIsSystem(entity.getIsSystem());
-        vo.setCreateTime(entity.getCreateTime());
-        vo.setUpdateTime(entity.getUpdateTime());
+    private JobDetailVO assembleDetailVO(JobEntity entity) {
+        JobDetailVO vo = converter.toDetailVO(entity);
         JobLogEntity lastLog = getLastLog(entity.getId());
         if (lastLog != null) {
             vo.setLastExecuteTime(lastLog.getStartTime());

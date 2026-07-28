@@ -52,7 +52,7 @@ public class AttachmentService {
     /** 按业务单据查询附件列表 */
     public List<AttachmentVO> listByBiz(String bizType, String bizId) {
         List<AttachmentEntity> entities = mapper.selectByBiz(bizType, bizId);
-        return entities.stream().map(this::toVo).collect(Collectors.toList());
+        return entities.stream().map(this::assembleAttachmentVO).collect(Collectors.toList());
     }
 
     /** 列出现有附件,无论是临时还是正式都有 */
@@ -60,14 +60,15 @@ public class AttachmentService {
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
-        return mapper.selectByIds(ids).stream().map(this::toVo).collect(Collectors.toList());
+        return mapper.selectByIds(ids).stream().map(this::assembleAttachmentVO).collect(Collectors.toList());
     }
 
     public AttachmentEntity getById(Long id) {
         return mapper.selectById(id);
     }
 
-    private AttachmentVO toVo(AttachmentEntity entity) {
+    /** 访问地址依赖当前存储实现，因此属于业务组装而非纯字段映射。 */
+    private AttachmentVO assembleAttachmentVO(AttachmentEntity entity) {
         AttachmentVO vo = new AttachmentVO();
         vo.setId(entity.getId());
         vo.setOriginalName(entity.getOriginalName());

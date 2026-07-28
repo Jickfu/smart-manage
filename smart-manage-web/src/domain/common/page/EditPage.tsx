@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { App, Spin, Button, Result, Collapse, Form } from 'antd';
+import { App, Collapse, Form } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { ReactNode } from 'react';
 import { OperationType, BillStatus } from './types';
 import { EditFormFields } from './EditFormFields';
 import type { AccessResource, PermissionAction } from './access';
 import { PermissionActions } from './PermissionActions';
+import { EditPageShell } from './EditPageShell';
 import { useWorkbenchStore } from '@/stores/workbench';
 import './EditPage.css';
 
@@ -173,91 +174,67 @@ const EditPage = ({
     }
   };
 
-  if (error) {
-    return (
-      <section className="sm-common-page sm-edit-page">
-        <Result
-          status="error"
-          title="加载失败"
-          subTitle={error.message || '请检查网络连接后重试'}
-          extra={
-            onRetry && (
-              <Button type="primary" onClick={onRetry}>
-                重试
-              </Button>
-            )
-          }
-        />
-      </section>
-    );
-  }
-
   return (
-    <section className="sm-common-page sm-edit-page">
-      {/* 顶部操作区固定展示，单据内容在下方独立滚动 */}
-      <div className="sm-edit-header">
-        <div className="sm-edit-header-actions">
-          <PermissionActions
-            prefix={access?.prefix}
-            actions={[
-              ...(editable && onSave
-                ? [
-                    {
-                      key: 'save',
-                      label: '保存',
-                      permission: access?.permissions.save,
-                      type: 'primary' as const,
-                      loading: saving,
-                      onClick: handleSave,
-                    },
-                  ]
-                : []),
-              ...(editable && onSubmit
-                ? [
-                    {
-                      key: 'submit',
-                      label: '提交',
-                      permission: access?.permissions.submit,
-                      type: 'primary' as const,
-                      loading: saving,
-                      onClick: handleSubmit,
-                    },
-                  ]
-                : []),
-              ...(headerActions ?? []),
-              ...(onExit ? [{ key: 'exit', label: '退出', onClick: onExit }] : []),
-            ]}
-          />
-        </div>
-      </div>
-
-      {/* 单据内容区 */}
-      <div className="sm-edit-body">
-        <Spin spinning={loading}>
-          <Form
-            form={form}
-            layout="vertical"
-            className="sm-edit-form"
-            onValuesChange={() => setDirty(true)}
-          >
-            <Collapse
-              className="sm-edit-collapse"
-              defaultActiveKey={detailContent ? ['basic', 'detail'] : ['basic']}
-              items={[
-                {
-                  key: 'basic',
-                  label: '基本信息',
-                  children: <EditFormFields fields={fields} editable={editable} />,
-                },
-                ...(detailContent
-                  ? [{ key: 'detail', label: '明细信息', children: detailContent(editable) }]
-                  : []),
-              ]}
-            />
-          </Form>
-        </Spin>
-      </div>
-    </section>
+    <EditPageShell
+      loading={loading}
+      error={error}
+      onRetry={onRetry}
+      actions={
+        <PermissionActions
+          prefix={access?.prefix}
+          actions={[
+            ...(editable && onSave
+              ? [
+                  {
+                    key: 'save',
+                    label: '保存',
+                    permission: access?.permissions.save,
+                    type: 'primary' as const,
+                    loading: saving,
+                    onClick: handleSave,
+                  },
+                ]
+              : []),
+            ...(editable && onSubmit
+              ? [
+                  {
+                    key: 'submit',
+                    label: '提交',
+                    permission: access?.permissions.submit,
+                    type: 'primary' as const,
+                    loading: saving,
+                    onClick: handleSubmit,
+                  },
+                ]
+              : []),
+            ...(headerActions ?? []),
+            ...(onExit ? [{ key: 'exit', label: '退出', onClick: onExit }] : []),
+          ]}
+        />
+      }
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        className="sm-edit-form"
+        onValuesChange={() => setDirty(true)}
+      >
+        <Collapse
+          className="sm-edit-collapse"
+          defaultActiveKey={detailContent ? ['basic', 'detail'] : ['basic']}
+          items={[
+            {
+              key: 'basic',
+              label: '基本信息',
+              children: <EditFormFields fields={fields} editable={editable} />,
+            },
+            ...(detailContent
+              ? [{ key: 'detail', label: '明细信息', children: detailContent(editable) }]
+              : []),
+          ]}
+        />
+      </Form>
+    </EditPageShell>
   );
 };
 

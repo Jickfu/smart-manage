@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 public class MenuDetailVO {
 
 	@Schema(description = "ID")
-	private String id;
+    private Long id;
 
 	@Schema(description = "编码")
 	private String number;
@@ -70,7 +70,7 @@ public class MenuDetailVO {
 	@Schema(description = "父菜单简要信息")
 	public static class ParentInfo {
 		@Schema(description = "ID")
-		private String id;
+        private Long id;
 
 		@Schema(description = "编码")
 		private String number;
