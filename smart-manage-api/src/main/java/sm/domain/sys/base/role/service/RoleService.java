@@ -82,11 +82,7 @@ public class RoleService {
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), voList);
 	}
 
-	public RoleEntity getById(Long id) {
-		return mapper.selectById(id);
-	}
-
-	public RoleDetailVO getDetail(Long id) {
+	public RoleDetailVO detail(Long id) {
 		if (id == null) {
 			throw new BizException(ResultEnum.PARAM_ERROR, "角色ID不能为空");
 		}

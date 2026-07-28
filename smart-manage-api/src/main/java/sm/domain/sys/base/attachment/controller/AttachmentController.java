@@ -75,7 +75,7 @@ public class AttachmentController {
     @PostMapping("/sys/base/attachment/download")
     @Operation(summary = "下载附件", description = "按附件ID下载文件")
     public ResponseEntity<byte[]> download(@RequestBody @Valid IdForm form) throws IOException {
-        AttachmentEntity entity = service.getById(form.getId());
+        AttachmentEntity entity = service.requireDownloadableAttachment(form.getId());
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "附件不存在：" + form.getId());
         }

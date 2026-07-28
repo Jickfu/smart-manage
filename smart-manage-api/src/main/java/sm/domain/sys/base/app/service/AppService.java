@@ -25,19 +25,12 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class AppService {
-	private static final String DEFAULT_ICON = "app";
-	private static final String DEFAULT_ICON_COLOR = "#165dff";
-
 	private final AppMapper mapper;
 	private final AppTxService txService;
 
 	public PageData<AppListVO> listPage(AppListForm form) {
 		Page<AppListVO> result = mapper.selectListPage(new Page<>(form.getPageNum(), form.getPageSize()), form);
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), result.getRecords());
-	}
-
-	public AppEntity getById(Long id) {
-		return mapper.selectById(id);
 	}
 
 	/**
@@ -56,8 +49,8 @@ public class AppService {
 
 	public AppCreateNewDataVO createNewData() {
 		AppCreateNewDataVO vo = new AppCreateNewDataVO();
-		vo.setIcon(DEFAULT_ICON);
-		vo.setIconColor(DEFAULT_ICON_COLOR);
+		vo.setIcon(AppDefaults.ICON);
+		vo.setIconColor(AppDefaults.ICON_COLOR);
 		vo.setSeq(99);
 		vo.setEnabled(true);
 		return vo;
@@ -93,14 +86,14 @@ public class AppService {
 		if (UserHelper.isAdmin()) {
 			return getAllCloudApps();
 		}
-		return toCloudApps(mapper.selectUserCloudApps(userId, UserHelper.getCurrentOrgId()));
+		return assembleCloudApps(mapper.selectUserCloudApps(userId, UserHelper.getCurrentOrgId()));
 	}
 
 	public List<CloudAppsVO> getAllCloudApps() {
-		return toCloudApps(mapper.selectAllCloudApps());
+		return assembleCloudApps(mapper.selectAllCloudApps());
 	}
 
-	private List<CloudAppsVO> toCloudApps(List<CloudAppRowVO> rows) {
+	private List<CloudAppsVO> assembleCloudApps(List<CloudAppRowVO> rows) {
 		Map<Long, CloudAppsVO> cloudMap = new LinkedHashMap<>();
 		Map<Long, Map<Long, AppVO>> appMap = new LinkedHashMap<>();
 		for (CloudAppRowVO row : rows) {

@@ -171,8 +171,12 @@ public class UserService {
 
 	/** Redis 远程缓存读取（外部调用时走代理生效，内部调用请直接使用 mapper） */
 	@Cached(cacheType = CacheType.REMOTE, name = CacheConstant.USER_INFO, key = "#id", expire = 1, timeUnit = TimeUnit.HOURS)
-	public UserEntity getById(Long id) {
-		return mapper.selectById(id);
+	public UserEntity requireUser(Long id) {
+		UserEntity entity = mapper.selectById(id);
+		if (entity == null) {
+			throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+		}
+		return entity;
 	}
 
 	/**

@@ -54,7 +54,7 @@ public class SysParamService {
     }
 
     /** 详情 */
-    public SysParamVO getById(Long id) {
+    public SysParamVO detail(Long id) {
         if (id == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "系统参数ID不能为空");
         }

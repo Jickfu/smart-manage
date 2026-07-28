@@ -104,6 +104,25 @@ class SystemDependencyBoundaryTests {
         assertTrue(violations.isEmpty(), () -> "高风险 Service 必须校验 administrator 身份: " + violations);
     }
 
+    @Test
+    void serviceDetailMethodsMustUseStandardName() throws IOException {
+        assertNoSourceViolation(
+                path -> path.toString().endsWith("Service.java"),
+                source -> source.matches("(?s).*public\\s+\\w+(?:Detail|Info|List)?VO\\s+(?:getDetail|getById)\\s*\\(.*"),
+                "标准详情 Service 方法必须统一命名为 detail"
+        );
+    }
+
+    @Test
+    void publicServicesMustNotExposeGenericEntityLookup() throws IOException {
+        assertNoSourceViolation(
+                path -> path.toString().endsWith("Service.java")
+                        && !path.toString().endsWith("TxService.java"),
+                source -> source.matches("(?s).*public\\s+\\w+Entity\\s+getById\\s*\\(.*"),
+                "公开 Service 禁止通过通用 getById 暴露 Entity，应改为具有业务语义的方法"
+        );
+    }
+
     private void assertNoDomainImports(Path sourceRoot) throws IOException {
         try (var paths = Files.walk(sourceRoot)) {
             var violations = paths

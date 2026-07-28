@@ -6,6 +6,7 @@ import {
 } from '@/domain/common/page/tabKeys';
 import { OperationType } from '@/domain/common/page/types';
 import type { AppVO } from '@/domain/sys/app/types';
+import { pushTabHistory, resolveNextActiveTabKey } from './tabHistory';
 
 /** 内容页签最大数量（不含首页） */
 const MAX_CONTENT_TABS = 20;
@@ -82,10 +83,6 @@ function defaultWorkspace(appInfo: AppVO): WorkspaceState {
     activeContentTabKey: '__home__',
     activeContentTabHistory: ['__home__'],
   };
-}
-
-function pushContentHistory(history: string[], key: string) {
-  return [...history.filter((item) => item !== key), key];
 }
 
 export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
@@ -212,13 +209,15 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       let activeContentTabKey = ws.activeContentTabKey;
       if (tabKeySet.has(activeContentTabKey)) {
         const remainingKeys = new Set(contentTabs.map((tab) => tab.key));
-        activeContentTabKey =
-          [...ws.activeContentTabHistory]
-            .reverse()
-            .find((key) => !tabKeySet.has(key) && remainingKeys.has(key)) ?? '__home__';
+        activeContentTabKey = resolveNextActiveTabKey(
+          ws.activeContentTabHistory,
+          remainingKeys,
+          '__home__',
+          tabKeySet,
+        );
       }
 
-      const activeContentTabHistory = pushContentHistory(
+      const activeContentTabHistory = pushTabHistory(
         ws.activeContentTabHistory.filter((key) => !tabKeySet.has(key)),
         activeContentTabKey,
       );
@@ -288,7 +287,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
           [appNumber]: {
             ...ws,
             activeContentTabKey: tab.key,
-            activeContentTabHistory: pushContentHistory(ws.activeContentTabHistory, tab.key),
+            activeContentTabHistory: pushTabHistory(ws.activeContentTabHistory, tab.key),
           },
         },
       });
@@ -308,7 +307,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
           ...ws,
           contentTabs: [...ws.contentTabs, tab],
           activeContentTabKey: tab.key,
-          activeContentTabHistory: pushContentHistory(ws.activeContentTabHistory, tab.key),
+          activeContentTabHistory: pushTabHistory(ws.activeContentTabHistory, tab.key),
         },
       },
     });
@@ -366,7 +365,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     const contentTabs = ws.contentTabs.map((tab) => (tab.key === oldTabKey ? nextTab : tab));
     const activeContentTabKey =
       ws.activeContentTabKey === oldTabKey ? nextTab.key : ws.activeContentTabKey;
-    const activeContentTabHistory = pushContentHistory(
+    const activeContentTabHistory = pushTabHistory(
       ws.activeContentTabHistory.filter((key) => key !== oldTabKey),
       activeContentTabKey,
     );
@@ -402,10 +401,12 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     const nextHistory = ws.activeContentTabHistory.filter((key) => key !== tabKey);
     let newActiveKey = ws.activeContentTabKey;
     if (ws.activeContentTabKey === tabKey) {
-      newActiveKey =
-        [...ws.activeContentTabHistory]
-          .reverse()
-          .find((key) => key !== tabKey && remainingKeys.has(key)) ?? '__home__';
+      newActiveKey = resolveNextActiveTabKey(
+        ws.activeContentTabHistory,
+        remainingKeys,
+        '__home__',
+        new Set([tabKey]),
+      );
     }
 
     const nextCallbacks = { ...beforeCloseCallbacks };
@@ -418,7 +419,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
           ...ws,
           contentTabs: newTabs,
           activeContentTabKey: newActiveKey,
-          activeContentTabHistory: pushContentHistory(nextHistory, newActiveKey),
+          activeContentTabHistory: pushTabHistory(nextHistory, newActiveKey),
         },
       },
       beforeCloseCallbacks: nextCallbacks,
@@ -435,7 +436,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         [appNumber]: {
           ...ws,
           activeContentTabKey: tabKey,
-          activeContentTabHistory: pushContentHistory(ws.activeContentTabHistory, tabKey),
+          activeContentTabHistory: pushTabHistory(ws.activeContentTabHistory, tabKey),
         },
       },
     });

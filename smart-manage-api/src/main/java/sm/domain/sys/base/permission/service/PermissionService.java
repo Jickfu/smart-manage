@@ -96,11 +96,7 @@ public class PermissionService {
 		return mapper.selectUserPermissionNumbers(userId, orgId, prefix);
 	}
 
-	public PermissionEntity getById(Long id) {
-		return mapper.selectById(id);
-	}
-
-	public PermissionDetailVO getDetail(Long id) {
+	public PermissionDetailVO detail(Long id) {
 		if (id == null) {
 			throw new BizException(ResultEnum.PARAM_ERROR, "权限ID不能为空");
 		}

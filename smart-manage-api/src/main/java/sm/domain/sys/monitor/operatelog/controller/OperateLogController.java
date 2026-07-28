@@ -33,7 +33,7 @@ public class OperateLogController {
 	@Operation(summary = "操作日志详情")
 	@SaCheckPermission("sys:log:operate:detail")
 	public Result<OperateLogDetailVO> detail(@Valid @RequestBody IdForm form) {
-		return Result.success(service.getById(form.getId()));
+		return Result.success(service.detail(form.getId()));
 	}
 }
 

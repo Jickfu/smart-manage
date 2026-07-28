@@ -60,7 +60,7 @@ public class PermissionController {
 	@SaCheckPermission(PermissionManagementPermission.DETAIL)
 	@PostMapping("/sys/base/permission/detail")
 	public Result<PermissionDetailVO> detail(@RequestBody @Valid IdForm form) {
-		return Result.success(service.getDetail(form.getId()));
+		return Result.success(service.detail(form.getId()));
 	}
 
 	@PostMapping("/sys/base/permission/save")

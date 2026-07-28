@@ -61,11 +61,7 @@ public class CloudService {
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
 	}
 
-	public CloudEntity getById(Long id) {
-		return mapper.selectById(id);
-	}
-
-	public CloudDetailVO getDetail(Long id) {
+	public CloudDetailVO detail(Long id) {
 		if (id == null) {
 			throw new BizException(ResultEnum.PARAM_ERROR, "云ID不能为空");
 		}

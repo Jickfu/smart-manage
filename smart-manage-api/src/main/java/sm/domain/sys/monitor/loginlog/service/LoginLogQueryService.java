@@ -42,7 +42,7 @@ public class LoginLogQueryService {
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
 	}
 
-	public LoginLogListVO getById(Long id) {
+	public LoginLogListVO detail(Long id) {
 		if (id == null) {
 			throw new BizException(ResultEnum.PARAM_ERROR, "登录日志ID不能为空");
 		}

@@ -176,11 +176,7 @@ public class MenuService {
 		return getUserMenusByAppId(userId, appId);
 	}
 
-	public MenuEntity getById(Long id) {
-		return mapper.selectById(id);
-	}
-
-	public MenuDetailVO getDetail(Long id) {
+	public MenuDetailVO detail(Long id) {
 		if (id == null) {
 			throw new BizException(ResultEnum.PARAM_ERROR, "菜单ID不能为空");
 		}

@@ -23,9 +23,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
 class AppTxService {
-    private static final String DEFAULT_ICON = "app";
-    private static final String DEFAULT_ICON_COLOR = "#165dff";
-
     private final AppMapper mapper;
 
     public Long save(AppSaveForm form) {
@@ -46,8 +43,8 @@ class AppTxService {
         }
         entity.setName(form.getName());
         entity.setNumber(form.getNumber());
-        entity.setIcon(form.getIcon() == null || form.getIcon().isBlank() ? DEFAULT_ICON : form.getIcon());
-        entity.setIconColor(form.getIconColor() == null || form.getIconColor().isBlank() ? DEFAULT_ICON_COLOR : form.getIconColor());
+        entity.setIcon(form.getIcon() == null || form.getIcon().isBlank() ? AppDefaults.ICON : form.getIcon());
+        entity.setIconColor(form.getIconColor() == null || form.getIconColor().isBlank() ? AppDefaults.ICON_COLOR : form.getIconColor());
         entity.setSeq(form.getSeq() != null ? form.getSeq() : 99);
         entity.setDescription(form.getDescription());
         entity.setCloudId(form.getCloudId());

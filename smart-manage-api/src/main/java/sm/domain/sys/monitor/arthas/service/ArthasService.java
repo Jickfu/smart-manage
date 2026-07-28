@@ -53,7 +53,7 @@ public class ArthasService {
     /**
      * 执行一次性命令
      */
-    @BizLog(value = "执行Arthas命令", saveRequest = false, saveResponse = false)
+    @BizLog(value = "执行Arthas命令", recordRequest = false, recordResponse = false)
     public ArthasResultVO execute(String command, String args) {
         UserHelper.checkAdmin();
         if (!ONE_SHOT_COMMANDS.contains(command)) {
@@ -70,7 +70,7 @@ public class ArthasService {
     /**
      * 启动持续命令（trace/watch/stack/tt/monitor）
      */
-    @BizLog(value = "启动Arthas会话", saveRequest = false, saveResponse = false)
+    @BizLog(value = "启动Arthas会话", recordRequest = false, recordResponse = false)
     public ArthasResultVO start(String command, String args) {
         UserHelper.checkAdmin();
         if (!CONTINUOUS_COMMANDS.contains(command)) {

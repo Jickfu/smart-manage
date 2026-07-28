@@ -47,7 +47,7 @@ public class CloudController {
 	@PostMapping("/sys/base/cloud/detail")
 	@SaCheckPermission(CloudPermission.DETAIL)
 	public Result<CloudDetailVO> detail(@RequestBody @Valid IdForm form) {
-		return Result.success(service.getDetail(form.getId()));
+		return Result.success(service.detail(form.getId()));
 	}
 
 	@Operation(summary = "保存云", description = "新增或更新云")

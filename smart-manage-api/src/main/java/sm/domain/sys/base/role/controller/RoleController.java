@@ -61,7 +61,7 @@ public class RoleController {
 	@SaCheckPermission(RolePermission.DETAIL)
 	@PostMapping("/sys/base/role/detail")
 	public Result<RoleDetailVO> detail(@RequestBody @Valid IdForm form) {
-		return Result.success(service.getDetail(form.getId()));
+		return Result.success(service.detail(form.getId()));
 	}
 
 	@Operation(summary = "保存角色", description = "新增或更新角色")

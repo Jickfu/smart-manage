@@ -49,7 +49,7 @@ public class SqlService {
         this.converter = converter;
     }
 
-    @BizLog(value = "执行SQL", saveRequest = false, saveResponse = false)
+    @BizLog(value = "执行SQL", recordRequest = false, recordResponse = false)
     public SqlResultVO execute(SqlExecuteForm form) {
         UserHelper.checkAdmin();
         String sql = form.getSql().trim();
@@ -147,19 +147,7 @@ public class SqlService {
         return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(), vos);
     }
 
-    /**
-     * 查询单条执行历史
-     */
-    public SqlLogEntity detail(Long id) {
-        UserHelper.checkAdmin();
-        SqlLogEntity entity = mapper.selectById(id);
-        if (entity == null) {
-            throw new BizException(ResultEnum.NOT_FOUND, "执行日志不存在");
-        }
-        return entity;
-    }
-
-    public SqlLogDetailVO getDetail(Long id) {
+    public SqlLogDetailVO detail(Long id) {
         UserHelper.checkAdmin();
         SqlLogEntity entity = mapper.selectById(id);
         if (entity == null) {

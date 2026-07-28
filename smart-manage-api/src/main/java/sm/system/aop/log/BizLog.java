@@ -19,12 +19,12 @@ public @interface BizLog {
 	/**
 	 * 是否落库方法参数（会脱敏/截断）
 	 */
-	boolean saveRequest() default true;
+	boolean recordRequest() default true;
 
 	/**
 	 * 是否落库返回体（会脱敏/截断）
 	 */
-	boolean saveResponse() default true;
+	boolean recordResponse() default true;
 
 	int maxParamLen() default 4000;
 

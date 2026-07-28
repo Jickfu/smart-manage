@@ -39,7 +39,7 @@ public class FileConfigController {
     @Operation(summary = "文件配置详情")
     @SaCheckPermission("sys:base:file-config:detail")
     public Result<FileConfigDetailVO> detail(@RequestBody @Valid IdForm form) {
-        return Result.success(service.getDetail(form.getId()));
+        return Result.success(service.detail(form.getId()));
     }
 
     @PostMapping("/sys/base/file-config/save")

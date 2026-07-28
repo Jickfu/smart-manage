@@ -46,6 +46,6 @@ public class SqlController {
     @Operation(summary = "执行日志详情")
     @SaCheckPermission("sys:monitor:sql:log:detail")
     public Result<SqlLogDetailVO> detail(@Valid @RequestBody IdForm form) {
-        return Result.success(sqlService.getDetail(form.getId()));
+        return Result.success(sqlService.detail(form.getId()));
     }
 }

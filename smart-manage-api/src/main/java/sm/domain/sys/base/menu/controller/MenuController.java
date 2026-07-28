@@ -69,7 +69,7 @@ public class MenuController {
 	@SaCheckPermission(MenuPermission.DETAIL)
 	@PostMapping("/sys/base/menu/detail")
 	public Result<MenuDetailVO> detail(@RequestBody @Valid IdForm form) {
-		return Result.success(service.getDetail(form.getId()));
+		return Result.success(service.detail(form.getId()));
 	}
 
 	@PostMapping("/sys/base/menu/save")

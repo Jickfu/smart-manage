@@ -54,7 +54,7 @@ public class UserHelper {
 	 * 获取当前登录用户信息
 	 */
 	public static UserEntity getCurrentUser() {
-		return userService.getById(getCurrentUserId());
+		return userService.requireUser(getCurrentUserId());
 	}
 
 	/**

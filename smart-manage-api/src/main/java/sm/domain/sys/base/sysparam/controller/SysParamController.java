@@ -42,7 +42,7 @@ public class SysParamController {
     @Operation(summary = "系统参数详情")
     @SaCheckPermission("sys:base:param:detail")
     public Result<SysParamVO> detail(@RequestBody @Valid IdForm form) {
-        return Result.success(service.getById(form.getId()));
+        return Result.success(service.detail(form.getId()));
     }
 
     @PostMapping("/sys/base/param/save")

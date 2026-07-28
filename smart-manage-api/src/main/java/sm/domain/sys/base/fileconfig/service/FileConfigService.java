@@ -55,11 +55,7 @@ public class FileConfigService implements FileStorageConfigProvider {
         return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
     }
 
-    public FileConfigEntity getById(Long id) {
-        return mapper.selectById(id);
-    }
-
-    public FileConfigDetailVO getDetail(Long id) {
+    public FileConfigDetailVO detail(Long id) {
         if (id == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "文件配置ID不能为空");
         }
@@ -105,7 +101,7 @@ public class FileConfigService implements FileStorageConfigProvider {
     /**
      * 使用前端当前填写的参数测试 FTP 连通性，不读取也不保存文件配置。
      */
-    @BizLog(value = "测试FTP连接", saveRequest = false)
+    @BizLog(value = "测试FTP连接", recordRequest = false)
     public String testFtp(FtpTestForm form) {
         // FTP 连接可访问任意网络地址，除业务权限外还必须校验超级管理员账号身份。
         UserHelper.checkAdmin();

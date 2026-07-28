@@ -14,7 +14,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.condition.PathPatternsRequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-import sm.system.exception.ExceptionResult;
+import sm.system.exception.ExceptionResultResolver;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.lang.reflect.Method;
@@ -77,7 +77,7 @@ public class SaTokenConfig {
 					SaHolder.getResponse().setHeader("Content-Type", "application/json;charset=UTF-8");
 					// 处理异常
 					try {
-						return jsonMapper.writeValueAsString(ExceptionResult.getExceptionResult(e));
+						return jsonMapper.writeValueAsString(ExceptionResultResolver.resolve(e));
 					} catch (Exception ex) {
 						return "{\"code\":500,\"msg\":\"server error\"}";
 					}

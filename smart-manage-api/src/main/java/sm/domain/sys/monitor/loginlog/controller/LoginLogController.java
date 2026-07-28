@@ -32,7 +32,7 @@ public class LoginLogController {
 	@Operation(summary = "登录日志详情")
 	@SaCheckPermission("sys:log:login:detail")
 	public Result<LoginLogListVO> detail(@Valid @RequestBody IdForm form) {
-		return Result.success(loginLogQueryService.getById(form.getId()));
+		return Result.success(loginLogQueryService.detail(form.getId()));
 	}
 }
 

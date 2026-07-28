@@ -31,15 +31,15 @@ import java.util.stream.Collectors;
  * @author Chekfu
  */
 @Slf4j
-public final class ExceptionResult {
+public final class ExceptionResultResolver {
 
     private static final String SQL_STATE_UNIQUE_VIOLATION = "23505";
     private static final String SQL_STATE_FOREIGN_KEY_VIOLATION = "23503";
 
-    private ExceptionResult() {
+    private ExceptionResultResolver() {
     }
 
-    public static Result<String> getExceptionResult(Throwable exception) {
+    public static Result<String> resolve(Throwable exception) {
         if (exception instanceof BizException bizException) {
             log.warn("业务异常: {}", bizException.getMessage());
             return Result.error(bizException.getCode(), bizException.getMessage());

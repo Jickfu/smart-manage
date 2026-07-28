@@ -70,7 +70,7 @@ public class JobService {
         return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
     }
 
-    public JobDetailVO getById(Long id) {
+    public JobDetailVO detail(Long id) {
         if (id == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "任务ID不能为空");
         }

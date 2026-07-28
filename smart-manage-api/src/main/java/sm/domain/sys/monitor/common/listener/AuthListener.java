@@ -38,7 +38,7 @@ public class AuthListener implements SaTokenListener {
                 try {
                     long uid = Long.parseLong(String.valueOf(loginId));
                     e.setUserId(uid);
-                    UserEntity u = userService.getById(uid);
+                    UserEntity u = userService.requireUser(uid);
                     if (u != null) {
                         e.setUsername(u.getUsername());
                         e.setNickname(u.getNickname());
@@ -67,7 +67,7 @@ public class AuthListener implements SaTokenListener {
                 try {
                     long uid = Long.parseLong(String.valueOf(loginId));
                     e.setUserId(uid);
-                    UserEntity u = userService.getById(uid);
+                    UserEntity u = userService.requireUser(uid);
                     if (u != null) {
                         e.setUsername(u.getUsername());
                         e.setNickname(u.getNickname());

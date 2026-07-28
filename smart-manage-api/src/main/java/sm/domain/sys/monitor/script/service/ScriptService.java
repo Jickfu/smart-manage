@@ -56,7 +56,7 @@ public class ScriptService {
 
     // ---- 脚本执行 ----
 
-    @BizLog(value = "执行脚本", saveRequest = false, saveResponse = false)
+    @BizLog(value = "执行脚本", recordRequest = false, recordResponse = false)
     public ScriptResultVO execute(ScriptExecuteForm form) {
         UserHelper.checkAdmin();
         String content = form.getContent().trim();
@@ -194,7 +194,7 @@ public class ScriptService {
         return converter.toDetailVO(entity);
     }
 
-    @BizLog(value = "保存脚本", saveRequest = false)
+    @BizLog(value = "保存脚本", recordRequest = false)
     public Long save(ScriptSaveForm form) {
         UserHelper.checkAdmin();
         return txService.save(form);

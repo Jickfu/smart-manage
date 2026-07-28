@@ -128,6 +128,7 @@
         <dependency>
             <groupId>com.alicp.jetcache</groupId>
             <artifactId>jetcache-starter-redis</artifactId>
+            <!-- JetCache 2.8.0.RC 是当前支持 Spring Boot 4 的最新版本，不能降级到 2.7.x。 -->
             <version>2.8.0.RC</version>
         </dependency>
         <!-- Quartz 定时任务 -->

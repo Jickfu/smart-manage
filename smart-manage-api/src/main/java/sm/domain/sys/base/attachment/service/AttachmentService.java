@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import sm.system.aop.log.BizLog;
+import sm.system.exception.BizException;
+import sm.system.response.ResultEnum;
 import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
@@ -32,7 +34,7 @@ public class AttachmentService {
     private final AttachmentTxService txService;
 
     /** 上传附件：传 bizType 时存入临时目录（需 promote），否则直接存 sys 系统目录 */
-    @BizLog(value = "上传附件", saveRequest = false)
+    @BizLog(value = "上传附件", recordRequest = false)
     public AttachmentVO upload(MultipartFile file, String bizType) throws IOException {
         return txService.upload(file, bizType);
     }
@@ -63,8 +65,12 @@ public class AttachmentService {
         return mapper.selectByIds(ids).stream().map(this::assembleAttachmentVO).collect(Collectors.toList());
     }
 
-    public AttachmentEntity getById(Long id) {
-        return mapper.selectById(id);
+    public AttachmentEntity requireDownloadableAttachment(Long id) {
+        AttachmentEntity entity = mapper.selectById(id);
+        if (entity == null) {
+            throw new BizException(ResultEnum.NOT_FOUND, "附件不存在");
+        }
+        return entity;
     }
 
     /** 访问地址依赖当前存储实现，因此属于业务组装而非纯字段映射。 */

@@ -43,7 +43,7 @@ public class OperateLogQueryService {
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
 	}
 
-	public OperateLogDetailVO getById(Long id) {
+	public OperateLogDetailVO detail(Long id) {
 		if (id == null) {
 			throw new BizException(ResultEnum.PARAM_ERROR, "操作日志ID不能为空");
 		}

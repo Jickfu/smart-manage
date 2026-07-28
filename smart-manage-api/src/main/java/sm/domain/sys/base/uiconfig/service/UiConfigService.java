@@ -49,11 +49,7 @@ public class UiConfigService {
         return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
     }
 
-    public UiConfigEntity getById(Long id) {
-        return mapper.selectById(id);
-    }
-
-    public UiConfigDetailVO getDetail(Long id) {
+    public UiConfigDetailVO detail(Long id) {
         if (id == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "界面配置ID不能为空");
         }

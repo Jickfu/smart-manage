@@ -24,9 +24,9 @@ class FileConfigServiceTests {
                 mapper, mock(FileConfigTxService.class), mock(SM4Helper.class),
                 new FileConfigConverterImpl());
 
-        assertTrue(service.getDetail(1L).getFtpPasswordConfigured());
+        assertTrue(service.detail(1L).getFtpPasswordConfigured());
 
         entity.setFtpPasswordCipher(null);
-        assertFalse(service.getDetail(1L).getFtpPasswordConfigured());
+        assertFalse(service.detail(1L).getFtpPasswordConfigured());
     }
 }

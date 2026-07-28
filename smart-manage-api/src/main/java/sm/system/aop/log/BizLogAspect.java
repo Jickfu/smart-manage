@@ -62,7 +62,7 @@ public class BizLogAspect {
         String username = currentOperatorProvider.getCurrentUsernameOrDefault("未知");
 
         String params = null;
-        if (bizLog.saveRequest()) {
+        if (bizLog.recordRequest()) {
             params = LogPayloadUtil.truncate(LogPayloadUtil.maskJsonLike(serializeArgs(joinPoint.getArgs())), bizLog.maxParamLen());
         }
 
@@ -78,7 +78,7 @@ public class BizLogAspect {
         }
         long duration = System.currentTimeMillis() - t0;
         String body = null;
-        if (bizLog.saveResponse()) {
+        if (bizLog.recordResponse()) {
             body = LogPayloadUtil.truncate(LogPayloadUtil.maskJsonLike(serializeObject(result)), bizLog.maxResponseLen());
         }
         writeLog(bizLog, joinPoint, true, null, ip, userAgent, requestUri, requestMethod, userId, username, params, body, duration);

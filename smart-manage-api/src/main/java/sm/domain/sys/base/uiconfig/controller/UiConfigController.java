@@ -42,7 +42,7 @@ public class UiConfigController {
     @Operation(summary = "界面配置详情", description = "按ID查询界面配置")
     @SaCheckPermission("sys:base:ui-config:detail")
     public Result<UiConfigDetailVO> detail(@RequestBody @Valid IdForm form) {
-        return Result.success(service.getDetail(form.getId()));
+        return Result.success(service.detail(form.getId()));
     }
 
     @PostMapping("/sys/base/ui-config/save")

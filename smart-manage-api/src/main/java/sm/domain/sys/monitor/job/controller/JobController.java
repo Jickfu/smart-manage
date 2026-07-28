@@ -44,7 +44,7 @@ public class JobController {
     @Operation(summary = "任务详情", description = "按ID查询任务详情")
     @SaCheckPermission("sys:monitor:job:detail")
     public Result<JobDetailVO> detail(@RequestBody @Valid IdForm form) {
-        return Result.success(service.getById(form.getId()));
+        return Result.success(service.detail(form.getId()));
     }
 
     @PostMapping("/sys/monitor/job/save")

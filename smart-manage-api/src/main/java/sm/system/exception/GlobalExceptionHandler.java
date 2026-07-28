@@ -13,7 +13,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public Result<String> handleException(Exception e) {
-		return ExceptionResult.getExceptionResult(e);
+		return ExceptionResultResolver.resolve(e);
 	}
 
 }
