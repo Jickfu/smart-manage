@@ -1,0 +1,17 @@
+.sm-ui-config-form {
+  padding: 20px 24px;
+}
+
+.sm-ui-config-text-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+  max-width: 920px;
+}
+
+.sm-ui-config-image-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  max-width: 920px;
+}

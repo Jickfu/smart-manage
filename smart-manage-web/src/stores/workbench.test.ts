@@ -113,4 +113,18 @@ describe('workbench store', () => {
       store.openBillTab(APP_NUMBER, COMPONENT_KEY, '超限页签', 'overflow', OperationType.VIEW),
     ).toBe('limit_reached');
   });
+
+  it('自定义配置页按 CUSTOM 协议打开且保持单实例', () => {
+    const store = useWorkbenchStore.getState();
+    const componentKey = 'sys/base/ui-config';
+
+    expect(store.openCustomTab(APP_NUMBER, componentKey, '界面配置')).toBe('opened');
+    expect(store.openCustomTab(APP_NUMBER, componentKey, '界面配置')).toBe('activated');
+
+    const tabs = useWorkbenchStore
+      .getState()
+      .workspaces[APP_NUMBER]!.contentTabs.filter((tab) => tab.componentKey === componentKey);
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0]?.pageType).toBe('CUSTOM');
+  });
 });

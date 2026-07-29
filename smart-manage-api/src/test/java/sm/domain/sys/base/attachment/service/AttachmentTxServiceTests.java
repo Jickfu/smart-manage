@@ -58,12 +58,13 @@ class AttachmentTxServiceTests {
 		AttachmentEntity entity = new AttachmentEntity();
 		entity.setId(1L);
 		entity.setStoredPath("temp/stored.txt");
+		entity.setStorageType("LOCAL");
 		entity.setIsTemp(true);
 		AttachmentPromoteForm form = new AttachmentPromoteForm();
 		form.setAttachmentIds(List.of(1L));
 		form.setBizType("purchase-requisition");
 		form.setBizId("100");
-		when(storageFactory.getService()).thenReturn(storage);
+		when(storageFactory.getService("LOCAL")).thenReturn(storage);
 		when(mapper.selectById(1L)).thenReturn(entity);
 		when(storage.promote("temp/stored.txt", "biz/purchase-requisition"))
 				.thenReturn("biz/purchase-requisition/stored.txt");
@@ -79,9 +80,10 @@ class AttachmentTxServiceTests {
 		AttachmentEntity entity = new AttachmentEntity();
 		entity.setId(1L);
 		entity.setStoredPath("sys/stored.txt");
+		entity.setStorageType("LOCAL");
 		when(mapper.selectById(1L)).thenReturn(entity);
 		when(mapper.deleteById(1L)).thenReturn(1);
-		when(storageFactory.getService()).thenReturn(storage);
+		when(storageFactory.getService("LOCAL")).thenReturn(storage);
 		TransactionSynchronizationManager.setActualTransactionActive(true);
 		TransactionSynchronizationManager.initSynchronization();
 

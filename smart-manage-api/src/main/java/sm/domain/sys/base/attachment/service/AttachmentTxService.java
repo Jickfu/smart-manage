@@ -81,8 +81,8 @@ class AttachmentTxService {
 
     /** 提升附件：关联业务单据 + 移出临时目录 */
     public void promote(AttachmentPromoteForm form) throws IOException {
-        FileStorageService storage = storageFactory.getService();
         List<String> promotedPaths = new ArrayList<>();
+        List<FileStorageService> promotedStorages = new ArrayList<>();
         try {
             for (Long attachmentId : form.getAttachmentIds()) {
                 AttachmentEntity entity = mapper.selectById(attachmentId);
@@ -90,8 +90,10 @@ class AttachmentTxService {
                     throw new BizException(ResultEnum.NOT_FOUND, "附件不存在: " + attachmentId);
                 }
                 if (Boolean.TRUE.equals(entity.getIsTemp())) {
+                    FileStorageService storage = storageFactory.getService(entity.getStorageType());
                     String newPath = storage.promote(entity.getStoredPath(), "biz/" + form.getBizType());
                     promotedPaths.add(newPath);
+                    promotedStorages.add(storage);
                     entity.setStoredPath(newPath);
                     entity.setIsTemp(false);
                     if (mapper.updateById(entity) != 1) {
@@ -117,7 +119,7 @@ class AttachmentTxService {
             }
         } catch (IOException | RuntimeException exception) {
             for (int index = promotedPaths.size() - 1; index >= 0; index--) {
-                moveForCompensation(storage, promotedPaths.get(index));
+                moveForCompensation(promotedStorages.get(index), promotedPaths.get(index));
             }
             throw exception;
         }
@@ -138,7 +140,7 @@ class AttachmentTxService {
         if (mapper.deleteById(id) != 1) {
             throw new BizException(sm.system.response.ResultEnum.DATA_CONFLICT, "数据已被其他用户删除");
         }
-        FileStorageService storage = storageFactory.getService();
+        FileStorageService storage = storageFactory.getService(entity.getStorageType());
         String storedPath = entity.getStoredPath();
         // 数据库提交后再删除外部文件；失败会保留包含附件 ID 与路径的可恢复告警。
         TransactionUtil.afterCommit(() -> {
@@ -166,7 +168,7 @@ class AttachmentTxService {
         vo.setMimeType(entity.getMimeType());
         vo.setFileExt(entity.getFileExt());
         vo.setIsTemp(entity.getIsTemp());
-        vo.setUrl(storageFactory.getService().getAccessUrl(entity.getStoredPath()));
+        vo.setUrl(storageFactory.getService(entity.getStorageType()).getAccessUrl(entity.getStoredPath()));
         if (entity.getCreateTime() != null) {
             vo.setCreateTime(entity.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }

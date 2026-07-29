@@ -23,4 +23,8 @@ public class SysParamVO {
     private String remark;
 
     private Boolean isSystem;
+
+    private Long appId;
+
+    private String appName;
 }

@@ -3,7 +3,6 @@ package sm.domain.sys.base.sysparam.service;
 import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.Cached;
 import com.alicp.jetcache.anno.CacheInvalidate;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * 系统参数服务
@@ -37,20 +35,12 @@ import java.util.stream.Collectors;
 public class SysParamService {
     private final SysParamMapper mapper;
     private final SysParamTxService txService;
-    private final SysParamConverter converter;
 
     /** 管理端分页列表 */
     public PageData<SysParamVO> listPage(SysParamListForm form) {
-        LambdaQueryWrapper<SysParamEntity> qw = new LambdaQueryWrapper<SysParamEntity>();
-        if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
-            String kw = form.getKeyword().trim();
-            qw.and(condition -> condition.like(SysParamEntity::getNumber, kw).or().like(SysParamEntity::getName, kw));
-        }
-        qw.orderByAsc(SysParamEntity::getNumber);
-        Page<SysParamEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
-        Page<SysParamEntity> result = mapper.selectPage(page, qw);
-        List<SysParamVO> vos = result.getRecords().stream().map(converter::toVO).collect(Collectors.toList());
-        return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
+        Page<SysParamVO> result = mapper.selectListPage(
+                new Page<>(form.getPageNum(), form.getPageSize()), form);
+        return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), result.getRecords());
     }
 
     /** 详情 */
@@ -58,11 +48,11 @@ public class SysParamService {
         if (id == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "系统参数ID不能为空");
         }
-        SysParamEntity entity = mapper.selectById(id);
-        if (entity == null) {
+        SysParamVO detail = mapper.selectDetailById(id);
+        if (detail == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "系统参数不存在");
         }
-        return converter.toVO(entity);
+        return detail;
     }
 
     /** 新增默认值 */

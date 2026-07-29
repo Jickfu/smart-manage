@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.sys.base.sysparam.mapper.SysParamMapper">
+    <select id="selectListPage" resultType="sm.domain.sys.base.sysparam.model.vo.SysParamVO">
+        SELECT a.id, a.version, a.number, a.name, a.value, a.remark, a.is_system,
+               a.app_id, b.name AS app_name
+        FROM t_sys_param a
+        LEFT JOIN t_sys_app b ON b.id = a.app_id
+        <where>
+            <if test="form.appId != null">a.app_id = #{form.appId}</if>
+            <if test="form.cloudId != null">b.cloud_id = #{form.cloudId}</if>
+            <if test="form.globalOnly == true">a.app_id IS NULL</if>
+            <if test="form.keyword != null and form.keyword.trim() != ''">
+                AND (a.number LIKE CONCAT('%', #{form.keyword}, '%')
+                OR a.name LIKE CONCAT('%', #{form.keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY a.number, a.id
+    </select>
+
+    <select id="selectDetailById" resultType="sm.domain.sys.base.sysparam.model.vo.SysParamVO">
+        SELECT a.id, a.version, a.number, a.name, a.value, a.remark, a.is_system,
+               a.app_id, b.name AS app_name
+        FROM t_sys_param a
+        LEFT JOIN t_sys_app b ON b.id = a.app_id
+        WHERE a.id = #{id}
+    </select>
+</mapper>

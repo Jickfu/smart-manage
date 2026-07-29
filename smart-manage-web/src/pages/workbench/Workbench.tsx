@@ -8,6 +8,7 @@ import AppSidebar from './AppSidebar';
 import ContentTabsBar from './ContentTabsBar';
 import PageRenderer from './PageRenderer';
 import ApplicationHome from './ApplicationHome';
+import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import './Workbench.css';
 
 interface Props {
@@ -18,6 +19,7 @@ const Workbench = ({ appNumber }: Props) => {
   const { modal } = App.useApp();
   const ws = useWorkbenchStore((s) => s.workspaces[appNumber]);
   const openListTab = useWorkbenchStore((s) => s.openListTab);
+  const openCustomTab = useWorkbenchStore((s) => s.openCustomTab);
 
   const menuQuery = useQuery({
     queryKey: menuQueryKeys.userByApp(appNumber),
@@ -28,7 +30,10 @@ const Workbench = ({ appNumber }: Props) => {
   const handleMenuItemClick = useCallback(
     (item: { component?: string; path?: string; name: string }) => {
       const componentKey = item.component?.trim() || item.path?.trim() || item.name;
-      const result = openListTab(appNumber, componentKey, item.name);
+      const result =
+        componentRegistry[componentKey]?.pageType === 'CUSTOM'
+          ? openCustomTab(appNumber, componentKey, item.name)
+          : openListTab(appNumber, componentKey, item.name);
       if (result === 'limit_reached') {
         modal.warning({
           title: '页签数量已达上限',
@@ -36,7 +41,7 @@ const Workbench = ({ appNumber }: Props) => {
         });
       }
     },
-    [appNumber, modal, openListTab],
+    [appNumber, modal, openCustomTab, openListTab],
   );
 
   if (!ws) return null;

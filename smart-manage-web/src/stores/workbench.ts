@@ -63,6 +63,7 @@ interface WorkbenchState {
   /** 添加/激活 content tab — 返回操作结果供调用层反馈 */
   addContentTab: (appNumber: string, tab: ContentTabItem) => AddTabResult;
   openListTab: (appNumber: string, componentKey: string, label: string) => AddTabResult;
+  openCustomTab: (appNumber: string, componentKey: string, label: string) => AddTabResult;
   openAddNewTab: (appNumber: string, componentKey: string, label: string) => AddTabResult;
   openBillTab: (
     appNumber: string,
@@ -321,6 +322,16 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       closable: true,
       componentKey,
       pageType: 'LIST',
+    });
+  },
+
+  openCustomTab: (appNumber, componentKey, label) => {
+    return get().addContentTab(appNumber, {
+      key: createListTabKey(componentKey),
+      label,
+      closable: true,
+      componentKey,
+      pageType: 'CUSTOM',
     });
   },
 

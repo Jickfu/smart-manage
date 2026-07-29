@@ -20,13 +20,18 @@ public class FileStorageServiceFactory {
 
     public FileStorageService getService() {
         FileStorageConfig config = configProvider.getFileStorageConfig();
-        if ("FTP".equalsIgnoreCase(config.storageType())) {
+        return getService(config.storageType());
+    }
+
+    /** 已持久化附件必须按其记录的存储类型路由，不能受后续配置切换影响。 */
+    public FileStorageService getService(String storageType) {
+        if ("FTP".equalsIgnoreCase(storageType)) {
             return ftpFileStorageService;
         }
-        if ("LOCAL".equalsIgnoreCase(config.storageType())) {
+        if ("LOCAL".equalsIgnoreCase(storageType)) {
             return localFileStorageService;
         }
         // 未知存储类型属于配置错误，禁止静默回退到本地存储。
-        throw new BizException(ResultEnum.CONFIG_ERROR, "不支持的文件存储类型: " + config.storageType());
+        throw new BizException(ResultEnum.CONFIG_ERROR, "不支持的文件存储类型: " + storageType);
     }
 }

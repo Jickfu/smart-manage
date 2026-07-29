@@ -11,17 +11,26 @@ import pageRegistrationModule2 from '../../sys/app/pageRegistration';
 // src/domain/sys/cloud/pageRegistration.ts
 import pageRegistrationModule3 from '../../sys/cloud/pageRegistration';
 
+// src/domain/sys/fileConfig/pageRegistration.ts
+import pageRegistrationModule4 from '../../sys/fileConfig/pageRegistration';
+
 // src/domain/sys/menu/pageRegistration.ts
-import pageRegistrationModule4 from '../../sys/menu/pageRegistration';
+import pageRegistrationModule5 from '../../sys/menu/pageRegistration';
 
 // src/domain/sys/permission/pageRegistration.ts
-import pageRegistrationModule5 from '../../sys/permission/pageRegistration';
+import pageRegistrationModule6 from '../../sys/permission/pageRegistration';
 
 // src/domain/sys/role/pageRegistration.ts
-import pageRegistrationModule6 from '../../sys/role/pageRegistration';
+import pageRegistrationModule7 from '../../sys/role/pageRegistration';
+
+// src/domain/sys/sysParam/pageRegistration.ts
+import pageRegistrationModule8 from '../../sys/sysParam/pageRegistration';
+
+// src/domain/sys/uiConfig/pageRegistration.ts
+import pageRegistrationModule9 from '../../sys/uiConfig/pageRegistration';
 
 // src/domain/sys/user/pageRegistration.ts
-import pageRegistrationModule7 from '../../sys/user/pageRegistration';
+import pageRegistrationModule10 from '../../sys/user/pageRegistration';
 
 import { registerPageRegistrationModules } from './componentRegistry';
 
@@ -33,4 +42,7 @@ registerPageRegistrationModules([
   pageRegistrationModule5,
   pageRegistrationModule6,
   pageRegistrationModule7,
+  pageRegistrationModule8,
+  pageRegistrationModule9,
+  pageRegistrationModule10,
 ]);

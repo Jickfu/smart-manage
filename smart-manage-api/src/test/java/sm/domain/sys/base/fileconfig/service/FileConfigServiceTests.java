@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import java.util.List;
 
 class FileConfigServiceTests {
 
@@ -18,15 +19,15 @@ class FileConfigServiceTests {
         FileConfigEntity entity = new FileConfigEntity();
         entity.setId(1L);
         entity.setFtpPasswordCipher("cipher-text");
-        when(mapper.selectById(1L)).thenReturn(entity);
+        when(mapper.selectList(null)).thenReturn(List.of(entity));
 
         FileConfigService service = new FileConfigService(
                 mapper, mock(FileConfigTxService.class), mock(SM4Helper.class),
                 new FileConfigConverterImpl());
 
-        assertTrue(service.detail(1L).getFtpPasswordConfigured());
+        assertTrue(service.singleton().getFtpPasswordConfigured());
 
         entity.setFtpPasswordCipher(null);
-        assertFalse(service.detail(1L).getFtpPasswordConfigured());
+        assertFalse(service.singleton().getFtpPasswordConfigured());
     }
 }

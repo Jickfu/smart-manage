@@ -15,6 +15,15 @@ import sm.system.form.PageForm;
 @Schema(description = "系统参数列表表单")
 public class SysParamListForm extends PageForm {
 
+    @Schema(description = "所属应用ID")
+    private Long appId;
+
+    @Schema(description = "所属云ID")
+    private Long cloudId;
+
+    @Schema(description = "是否只查询全局参数")
+    private Boolean globalOnly;
+
     @Schema(description = "关键词")
     private String keyword;
 }

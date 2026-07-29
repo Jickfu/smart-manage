@@ -36,6 +36,9 @@ public class SysParamEntity extends BaseEntity {
     /** 是否系统内置 */
     private Boolean isSystem;
 
+    /** 所属应用 ID */
+    private Long appId;
+
     @Version
     private Integer version;
 }

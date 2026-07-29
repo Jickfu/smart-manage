@@ -2,6 +2,7 @@ package sm.domain.sys.base.sysparam.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.base.sysparam.model.entity.SysParamEntity;
@@ -47,10 +48,17 @@ class SysParamTxService {
         } else {
             entity = new SysParamEntity();
         }
+        Long duplicateCount = mapper.selectCount(new LambdaQueryWrapper<SysParamEntity>()
+                .eq(SysParamEntity::getNumber, form.getNumber())
+                .ne(form.getId() != null, SysParamEntity::getId, form.getId()));
+        if (duplicateCount > 0) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "系统参数编码已存在");
+        }
         entity.setNumber(form.getNumber());
         entity.setName(form.getName());
         entity.setValue(form.getValue());
         entity.setRemark(form.getRemark());
+        entity.setAppId(form.getAppId());
         if (form.getId() == null) {
             entity.setIsSystem(false);
         }

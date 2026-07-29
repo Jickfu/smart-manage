@@ -16,6 +16,9 @@ public class UiConfigSaveForm {
     @Schema(description = "主键ID（新建时不传）")
     private Long id;
 
+    @Schema(description = "乐观锁版本号，修改时必传")
+    private Integer version;
+
     @NotBlank(message = "页面标题不能为空")
     @Schema(description = "页面标题")
     private String pageTitle;
@@ -32,4 +35,13 @@ public class UiConfigSaveForm {
 
     @Schema(description = "首页 header logo 路径")
     private String headerLogo;
+
+    @Schema(description = "登录页Banner附件ID")
+    private Long loginBannerAttachmentId;
+
+    @Schema(description = "登录页Logo附件ID")
+    private Long loginLogoAttachmentId;
+
+    @Schema(description = "顶部Logo附件ID")
+    private Long headerLogoAttachmentId;
 }

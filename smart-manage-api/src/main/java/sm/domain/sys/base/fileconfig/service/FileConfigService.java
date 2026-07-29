@@ -3,22 +3,18 @@ package sm.domain.sys.base.fileconfig.service;
 import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.Cached;
 import com.alicp.jetcache.anno.CacheInvalidate;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.base.fileconfig.model.entity.FileConfigEntity;
-import sm.domain.sys.base.fileconfig.model.form.FileConfigListForm;
 import sm.domain.sys.base.fileconfig.model.form.FileConfigSaveForm;
 import sm.domain.sys.base.fileconfig.model.form.FtpTestForm;
 import sm.domain.sys.base.fileconfig.model.vo.FileConfigDetailVO;
 import sm.domain.sys.base.fileconfig.mapper.FileConfigMapper;
 import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
-import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.system.helper.SM4Helper;
 import sm.system.storage.FileStorageConfig;
@@ -27,6 +23,7 @@ import sm.domain.sys.base.common.helper.UserHelper;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.Objects;
 
 /**
  * 文件配置服务
@@ -42,28 +39,19 @@ public class FileConfigService implements FileStorageConfigProvider {
     private final SM4Helper sm4Helper;
     private final FileConfigConverter converter;
 
-    public PageData<FileConfigDetailVO> listPage(FileConfigListForm form) {
-        LambdaQueryWrapper<FileConfigEntity> qw = new LambdaQueryWrapper<FileConfigEntity>();
-        if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
-            String kw = form.getKeyword().trim();
-            qw.like(FileConfigEntity::getStorageType, kw);
+    /** 单例管理页读取；尚未配置时返回本地存储默认值。 */
+    public FileConfigDetailVO singleton() {
+        List<FileConfigEntity> entityList = mapper.selectList(null);
+        if (entityList.isEmpty()) {
+            FileConfigDetailVO detail = new FileConfigDetailVO();
+            detail.setStorageType("LOCAL");
+            detail.setLocalDir("E:/upload/");
+            detail.setFtpPort(21);
+            detail.setFtpPassiveMode(true);
+            detail.setFtpPasswordConfigured(false);
+            return detail;
         }
-        qw.orderByAsc(FileConfigEntity::getId);
-        Page<FileConfigEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
-        Page<FileConfigEntity> result = mapper.selectPage(page, qw);
-        List<FileConfigDetailVO> vos = result.getRecords().stream().map(converter::toDetailVO).toList();
-        return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
-    }
-
-    public FileConfigDetailVO detail(Long id) {
-        if (id == null) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "文件配置ID不能为空");
-        }
-        FileConfigEntity entity = mapper.selectById(id);
-        if (entity == null) {
-            throw new BizException(ResultEnum.NOT_FOUND, "文件配置不存在");
-        }
-        return converter.toDetailVO(entity);
+        return converter.toDetailVO(entityList.get(0));
     }
 
     /** 获取服务端内部使用的活跃配置，敏感字段不得通过 Controller 暴露。 */
@@ -88,14 +76,58 @@ public class FileConfigService implements FileStorageConfigProvider {
     @CacheInvalidate(name = CacheConstant.FILE_CONFIG,
             key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY")
     public Long save(FileConfigSaveForm form) {
+        // 存储目录和凭据影响全系统文件读写，除权限码外必须校验管理员身份。
+        UserHelper.checkAdmin();
+        validateStorageConfig(form);
+        validateStorageTopologyChange(form);
         return txService.save(form);
     }
 
-    @BizLog("删除文件存储配置")
-    @CacheInvalidate(name = CacheConstant.FILE_CONFIG,
-            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY")
-    public void deleteById(Long id) {
-        txService.deleteById(id);
+    private void validateStorageConfig(FileConfigSaveForm form) {
+        if ("LOCAL".equalsIgnoreCase(form.getStorageType())) {
+            if (form.getLocalDir() == null || form.getLocalDir().isBlank()) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "本地存储目录不能为空");
+            }
+            return;
+        }
+        if (!"FTP".equalsIgnoreCase(form.getStorageType())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "不支持的文件存储类型: " + form.getStorageType());
+        }
+        if (form.getFtpHost() == null || form.getFtpHost().isBlank()
+                || form.getFtpPort() == null
+                || form.getFtpUsername() == null || form.getFtpUsername().isBlank()) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "FTP 主机、端口和用户名不能为空");
+        }
+        boolean passwordConfigured = false;
+        if (form.getId() != null) {
+            FileConfigEntity existing = mapper.selectById(form.getId());
+            passwordConfigured = existing != null && existing.getFtpPasswordCipher() != null;
+        }
+        if (!passwordConfigured && (form.getFtpPassword() == null || form.getFtpPassword().isBlank())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "FTP 密码不能为空");
+        }
+    }
+
+    /**
+     * 当前版本不提供跨存储迁移；已有附件时禁止改变会导致历史路径失效的存储拓扑。
+     * 凭据、端口和被动模式仍可按运维需要调整。
+     */
+    private void validateStorageTopologyChange(FileConfigSaveForm form) {
+        if (form.getId() == null || !mapper.existsStoredAttachment()) {
+            return;
+        }
+        FileConfigEntity existing = mapper.selectById(form.getId());
+        if (existing == null) {
+            return;
+        }
+        boolean topologyChanged = !Objects.equals(existing.getStorageType(), form.getStorageType())
+                || !Objects.equals(existing.getLocalDir(), form.getLocalDir())
+                || !Objects.equals(existing.getFtpHost(), form.getFtpHost())
+                || !Objects.equals(existing.getFtpDir(), form.getFtpDir());
+        if (topologyChanged) {
+            throw new BizException(ResultEnum.CONFIG_ERROR,
+                    "系统已有附件，不能直接切换存储类型、根目录或FTP主机；请先完成文件迁移");
+        }
     }
 
     /**
