@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { App, Form, Input } from 'antd';
+import { App, Collapse, Form, Input } from 'antd';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
@@ -52,8 +52,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     });
   }, [form, query.data]);
   const saveMutation = useMutation({
-    mutationFn: async () => {
-      const values = await form.validateFields();
+    mutationFn: async (values: UiConfigFormValues) => {
       const payload: UiConfigDetail = {
         id: query.data?.id,
         version: query.data?.version,
@@ -71,6 +70,17 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     },
     onError: (error) => message.error(error instanceof Error ? error.message : '保存失败'),
   });
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
+      saveMutation.mutate(values);
+    } catch (error) {
+      // 表单校验错误由字段自身展示，校验通过前不得进入后端请求的加载状态。
+      if (!(error as { errorFields?: unknown[] }).errorFields) {
+        message.error(error instanceof Error ? error.message : '表单校验失败');
+      }
+    }
+  };
   const imageField = (
     idName: keyof UiConfigFormValues,
     urlName: keyof UiConfigFormValues,
@@ -79,7 +89,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     attachmentId?: string,
     imageUrl?: string,
   ) => (
-    <Form.Item label={label} extra={extra}>
+    <Form.Item className="sm-edit-field" label={label} extra={extra}>
       <ImageAttachmentField
         attachmentId={attachmentId}
         imageUrl={imageUrl}
@@ -115,7 +125,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
               permission: uiConfigAccess.permissions.save,
               type: 'primary',
               loading: saveMutation.isPending,
-              onClick: () => saveMutation.mutate(),
+              onClick: handleSave,
             },
           ]}
         />
@@ -124,7 +134,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       <Form
         form={form}
         layout="vertical"
-        className="sm-ui-config-form"
+        className="sm-edit-form sm-ui-config-form"
         onValuesChange={() => setDirty(true)}
       >
         <Form.Item name="loginBannerAttachmentId" hidden>
@@ -145,48 +155,69 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
         <Form.Item name="headerLogo" hidden>
           <Input />
         </Form.Item>
-        <div className="sm-ui-config-text-grid">
-          <Form.Item
-            name="pageTitle"
-            label="页面标题"
-            rules={[{ required: true, message: '页面标题不能为空' }]}
-          >
-            <Input variant="underlined" />
-          </Form.Item>
-          <Form.Item
-            name="systemName"
-            label="系统名称"
-            rules={[{ required: true, message: '系统名称不能为空' }]}
-          >
-            <Input variant="underlined" />
-          </Form.Item>
-        </div>
-        <div className="sm-ui-config-image-grid">
-          {imageField(
-            'loginBannerAttachmentId',
-            'loginBanner',
-            '登录页 Banner',
-            '建议使用横向图片',
-            loginBannerAttachmentId,
-            loginBanner,
-          )}
-          {imageField(
-            'loginLogoAttachmentId',
-            'loginLogo',
-            '登录页 Logo',
-            '建议使用透明背景图片',
-            loginLogoAttachmentId,
-            loginLogo,
-          )}
-          {imageField(
-            'headerLogoAttachmentId',
-            'headerLogo',
-            '顶部 Logo',
-            '建议使用紧凑横向图片',
-            headerLogoAttachmentId,
-            headerLogo,
-          )}
-        </div>
+        <Collapse
+          className="sm-edit-collapse"
+          collapsible="icon"
+          defaultActiveKey={['basic', 'images']}
+          items={[
+            {
+              key: 'basic',
+              label: '基本信息',
+              children: (
+                <div className="sm-edit-fields">
+                  <Form.Item
+                    className="sm-edit-field"
+                    name="pageTitle"
+                    label="页面标题"
+                    rules={[{ required: true, message: '页面标题不能为空' }]}
+                  >
+                    <Input variant="underlined" />
+                  </Form.Item>
+                  <Form.Item
+                    className="sm-edit-field"
+                    name="systemName"
+                    label="系统名称"
+                    rules={[{ required: true, message: '系统名称不能为空' }]}
+                  >
+                    <Input variant="underlined" />
+                  </Form.Item>
+                </div>
+              ),
+            },
+            {
+              key: 'images',
+              label: '图片配置',
+              children: (
+                <div className="sm-edit-fields">
+                  {imageField(
+                    'loginBannerAttachmentId',
+                    'loginBanner',
+                    '登录页 Banner',
+                    '建议使用横向图片',
+                    loginBannerAttachmentId,
+                    loginBanner,
+                  )}
+                  {imageField(
+                    'loginLogoAttachmentId',
+                    'loginLogo',
+                    '登录页 Logo',
+                    '建议使用透明背景图片',
+                    loginLogoAttachmentId,
+                    loginLogo,
+                  )}
+                  {imageField(
+                    'headerLogoAttachmentId',
+                    'headerLogo',
+                    '顶部 Logo',
+                    '建议使用紧凑横向图片',
+                    headerLogoAttachmentId,
+                    headerLogo,
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
       </Form>
     </EditPageShell>
   );

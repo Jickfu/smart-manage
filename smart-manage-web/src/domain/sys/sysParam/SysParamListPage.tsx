@@ -57,17 +57,22 @@ const SysParamListPage = (props: PageComponentProps) => {
   });
   const treeData = useMemo<DataNode[]>(
     () => [
-      { key: 'all', title: '全部参数' },
-      { key: 'global', title: '全局参数' },
-      ...(treeQuery.data?.map((cloud) => ({
-        key: `cloud:${cloud.id}`,
-        title: cloud.name,
-        children: cloud.appList.map((application) => ({
-          key: `app:${application.id}`,
-          title: application.name,
-          isLeaf: true,
-        })),
-      })) ?? []),
+      {
+        key: 'all',
+        title: '全部参数',
+        children: [
+          { key: 'global', title: '全局参数', isLeaf: true },
+          ...(treeQuery.data?.map((cloud) => ({
+            key: `cloud:${cloud.id}`,
+            title: cloud.name,
+            children: cloud.appList.map((application) => ({
+              key: `app:${application.id}`,
+              title: application.name,
+              isLeaf: true,
+            })),
+          })) ?? []),
+        ],
+      },
     ],
     [treeQuery.data],
   );
@@ -116,6 +121,7 @@ const SysParamListPage = (props: PageComponentProps) => {
           <Tree
             treeData={treeData}
             blockNode
+            defaultExpandedKeys={['all']}
             defaultSelectedKeys={['all']}
             onSelect={(keys) => {
               const key = String(keys[0] ?? 'all');

@@ -1,12 +1,5 @@
 .sm-file-config-form {
-  max-width: 920px;
-  padding: 20px 24px;
-}
-
-.sm-file-config-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 24px;
+  min-height: 100%;
 }
 
 .sm-file-config-full {

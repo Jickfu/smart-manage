@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { App, Form, Input, InputNumber, Radio, Switch } from 'antd';
+import { App, Collapse, Form, Input, InputNumber, Select, Switch } from 'antd';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
@@ -34,8 +34,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
   }, [form, query.data]);
   const storageType = Form.useWatch('storageType', form) ?? 'LOCAL';
   const saveMutation = useMutation({
-    mutationFn: async () => {
-      const values = await form.validateFields();
+    mutationFn: async (values: FileConfigSaveForm) => {
       await fileConfigApi.save({
         ...values,
         id: query.data?.id,
@@ -49,7 +48,31 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     onError: (error) => message.error(error instanceof Error ? error.message : '保存失败'),
   });
   const testMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: (values: FileConfigSaveForm) =>
+      fileConfigApi.testFtp({
+        ftpHost: values.ftpHost,
+        ftpPort: values.ftpPort,
+        ftpUsername: values.ftpUsername,
+        ftpPassword: values.ftpPassword,
+        ftpDir: values.ftpDir,
+        ftpPassiveMode: values.ftpPassiveMode,
+      }),
+    onSuccess: (result) => message.success(result || 'FTP 连接成功'),
+    onError: (error) => message.error(error instanceof Error ? error.message : 'FTP 连接失败'),
+  });
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
+      saveMutation.mutate(values);
+    } catch (error) {
+      // 表单校验错误由字段自身展示，校验通过前不得进入后端请求的加载状态。
+      if (!(error as { errorFields?: unknown[] }).errorFields) {
+        message.error(error instanceof Error ? error.message : '表单校验失败');
+      }
+    }
+  };
+  const handleTestFtp = async () => {
+    try {
       const values = await form.validateFields([
         'ftpHost',
         'ftpPort',
@@ -59,20 +82,21 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
         'ftpPassiveMode',
       ]);
       if (!values.ftpPassword?.trim()) {
-        throw new Error('测试连接时必须重新输入 FTP 密码');
+        form.setFields([
+          {
+            name: 'ftpPassword',
+            errors: ['测试连接时必须重新输入 FTP 密码'],
+          },
+        ]);
+        return;
       }
-      return fileConfigApi.testFtp({
-        ftpHost: values.ftpHost,
-        ftpPort: values.ftpPort,
-        ftpUsername: values.ftpUsername,
-        ftpPassword: values.ftpPassword,
-        ftpDir: values.ftpDir,
-        ftpPassiveMode: values.ftpPassiveMode,
-      });
-    },
-    onSuccess: (result) => message.success(result || 'FTP 连接成功'),
-    onError: (error) => message.error(error instanceof Error ? error.message : 'FTP 连接失败'),
-  });
+      testMutation.mutate(values);
+    } catch (error) {
+      if (!(error as { errorFields?: unknown[] }).errorFields) {
+        message.error(error instanceof Error ? error.message : '表单校验失败');
+      }
+    }
+  };
   return (
     <EditPageShell
       loading={query.isLoading}
@@ -88,7 +112,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
               permission: fileConfigAccess.permissions.save,
               type: 'primary',
               loading: saveMutation.isPending,
-              onClick: () => saveMutation.mutate(),
+              onClick: handleSave,
             },
             ...(storageType === 'FTP'
               ? [
@@ -97,7 +121,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
                     label: '测试 FTP 连接',
                     permission: fileConfigAccess.permissions.save,
                     loading: testMutation.isPending,
-                    onClick: () => testMutation.mutate(),
+                    onClick: handleTestFtp,
                   },
                 ]
               : []),
@@ -108,81 +132,117 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       <Form
         form={form}
         layout="vertical"
-        className="sm-file-config-form"
+        className="sm-edit-form sm-file-config-form"
         onValuesChange={() => setDirty(true)}
       >
-        <Form.Item name="storageType" label="存储方式" rules={[{ required: true }]}>
-          <Radio.Group
-            options={[
-              { label: '本地存储', value: 'LOCAL' },
-              { label: 'FTP 存储', value: 'FTP' },
-            ]}
-            optionType="button"
-          />
-        </Form.Item>
-        {storageType === 'LOCAL' ? (
-          <Form.Item
-            name="localDir"
-            label="本地存储目录"
-            rules={[{ required: true, message: '本地存储目录不能为空' }]}
-          >
-            <Input variant="underlined" placeholder="例如 E:/upload/" />
-          </Form.Item>
-        ) : (
-          <div className="sm-file-config-grid">
-            <Form.Item
-              name="ftpHost"
-              label="FTP 主机"
-              rules={[{ required: true, message: 'FTP 主机不能为空' }]}
-            >
-              <Input variant="underlined" />
-            </Form.Item>
-            <Form.Item
-              name="ftpPort"
-              label="FTP 端口"
-              rules={[{ required: true, message: 'FTP 端口不能为空' }]}
-            >
-              <InputNumber
-                className="sm-file-config-full"
-                min={1}
-                max={65535}
-                variant="underlined"
-              />
-            </Form.Item>
-            <Form.Item
-              name="ftpUsername"
-              label="FTP 用户名"
-              rules={[{ required: true, message: 'FTP 用户名不能为空' }]}
-            >
-              <Input variant="underlined" autoComplete="off" />
-            </Form.Item>
-            <Form.Item
-              name="ftpPassword"
-              label="FTP 密码"
-              extra={
-                query.data?.ftpPasswordConfigured
-                  ? '密码已配置；留空保存时保留原密码，测试连接时必须重新输入'
-                  : '尚未配置密码'
-              }
-              rules={[
-                {
-                  validator: (_, value) =>
-                    query.data?.ftpPasswordConfigured || value
-                      ? Promise.resolve()
-                      : Promise.reject(new Error('FTP 密码不能为空')),
-                },
-              ]}
-            >
-              <Input.Password variant="underlined" autoComplete="new-password" />
-            </Form.Item>
-            <Form.Item name="ftpDir" label="FTP 远程目录">
-              <Input variant="underlined" />
-            </Form.Item>
-            <Form.Item name="ftpPassiveMode" label="被动模式" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-          </div>
-        )}
+        <Collapse
+          className="sm-edit-collapse"
+          collapsible="icon"
+          defaultActiveKey={['storage']}
+          items={[
+            {
+              key: 'storage',
+              label: '存储设置',
+              children: (
+                <>
+                  <div className="sm-edit-fields">
+                    <Form.Item
+                      className="sm-edit-field"
+                      name="storageType"
+                      label="当前存储类型"
+                      extra="保存后，系统文件将使用该存储类型"
+                      rules={[{ required: true, message: '请选择存储类型' }]}
+                    >
+                      <Select
+                        className="sm-file-config-full"
+                        variant="underlined"
+                        placeholder="请选择存储类型"
+                        showSearch={false}
+                        options={[
+                          { label: '本地存储', value: 'LOCAL' },
+                          { label: 'FTP 存储', value: 'FTP' },
+                        ]}
+                      />
+                    </Form.Item>
+                    {storageType === 'LOCAL' ? (
+                      <Form.Item
+                        className="sm-edit-field"
+                        name="localDir"
+                        label="本地存储目录"
+                        rules={[{ required: true, message: '本地存储目录不能为空' }]}
+                      >
+                        <Input variant="underlined" placeholder="例如 E:/upload/" />
+                      </Form.Item>
+                    ) : (
+                      <>
+                        <Form.Item
+                          className="sm-edit-field"
+                          name="ftpHost"
+                          label="FTP 主机"
+                          rules={[{ required: true, message: 'FTP 主机不能为空' }]}
+                        >
+                          <Input variant="underlined" />
+                        </Form.Item>
+                        <Form.Item
+                          className="sm-edit-field"
+                          name="ftpPort"
+                          label="FTP 端口"
+                          rules={[{ required: true, message: 'FTP 端口不能为空' }]}
+                        >
+                          <InputNumber
+                            className="sm-file-config-full"
+                            min={1}
+                            max={65535}
+                            variant="underlined"
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          className="sm-edit-field"
+                          name="ftpUsername"
+                          label="FTP 用户名"
+                          rules={[{ required: true, message: 'FTP 用户名不能为空' }]}
+                        >
+                          <Input variant="underlined" autoComplete="off" />
+                        </Form.Item>
+                        <Form.Item
+                          className="sm-edit-field"
+                          name="ftpPassword"
+                          label="FTP 密码"
+                          extra={
+                            query.data?.ftpPasswordConfigured
+                              ? '密码已配置；留空保存时保留原密码，测试连接时必须重新输入'
+                              : '尚未配置密码'
+                          }
+                          rules={[
+                            {
+                              validator: (_, value) =>
+                                query.data?.ftpPasswordConfigured || value
+                                  ? Promise.resolve()
+                                  : Promise.reject(new Error('FTP 密码不能为空')),
+                            },
+                          ]}
+                        >
+                          <Input.Password variant="underlined" autoComplete="new-password" />
+                        </Form.Item>
+                        <Form.Item className="sm-edit-field" name="ftpDir" label="FTP 远程目录">
+                          <Input variant="underlined" />
+                        </Form.Item>
+                        <Form.Item
+                          className="sm-edit-field"
+                          name="ftpPassiveMode"
+                          label="被动模式"
+                          valuePropName="checked"
+                        >
+                          <Switch />
+                        </Form.Item>
+                      </>
+                    )}
+                  </div>
+                </>
+              ),
+            },
+          ]}
+        />
       </Form>
     </EditPageShell>
   );

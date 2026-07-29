@@ -96,6 +96,14 @@
   padding-bottom: 0;
 }
 
+/* 字段辅助说明弱于标签和正文，避免与校验信息或业务内容混淆。 */
+.sm-edit-form .ant-form-item-extra {
+  margin-top: 4px;
+  color: var(--ant-color-text-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 /* margin-bottom 设置为错误提示行高，让 antd margin-offset 机制精确补偿 */
 .sm-edit-form .ant-form-item {
   margin-bottom: 22px;
