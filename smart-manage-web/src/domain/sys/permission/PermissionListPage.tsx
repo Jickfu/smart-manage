@@ -74,7 +74,7 @@ const PermissionListPage = (props: PageComponentProps) => {
           text
         ),
     },
-    { title: '名称', dataIndex: 'name', width: 220 },
+    { title: '名称', dataIndex: 'name' },
   ];
 
   return (

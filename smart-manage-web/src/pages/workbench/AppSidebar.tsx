@@ -34,6 +34,7 @@ function renderMenuTree(items: MenuVO[]): Required<MenuProps>['items'] {
         label: item.name,
         icon: resolveIcon(item.icon) ?? <FolderOutlined />,
         children: renderMenuTree(item.routes),
+        popupClassName: 'sm-workspace-sidebar-popup',
       };
     }
     return {

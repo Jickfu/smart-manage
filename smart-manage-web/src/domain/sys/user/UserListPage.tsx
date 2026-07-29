@@ -86,7 +86,7 @@ const UserListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '昵称', dataIndex: 'nickname', width: 160 },
+    { title: '昵称', dataIndex: 'nickname' },
     {
       title: '头像',
       dataIndex: 'avatar',

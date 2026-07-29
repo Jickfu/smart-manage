@@ -61,6 +61,10 @@
   font-size: 12px;
 }
 
+.sm-workspace-sidebar-popup {
+  font-size: 12px;
+}
+
 .sm-workspace-sidebar--collapsed .ant-menu {
   width: 50px;
 }

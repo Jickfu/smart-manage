@@ -45,6 +45,7 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId }: PageComponentProp
     >
       <Collapse
         className="sm-edit-collapse"
+        collapsible="icon"
         defaultActiveKey={['roles']}
         items={[
           {

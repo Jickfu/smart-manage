@@ -129,6 +129,10 @@
   min-width: 160px;
 }
 
+.sm-list-tree-panel-inner .ant-tree {
+  font-size: 12px;
+}
+
 /* === 表格内容区（右侧） === */
 
 .sm-list-table-content {
@@ -152,6 +156,11 @@
   min-height: 32px;
   color: var(--sm-color-text);
   border-bottom: 1px solid var(--sm-color-divider);
+  font-size: 12px;
+}
+
+.sm-list-table-meta .ant-pagination,
+.sm-list-table-meta .ant-pagination .ant-select {
   font-size: 12px;
 }
 

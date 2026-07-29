@@ -154,7 +154,7 @@ const MenuListPage = (props: PageComponentProps) => {
       render: (val) => (val === 2 ? <Tag color="blue">分组</Tag> : <Tag color="green">页面</Tag>),
     },
     { title: '路径', dataIndex: 'path', width: 180, ellipsis: true },
-    { title: '组件', dataIndex: 'component', width: 200, ellipsis: true },
+    { title: '组件', dataIndex: 'component', ellipsis: true },
     { title: '排序', dataIndex: 'sort', width: 60 },
     {
       title: '状态',

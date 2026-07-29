@@ -98,7 +98,7 @@ const AppListPage = (props: PageComponentProps) => {
       width: 80,
       render: (value) => (value ? <Tag color="green">启用</Tag> : <Tag color="default">停用</Tag>),
     },
-    { title: '描述', dataIndex: 'description', width: 200, ellipsis: true },
+    { title: '描述', dataIndex: 'description', ellipsis: true },
     { title: '创建时间', dataIndex: 'createTime', width: 180 },
   ];
 

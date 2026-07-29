@@ -36,6 +36,7 @@
 
 - 禁止在 TSX 中编写 CSS 或内联 `style`。
 - 自定义 CSS 类名以 `sm-` 开头，优先使用 flex 布局。
+- 公共 `ListPage` 的列定义必须至少保留一个未设置 `width` 的业务列，用于吸收表格剩余空间，避免选择列和序号列被同比放大。
 - 表单字段校验由 Ant Design Form 负责；没有明确的外部不可信数据校验需求时不引入重复校验模型。
 - ESLint 报错时，未经用户允许不得用注释跳过，也不得修改 `eslint.config.js` 降低规则。
 - 只有需要自动修复格式或用户明确要求时才执行 `pnpm lint:fix` 或 `pnpm format`。

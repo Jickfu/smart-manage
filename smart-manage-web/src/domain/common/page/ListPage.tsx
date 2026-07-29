@@ -49,7 +49,7 @@ interface ListPageProps<T> {
 
   /** Table — 行 key */
   rowKey: string | ((record: T) => string);
-  /** Table — 列定义（不含勾选列和序号列，由 ListPage 自动添加） */
+  /** Table — 列定义（不含勾选列和序号列；至少保留一个未设置 width 的业务列吸收剩余空间） */
   columns: ColumnsType<T>;
   /** Table — 数据源 */
   dataSource: T[];

@@ -56,7 +56,7 @@ const CloudListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name', width: 220 },
+    { title: '名称', dataIndex: 'name' },
     { title: '排序', dataIndex: 'seq', width: 80 },
     {
       title: '状态',

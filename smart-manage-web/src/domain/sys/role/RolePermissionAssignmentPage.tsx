@@ -64,6 +64,7 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
     >
       <Collapse
         className="sm-edit-collapse"
+        collapsible="icon"
         defaultActiveKey={groups.map((group) => group.appId)}
         items={groups.map((group) => ({
           key: group.appId,
