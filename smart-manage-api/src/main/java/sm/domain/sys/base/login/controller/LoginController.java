@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import sm.domain.sys.base.login.model.form.LoginForm;
+import sm.domain.sys.base.login.model.form.PasswordChangeForm;
 import sm.domain.sys.base.login.model.vo.CaptchaVO;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.login.service.LoginService;
@@ -30,6 +31,14 @@ public class LoginController {
 	@SaIgnore
 	public Result<LoginVO> login(@Parameter(description = "登录表单", required = true) @Validated @RequestBody LoginForm form) {
 		return Result.success(service.login(form));
+	}
+
+	@SaIgnore
+	@Operation(summary = "首次登录修改密码", description = "使用一次性改密凭证设置正式密码")
+	@PostMapping("/sys/base/login/change-password")
+	public Result<String> changePassword(@Validated @RequestBody PasswordChangeForm form) {
+		service.changePassword(form);
+		return Result.success();
 	}
 
 	@Operation(summary = "获取验证码", description = "获取登录验证码图片")

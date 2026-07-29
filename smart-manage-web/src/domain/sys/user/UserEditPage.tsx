@@ -9,7 +9,6 @@ import { userApi } from './api';
 import { userAccess } from './permissions';
 import { userQueryKeys } from './queryKeys';
 import type { PageComponentProps } from '@/domain/common/page/types';
-import { THEME_COLOR_OPTIONS } from '@/styles/themePalette';
 
 /** 用户编辑页只维护用户资料，角色关系由专用分配页面处理。 */
 const UserEditPage = (props: PageComponentProps) => {
@@ -33,28 +32,33 @@ const UserEditPage = (props: PageComponentProps) => {
         type: 'text',
         rules: [{ required: true, message: '用户名不能为空' }],
       },
-      {
-        label: '密码',
-        dataIndex: 'password',
-        type: 'password',
-        placeholder: isAddNew ? '请输入密码' : '留空则不修改',
-        rules: isAddNew ? [{ required: true, message: '密码不能为空' }] : [],
-      },
+      ...(isAddNew
+        ? [
+            {
+              label: '密码',
+              dataIndex: 'password',
+              type: 'password' as const,
+              placeholder: '请输入初始密码',
+              rules: [{ required: true, message: '密码不能为空' }],
+            },
+          ]
+        : []),
       { label: '昵称', dataIndex: 'nickname', type: 'text' },
-      { label: '邮箱', dataIndex: 'email', type: 'text' },
-      { label: '手机号', dataIndex: 'phone', type: 'text' },
-      { label: '头像URL', dataIndex: 'avatar', type: 'text' },
       {
-        label: '主题色',
-        dataIndex: 'themeColor',
-        type: 'select',
-        options: THEME_COLOR_OPTIONS.map((option) => ({
-          label: option.label,
-          value: option.value,
-        })),
+        label: '邮箱',
+        dataIndex: 'email',
+        type: 'text',
+        rules: [{ type: 'email', message: '邮箱格式不正确' }],
       },
-      { label: '创建时间', dataIndex: 'createTime', type: 'readonly' },
-      { label: '更新时间', dataIndex: 'updateTime', type: 'readonly' },
+      {
+        label: '手机号',
+        dataIndex: 'phone',
+        type: 'text',
+        rules: [{ pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确' }],
+      },
+      { label: '头像URL', dataIndex: 'avatar', type: 'text' },
+      { label: '创建时间', dataIndex: 'createTime', type: 'datetime', disabled: true },
+      { label: '更新时间', dataIndex: 'updateTime', type: 'datetime', disabled: true },
     ],
     [isAddNew],
   );
@@ -67,7 +71,6 @@ const UserEditPage = (props: PageComponentProps) => {
             email: detail.email ?? '',
             phone: detail.phone ?? '',
             avatar: detail.avatar ?? '',
-            themeColor: detail.themeColor ?? '',
             createTime: detail.createTime ?? '',
             updateTime: detail.updateTime ?? '',
           }
@@ -83,10 +86,9 @@ const UserEditPage = (props: PageComponentProps) => {
         username,
         password: (values.password as string) || undefined,
         nickname: (values.nickname as string) ?? undefined,
-        email: (values.email as string) ?? undefined,
-        phone: (values.phone as string) ?? undefined,
+        email: ((values.email as string) ?? '').trim() || undefined,
+        phone: ((values.phone as string) ?? '').trim() || undefined,
         avatar: (values.avatar as string) ?? undefined,
-        themeColor: (values.themeColor as string) ?? undefined,
       });
       if (isAddNew) {
         const nextKey = `bill:${props.componentKey}:${savedId}`;

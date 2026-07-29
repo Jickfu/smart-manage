@@ -18,6 +18,7 @@ import sm.domain.sys.base.user.model.form.CurrentUserThemeForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.base.user.model.vo.UserListVO;
+import sm.domain.sys.base.user.model.vo.ResetPasswordVO;
 import sm.domain.sys.base.user.service.UserService;
 import sm.system.form.IdForm;
 import sm.system.form.IdsForm;
@@ -112,5 +113,12 @@ public class UserController {
 	public Result<String> assignRoles(@RequestBody @Valid UserRoleAssignForm form) {
 		service.assignRoles(form);
 		return Result.success();
+	}
+
+	@Operation(summary = "重置用户密码", description = "生成随机临时密码并要求用户登录后修改")
+	@PostMapping("/sys/base/user/resetPassword")
+	@SaCheckPermission(UserPermission.RESET_PASSWORD)
+	public Result<ResetPasswordVO> resetPassword(@RequestBody @Valid IdForm form) {
+		return Result.success(service.resetPassword(form.getId()));
 	}
 }

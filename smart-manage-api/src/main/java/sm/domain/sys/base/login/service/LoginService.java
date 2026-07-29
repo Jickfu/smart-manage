@@ -10,6 +10,7 @@ import sm.domain.sys.base.common.config.CaptchaConfig;
 import sm.domain.sys.base.common.constant.RedisKeyConstant;
 import sm.domain.sys.base.common.util.CaptchaUtil;
 import sm.domain.sys.base.login.model.form.LoginForm;
+import sm.domain.sys.base.login.model.form.PasswordChangeForm;
 import sm.domain.sys.base.login.model.vo.CaptchaVO;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.menu.service.MenuService;
@@ -34,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 @Slf4j
 public class LoginService {
+	private static final long PASSWORD_CHANGE_TICKET_MINUTES = 5;
 	private final CaptchaConfig captchaConfig;
 	private final UserService userService;
 	private final MenuService menuService;
@@ -64,8 +66,43 @@ public class LoginService {
 
 		// SM2 解密前端密码
 		String decryptedPassword = SM2Helper.decrypt(form.getPassword());
-		LoginVO vo = userService.login(form.getUsername(), decryptedPassword);
-		if (vo.getToken() == null && StringUtils.hasText(form.getUsername())) {
+		var authentication = userService.authenticate(form.getUsername(), decryptedPassword);
+		if (!authentication.successful()) {
+			LoginVO failed = new LoginVO(authentication.message());
+			if (StringUtils.hasText(form.getUsername())) {
+				writeLoginFailure(form.getUsername(), authentication.message());
+			}
+			return failed;
+		}
+		if (authentication.passwordReset()) {
+			String ticket = UUID.randomUUID().toString();
+			redisTemplate.opsForValue().set(
+					RedisKeyConstant.PASSWORD_CHANGE_TICKET + ticket,
+					authentication.userId(),
+					PASSWORD_CHANGE_TICKET_MINUTES,
+					TimeUnit.MINUTES);
+			LoginVO passwordReset = new LoginVO();
+			passwordReset.setPasswordReset(true);
+			passwordReset.setPasswordChangeTicket(ticket);
+			return passwordReset;
+		}
+		return userService.completeLogin(authentication);
+	}
+
+	/**
+	 * 一次性凭证先原子取出再修改密码；无论后续成功与否都不能重放。
+	 */
+	public void changePassword(PasswordChangeForm form) {
+		Object userIdValue = redisTemplate.opsForValue().getAndDelete(
+				RedisKeyConstant.PASSWORD_CHANGE_TICKET + form.getTicket());
+		if (userIdValue == null) {
+			throw new BizException(ResultEnum.UNAUTHORIZED, "改密凭证已失效，请重新登录");
+		}
+		String newPassword = SM2Helper.decrypt(form.getNewPassword());
+		userService.changeResetPassword(Long.valueOf(String.valueOf(userIdValue)), newPassword);
+	}
+
+	private void writeLoginFailure(String username, String message) {
 			String ip = null;
 			String ua = null;
 			try {
@@ -74,9 +111,7 @@ public class LoginService {
 			} catch (Exception e) {
 				log.warn("获取客户端IP/UA失败", e);
 			}
-			logWriteService.writeLoginFailed(form.getUsername(), vo.getMsg(), ip, ua);
-		}
-		return vo;
+			logWriteService.writeLoginFailed(username, message, ip, ua);
 	}
 
 	public CaptchaVO captcha() throws IOException {

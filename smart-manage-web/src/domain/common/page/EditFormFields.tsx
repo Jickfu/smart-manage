@@ -1,7 +1,12 @@
 import { DatePicker, Form, Input, InputNumber, Select, Switch } from 'antd';
 import RefSelector from '@/domain/common/component/RefSelector';
 import type { EditField } from './EditPage';
-import { getDatePickerValueProps, normalizeDatePickerValue } from './dateFormValue';
+import {
+  getDatePickerValueProps,
+  getDateTimePickerValueProps,
+  normalizeDatePickerValue,
+  normalizeDateTimePickerValue,
+} from './dateFormValue';
 
 const { TextArea } = Input;
 
@@ -31,6 +36,17 @@ function renderFormControl(field: EditField, disabled: boolean) {
           className="sm-edit-control-full"
           placeholder={field.placeholder}
           disabled={disabled}
+        />
+      );
+    case 'datetime':
+      return (
+        <DatePicker
+          variant="underlined"
+          className="sm-edit-control-full"
+          placeholder={field.placeholder}
+          disabled={disabled}
+          showTime
+          format="YYYY-MM-DD HH:mm:ss"
         />
       );
     case 'number':
@@ -103,8 +119,20 @@ export function EditFormFields({ fields, editable = true }: EditFormFieldsProps)
             label={field.label}
             rules={field.rules}
             valuePropName={field.type === 'switch' ? 'checked' : undefined}
-            getValueProps={field.type === 'date' ? getDatePickerValueProps : undefined}
-            normalize={field.type === 'date' ? normalizeDatePickerValue : undefined}
+            getValueProps={
+              field.type === 'date'
+                ? getDatePickerValueProps
+                : field.type === 'datetime'
+                  ? getDateTimePickerValueProps
+                  : undefined
+            }
+            normalize={
+              field.type === 'date'
+                ? normalizeDatePickerValue
+                : field.type === 'datetime'
+                  ? normalizeDateTimePickerValue
+                  : undefined
+            }
             className={className}
           >
             {renderFormControl(field, disabled)}

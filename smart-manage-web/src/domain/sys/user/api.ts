@@ -1,6 +1,12 @@
 import request from '@/api/request';
 import type { PageData, Result } from '@/types/api';
-import type { UserDetailVO, UserListForm, UserListVO, UserSaveForm } from './types';
+import type {
+  ResetPasswordVO,
+  UserDetailVO,
+  UserListForm,
+  UserListVO,
+  UserSaveForm,
+} from './types';
 
 export const userApi = {
   listPage: (form: UserListForm) =>
@@ -31,5 +37,10 @@ export const userApi = {
   assignRoles: (userId: string, roleIds: string[]) =>
     request
       .post<Result<string>>('/sys/base/user/assignRoles', { userId, roleIds })
+      .then((response) => response.data.data),
+
+  resetPassword: (id: string) =>
+    request
+      .post<Result<ResetPasswordVO>>('/sys/base/user/resetPassword', { id })
       .then((response) => response.data.data),
 };

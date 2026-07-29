@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import { App, Button, Tag, Avatar } from 'antd';
+import { App, Avatar, Button, Input, Modal, Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { useMutation } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
@@ -12,6 +13,7 @@ import { userQueryKeys } from './queryKeys';
 import type { UserListVO } from './types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { userAccess } from './permissions';
+import './UserListPage.css';
 
 /** 用户编辑页 componentKey */
 const USER_EDIT_KEY = 'sys/base/user/edit';
@@ -19,7 +21,7 @@ const USER_ROLE_ASSIGNMENT_KEY = 'sys/base/user/role-assignment';
 
 /** 用户管理列表页 */
 const UserListPage = (props: PageComponentProps) => {
-  const { modal } = App.useApp();
+  const { message, modal } = App.useApp();
   const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
     useListPageQuery({
       queryKey: userQueryKeys.lists(),
@@ -27,6 +29,8 @@ const UserListPage = (props: PageComponentProps) => {
     });
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [resetPassword, setResetPassword] = useState<string>();
+  const [resetUsername, setResetUsername] = useState('');
   const openBillTab = useWorkbenchStore((s) => s.openBillTab);
   const openAddNewTab = useWorkbenchStore((s) => s.openAddNewTab);
   const addContentTab = useWorkbenchStore((state) => state.addContentTab);
@@ -37,6 +41,10 @@ const UserListPage = (props: PageComponentProps) => {
   const enabledMutation = useEnabledMutation(userApi.setEnabled, async () => {
     setSelectedRowKeys([]);
     await query.refetch();
+  });
+  const resetPasswordMutation = useMutation({
+    mutationFn: (id: string) => userApi.resetPassword(id),
+    onSuccess: (result) => setResetPassword(result.password),
   });
 
   const handleOpenEdit = useCallback(
@@ -75,6 +83,37 @@ const UserListPage = (props: PageComponentProps) => {
     });
   }, [addContentTab, props.appNumber, selectedRowKeys]);
 
+  const handleResetPassword = useCallback(() => {
+    if (selectedRowKeys.length !== 1) return;
+    const userId = String(selectedRowKeys[0]);
+    const user = records.find((record) => record.id === userId);
+    modal.confirm({
+      title: '确认重置密码',
+      content: `确定要重置用户“${user?.username ?? userId}”的密码吗？该用户已有登录状态将立即失效。`,
+      okText: '重置',
+      cancelText: '取消',
+      onOk: async () => {
+        setResetUsername(user?.username ?? userId);
+        await resetPasswordMutation.mutateAsync(userId);
+      },
+    });
+  }, [modal, records, resetPasswordMutation, selectedRowKeys]);
+
+  const closeResetPasswordModal = useCallback(() => {
+    setResetPassword(undefined);
+    setResetUsername('');
+  }, []);
+
+  const copyResetPassword = useCallback(async () => {
+    if (!resetPassword) return;
+    try {
+      await navigator.clipboard.writeText(resetPassword);
+      message.success('新密码已复制');
+    } catch {
+      message.error('复制失败，请手动复制');
+    }
+  }, [message, resetPassword]);
+
   const columns: ColumnsType<UserListVO> = [
     {
       title: '用户名',
@@ -103,42 +142,77 @@ const UserListPage = (props: PageComponentProps) => {
   ];
 
   return (
-    <ListPage<UserListVO>
-      {...props}
-      title="用户管理"
-      access={userAccess}
-      loading={query.isLoading}
-      error={query.error as Error | null}
-      onRetry={() => query.refetch()}
-      total={total}
-      pageNum={pageNum}
-      pageSize={pageSize}
-      quickSearchPlaceholder="搜索用户名/昵称"
-      filterSummary={keyword ? `关键字：${keyword}` : undefined}
-      onAddNew={handleOpenAdd}
-      onDelete={handleDelete}
-      onEnable={() => enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: true })}
-      onDisable={() => enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: false })}
-      enabledCommandLoading={enabledMutation.isPending}
-      onRefresh={onRefresh}
-      toolbarActions={[
-        {
-          key: 'assignRoles',
-          label: '分配角色',
-          permission: userAccess.permissions.assignRoles,
-          disabled: selectedRowKeys.length !== 1,
-          onClick: handleAssignRoles,
-        },
-      ]}
-      onQuickSearch={onSearch}
-      onPageChange={onPageChange}
-      rowKey="id"
-      columns={columns}
-      dataSource={records}
-      selectMode="checkbox"
-      selectedRowKeys={selectedRowKeys}
-      onSelectChange={(keys) => setSelectedRowKeys(keys)}
-    />
+    <>
+      <ListPage<UserListVO>
+        {...props}
+        title="用户管理"
+        access={userAccess}
+        loading={query.isLoading}
+        error={query.error as Error | null}
+        onRetry={() => query.refetch()}
+        total={total}
+        pageNum={pageNum}
+        pageSize={pageSize}
+        quickSearchPlaceholder="搜索用户名/昵称"
+        filterSummary={keyword ? `关键字：${keyword}` : undefined}
+        onAddNew={handleOpenAdd}
+        onDelete={handleDelete}
+        onEnable={() => enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: true })}
+        onDisable={() =>
+          enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: false })
+        }
+        enabledCommandLoading={enabledMutation.isPending}
+        onRefresh={onRefresh}
+        toolbarActions={[
+          {
+            key: 'resetPassword',
+            label: '重置密码',
+            permission: userAccess.permissions.resetPassword,
+            disabled: selectedRowKeys.length !== 1,
+            loading: resetPasswordMutation.isPending,
+            onClick: handleResetPassword,
+          },
+          {
+            key: 'assignRoles',
+            label: '分配角色',
+            permission: userAccess.permissions.assignRoles,
+            disabled: selectedRowKeys.length !== 1,
+            onClick: handleAssignRoles,
+          },
+        ]}
+        onQuickSearch={onSearch}
+        onPageChange={onPageChange}
+        rowKey="id"
+        columns={columns}
+        dataSource={records}
+        selectMode="checkbox"
+        selectedRowKeys={selectedRowKeys}
+        onSelectChange={(keys) => setSelectedRowKeys(keys)}
+      />
+      <Modal
+        title="密码重置成功"
+        open={Boolean(resetPassword)}
+        closable
+        mask={{ closable: false }}
+        destroyOnHidden
+        onCancel={closeResetPasswordModal}
+        footer={[
+          <Button key="close" onClick={closeResetPasswordModal}>
+            关闭
+          </Button>,
+          <Button key="copy" type="primary" onClick={copyResetPassword}>
+            复制密码
+          </Button>,
+        ]}
+      >
+        <Space orientation="vertical" className="sm-user-reset-password-content">
+          <Typography.Text>
+            用户“{resetUsername}”下次登录时必须修改密码。新密码仅展示一次，请及时复制。
+          </Typography.Text>
+          <Input value={resetPassword} readOnly />
+        </Space>
+      </Modal>
+    </>
   );
 };
 

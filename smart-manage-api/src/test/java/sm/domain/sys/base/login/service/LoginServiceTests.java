@@ -9,9 +9,11 @@ import org.springframework.test.util.ReflectionTestUtils;
 import sm.domain.sys.base.common.config.CaptchaConfig;
 import sm.domain.sys.base.common.constant.RedisKeyConstant;
 import sm.domain.sys.base.login.model.form.LoginForm;
+import sm.domain.sys.base.login.model.form.PasswordChangeForm;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.menu.service.MenuService;
 import sm.domain.sys.base.user.service.UserService;
+import sm.domain.sys.base.user.model.vo.UserAuthentication;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.system.exception.BizException;
 import sm.system.helper.SM2Helper;
@@ -28,6 +30,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.eq;
 
 class LoginServiceTests {
 
@@ -64,7 +67,7 @@ class LoginServiceTests {
 			BizException exception = assertThrows(BizException.class, () -> loginService.login(form));
 
 			assertEquals(ResultEnum.CAPTCHA_EXPIRE.getCode(), exception.getCode());
-			verify(userService, never()).login("administrator", "password");
+			verify(userService, never()).authenticate("administrator", "password");
 			verify(redisTemplate, never()).delete(CAPTCHA_KEY);
 		}
 	}
@@ -80,7 +83,7 @@ class LoginServiceTests {
 			BizException exception = assertThrows(BizException.class, () -> loginService.login(form));
 
 			assertEquals(ResultEnum.CAPTCHA_ERROR.getCode(), exception.getCode());
-			verify(userService, never()).login("administrator", "password");
+			verify(userService, never()).authenticate("administrator", "password");
 			verify(redisTemplate, never()).delete(CAPTCHA_KEY);
 		}
 	}
@@ -90,8 +93,11 @@ class LoginServiceTests {
 		LoginForm form = loginForm();
 		LoginVO expected = new LoginVO();
 		expected.setToken("token");
+		UserAuthentication authentication =
+				new UserAuthentication(1L, "管理员", false, true, null);
 		when(valueOperations.get(CAPTCHA_KEY)).thenReturn("ABCD");
-		when(userService.login("administrator", "password")).thenReturn(expected);
+		when(userService.authenticate("administrator", "password")).thenReturn(authentication);
+		when(userService.completeLogin(authentication)).thenReturn(expected);
 
 		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
 			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-captcha")).thenReturn("abcd");
@@ -101,17 +107,18 @@ class LoginServiceTests {
 
 			assertSame(expected, actual);
 			verify(redisTemplate).delete(CAPTCHA_KEY);
-			verify(userService).login("administrator", "password");
+			verify(userService).authenticate("administrator", "password");
+			verify(userService).completeLogin(authentication);
 		}
 	}
 
 	@Test
 	void authenticationFailureIsReturnedAndWrittenToLoginLog() {
 		LoginForm form = loginForm();
-		LoginVO expected = new LoginVO("用户名或密码错误");
+		UserAuthentication failed = UserAuthentication.failed("用户名或密码错误");
 		HttpServletRequest request = mock(HttpServletRequest.class);
 		when(valueOperations.get(CAPTCHA_KEY)).thenReturn("ABCD");
-		when(userService.login("administrator", "password")).thenReturn(expected);
+		when(userService.authenticate("administrator", "password")).thenReturn(failed);
 		when(request.getHeader("User-Agent")).thenReturn("test-agent");
 
 		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class);
@@ -123,13 +130,68 @@ class LoginServiceTests {
 
 			LoginVO actual = loginService.login(form);
 
-			assertSame(expected, actual);
+			assertEquals("用户名或密码错误", actual.getMsg());
 			verify(logWriteService).writeLoginFailed(
 					"administrator",
 					"用户名或密码错误",
 					"127.0.0.1",
 					"test-agent");
 		}
+	}
+
+	@Test
+	void passwordResetLoginReturnsOneTimeTicketWithoutCompletingLogin() {
+		LoginForm form = loginForm();
+		UserAuthentication authentication =
+				new UserAuthentication(9L, "待改密用户", true, false, null);
+		when(valueOperations.get(CAPTCHA_KEY)).thenReturn("ABCD");
+		when(userService.authenticate("administrator", "password")).thenReturn(authentication);
+
+		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
+			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-captcha")).thenReturn("ABCD");
+			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-password")).thenReturn("password");
+
+			LoginVO actual = loginService.login(form);
+
+			assertEquals(true, actual.getPasswordReset());
+			verify(userService, never()).completeLogin(authentication);
+			verify(valueOperations).set(
+					org.mockito.ArgumentMatchers.startsWith(RedisKeyConstant.PASSWORD_CHANGE_TICKET),
+					eq(9L),
+					eq(5L),
+					eq(java.util.concurrent.TimeUnit.MINUTES));
+		}
+	}
+
+	@Test
+	void changePasswordConsumesTicketAndDelegatesWithDecryptedPassword() {
+		PasswordChangeForm form = new PasswordChangeForm();
+		form.setTicket("ticket");
+		form.setNewPassword("encrypted-new-password");
+		when(valueOperations.getAndDelete(RedisKeyConstant.PASSWORD_CHANGE_TICKET + "ticket"))
+				.thenReturn(9L);
+
+		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
+			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-new-password")).thenReturn("new-password");
+
+			loginService.changePassword(form);
+
+			verify(userService).changeResetPassword(9L, "new-password");
+		}
+	}
+
+	@Test
+	void expiredPasswordChangeTicketCannotChangePassword() {
+		PasswordChangeForm form = new PasswordChangeForm();
+		form.setTicket("expired-ticket");
+		form.setNewPassword("encrypted-new-password");
+		when(valueOperations.getAndDelete(RedisKeyConstant.PASSWORD_CHANGE_TICKET + "expired-ticket"))
+				.thenReturn(null);
+
+		BizException exception = assertThrows(BizException.class, () -> loginService.changePassword(form));
+
+		assertEquals(ResultEnum.UNAUTHORIZED.getCode(), exception.getCode());
+		verify(userService, never()).changeResetPassword(9L, "new-password");
 	}
 
 	private LoginForm loginForm() {

@@ -61,6 +61,7 @@ export type EditField = EditFieldBase &
     | { type: 'text' }
     | { type: 'password' }
     | { type: 'date' }
+    | { type: 'datetime' }
     | { type: 'number' }
     | { type: 'switch' }
     | { type: 'textarea' }

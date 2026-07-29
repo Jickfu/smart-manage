@@ -24,6 +24,8 @@ import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.base.user.model.vo.UserListVO;
+import sm.domain.sys.base.user.model.vo.ResetPasswordVO;
+import sm.domain.sys.base.user.model.vo.UserAuthentication;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.model.entity.UserRoleEntity;
@@ -116,35 +118,59 @@ public class UserService {
 		return userInfoVO;
 	}
 
-	public LoginVO login(String username, String password) {
+	public UserAuthentication authenticate(String username, String password) {
 		// 查询用户
 		UserEntity user = mapper.selectOne(
 				new LambdaQueryWrapper<UserEntity>().eq(UserEntity::getUsername, username));
 		if (user == null) {
-			return new LoginVO("用户名或密码错误");
+			return UserAuthentication.failed("用户名或密码错误");
 		}
 
 		// 使用 Argon2 验证密码
 		if (!Argon2Helper.verify(user.getPassword(), password)) {
-			return new LoginVO("用户名或密码错误");
+			return UserAuthentication.failed("用户名或密码错误");
 		}
 
 		// 检查用户状态
 		if (user.getEnabled() == null || !user.getEnabled()) {
-			return new LoginVO("用户已被禁用");
+			return UserAuthentication.failed("用户已被禁用");
 		}
 
-		// 登录成功，使用 Sa-Token 登录
-		StpUtil.login(user.getId());
+		return new UserAuthentication(
+				user.getId(),
+				user.getNickname(),
+				Boolean.TRUE.equals(user.getPasswordReset()),
+				UserConstant.SUPER_ADMIN.equalsIgnoreCase(user.getUsername()),
+				null);
+	}
+
+	/** 凭据验证且无需强制改密后，才创建正式登录状态。 */
+	public LoginVO completeLogin(UserAuthentication authentication) {
+		StpUtil.login(authentication.userId());
 		// 默认组织，供权限与业务按组织维度使用
 		UserHelper.setCurrentOrgId(defaultOrgId);
 		String token = StpUtil.getTokenValue();
 
 		LoginVO vo = new LoginVO();
 		vo.setToken(token);
-		vo.setNickname(user.getNickname());
-		vo.setAccess(UserConstant.SUPER_ADMIN.equalsIgnoreCase(user.getUsername()) ? "kdcloud" : "");
+		vo.setNickname(authentication.nickname());
+		vo.setAccess(authentication.administrator() ? "kdcloud" : "");
 		return vo;
+	}
+
+	@BizLog(value = "重置用户密码", recordResponse = false)
+	public ResetPasswordVO resetPassword(Long userId) {
+		String password = txService.resetPassword(userId);
+		authorizationStateHelper.invalidateUsers(List.of(userId));
+		return new ResetPasswordVO(password);
+	}
+
+	public void changeResetPassword(Long userId, String newPassword) {
+		if (newPassword == null || newPassword.isBlank()) {
+			throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能为空");
+		}
+		txService.changeResetPassword(userId, newPassword);
+		authorizationStateHelper.invalidateUsers(List.of(userId));
 	}
 
 	public UserInfoVO current() {

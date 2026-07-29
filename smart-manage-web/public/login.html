@@ -7,7 +7,7 @@
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-i5Ak2xlsAfS7ZGF1QswLQoShNsNDmprAVcDjmGsWHrI='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-0AhZtmQLOGHX4MI1Fx5aNvM4VgNsPopv5Uj8v2LWyd4='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
     <title>Smart Manage - 登录</title>
     <script src="js/sm2.js"></script>
@@ -126,6 +126,53 @@
 
               <button id="loginBtn" class="sm-login-btn" type="submit">登录</button>
             </form>
+
+            <form id="passwordChangeForm" class="sm-form" autocomplete="off" hidden>
+              <div class="sm-input-wrap">
+                <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v10H6V11Z"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <input
+                  id="newPassword"
+                  class="sm-input"
+                  type="password"
+                  placeholder="新密码"
+                  autocomplete="new-password"
+                />
+              </div>
+              <div class="sm-input-wrap">
+                <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v10H6V11Z"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <input
+                  id="confirmPassword"
+                  class="sm-input"
+                  type="password"
+                  placeholder="确认新密码"
+                  autocomplete="new-password"
+                />
+              </div>
+              <button id="changePasswordBtn" class="sm-login-btn" type="submit">
+                确认修改
+              </button>
+              <button id="backToLoginBtn" class="sm-secondary-btn" type="button">
+                返回登录
+              </button>
+            </form>
           </div>
         </div>
         <div class="sm-psv"></div>
@@ -142,6 +189,8 @@
       var captchaId = '';
       var captchaVisible = false;
       var captchaLoading = false;
+      var passwordChangeTicket = '';
+      var defaultLoginTitle = '';
 
       var loginLogoEl = document.getElementById('loginLogo');
       var loginTitleEl = document.getElementById('loginTitle');
@@ -157,6 +206,11 @@
       var loginBtnEl = document.getElementById('loginBtn');
       var forgotPasswordBtnEl = document.getElementById('forgotPasswordBtn');
       var loginFormEl = document.getElementById('loginForm');
+      var passwordChangeFormEl = document.getElementById('passwordChangeForm');
+      var newPasswordEl = document.getElementById('newPassword');
+      var confirmPasswordEl = document.getElementById('confirmPassword');
+      var changePasswordBtnEl = document.getElementById('changePasswordBtn');
+      var backToLoginBtnEl = document.getElementById('backToLoginBtn');
       var bannerEl = document.getElementById('loginBanner');
 
       /** 获取并校验重定向 URL — 使用 URL 解析器严格校验同源，防止开放重定向攻击 */
@@ -194,19 +248,27 @@
       }
 
       function showError(msg) {
+        errorMsgEl.classList.remove('is-success');
+        errorMsgTextEl.textContent = msg;
+        errorMsgEl.classList.add('is-visible');
+      }
+
+      function showSuccess(msg) {
+        errorMsgEl.classList.add('is-success');
         errorMsgTextEl.textContent = msg;
         errorMsgEl.classList.add('is-visible');
       }
 
       function hideError() {
         errorMsgTextEl.textContent = '';
-        errorMsgEl.classList.remove('is-visible');
+        errorMsgEl.classList.remove('is-visible', 'is-success');
       }
 
       function applyUiConfig(config) {
         var systemName = config.systemName;
         var pageTitle = config.pageTitle || systemName;
         var loginTitle = systemName.indexOf('登录') >= 0 ? systemName : systemName + ' 账号登录';
+        defaultLoginTitle = loginTitle;
         document.title = pageTitle + ' - 登录';
         loginTitleEl.textContent = loginTitle;
         loginLogoEl.src = normalizeAssetUrl(config.loginLogo, 'logo.svg');
@@ -293,6 +355,90 @@
         loginBtnEl.textContent = loading ? '登录中...' : '登录';
       }
 
+      function showPasswordChange(ticket) {
+        passwordChangeTicket = ticket;
+        defaultLoginTitle = defaultLoginTitle || loginTitleEl.textContent;
+        loginTitleEl.textContent = '首次登录修改密码';
+        loginFormEl.hidden = true;
+        passwordChangeFormEl.hidden = false;
+        passwordEl.value = '';
+        captchaEl.value = '';
+        hideError();
+        newPasswordEl.focus();
+      }
+
+      function showLoginForm(successMessage) {
+        passwordChangeTicket = '';
+        newPasswordEl.value = '';
+        confirmPasswordEl.value = '';
+        passwordChangeFormEl.hidden = true;
+        loginFormEl.hidden = false;
+        loginTitleEl.textContent = defaultLoginTitle || 'Smart Manage 账号登录';
+        captchaId = '';
+        loadCaptcha();
+        if (successMessage) {
+          showSuccess(successMessage);
+        } else {
+          hideError();
+        }
+        passwordEl.focus();
+      }
+
+      function setPasswordChangeLoading(loading) {
+        changePasswordBtnEl.disabled = loading;
+        backToLoginBtnEl.disabled = loading;
+        changePasswordBtnEl.textContent = loading ? '修改中...' : '确认修改';
+      }
+
+      function changePassword() {
+        var newPassword = newPasswordEl.value;
+        var confirmPassword = confirmPasswordEl.value;
+        if (!newPassword) {
+          showError('请输入新密码');
+          newPasswordEl.focus();
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          showError('两次输入的密码不一致');
+          confirmPasswordEl.focus();
+          return;
+        }
+        if (!passwordChangeTicket) {
+          showError('改密凭证已失效，请返回登录后重试');
+          return;
+        }
+
+        hideError();
+        setPasswordChangeLoading(true);
+        var encryptedNewPassword = sm2.doEncrypt(newPassword, SM2_PUBLIC_KEY, 1);
+        fetch(API_BASE + '/sys/base/login/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticket: passwordChangeTicket,
+            newPassword: encryptedNewPassword,
+          }),
+        })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (result) {
+            if (result.code === 0) {
+              showLoginForm('密码修改成功，请使用新密码重新登录');
+              return;
+            }
+            passwordChangeTicket = '';
+            showError(result.msg || '密码修改失败，请返回登录后重试');
+          })
+          .catch(function () {
+            passwordChangeTicket = '';
+            showError('网络异常，密码修改失败，请返回登录后重试');
+          })
+          .finally(function () {
+            setPasswordChangeLoading(false);
+          });
+      }
+
       function login() {
         var username = usernameEl.value.trim();
         var password = passwordEl.value;
@@ -340,6 +486,16 @@
             return res.json();
           })
           .then(function (result) {
+            if (
+              result.code === 0 &&
+              result.data &&
+              result.data.passwordReset &&
+              result.data.passwordChangeTicket
+            ) {
+              persistRememberedUsername(username);
+              showPasswordChange(result.data.passwordChangeTicket);
+              return;
+            }
             if (result.code === 0 && result.data && result.data.token) {
               localStorage.setItem('token', result.data.token);
               persistRememberedUsername(username);
@@ -376,6 +532,13 @@
       loginFormEl.addEventListener('submit', function (event) {
         event.preventDefault();
         login();
+      });
+      passwordChangeFormEl.addEventListener('submit', function (event) {
+        event.preventDefault();
+        changePassword();
+      });
+      backToLoginBtnEl.addEventListener('click', function () {
+        showLoginForm('');
       });
     </script>
   </body>

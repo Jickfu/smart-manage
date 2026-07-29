@@ -3,6 +3,8 @@ package sm.domain.sys.base.user.model.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 /**
  * @author Chekfu
  */
@@ -23,4 +25,7 @@ public class UserListVO {
 
 	@Schema(description = "启用状态")
 	private Boolean enabled;
+
+	@Schema(description = "创建时间")
+	private LocalDateTime createTime;
 }

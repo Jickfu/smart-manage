@@ -46,6 +46,10 @@ public class UserEntity extends BaseEntity {
 	 */
 	private String themeColor;
 	/*
+	 * 是否必须修改密码
+	 */
+	private Boolean passwordReset;
+	/*
 	 * 是否可用
 	 */
 	private Boolean enabled;

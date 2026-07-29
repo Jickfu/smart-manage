@@ -12,6 +12,7 @@ export interface UserListVO {
   nickname: string;
   avatar: string;
   enabled: boolean;
+  createTime?: string;
 }
 
 /** 用户详情 — 所有 ID 均为字符串 */
@@ -40,5 +41,8 @@ export interface UserSaveForm {
   email?: string;
   phone?: string;
   avatar?: string;
-  themeColor?: string;
+}
+
+export interface ResetPasswordVO {
+  password: string;
 }

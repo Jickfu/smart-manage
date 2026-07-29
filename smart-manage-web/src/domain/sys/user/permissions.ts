@@ -8,4 +8,5 @@ export const userAccess = defineAccessResource('sys:base:user', {
   enable: 'enable',
   disable: 'disable',
   assignRoles: 'assignRoles',
+  resetPassword: 'resetPassword',
 });

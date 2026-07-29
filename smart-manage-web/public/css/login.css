@@ -278,6 +278,28 @@ body {
   cursor: not-allowed;
 }
 
+.sm-secondary-btn {
+  width: 100%;
+  height: 45px;
+  margin-top: 12px;
+  border: 1px solid var(--sm-border);
+  border-radius: 2px;
+  color: var(--sm-text);
+  background: var(--sm-bg);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sm-secondary-btn:hover {
+  border-color: var(--sm-primary);
+  color: var(--sm-primary);
+}
+
+.sm-secondary-btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
 /* ===== 错误提示 ===== */
 .sm-error-msg {
   display: flex;
@@ -309,6 +331,12 @@ body {
   opacity: 1;
   pointer-events: auto;
   visibility: visible;
+}
+
+.sm-error-msg.is-success {
+  border-color: #b7eb8f;
+  color: #1ba854;
+  background: #f6ffed;
 }
 
 .sm-error-icon {
