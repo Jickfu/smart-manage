@@ -26,6 +26,5 @@ public class LoginLogEntity extends BaseEntity {
 	private String failReason;
 	private String ip;
 	private String userAgent;
-	private String tokenHint;
 	private String traceId;
 }

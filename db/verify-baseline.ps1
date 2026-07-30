@@ -1,5 +1,5 @@
 param(
-    [string]$PsqlPath = 'D:\Programs\PostgreSQL\16\bin\psql.exe',
+    [string]$PsqlPath = 'D:\Program Files\PostgreSQL\16\bin\psql.exe',
     [string]$DbHost = 'localhost',
     [int]$DbPort = 5432,
     [string]$DbUser = 'postgres',

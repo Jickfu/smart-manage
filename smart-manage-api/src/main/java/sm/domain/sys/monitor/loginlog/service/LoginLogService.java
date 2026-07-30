@@ -1,0 +1,68 @@
+package sm.domain.sys.monitor.loginlog.service;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import sm.domain.sys.monitor.common.util.LogQueryValidator;
+import sm.domain.sys.monitor.loginlog.model.entity.LoginLogEntity;
+import sm.domain.sys.monitor.loginlog.model.form.LoginLogListForm;
+import sm.domain.sys.monitor.loginlog.model.vo.LoginLogDetailVO;
+import sm.domain.sys.monitor.loginlog.model.vo.LoginLogListVO;
+import sm.domain.sys.monitor.loginlog.mapper.LoginLogMapper;
+import sm.system.exception.BizException;
+import sm.system.response.PageData;
+import sm.system.response.ResultEnum;
+
+@Service
+@RequiredArgsConstructor
+public class LoginLogService {
+	private final LoginLogMapper loginLogMapper;
+	private final LoginLogConverter converter;
+
+	public PageData<LoginLogListVO> listPage(LoginLogListForm form) {
+		LogQueryValidator.validateTimeRange(form.getBeginTime(), form.getEndTime());
+		LambdaQueryWrapper<LoginLogEntity> qw = new LambdaQueryWrapper<LoginLogEntity>();
+		if (StringUtils.hasText(form.getKeyword())) {
+			String keyword = form.getKeyword().trim();
+			qw.and(condition -> condition
+					.like(LoginLogEntity::getUsername, keyword)
+					.or()
+					.like(LoginLogEntity::getNickname, keyword)
+					.or()
+					.like(LoginLogEntity::getIp, keyword));
+		}
+		if (form.getSuccess() != null) {
+			qw.eq(LoginLogEntity::getSuccess, form.getSuccess());
+		}
+		if (form.getEventType() != null) {
+			qw.eq(LoginLogEntity::getEventType, form.getEventType().name());
+		}
+		if (StringUtils.hasText(form.getTraceId())) {
+			qw.eq(LoginLogEntity::getTraceId, form.getTraceId().trim());
+		}
+		if (form.getBeginTime() != null) {
+			qw.ge(LoginLogEntity::getCreateTime, form.getBeginTime());
+		}
+		if (form.getEndTime() != null) {
+			qw.le(LoginLogEntity::getCreateTime, form.getEndTime());
+		}
+		qw.orderByDesc(LoginLogEntity::getCreateTime);
+		Page<LoginLogEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
+		Page<LoginLogEntity> result = loginLogMapper.selectPage(page, qw);
+		var records = result.getRecords().stream().map(converter::toListVO).toList();
+		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
+	}
+
+	public LoginLogDetailVO detail(Long id) {
+		if (id == null) {
+			throw new BizException(ResultEnum.PARAM_ERROR, "登录日志ID不能为空");
+		}
+		LoginLogEntity entity = loginLogMapper.selectById(id);
+		if (entity == null) {
+			throw new BizException(ResultEnum.NOT_FOUND, "登录日志不存在");
+		}
+		return converter.toDetailVO(entity);
+	}
+}

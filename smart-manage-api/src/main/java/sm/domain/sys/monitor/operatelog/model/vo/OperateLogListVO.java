@@ -20,6 +20,7 @@ public class OperateLogListVO implements Serializable {
 	private String methodName;
 	private Long durationMs;
 	private String username;
+	private String traceId;
 	private LocalDateTime createTime;
 }
 

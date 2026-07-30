@@ -97,7 +97,13 @@ export function EditFormFields({ fields, editable = true }: EditFormFieldsProps)
     <div className="sm-edit-fields">
       {fields.map((field) => {
         const disabled = Boolean(field.disabled || !editable);
-        const className = `sm-edit-field${field.fullWidth ? ' sm-edit-field--full' : ''}`;
+        const className = [
+          'sm-edit-field',
+          field.columnSpan === 2 ? 'sm-edit-field--span-2' : '',
+          field.fullWidth ? 'sm-edit-field--full' : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
 
         if (field.type === 'readonly') {
           return (

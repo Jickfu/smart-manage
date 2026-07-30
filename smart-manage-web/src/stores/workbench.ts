@@ -5,7 +5,7 @@ import {
   createListTabKey,
 } from '@/domain/common/page/tabKeys';
 import { OperationType } from '@/domain/common/page/types';
-import type { AppVO } from '@/domain/sys/app/types';
+import type { AppVO } from '@/domain/sys/base/app/types';
 import { pushTabHistory, resolveNextActiveTabKey } from './tabHistory';
 
 /** 内容页签最大数量（不含首页） */

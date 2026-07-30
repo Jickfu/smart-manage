@@ -15,3 +15,13 @@ describe('login CSP', () => {
     expect(html).not.toContain("script-src 'self' 'unsafe-inline'");
   });
 });
+
+describe('login form visibility', () => {
+  it('keeps the password change form hidden until it is requested', () => {
+    const html = readFileSync('public/login.html', 'utf8');
+    const css = readFileSync('public/css/login.css', 'utf8');
+
+    expect(html).toMatch(/<form id="passwordChangeForm"[^>]*\shidden>/);
+    expect(css).toMatch(/\.sm-form\[hidden\]\s*\{\s*display:\s*none;/);
+  });
+});

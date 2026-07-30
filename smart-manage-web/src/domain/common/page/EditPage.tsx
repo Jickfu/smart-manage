@@ -21,6 +21,8 @@ export interface EditFieldBase {
   placeholder?: string;
   /** 是否占满整行 */
   fullWidth?: boolean;
+  /** 横跨的标准字段列数；适用于类名等较长但不需要占满整行的内容。 */
+  columnSpan?: 2;
 }
 
 /** RefSelector 字段配置 — type === 'ref-selector' 时必填 */

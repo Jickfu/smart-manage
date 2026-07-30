@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OperationType } from '@/domain/common/page/types';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
-import type { AppVO } from '@/domain/sys/app/types';
+import type { AppVO } from '@/domain/sys/base/app/types';
 import { useWorkbenchStore } from './workbench';
 
 const APP_NUMBER = 'scm';

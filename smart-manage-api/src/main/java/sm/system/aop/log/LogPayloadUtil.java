@@ -8,9 +8,12 @@ import java.util.regex.Pattern;
 public final class LogPayloadUtil {
     private static final int DEFAULT_MAX = 4000;
     private static final Set<String> SENSITIVE_KEYS = Set.of(
-            "password", "oldpassword", "newpassword", "captcha", "token", "authorization", "smtoken");
+            "password", "oldpassword", "newpassword", "captcha", "token", "authorization", "smtoken",
+            "secret", "privatekey", "accesskey", "ticket");
     private static final Pattern KEY_IN_JSON = Pattern.compile(
-            "\"(password|token|authorization|smtoken|Captcha|captcha)\"\\s*:\\s*\"([^\"]*)\"");
+            "\"([^\"]*(?:password|captcha|token|secret|privatekey|accesskey|ticket)|authorization|smtoken)\""
+                    + "\\s*:\\s*\"([^\"]*)\"",
+            Pattern.CASE_INSENSITIVE);
 
     private LogPayloadUtil() {
     }
@@ -36,7 +39,15 @@ public final class LogPayloadUtil {
             return null;
         }
         String normalizedName = name.toLowerCase(Locale.ROOT);
-        return normalizedName.contains("password") || normalizedName.contains("token") ? "***" : name;
+        return isSensitiveKey(normalizedName)
+                || normalizedName.contains("password")
+                || normalizedName.contains("token")
+                || normalizedName.contains("secret")
+                || normalizedName.contains("privatekey")
+                || normalizedName.contains("accesskey")
+                || normalizedName.contains("ticket")
+                ? "***"
+                : name;
     }
 
     public static boolean isSensitiveKey(String key) {

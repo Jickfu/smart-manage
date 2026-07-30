@@ -83,11 +83,17 @@
 
 .sm-edit-field {
   width: 230px;
+  min-width: 0;
   flex-shrink: 0;
 }
 
 .sm-edit-field--full {
   width: 100%;
+}
+
+.sm-edit-field--span-2 {
+  width: 524px;
+  max-width: 100%;
 }
 
 /* === Form.Item 样式覆盖 === */
@@ -116,9 +122,14 @@
 .sm-edit-readonly {
   display: flex;
   align-items: center;
-  height: 28px;
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
   color: var(--sm-color-text);
   font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* === 整单查看态 ===

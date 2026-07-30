@@ -12,6 +12,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.service.UserService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
+import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
 import sm.domain.sys.monitor.loginlog.model.entity.LoginLogEntity;
 import sm.system.util.ServletUtil;
 
@@ -46,9 +47,8 @@ public class AuthListener implements SaTokenListener {
                 } catch (Exception ignored) {
                 }
             }
-            e.setEventType("LOGIN");
+            e.setEventType(LoginEventType.LOGIN.name());
             e.setSuccess(true);
-            e.setTokenHint(tokenHint(tokenValue));
             fillRequestMeta(e);
             logWriteService.writeLogin(e);
         } catch (Exception e) {
@@ -75,9 +75,8 @@ public class AuthListener implements SaTokenListener {
                 } catch (Exception ignored) {
                 }
             }
-            e.setEventType("LOGOUT");
+            e.setEventType(LoginEventType.LOGOUT.name());
             e.setSuccess(true);
-            e.setTokenHint(tokenHint(tokenValue));
             fillRequestMeta(e);
             logWriteService.writeLogin(e);
         } catch (Exception e) {
@@ -166,13 +165,4 @@ public class AuthListener implements SaTokenListener {
         }
     }
 
-    private String tokenHint(String tokenValue) {
-        if (!StringUtils.hasText(tokenValue)) {
-            return null;
-        }
-        if (tokenValue.length() <= 8) {
-            return "***";
-        }
-        return tokenValue.substring(0, 4) + "..." + tokenValue.substring(tokenValue.length() - 4);
-    }
 }

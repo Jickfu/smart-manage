@@ -1,9 +1,9 @@
 import { memo, useCallback } from 'react';
 import { App, Spin } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import { menuQueryKeys } from '@/domain/sys/menu/queryKeys';
+import { menuQueryKeys } from '@/domain/sys/base/menu/queryKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
-import { getUserMenusByAppNumber } from '@/domain/sys/menu/api';
+import { getUserMenusByAppNumber } from '@/domain/sys/base/menu/api';
 import AppSidebar from './AppSidebar';
 import ContentTabsBar from './ContentTabsBar';
 import PageRenderer from './PageRenderer';

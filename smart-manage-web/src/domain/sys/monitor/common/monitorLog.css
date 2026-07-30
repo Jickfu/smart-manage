@@ -1,0 +1,29 @@
+.sm-monitor-log-filter {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px 0;
+}
+
+.sm-monitor-log-filter-select {
+  width: 110px;
+}
+
+.sm-monitor-log-filter-trace {
+  width: 240px;
+}
+
+.sm-monitor-log-detail-value {
+  word-break: break-all;
+}
+
+.sm-monitor-log-payload {
+  max-height: 240px;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  color: var(--sm-color-text);
+  background: var(--sm-color-bg-layout);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Empty, Spin } from 'antd';
+import { Empty, Result, Spin, Typography } from 'antd';
 import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import type { OperationType, PageType } from '@/domain/common/page/types';
 import './PageRenderer.css';
@@ -39,9 +39,23 @@ const PageRenderer = ({
 
   const registration = componentRegistry[componentKey];
   if (!registration) {
+    console.error(`[PageRenderer] 页面组件未注册：${componentKey}`);
     return (
       <div className="sm-page-renderer-empty">
-        <Empty description={`未注册页面：${componentKey}`} />
+        <div className="sm-page-renderer-card">
+          <Result
+            status="warning"
+            title="页面暂不可用"
+            subTitle={
+              <div className="sm-page-renderer-message">
+                <span>当前前端版本未注册该页面，请联系系统管理员检查页面配置。</span>
+                <Typography.Text type="secondary" code>
+                  {componentKey}
+                </Typography.Text>
+              </div>
+            }
+          />
+        </div>
       </div>
     );
   }

@@ -17,8 +17,7 @@ public class LoginLogListVO implements Serializable {
 	private Boolean success;
 	private String failReason;
 	private String ip;
-	private String userAgent;
-	private String tokenHint;
+	private String traceId;
 	private LocalDateTime createTime;
 }
 

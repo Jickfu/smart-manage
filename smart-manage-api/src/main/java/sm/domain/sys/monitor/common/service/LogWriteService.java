@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import sm.system.aop.log.LogPayloadUtil;
+import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
 import sm.domain.sys.monitor.loginlog.model.entity.LoginLogEntity;
 import sm.domain.sys.monitor.loginlog.mapper.LoginLogMapper;
 import sm.domain.sys.monitor.operatelog.model.entity.OperateLogEntity;
@@ -43,6 +43,13 @@ public class LogWriteService implements OperateLogWriter {
         if (e.getTraceId() == null) {
             e.setTraceId(TraceIdUtil.getTraceId());
         }
+        e.setUsername(truncateColumn(e.getUsername(), 128));
+        e.setNickname(truncateColumn(e.getNickname(), 255));
+        e.setEventType(truncateColumn(e.getEventType(), 32));
+        e.setFailReason(truncateColumn(e.getFailReason(), 512));
+        e.setIp(truncateColumn(e.getIp(), 64));
+        e.setUserAgent(truncateColumn(e.getUserAgent(), 1024));
+        e.setTraceId(truncateColumn(e.getTraceId(), 64));
         runAsync(() -> loginLogMapper.insert(e));
     }
 
@@ -53,6 +60,15 @@ public class LogWriteService implements OperateLogWriter {
         if (entity.getCreateTime() == null) {
             entity.setCreateTime(LocalDateTime.now());
         }
+        entity.setBizName(truncateColumn(entity.getBizName(), 256));
+        entity.setRequestMethod(truncateColumn(entity.getRequestMethod(), 32));
+        entity.setRequestUri(truncateColumn(entity.getRequestUri(), 512));
+        entity.setIp(truncateColumn(entity.getIp(), 64));
+        entity.setUserAgent(truncateColumn(entity.getUserAgent(), 1024));
+        entity.setClassName(truncateColumn(entity.getClassName(), 256));
+        entity.setMethodName(truncateColumn(entity.getMethodName(), 128));
+        entity.setUsername(truncateColumn(entity.getUsername(), 128));
+        entity.setTraceId(truncateColumn(entity.getTraceId(), 64));
         runAsync(() -> operateLogMapper.insert(entity));
     }
 
@@ -86,9 +102,9 @@ public class LogWriteService implements OperateLogWriter {
     public void writeLoginFailed(String username, String failReason, String ip, String userAgent) {
         LoginLogEntity entity = new LoginLogEntity();
         entity.setUsername(username);
-        entity.setEventType("LOGIN");
+        entity.setEventType(LoginEventType.LOGIN.name());
         entity.setSuccess(false);
-        entity.setFailReason(truncateMsg(failReason));
+        entity.setFailReason(failReason);
         entity.setIp(ip);
         entity.setUserAgent(StringUtils.hasText(userAgent) ? userAgent : null);
         entity.setCreateTime(LocalDateTime.now());
@@ -109,7 +125,11 @@ public class LogWriteService implements OperateLogWriter {
         });
     }
 
-    private String truncateMsg(String s) {
-        return s == null ? null : LogPayloadUtil.truncate(s, 500);
+    /** 严格适配 varchar 长度，截断结果本身不能再次超过数据库字段上限。 */
+    private String truncateColumn(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 }

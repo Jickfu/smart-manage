@@ -24,6 +24,7 @@ public class OperateLogDetailVO implements Serializable {
 	private String responseBody;
 	private Long userId;
 	private String username;
+	private String traceId;
 	private LocalDateTime createTime;
 }
 
