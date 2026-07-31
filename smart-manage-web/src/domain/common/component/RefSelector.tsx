@@ -365,7 +365,8 @@ function RefSelector<T extends Record<string, unknown>>({
             pagination={false}
             loading={query.fetching}
             onRow={onRow}
-            scroll={{ x: 'max-content' }}
+            sticky
+            scroll={{ x: 'max-content', y: 1 }}
           />
         </div>
       </div>

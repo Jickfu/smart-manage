@@ -11,6 +11,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import './ApplicationHome.css';
+import SchedulerHome from '@/domain/sys/scheduler/home/SchedulerHome';
 
 interface ApplicationHomeProps {
   appNumber: string;
@@ -226,6 +227,7 @@ const ApplicationHome = ({ appNumber, appName }: ApplicationHomeProps) => {
   if (appNumber === 'procurement') return <ProcurementHome />;
   if (appNumber === 'monitor') return <MonitorHome />;
   if (appNumber === 'base') return <ModelingHome />;
+  if (appNumber === 'scheduler') return <SchedulerHome />;
   return (
     <div className="sm-app-home">
       <HomeHeader title={`${appName}首页`} description="当前应用暂未配置专属首页" />
