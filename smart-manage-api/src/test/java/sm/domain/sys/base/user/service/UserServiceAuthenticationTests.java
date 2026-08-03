@@ -5,7 +5,6 @@ import org.mockito.MockedStatic;
 import sm.domain.sys.base.common.config.OrgConfig;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
-import sm.domain.sys.base.common.service.CurrentUserService;
 import sm.domain.sys.base.menu.service.MenuService;
 import sm.domain.sys.base.permission.service.PermissionService;
 import sm.domain.sys.base.user.mapper.UserMapper;
@@ -40,9 +39,7 @@ class UserServiceAuthenticationTests {
 				mock(AuthorizationStateHelper.class),
 				mock(UserConverter.class),
 				mock(CurrentUserContext.class),
-				mock(OrgConfig.class),
-				mock(CurrentUserService.class),
-				mock(CachedUserProvider.class));
+				mock(OrgConfig.class));
 
 		try (MockedStatic<Argon2Helper> argon2Helper = mockStatic(Argon2Helper.class)) {
 			argon2Helper.when(() -> Argon2Helper.verify("encoded-password", "password"))

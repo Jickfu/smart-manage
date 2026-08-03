@@ -11,6 +11,7 @@ import sm.domain.sys.base.common.helper.CurrentUserContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -18,7 +19,26 @@ import static org.mockito.Mockito.when;
 
 class UserTxServiceTests {
 
-    @Test
+	@Test
+	void existingLoginUsernameCannotBeChanged() {
+		UserMapper userMapper = mock(UserMapper.class);
+		UserEntity existing = new UserEntity();
+		existing.setId(1L);
+		existing.setUsername("original-user");
+		existing.setVersion(0);
+		when(userMapper.selectCount(any())).thenReturn(0L);
+		when(userMapper.selectById(1L)).thenReturn(existing);
+		UserTxService service = new UserTxService(
+				userMapper, mock(UserRoleMapper.class), mock(CurrentUserContext.class));
+		UserSaveForm form = new UserSaveForm();
+		form.setId(1L);
+		form.setVersion(0);
+		form.setUsername("renamed-user");
+
+		assertThrows(sm.system.exception.BizException.class, () -> service.save(form));
+	}
+
+	@Test
     void newUserUsesDefaultThemeAndMustChangeInitialPassword() {
         UserMapper userMapper = mock(UserMapper.class);
         UserTxService service = new UserTxService(

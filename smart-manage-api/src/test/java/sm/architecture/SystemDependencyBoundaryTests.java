@@ -98,7 +98,7 @@ class SystemDependencyBoundaryTests {
                 Path.of("src/main/java/sm/domain/sys/scheduler/service/JobService.java")
         );
         var violations = highRiskServices.stream()
-                .filter(path -> !readSource(path).contains("currentUserService.checkAdministrator()"))
+                .filter(path -> !readSource(path).contains("currentUserContext.checkAdministrator()"))
                 .map(Path::toString)
                 .toList();
         assertTrue(violations.isEmpty(), () -> "高风险 Service 必须校验 administrator 身份: " + violations);

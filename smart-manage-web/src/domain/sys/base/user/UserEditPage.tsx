@@ -31,6 +31,7 @@ const UserEditPage = (props: PageComponentProps) => {
         label: '用户名',
         dataIndex: 'username',
         type: 'text',
+        disabled: !isAddNew,
         rules: [{ required: true, message: '用户名不能为空' }],
       },
       ...(isAddNew

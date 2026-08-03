@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.net.telnet.TelnetClient;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.common.service.CurrentUserService;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.monitor.arthas.model.vo.ArthasResultVO;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 @Slf4j
 @RequiredArgsConstructor
 public class ArthasService {
-	private final CurrentUserService currentUserService;
+	private final CurrentUserContext currentUserContext;
 
     private static final String HOST = "127.0.0.1";
     private static final int PORT = 3658;
@@ -58,7 +58,7 @@ public class ArthasService {
      */
     @BizLog(value = "执行Arthas命令", recordRequest = false, recordResponse = false)
     public ArthasResultVO execute(String command, String args) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         if (!ONE_SHOT_COMMANDS.contains(command)) {
             if (CONTINUOUS_COMMANDS.contains(command)) {
                 throw new BizException(ResultEnum.PARAM_ERROR, "命令 '" + command + "' 是持续命令，请使用 /start 端点");
@@ -75,7 +75,7 @@ public class ArthasService {
      */
     @BizLog(value = "启动Arthas会话", recordRequest = false, recordResponse = false)
     public ArthasResultVO start(String command, String args) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         if (!CONTINUOUS_COMMANDS.contains(command)) {
             throw new BizException(ResultEnum.PARAM_ERROR, "命令 '" + command + "' 不是持续命令，请使用 /execute 端点");
         }
@@ -94,7 +94,7 @@ public class ArthasService {
      */
     @BizLog("停止Arthas会话")
     public ArthasResultVO stop(String sessionId) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         ArthasSession session = sessions.remove(sessionId);
         if (session == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "会话不存在或已结束: " + sessionId);
@@ -107,7 +107,7 @@ public class ArthasService {
      * 读取持续命令输出
      */
     public ArthasResultVO read(String sessionId) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         ArthasSession session = sessions.get(sessionId);
         if (session == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "会话不存在或已结束: " + sessionId);

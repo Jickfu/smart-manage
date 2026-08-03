@@ -9,7 +9,6 @@ import sm.domain.sys.base.app.model.entity.AppEntity;
 import sm.domain.sys.base.app.mapper.AppMapper;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
-import sm.domain.sys.base.common.service.CurrentUserService;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuListForm;
 import sm.domain.sys.base.menu.model.form.MenuSaveForm;
@@ -35,7 +34,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MenuService {
 	private final CurrentUserContext currentUserContext;
-	private final CurrentUserService currentUserService;
 	private final MenuMapper mapper;
 	private final AppMapper appMapper;
 	private final MenuTxService txService;
@@ -132,7 +130,7 @@ public class MenuService {
 		}
 
 		List<MenuEntity> entityList = mapper.selectUserMenus(
-				userId, currentUserContext.getOrgId(), appId, currentUserService.isAdministrator());
+				userId, currentUserContext.getOrgId(), appId, currentUserContext.isAdministrator());
 		Map<Long, MenuVO> categories = new HashMap<>();
 		for (MenuEntity menuEntity : entityList) {
 			MenuVO menu = new MenuVO();

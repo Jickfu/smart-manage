@@ -64,6 +64,9 @@ class UserTxService {
             entity = new UserEntity();
         }
 
+		if (form.getId() != null && !Objects.equals(entity.getUsername(), form.getUsername())) {
+			throw new BizException(ResultEnum.PARAM_ERROR, "登录用户名创建后不允许修改");
+		}
         entity.setUsername(form.getUsername());
         // 密码只允许在新增时设置；已有用户必须通过独立重置命令修改密码。
         if (form.getId() != null && form.getPassword() != null && !form.getPassword().isEmpty()) {

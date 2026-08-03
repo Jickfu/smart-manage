@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
-import sm.domain.sys.base.common.service.CurrentUserService;
 import sm.domain.sys.monitor.sql.model.entity.SqlLogEntity;
 import sm.domain.sys.monitor.sql.model.form.SqlExecuteForm;
 import sm.domain.sys.monitor.sql.model.form.SqlLogListForm;
@@ -39,26 +38,23 @@ public class SqlService {
     private final SqlLogTxService txService;
     private final SqlLogConverter converter;
     private final CurrentUserContext currentUserContext;
-    private final CurrentUserService currentUserService;
 
     public SqlService(
             DataSource dataSource,
             SqlLogMapper mapper,
             SqlLogTxService txService,
             SqlLogConverter converter,
-            CurrentUserContext currentUserContext,
-            CurrentUserService currentUserService) {
+            CurrentUserContext currentUserContext) {
         this.dataSource = dataSource;
         this.mapper = mapper;
         this.txService = txService;
         this.converter = converter;
         this.currentUserContext = currentUserContext;
-        this.currentUserService = currentUserService;
     }
 
     @BizLog(value = "执行SQL", recordRequest = false, recordResponse = false)
     public SqlResultVO execute(SqlExecuteForm form) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         String sql = form.getSql().trim();
         if (sql.isEmpty()) {
             throw new BizException(ResultEnum.PARAM_ERROR, "SQL 语句不能为空");
@@ -139,7 +135,7 @@ public class SqlService {
      * 分页查询执行历史
      */
     public PageData<SqlLogListVO> listPage(SqlLogListForm form) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         LambdaQueryWrapper<SqlLogEntity> qw = new LambdaQueryWrapper<SqlLogEntity>();
         if (StringUtil.isNotBlank(form.getKeyword())) {
             qw.like(SqlLogEntity::getSqlText, form.getKeyword());
@@ -155,7 +151,7 @@ public class SqlService {
     }
 
     public SqlLogDetailVO detail(Long id) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         SqlLogEntity entity = mapper.selectById(id);
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "执行日志不存在");
@@ -218,7 +214,7 @@ public class SqlService {
             logEntity.setErrorMessage("ERROR".equals(result.getType()) ? result.getMessage() : null);
 
             if (currentUserContext.isLogin()) {
-                logEntity.setCreateName(currentUserService.requireCurrentUser().getUsername());
+                logEntity.setCreateName(currentUserContext.getUsernameOrDefault("未知"));
             }
             try {
                 logEntity.setCreateIp(ServletUtil.getClientIp());

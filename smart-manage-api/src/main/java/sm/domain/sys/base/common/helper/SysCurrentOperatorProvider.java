@@ -4,8 +4,6 @@ import cn.dev33.satoken.exception.SaTokenContextException;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import sm.domain.sys.base.common.service.CurrentUserService;
-import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.system.helper.CurrentOperatorProvider;
 
 /** 基于当前 Sa-Token 会话提供审计操作人。 */
@@ -14,7 +12,6 @@ import sm.system.helper.CurrentOperatorProvider;
 @RequiredArgsConstructor
 public class SysCurrentOperatorProvider implements CurrentOperatorProvider {
 	private final CurrentUserContext currentUserContext;
-	private final CurrentUserService currentUserService;
 
     @Override
     public Long getCurrentUserIdOrNull() {
@@ -34,8 +31,7 @@ public class SysCurrentOperatorProvider implements CurrentOperatorProvider {
             if (!currentUserContext.isLogin()) {
                 return defaultUsername;
             }
-            UserEntity user = currentUserService.requireCurrentUser();
-            return user == null || user.getUsername() == null ? defaultUsername : user.getUsername();
+            return currentUserContext.getUsernameOrDefault(defaultUsername);
         } catch (SaTokenContextException exception) {
             return defaultUsername;
         } catch (Exception exception) {

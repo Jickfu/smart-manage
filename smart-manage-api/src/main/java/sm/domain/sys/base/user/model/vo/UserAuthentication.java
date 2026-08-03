@@ -5,13 +5,14 @@ package sm.domain.sys.base.user.model.vo;
  */
 public record UserAuthentication(
         Long userId,
+        String username,
         String nickname,
         boolean passwordReset,
         boolean administrator,
         String message) {
 
     public static UserAuthentication failed(String message) {
-        return new UserAuthentication(null, null, false, false, message);
+        return new UserAuthentication(null, null, null, false, false, message);
     }
 
     public boolean successful() {

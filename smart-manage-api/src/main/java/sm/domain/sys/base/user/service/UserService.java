@@ -1,6 +1,8 @@
 package sm.domain.sys.base.user.service;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.alicp.jetcache.anno.CacheType;
+import com.alicp.jetcache.anno.Cached;
 import com.alicp.jetcache.anno.CacheInvalidate;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -11,7 +13,6 @@ import sm.domain.sys.base.common.constant.UserConstant;
 import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.base.common.config.OrgConfig;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
-import sm.domain.sys.base.common.service.CurrentUserService;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.menu.service.MenuService;
@@ -35,6 +36,7 @@ import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -55,8 +57,6 @@ public class UserService {
 	private final UserConverter converter;
 	private final CurrentUserContext currentUserContext;
 	private final OrgConfig orgConfig;
-	private final CurrentUserService currentUserService;
-	private final CachedUserProvider cachedUserProvider;
 
 	public PageData<UserListVO> listPage(UserListForm form) {
 		LambdaQueryWrapper<UserEntity> qw = new LambdaQueryWrapper<UserEntity>().orderByAsc(UserEntity::getId);
@@ -137,6 +137,7 @@ public class UserService {
 
 		return new UserAuthentication(
 				user.getId(),
+				user.getUsername(),
 				user.getNickname(),
 				Boolean.TRUE.equals(user.getPasswordReset()),
 				UserConstant.SUPER_ADMIN.equals(user.getUsername()),
@@ -146,8 +147,8 @@ public class UserService {
 	/** 凭据验证且无需强制改密后，才创建正式登录状态。 */
 	public LoginVO completeLogin(UserAuthentication authentication) {
 		StpUtil.login(authentication.userId());
-		// 默认组织，供权限与业务按组织维度使用
-		currentUserContext.setOrgId(orgConfig.getDefaultId());
+		currentUserContext.initializeIdentity(
+				authentication.username(), authentication.administrator());
 		String token = StpUtil.getTokenValue();
 
 		LoginVO vo = new LoginVO();
@@ -188,15 +189,21 @@ public class UserService {
 	 * 按前缀获取当前用户的权限编码列表
 	 */
 	public List<String> permissions(String prefix) {
-		if (currentUserService.isAdministrator()) {
+		if (currentUserContext.isAdministrator()) {
 			return List.of("*");
 		}
 		return permissionService.getUserPermissionsByPrefix(currentUserContext.getUserId(), currentUserContext.getOrgId(), prefix);
 	}
 
-	/** 保留用户查询公开 API，缓存策略统一由 CachedUserProvider 维护。 */
+	/** Redis 远程缓存读取；仅供其他 Spring Bean 外部调用，确保缓存代理生效。 */
+	@Cached(cacheType = CacheType.REMOTE, name = CacheConstant.USER_INFO,
+			key = "#id", expire = 1, timeUnit = TimeUnit.HOURS)
 	public UserEntity requireUser(Long id) {
-		return cachedUserProvider.requireUser(id);
+		UserEntity entity = mapper.selectById(id);
+		if (entity == null) {
+			throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+		}
+		return entity;
 	}
 
 	/**

@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.mozilla.javascript.*;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.common.service.CurrentUserService;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.sysparam.service.SysParamService;
 import sm.domain.sys.monitor.script.model.entity.ScriptEntity;
 import sm.domain.sys.monitor.script.model.form.ScriptExecuteForm;
@@ -42,26 +42,26 @@ public class ScriptService {
     private final SysParamService sysParamService;
     private final ScriptTxService txService;
     private final ScriptConverter converter;
-    private final CurrentUserService currentUserService;
+    private final CurrentUserContext currentUserContext;
 
     public ScriptService(
             ScriptMapper mapper,
             SysParamService sysParamService,
             ScriptTxService txService,
             ScriptConverter converter,
-            CurrentUserService currentUserService) {
+            CurrentUserContext currentUserContext) {
         this.mapper = mapper;
         this.sysParamService = sysParamService;
         this.txService = txService;
         this.converter = converter;
-        this.currentUserService = currentUserService;
+        this.currentUserContext = currentUserContext;
     }
 
     // ---- 脚本执行 ----
 
     @BizLog(value = "执行脚本", recordRequest = false, recordResponse = false)
     public ScriptResultVO execute(ScriptExecuteForm form) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         String content = form.getContent().trim();
         if (content.isEmpty()) {
             throw new BizException(ResultEnum.PARAM_ERROR, "脚本内容不能为空");
@@ -176,7 +176,7 @@ public class ScriptService {
     // ---- 脚本 CRUD ----
 
     public PageData<ScriptListVO> listPage(ScriptListForm form) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         LambdaQueryWrapper<ScriptEntity> qw = new LambdaQueryWrapper<ScriptEntity>();
         if (StringUtil.isNotBlank(form.getKeyword())) {
             qw.like(ScriptEntity::getNumber, form.getKeyword());
@@ -189,7 +189,7 @@ public class ScriptService {
     }
 
     public ScriptDetailVO detail(Long id) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         ScriptEntity entity = mapper.selectById(id);
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "脚本不存在");
@@ -199,13 +199,13 @@ public class ScriptService {
 
     @BizLog(value = "保存脚本", recordRequest = false)
     public Long save(ScriptSaveForm form) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         return txService.save(form);
     }
 
     @BizLog("删除脚本")
     public void delete(Long id) {
-        currentUserService.checkAdministrator();
+        currentUserContext.checkAdministrator();
         txService.delete(id);
     }
 

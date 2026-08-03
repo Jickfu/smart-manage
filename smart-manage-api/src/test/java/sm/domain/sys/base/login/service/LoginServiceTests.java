@@ -93,7 +93,7 @@ class LoginServiceTests {
 		LoginVO expected = new LoginVO();
 		expected.setToken("token");
 		UserAuthentication authentication =
-				new UserAuthentication(1L, "管理员", false, true, null);
+				new UserAuthentication(1L, "administrator", "管理员", false, true, null);
 		when(valueOperations.get(CAPTCHA_KEY)).thenReturn("ABCD");
 		when(userService.authenticate("administrator", "password")).thenReturn(authentication);
 		when(userService.completeLogin(authentication)).thenReturn(expected);
@@ -142,7 +142,7 @@ class LoginServiceTests {
 	void passwordResetLoginReturnsOneTimeTicketWithoutCompletingLogin() {
 		LoginForm form = loginForm();
 		UserAuthentication authentication =
-				new UserAuthentication(9L, "待改密用户", true, false, null);
+				new UserAuthentication(9L, "reset-user", "待改密用户", true, false, null);
 		when(valueOperations.get(CAPTCHA_KEY)).thenReturn("ABCD");
 		when(userService.authenticate("administrator", "password")).thenReturn(authentication);
 
