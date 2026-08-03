@@ -8,7 +8,7 @@ import sm.domain.scm.procurement.purchaserequisition.model.entity.PurchaseRequis
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionEntryForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSaveForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSubmitForm;
-import sm.domain.sys.base.common.helper.UserHelper;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
@@ -24,7 +24,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.mockStatic;
 
 class PurchaseRequisitionTxServiceTests {
 
@@ -45,15 +44,13 @@ class PurchaseRequisitionTxServiceTests {
         when(mapper.selectById(1L)).thenReturn(savedEntity);
         when(mapper.update(any(PurchaseRequisitionEntity.class), any())).thenReturn(1);
 
-        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(mapper, entryMapper);
+        CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
+        when(currentUserContext.getOrgId()).thenReturn(1L);
+        when(currentUserContext.getUserId()).thenReturn(1L);
+        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(currentUserContext, mapper, entryMapper);
         PurchaseRequisitionSubmitForm form = submitForm(null, null);
 
-        try (var userHelper = mockStatic(UserHelper.class)) {
-            userHelper.when(UserHelper::getCurrentOrgId).thenReturn(1L);
-            userHelper.when(UserHelper::getCurrentUserId).thenReturn(1L);
-
-            assertEquals(1L, service.submit(form));
-        }
+        assertEquals(1L, service.submit(form));
 
         verify(mapper).insert(any(PurchaseRequisitionEntity.class));
         verify(entryMapper).insert(any(PurchaseRequisitionEntryEntity.class));
@@ -70,7 +67,7 @@ class PurchaseRequisitionTxServiceTests {
         when(mapper.selectById(1L)).thenReturn(entity);
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
-                mapper, mock(PurchaseRequisitionEntryMapper.class));
+                mock(CurrentUserContext.class), mapper, mock(PurchaseRequisitionEntryMapper.class));
 
         BizException exception = assertThrows(BizException.class, () -> service.deleteById(1L, 1));
         assertEquals(ResultEnum.DATA_CONFLICT.getCode(), exception.getCode());
@@ -87,7 +84,7 @@ class PurchaseRequisitionTxServiceTests {
         when(mapper.delete(any())).thenReturn(0);
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
-                mapper, mock(PurchaseRequisitionEntryMapper.class));
+                mock(CurrentUserContext.class), mapper, mock(PurchaseRequisitionEntryMapper.class));
 
         BizException exception = assertThrows(BizException.class, () -> service.deleteById(1L, 2));
         assertEquals(ResultEnum.DATA_CONFLICT.getCode(), exception.getCode());
@@ -103,7 +100,8 @@ class PurchaseRequisitionTxServiceTests {
         entity.setBillStatus(BillStatusEnum.SUBMITTED.getValue());
         when(mapper.selectById(1L)).thenReturn(entity);
 
-        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(mapper, entryMapper);
+        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
+                mock(CurrentUserContext.class), mapper, entryMapper);
 
         BizException exception = assertThrows(BizException.class, () -> service.deleteById(1L, 2));
         assertEquals(ResultEnum.BILL_STATUS_ERROR.getCode(), exception.getCode());
@@ -121,7 +119,7 @@ class PurchaseRequisitionTxServiceTests {
         when(mapper.selectById(1L)).thenReturn(entity);
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
-                mapper, mock(PurchaseRequisitionEntryMapper.class));
+                mock(CurrentUserContext.class), mapper, mock(PurchaseRequisitionEntryMapper.class));
 
         PurchaseRequisitionSubmitForm form = submitForm(1L, 1);
         BizException exception = assertThrows(BizException.class, () -> service.submit(form));
@@ -145,7 +143,8 @@ class PurchaseRequisitionTxServiceTests {
         when(entryMapper.insert(any(PurchaseRequisitionEntryEntity.class))).thenReturn(1);
         when(mapper.update(any(PurchaseRequisitionEntity.class), any())).thenReturn(0);
 
-        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(mapper, entryMapper);
+        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
+                mock(CurrentUserContext.class), mapper, entryMapper);
 
         PurchaseRequisitionSubmitForm form = submitForm(1L, 2);
         BizException exception = assertThrows(BizException.class, () -> service.submit(form));
@@ -176,7 +175,8 @@ class PurchaseRequisitionTxServiceTests {
         form.setBizDate(LocalDate.of(2026, 7, 28));
         form.setEntrys(List.of(entryForm));
 
-        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(mapper, entryMapper);
+        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
+                mock(CurrentUserContext.class), mapper, entryMapper);
 
         BizException exception = assertThrows(BizException.class, () -> service.save(form));
         assertEquals(ResultEnum.PERSISTENCE_ERROR.getCode(), exception.getCode());

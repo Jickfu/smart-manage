@@ -1,10 +1,10 @@
 import { memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { appQueryKeys } from '@/domain/sys/app/queryKeys';
+import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';
 import { Empty, Spin } from 'antd';
 import { AppstoreOutlined } from '@ant-design/icons';
-import { fetchApps } from '@/domain/sys/app/api';
-import type { AppVO } from '@/domain/sys/app/types';
+import { fetchApps } from '@/domain/sys/base/app/api';
+import type { AppVO } from '@/domain/sys/base/app/types';
 import { openApp } from '@/services/navigationService';
 import './AppsView.css';
 

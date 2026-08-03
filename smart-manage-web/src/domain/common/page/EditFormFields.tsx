@@ -87,6 +87,8 @@ function renderFormControl(field: EditField, disabled: boolean) {
           {...field.refSelector}
         />
       );
+    case 'custom':
+      return <div className="sm-edit-readonly">{field.content}</div>;
     default:
       return null;
   }
@@ -97,7 +99,21 @@ export function EditFormFields({ fields, editable = true }: EditFormFieldsProps)
     <div className="sm-edit-fields">
       {fields.map((field) => {
         const disabled = Boolean(field.disabled || !editable);
-        const className = `sm-edit-field${field.fullWidth ? ' sm-edit-field--full' : ''}`;
+        const className = [
+          'sm-edit-field',
+          field.columnSpan === 2 ? 'sm-edit-field--span-2' : '',
+          field.fullWidth ? 'sm-edit-field--full' : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+
+        if (field.type === 'custom') {
+          return (
+            <Form.Item key={field.dataIndex} label={field.label} className={className}>
+              <div className="sm-edit-readonly">{field.content}</div>
+            </Form.Item>
+          );
+        }
 
         if (field.type === 'readonly') {
           return (

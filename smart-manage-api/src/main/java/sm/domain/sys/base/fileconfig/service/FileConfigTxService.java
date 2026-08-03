@@ -12,6 +12,8 @@ import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.helper.SM4Helper;
 
+import java.util.Objects;
+
 /**
  * 文件配置事务服务 —— 所有写操作在类级别事务中执行
  *
@@ -32,7 +34,13 @@ class FileConfigTxService {
             if (entity == null) {
                 throw new BizException(ResultEnum.NOT_FOUND, "文件配置不存在");
             }
+            if (form.getVersion() == null || !Objects.equals(entity.getVersion(), form.getVersion())) {
+                throw new BizException(ResultEnum.DATA_CONFLICT, "文件配置已被其他用户修改，请刷新后重试");
+            }
         } else {
+            if (mapper.selectCount(null) > 0) {
+                throw new BizException(ResultEnum.DATA_CONFLICT, "文件配置为单例，不能重复新增");
+            }
             entity = new FileConfigEntity();
         }
         entity.setStorageType(form.getStorageType());
@@ -57,16 +65,4 @@ class FileConfigTxService {
         return entity.getId();
     }
 
-    public void deleteById(Long id) {
-        if (id == null) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "文件配置ID不能为空");
-        }
-        FileConfigEntity entity = mapper.selectById(id);
-        if (entity == null) {
-            throw new BizException(ResultEnum.NOT_FOUND, "文件配置不存在");
-        }
-        if (mapper.deleteById(id) != 1) {
-            throw new BizException(sm.system.response.ResultEnum.DATA_CONFLICT, "数据已被其他用户删除");
-        }
-    }
 }

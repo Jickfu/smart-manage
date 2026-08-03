@@ -79,7 +79,7 @@ public class AttachmentController {
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "附件不存在：" + form.getId());
         }
-        FileStorageService storage = storageFactory.getService();
+        FileStorageService storage = storageFactory.getService(entity.getStorageType());
         byte[] bytes = storage.getBytes(entity.getStoredPath());
         String encodedName = URLEncoder.encode(entity.getOriginalName(), StandardCharsets.UTF_8)
                 .replace("+", "%20");

@@ -1,0 +1,69 @@
+.sm-scheduler-home-statistics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sm-scheduler-home-statistics .ant-card-body {
+  padding: 16px;
+}
+
+.sm-scheduler-home-statistics .ant-statistic-title {
+  font-size: 12px;
+}
+
+.sm-scheduler-home-statistics .ant-statistic-content {
+  font-size: 26px;
+}
+
+.sm-scheduler-home-legend {
+  white-space: nowrap;
+}
+
+.sm-scheduler-home-chart {
+  display: flex;
+  height: 240px;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 20px;
+}
+
+.sm-scheduler-home-chart-column {
+  display: grid;
+  min-width: 70px;
+  height: 100%;
+  grid-template-rows: 1fr auto auto;
+  align-items: end;
+  justify-items: center;
+  gap: 5px;
+  color: var(--sm-text-secondary);
+  font-size: 12px;
+}
+
+.sm-scheduler-home-chart-column svg {
+  width: 42px;
+  height: 180px;
+}
+
+.sm-scheduler-home-chart-column strong {
+  color: var(--sm-text);
+  font-weight: 500;
+}
+
+.sm-scheduler-home-bar--success {
+  fill: #52c41a;
+}
+
+.sm-scheduler-home-bar--failed {
+  fill: #ff4d4f;
+}
+
+.sm-scheduler-home-bar--skipped {
+  fill: #8c8c8c;
+}
+
+@media (max-width: 1100px) {
+  .sm-scheduler-home-statistics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

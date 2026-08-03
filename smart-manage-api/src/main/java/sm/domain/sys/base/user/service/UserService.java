@@ -1,18 +1,17 @@
 package sm.domain.sys.base.user.service;
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.alicp.jetcache.anno.CacheType;
-import com.alicp.jetcache.anno.Cached;
 import com.alicp.jetcache.anno.CacheInvalidate;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.UserConstant;
 import sm.domain.sys.base.common.constant.CacheConstant;
-import sm.domain.sys.base.common.helper.UserHelper;
+import sm.domain.sys.base.common.config.OrgConfig;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.domain.sys.base.common.service.CurrentUserService;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.menu.service.MenuService;
@@ -36,7 +35,6 @@ import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -55,9 +53,10 @@ public class UserService {
 	private final PermissionService permissionService;
 	private final AuthorizationStateHelper authorizationStateHelper;
 	private final UserConverter converter;
-
-	@Value("${smart-manage.org.default-id:1}")
-	private Long defaultOrgId;
+	private final CurrentUserContext currentUserContext;
+	private final OrgConfig orgConfig;
+	private final CurrentUserService currentUserService;
+	private final CachedUserProvider cachedUserProvider;
 
 	public PageData<UserListVO> listPage(UserListForm form) {
 		LambdaQueryWrapper<UserEntity> qw = new LambdaQueryWrapper<UserEntity>().orderByAsc(UserEntity::getId);
@@ -111,7 +110,7 @@ public class UserService {
 		userInfoVO.setRoleIds(userRoleMapper.selectList(new LambdaQueryWrapper<UserRoleEntity>()
 					.select(UserRoleEntity::getRoleId)
 					.eq(UserRoleEntity::getUserId, id)
-					.eq(UserRoleEntity::getOrgId, UserHelper.getCurrentOrgId()))
+					.eq(UserRoleEntity::getOrgId, currentUserContext.getOrgId()))
 				.stream()
 				.map(UserRoleEntity::getRoleId)
 				.toList());
@@ -140,7 +139,7 @@ public class UserService {
 				user.getId(),
 				user.getNickname(),
 				Boolean.TRUE.equals(user.getPasswordReset()),
-				UserConstant.SUPER_ADMIN.equalsIgnoreCase(user.getUsername()),
+				UserConstant.SUPER_ADMIN.equals(user.getUsername()),
 				null);
 	}
 
@@ -148,7 +147,7 @@ public class UserService {
 	public LoginVO completeLogin(UserAuthentication authentication) {
 		StpUtil.login(authentication.userId());
 		// 默认组织，供权限与业务按组织维度使用
-		UserHelper.setCurrentOrgId(defaultOrgId);
+		currentUserContext.setOrgId(orgConfig.getDefaultId());
 		String token = StpUtil.getTokenValue();
 
 		LoginVO vo = new LoginVO();
@@ -175,34 +174,29 @@ public class UserService {
 
 	public UserInfoVO current() {
 		// 直接走 mapper，避免自调用绕过缓存代理
-		UserEntity userEntity = mapper.selectById(UserHelper.getCurrentUserId());
+		UserEntity userEntity = mapper.selectById(currentUserContext.getUserId());
 		return converter.toInfoVO(userEntity);
 	}
 
 	@BizLog("修改个人主题")
-	@CacheInvalidate(name = CacheConstant.USER_INFO, key = "T(sm.domain.sys.base.common.helper.UserHelper).getCurrentUserId()")
+	@CacheInvalidate(name = CacheConstant.USER_INFO, key = "@currentUserContext.getUserId()")
 	public void updateCurrentTheme(String themeColor) {
-		txService.updateCurrentTheme(UserHelper.getCurrentUserId(), themeColor);
+		txService.updateCurrentTheme(currentUserContext.getUserId(), themeColor);
 	}
 
 	/**
 	 * 按前缀获取当前用户的权限编码列表
 	 */
 	public List<String> permissions(String prefix) {
-		if (UserHelper.isAdmin()) {
+		if (currentUserService.isAdministrator()) {
 			return List.of("*");
 		}
-		return permissionService.getUserPermissionsByPrefix(UserHelper.getCurrentUserId(), UserHelper.getCurrentOrgId(), prefix);
+		return permissionService.getUserPermissionsByPrefix(currentUserContext.getUserId(), currentUserContext.getOrgId(), prefix);
 	}
 
-	/** Redis 远程缓存读取（外部调用时走代理生效，内部调用请直接使用 mapper） */
-	@Cached(cacheType = CacheType.REMOTE, name = CacheConstant.USER_INFO, key = "#id", expire = 1, timeUnit = TimeUnit.HOURS)
+	/** 保留用户查询公开 API，缓存策略统一由 CachedUserProvider 维护。 */
 	public UserEntity requireUser(Long id) {
-		UserEntity entity = mapper.selectById(id);
-		if (entity == null) {
-			throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
-		}
-		return entity;
+		return cachedUserProvider.requireUser(id);
 	}
 
 	/**
@@ -211,7 +205,7 @@ public class UserService {
 	public UserCreateNewDataVO createNewData() {
 		UserCreateNewDataVO vo = new UserCreateNewDataVO();
 		// 默认组织ID
-		vo.setDefaultOrgId(defaultOrgId);
+		vo.setDefaultOrgId(orgConfig.getDefaultId());
 		// 默认启用
 		vo.setEnabled(true);
 		// 可根据业务需要设置默认角色等

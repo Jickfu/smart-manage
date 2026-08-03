@@ -8,10 +8,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import sm.domain.sys.monitor.operatelog.constant.OperateLogPermission;
 import sm.domain.sys.monitor.operatelog.model.form.OperateLogListForm;
 import sm.domain.sys.monitor.operatelog.model.vo.OperateLogDetailVO;
 import sm.domain.sys.monitor.operatelog.model.vo.OperateLogListVO;
-import sm.domain.sys.monitor.operatelog.service.OperateLogQueryService;
+import sm.domain.sys.monitor.operatelog.service.OperateLogService;
 import sm.system.form.IdForm;
 import sm.system.response.PageData;
 import sm.system.response.Result;
@@ -20,18 +21,18 @@ import sm.system.response.Result;
 @Tag(name = "系统服务-操作日志", description = "操作日志查询")
 @RequiredArgsConstructor
 public class OperateLogController {
-	private final OperateLogQueryService service;
+	private final OperateLogService service;
 
 	@PostMapping("/sys/log/operate/listPage")
 	@Operation(summary = "操作日志分页")
-	@SaCheckPermission("sys:log:operate:listPage")
+	@SaCheckPermission(OperateLogPermission.LIST)
 	public Result<PageData<OperateLogListVO>> listPage(@Valid @RequestBody OperateLogListForm form) {
 		return Result.success(service.listPage(form));
 	}
 
 	@PostMapping("/sys/log/operate/detail")
 	@Operation(summary = "操作日志详情")
-	@SaCheckPermission("sys:log:operate:detail")
+	@SaCheckPermission(OperateLogPermission.DETAIL)
 	public Result<OperateLogDetailVO> detail(@Valid @RequestBody IdForm form) {
 		return Result.success(service.detail(form.getId()));
 	}

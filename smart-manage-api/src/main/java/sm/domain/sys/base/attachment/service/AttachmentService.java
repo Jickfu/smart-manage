@@ -45,6 +45,11 @@ public class AttachmentService {
         txService.promote(form);
     }
 
+    /** 供同一业务命令内部确认附件，避免嵌套记录第二条业务日志。 */
+    public void promoteForAggregate(AttachmentPromoteForm form) throws IOException {
+        txService.promote(form);
+    }
+
     /** 删除附件（物理文件 + 映射 + 元数据） */
     @BizLog("删除附件")
     public void delete(Long id) throws IOException {
@@ -82,7 +87,7 @@ public class AttachmentService {
         vo.setMimeType(entity.getMimeType());
         vo.setFileExt(entity.getFileExt());
         vo.setIsTemp(entity.getIsTemp());
-        vo.setUrl(storageFactory.getService().getAccessUrl(entity.getStoredPath()));
+        vo.setUrl(storageFactory.getService(entity.getStorageType()).getAccessUrl(entity.getStoredPath()));
         if (entity.getCreateTime() != null) {
             vo.setCreateTime(entity.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }

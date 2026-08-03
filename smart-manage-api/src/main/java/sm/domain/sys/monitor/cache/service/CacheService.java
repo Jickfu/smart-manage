@@ -2,8 +2,8 @@ package sm.domain.sys.monitor.cache.service;
 
 import com.alicp.jetcache.Cache;
 import com.alicp.jetcache.CacheManager;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
@@ -29,11 +29,10 @@ import java.util.Properties;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class CacheService {
     private final RedisTemplate<String, Object> redisTemplate;
-
-    @Autowired
-    private CacheManager cacheManager;
+    private final CacheManager cacheManager;
 
     /** 单次扫描最大 key 数 */
     private static final int MAX_SCAN_KEYS = 500;
@@ -44,10 +43,6 @@ public class CacheService {
             CacheConstant.UI_CONFIG,
             CacheConstant.FILE_CONFIG,
             CacheConstant.BASIC_DATA_OPTIONS);
-
-    public CacheService(RedisTemplate<String, Object> redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
 
     // ==================== 统计 ====================
 

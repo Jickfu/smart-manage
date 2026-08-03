@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OperationType } from '@/domain/common/page/types';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
-import type { AppVO } from '@/domain/sys/app/types';
+import type { AppVO } from '@/domain/sys/base/app/types';
 import { useWorkbenchStore } from './workbench';
 
 const APP_NUMBER = 'scm';
@@ -112,5 +112,19 @@ describe('workbench store', () => {
     expect(
       store.openBillTab(APP_NUMBER, COMPONENT_KEY, '超限页签', 'overflow', OperationType.VIEW),
     ).toBe('limit_reached');
+  });
+
+  it('自定义配置页按 CUSTOM 协议打开且保持单实例', () => {
+    const store = useWorkbenchStore.getState();
+    const componentKey = 'sys/base/ui-config';
+
+    expect(store.openCustomTab(APP_NUMBER, componentKey, '界面配置')).toBe('opened');
+    expect(store.openCustomTab(APP_NUMBER, componentKey, '界面配置')).toBe('activated');
+
+    const tabs = useWorkbenchStore
+      .getState()
+      .workspaces[APP_NUMBER]!.contentTabs.filter((tab) => tab.componentKey === componentKey);
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0]?.pageType).toBe('CUSTOM');
   });
 });

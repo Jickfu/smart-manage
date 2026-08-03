@@ -15,6 +15,8 @@ public class OperateLogListForm extends PageForm {
 	private String keyword;
 	@Schema(description = "是否成功，空表示全部")
 	private Boolean success;
+	@Schema(description = "完整链路追踪ID")
+	private String traceId;
 	@Schema(description = "开始时间")
 	private LocalDateTime beginTime;
 	@Schema(description = "结束时间")

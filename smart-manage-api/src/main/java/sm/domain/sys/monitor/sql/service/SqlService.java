@@ -4,7 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.common.helper.UserHelper;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.domain.sys.base.common.service.CurrentUserService;
 import sm.domain.sys.monitor.sql.model.entity.SqlLogEntity;
 import sm.domain.sys.monitor.sql.model.form.SqlExecuteForm;
 import sm.domain.sys.monitor.sql.model.form.SqlLogListForm;
@@ -37,21 +38,27 @@ public class SqlService {
     private final SqlLogMapper mapper;
     private final SqlLogTxService txService;
     private final SqlLogConverter converter;
+    private final CurrentUserContext currentUserContext;
+    private final CurrentUserService currentUserService;
 
     public SqlService(
             DataSource dataSource,
             SqlLogMapper mapper,
             SqlLogTxService txService,
-            SqlLogConverter converter) {
+            SqlLogConverter converter,
+            CurrentUserContext currentUserContext,
+            CurrentUserService currentUserService) {
         this.dataSource = dataSource;
         this.mapper = mapper;
         this.txService = txService;
         this.converter = converter;
+        this.currentUserContext = currentUserContext;
+        this.currentUserService = currentUserService;
     }
 
     @BizLog(value = "执行SQL", recordRequest = false, recordResponse = false)
     public SqlResultVO execute(SqlExecuteForm form) {
-        UserHelper.checkAdmin();
+        currentUserService.checkAdministrator();
         String sql = form.getSql().trim();
         if (sql.isEmpty()) {
             throw new BizException(ResultEnum.PARAM_ERROR, "SQL 语句不能为空");
@@ -132,7 +139,7 @@ public class SqlService {
      * 分页查询执行历史
      */
     public PageData<SqlLogListVO> listPage(SqlLogListForm form) {
-        UserHelper.checkAdmin();
+        currentUserService.checkAdministrator();
         LambdaQueryWrapper<SqlLogEntity> qw = new LambdaQueryWrapper<SqlLogEntity>();
         if (StringUtil.isNotBlank(form.getKeyword())) {
             qw.like(SqlLogEntity::getSqlText, form.getKeyword());
@@ -148,7 +155,7 @@ public class SqlService {
     }
 
     public SqlLogDetailVO detail(Long id) {
-        UserHelper.checkAdmin();
+        currentUserService.checkAdministrator();
         SqlLogEntity entity = mapper.selectById(id);
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "执行日志不存在");
@@ -210,8 +217,8 @@ public class SqlService {
             logEntity.setRowCount(result.getRowCount());
             logEntity.setErrorMessage("ERROR".equals(result.getType()) ? result.getMessage() : null);
 
-            if (UserHelper.isLogin()) {
-                logEntity.setCreateName(UserHelper.getCurrentUser().getUsername());
+            if (currentUserContext.isLogin()) {
+                logEntity.setCreateName(currentUserService.requireCurrentUser().getUsername());
             }
             try {
                 logEntity.setCreateIp(ServletUtil.getClientIp());

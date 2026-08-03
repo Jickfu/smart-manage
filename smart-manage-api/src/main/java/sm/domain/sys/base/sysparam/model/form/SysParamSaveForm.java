@@ -32,4 +32,7 @@ public class SysParamSaveForm {
 
     @Schema(description = "备注")
     private String remark;
+
+    @Schema(description = "所属应用ID")
+    private Long appId;
 }

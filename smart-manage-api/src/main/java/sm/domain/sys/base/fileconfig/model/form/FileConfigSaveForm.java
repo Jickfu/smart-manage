@@ -16,6 +16,9 @@ public class FileConfigSaveForm {
     @Schema(description = "主键ID（新建时不传）")
     private Long id;
 
+    @Schema(description = "乐观锁版本号，修改时必传")
+    private Integer version;
+
     @NotBlank(message = "存储类型不能为空")
     @Schema(description = "存储类型：LOCAL / FTP")
     private String storageType;

@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
-import sm.domain.sys.base.common.helper.UserHelper;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuSaveForm;
 import sm.domain.sys.base.menu.mapper.MenuMapper;
@@ -26,6 +26,7 @@ import sm.system.util.EnabledCommandUtil;
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
 class MenuTxService {
+    private final CurrentUserContext currentUserContext;
     private final MenuMapper mapper;
 
     public Long save(MenuSaveForm form) {
@@ -76,7 +77,7 @@ class MenuTxService {
         } else {
             // 使用全字段 XML 更新，确保分组菜单可以把 permissionId/path/component 清空为 null。
             entity.setUpdateTime(LocalDateTime.now());
-            entity.setUpdateUser(UserHelper.isLogin() ? UserHelper.getCurrentUserId() : null);
+            entity.setUpdateUser(currentUserContext.isLogin() ? currentUserContext.getUserId() : null);
             mapper.updateAllColumns(entity);
         }
         return entity.getId();

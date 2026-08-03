@@ -3,25 +3,29 @@ package sm.domain.sys.base.uiconfig.service;
 import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.Cached;
 import com.alicp.jetcache.anno.CacheInvalidate;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.base.uiconfig.model.entity.UiConfigEntity;
-import sm.domain.sys.base.uiconfig.model.form.UiConfigListForm;
 import sm.domain.sys.base.uiconfig.model.form.UiConfigSaveForm;
 import sm.domain.sys.base.uiconfig.model.vo.UiConfigDetailVO;
-import sm.domain.sys.base.uiconfig.model.vo.UiConfigListVO;
 import sm.domain.sys.base.uiconfig.mapper.UiConfigMapper;
+import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
-import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.io.IOException;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 界面配置服务
@@ -35,29 +39,15 @@ public class UiConfigService {
     private final UiConfigMapper mapper;
     private final UiConfigTxService txService;
     private final UiConfigConverter converter;
+    private final AttachmentService attachmentService;
 
-    public PageData<UiConfigListVO> listPage(UiConfigListForm form) {
-        LambdaQueryWrapper<UiConfigEntity> qw = new LambdaQueryWrapper<UiConfigEntity>();
-        if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
-            String kw = "%" + form.getKeyword().trim() + "%";
-            qw.and(condition -> condition.like(UiConfigEntity::getPageTitle, kw).or().like(UiConfigEntity::getSystemName, kw));
+    /** 单例管理页读取；尚未配置时返回可直接编辑的空对象。 */
+    public UiConfigDetailVO singleton() {
+        List<UiConfigEntity> entityList = mapper.selectList(null);
+        if (entityList.isEmpty()) {
+            return new UiConfigDetailVO();
         }
-        qw.orderByAsc(UiConfigEntity::getId);
-        Page<UiConfigEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
-        Page<UiConfigEntity> result = mapper.selectPage(page, qw);
-        List<UiConfigListVO> vos = result.getRecords().stream().map(converter::toListVO).toList();
-        return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), vos);
-    }
-
-    public UiConfigDetailVO detail(Long id) {
-        if (id == null) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "界面配置ID不能为空");
-        }
-        UiConfigEntity entity = mapper.selectById(id);
-        if (entity == null) {
-            throw new BizException(ResultEnum.NOT_FOUND, "界面配置不存在");
-        }
-        return converter.toDetailVO(entity);
+        return assembleDetailVO(entityList.get(0));
     }
 
     /** 获取活跃配置（Caffeine 本地缓存） */
@@ -66,20 +56,131 @@ public class UiConfigService {
             expire = 30, timeUnit = TimeUnit.MINUTES)
     public UiConfigDetailVO getActiveConfig() {
         List<UiConfigEntity> entityList = mapper.selectList(null);
-        return entityList.isEmpty() ? new UiConfigDetailVO() : converter.toDetailVO(entityList.get(0));
+        return entityList.isEmpty() ? new UiConfigDetailVO() : assembleDetailVO(entityList.get(0));
     }
 
     @BizLog("保存界面配置")
     @CacheInvalidate(name = CacheConstant.UI_CONFIG,
             key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY")
     public Long save(UiConfigSaveForm form) {
-        return txService.save(form);
+        UiConfigEntity previous = form.getId() == null ? null : mapper.selectById(form.getId());
+        Long configId = previous == null ? IdWorker.getId() : previous.getId();
+        List<Long> temporaryImageIds = findTemporaryImageIds(form);
+        promoteImages(form, configId);
+        try {
+            txService.save(form, configId);
+        } catch (RuntimeException exception) {
+            deleteImagesForCompensation(temporaryImageIds);
+            throw exception;
+        }
+        deleteReplacedImages(previous, form);
+        return configId;
     }
 
-    @BizLog("删除界面配置")
-    @CacheInvalidate(name = CacheConstant.UI_CONFIG,
-            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY")
-    public void deleteById(Long id) {
-        txService.deleteById(id);
+    /**
+     * 图片上传先进入临时目录，配置保存取得真实 ID 后再提升为正式附件。
+     * 外部存储与数据库无法原子提交；附件模块负责提升失败时的文件反向移动补偿。
+     */
+    private void promoteImages(UiConfigSaveForm form, Long configId) {
+        LinkedHashSet<Long> attachmentIds = new LinkedHashSet<>();
+        if (form.getLoginBannerAttachmentId() != null) {
+            attachmentIds.add(form.getLoginBannerAttachmentId());
+        }
+        if (form.getLoginLogoAttachmentId() != null) {
+            attachmentIds.add(form.getLoginLogoAttachmentId());
+        }
+        if (form.getHeaderLogoAttachmentId() != null) {
+            attachmentIds.add(form.getHeaderLogoAttachmentId());
+        }
+        if (attachmentIds.isEmpty()) {
+            return;
+        }
+        AttachmentPromoteForm promoteForm = new AttachmentPromoteForm();
+        promoteForm.setAttachmentIds(List.copyOf(attachmentIds));
+        promoteForm.setBizType("SYS_UI_CONFIG");
+        promoteForm.setBizId(String.valueOf(configId));
+        try {
+            attachmentService.promoteForAggregate(promoteForm);
+        } catch (IOException exception) {
+            throw new BizException(ResultEnum.CONFIG_ERROR, "界面图片确认失败: " + exception.getMessage());
+        }
+    }
+
+    private List<Long> findTemporaryImageIds(UiConfigSaveForm form) {
+        List<Long> attachmentIds = java.util.stream.Stream.of(
+                        form.getLoginBannerAttachmentId(),
+                        form.getLoginLogoAttachmentId(),
+                        form.getHeaderLogoAttachmentId())
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        return attachmentService.listByIds(attachmentIds).stream()
+                .filter(attachment -> Boolean.TRUE.equals(attachment.getIsTemp()))
+                .map(AttachmentVO::getId)
+                .toList();
+    }
+
+    private void deleteImagesForCompensation(List<Long> attachmentIds) {
+        for (Long attachmentId : attachmentIds) {
+            try {
+                attachmentService.delete(attachmentId);
+            } catch (IOException | RuntimeException cleanupException) {
+                log.error("界面配置保存失败且新图片补偿删除失败: id={}", attachmentId, cleanupException);
+            }
+        }
+    }
+
+    /** 图片访问地址依赖当前存储实现，读取时按附件 ID 动态解析，禁止持久化临时 URL。 */
+    private UiConfigDetailVO assembleDetailVO(UiConfigEntity entity) {
+        UiConfigDetailVO detail = converter.toDetailVO(entity);
+        List<Long> attachmentIds = java.util.stream.Stream.of(
+                        entity.getLoginBannerAttachmentId(),
+                        entity.getLoginLogoAttachmentId(),
+                        entity.getHeaderLogoAttachmentId())
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        Map<Long, AttachmentVO> attachmentMap = attachmentService.listByIds(attachmentIds).stream()
+                .collect(Collectors.toMap(AttachmentVO::getId, Function.identity()));
+        if (entity.getLoginBannerAttachmentId() != null) {
+            detail.setLoginBanner(resolveUrl(attachmentMap, entity.getLoginBannerAttachmentId()));
+        }
+        if (entity.getLoginLogoAttachmentId() != null) {
+            detail.setLoginLogo(resolveUrl(attachmentMap, entity.getLoginLogoAttachmentId()));
+        }
+        if (entity.getHeaderLogoAttachmentId() != null) {
+            detail.setHeaderLogo(resolveUrl(attachmentMap, entity.getHeaderLogoAttachmentId()));
+        }
+        return detail;
+    }
+
+    private String resolveUrl(Map<Long, AttachmentVO> attachmentMap, Long attachmentId) {
+        AttachmentVO attachment = attachmentMap.get(attachmentId);
+        return attachment == null ? null : attachment.getUrl();
+    }
+
+    /** 配置已成功切换后清理被替换的旧附件；清理失败保留告警，不回滚已生效配置。 */
+    private void deleteReplacedImages(UiConfigEntity previous, UiConfigSaveForm form) {
+        if (previous == null) {
+            return;
+        }
+        LinkedHashSet<Long> previousIds = new LinkedHashSet<>(java.util.stream.Stream.of(
+                        previous.getLoginBannerAttachmentId(),
+                        previous.getLoginLogoAttachmentId(),
+                        previous.getHeaderLogoAttachmentId())
+                .filter(java.util.Objects::nonNull)
+                .toList());
+        previousIds.removeAll(java.util.stream.Stream.of(
+                        form.getLoginBannerAttachmentId(),
+                        form.getLoginLogoAttachmentId(),
+                        form.getHeaderLogoAttachmentId())
+                .filter(java.util.Objects::nonNull)
+                .toList());
+        for (Long attachmentId : previousIds) {
+            try {
+                attachmentService.delete(attachmentId);
+            } catch (IOException | RuntimeException exception) {
+                log.warn("界面配置旧图片清理失败，需按附件ID重试: id={}", attachmentId, exception);
+            }
+        }
     }
 }

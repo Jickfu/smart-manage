@@ -12,6 +12,8 @@ public class FileConfigDetailVO {
 
     private Long id;
 
+    private Integer version;
+
     private String storageType;
 
     private String localDir;

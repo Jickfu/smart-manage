@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import sm.domain.sys.base.menu.constant.MenuPermission;
-import sm.domain.sys.base.common.helper.UserHelper;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.menu.model.form.*;
 import sm.domain.sys.base.menu.model.vo.*;
 import sm.domain.sys.base.menu.service.MenuService;
@@ -30,6 +30,7 @@ import java.util.List;
 @Tag(name = "菜单管理", description = "菜单信息管理接口")
 @RequiredArgsConstructor
 public class MenuController {
+	private final CurrentUserContext currentUserContext;
 	private final MenuService service;
 
 	@Operation(summary = "菜单列表", description = "获取菜单分页列表数据")
@@ -56,13 +57,13 @@ public class MenuController {
 	@Operation(summary = "用户菜单", description = "获取当前用户在应用下的菜单树")
 	@PostMapping("/sys/base/menu/getUserMenusByAppId")
 	public Result<MenuVO> getUserMenusByAppId(@RequestBody @Valid UserMenusByAppIdForm form) {
-		return Result.success(service.getUserMenusByAppId(UserHelper.getCurrentUserId(), form.getAppId()));
+		return Result.success(service.getUserMenusByAppId(currentUserContext.getUserId(), form.getAppId()));
 	}
 
 	@Operation(summary = "用户菜单（按应用编号）", description = "获取当前用户在应用下的菜单树（按 t_auth_app.number）")
 	@PostMapping("/sys/base/menu/getUserMenusByAppNumber")
 	public Result<MenuVO> getUserMenusByAppNumber(@RequestBody @Valid UserMenusByAppNumberForm form) {
-		return Result.success(service.getUserMenusByAppNumber(UserHelper.getCurrentUserId(), form.getNumber()));
+		return Result.success(service.getUserMenusByAppNumber(currentUserContext.getUserId(), form.getNumber()));
 	}
 
 	@Operation(summary = "菜单详情", description = "按ID查询菜单")

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { App, Collapse, Form } from 'antd';
+import type { FormInstance } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { ReactNode } from 'react';
 import { OperationType, BillStatus } from './types';
@@ -21,6 +22,8 @@ export interface EditFieldBase {
   placeholder?: string;
   /** 是否占满整行 */
   fullWidth?: boolean;
+  /** 横跨的标准字段列数；适用于类名等较长但不需要占满整行的内容。 */
+  columnSpan?: 2;
 }
 
 /** RefSelector 字段配置 — type === 'ref-selector' 时必填 */
@@ -66,6 +69,7 @@ export type EditField = EditFieldBase &
     | { type: 'switch' }
     | { type: 'textarea' }
     | { type: 'select'; options?: { label: string; value: string | number }[] }
+    | { type: 'custom'; content: ReactNode }
     | { type: 'readonly' }
     | { type: 'ref-selector'; refSelector: RefSelectorFieldConfig }
   );
@@ -97,6 +101,11 @@ interface EditPageProps {
   detailExtra?: (editable: boolean) => ReactNode;
   /** 注册页签关闭前的脏数据检查。 */
   closeGuard?: { appNumber: string; tabKey: string };
+  onValuesChange?: (
+    changedValues: Record<string, unknown>,
+    allValues: Record<string, unknown>,
+    form: FormInstance,
+  ) => void;
 }
 
 /** 是否可编辑：暂存或新增时允许编辑 */
@@ -124,6 +133,7 @@ const EditPage = ({
   detailContent,
   detailExtra,
   closeGuard,
+  onValuesChange,
 }: EditPageProps) => {
   const { modal } = App.useApp();
   const [form] = Form.useForm();
@@ -226,7 +236,10 @@ const EditPage = ({
         form={form}
         layout="vertical"
         className={`sm-edit-form${editable ? '' : ' sm-edit-form--view'}`}
-        onValuesChange={() => setDirty(true)}
+        onValuesChange={(changedValues, allValues) => {
+          setDirty(true);
+          onValuesChange?.(changedValues, allValues, form);
+        }}
       >
         <Collapse
           className="sm-edit-collapse"

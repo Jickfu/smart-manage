@@ -9,7 +9,8 @@ import sm.domain.sys.base.app.model.form.AppListForm;
 import sm.domain.sys.base.app.model.form.AppSaveForm;
 import sm.domain.sys.base.app.model.vo.*;
 import sm.domain.sys.base.app.mapper.AppMapper;
-import sm.domain.sys.base.common.helper.UserHelper;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.domain.sys.base.common.service.CurrentUserService;
 import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
@@ -25,6 +26,8 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class AppService {
+	private final CurrentUserContext currentUserContext;
+	private final CurrentUserService currentUserService;
 	private final AppMapper mapper;
 	private final AppTxService txService;
 
@@ -83,10 +86,10 @@ public class AppService {
 			return List.of();
 		}
 		// 超级管理员拥有全部应用，不依赖用户角色关系。
-		if (UserHelper.isAdmin()) {
+		if (currentUserService.isAdministrator()) {
 			return getAllCloudApps();
 		}
-		return assembleCloudApps(mapper.selectUserCloudApps(userId, UserHelper.getCurrentOrgId()));
+		return assembleCloudApps(mapper.selectUserCloudApps(userId, currentUserContext.getOrgId()));
 	}
 
 	public List<CloudAppsVO> getAllCloudApps() {
@@ -138,9 +141,9 @@ public class AppService {
 			throw new BizException(ResultEnum.PARAM_ERROR, "应用编码不能为空");
 		}
 		// 超级管理员直接按应用编码查询，普通用户仍通过角色权限关系过滤。
-		AppVO vo = UserHelper.isAdmin()
+		AppVO vo = currentUserService.isAdministrator()
 				? mapper.selectAppByNumber(appNumber)
-				: mapper.selectUserAppByNumber(userId, UserHelper.getCurrentOrgId(), appNumber);
+				: mapper.selectUserAppByNumber(userId, currentUserContext.getOrgId(), appNumber);
 		if (vo == null) {
 			throw new BizException(ResultEnum.NOT_FOUND, "应用不存在或无权访问");
 		}

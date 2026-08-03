@@ -12,6 +12,8 @@ public class UiConfigDetailVO {
 
     private Long id;
 
+    private Integer version;
+
     private String pageTitle;
 
     private String systemName;
@@ -21,4 +23,10 @@ public class UiConfigDetailVO {
     private String loginLogo;
 
     private String headerLogo;
+
+    private Long loginBannerAttachmentId;
+
+    private Long loginLogoAttachmentId;
+
+    private Long headerLogoAttachmentId;
 }

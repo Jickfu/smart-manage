@@ -134,6 +134,11 @@ body {
   gap: 0;
 }
 
+/* hidden 必须覆盖表单的 flex 布局，避免登录与首次改密控件同时显示。 */
+.sm-form[hidden] {
+  display: none;
+}
+
 /* 输入框外层 */
 .sm-input-wrap {
   position: relative;

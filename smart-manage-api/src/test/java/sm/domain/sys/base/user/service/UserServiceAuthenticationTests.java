@@ -1,0 +1,56 @@
+package sm.domain.sys.base.user.service;
+
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import sm.domain.sys.base.common.config.OrgConfig;
+import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.domain.sys.base.common.service.CurrentUserService;
+import sm.domain.sys.base.menu.service.MenuService;
+import sm.domain.sys.base.permission.service.PermissionService;
+import sm.domain.sys.base.user.mapper.UserMapper;
+import sm.domain.sys.base.user.mapper.UserRoleMapper;
+import sm.domain.sys.base.user.model.entity.UserEntity;
+import sm.domain.sys.base.user.model.vo.UserAuthentication;
+import sm.system.helper.Argon2Helper;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+
+class UserServiceAuthenticationTests {
+
+	@Test
+	void administratorLoginIdentityIsCaseSensitive() {
+		UserMapper userMapper = mock(UserMapper.class);
+		UserEntity user = new UserEntity();
+		user.setId(1L);
+		user.setUsername("Administrator");
+		user.setPassword("encoded-password");
+		user.setEnabled(true);
+		when(userMapper.selectOne(any())).thenReturn(user);
+		UserService service = new UserService(
+				userMapper,
+				mock(UserRoleMapper.class),
+				mock(UserTxService.class),
+				mock(MenuService.class),
+				mock(PermissionService.class),
+				mock(AuthorizationStateHelper.class),
+				mock(UserConverter.class),
+				mock(CurrentUserContext.class),
+				mock(OrgConfig.class),
+				mock(CurrentUserService.class),
+				mock(CachedUserProvider.class));
+
+		try (MockedStatic<Argon2Helper> argon2Helper = mockStatic(Argon2Helper.class)) {
+			argon2Helper.when(() -> Argon2Helper.verify("encoded-password", "password"))
+					.thenReturn(true);
+
+			UserAuthentication authentication = service.authenticate("Administrator", "password");
+
+			assertFalse(authentication.administrator());
+		}
+	}
+}

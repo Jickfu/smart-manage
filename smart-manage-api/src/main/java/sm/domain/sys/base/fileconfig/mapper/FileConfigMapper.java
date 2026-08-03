@@ -9,4 +9,5 @@ import sm.domain.sys.base.fileconfig.model.entity.FileConfigEntity;
  */
 @Mapper
 public interface FileConfigMapper extends BaseMapper<FileConfigEntity> {
+    boolean existsStoredAttachment();
 }

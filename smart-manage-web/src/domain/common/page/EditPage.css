@@ -83,6 +83,7 @@
 
 .sm-edit-field {
   width: 230px;
+  min-width: 0;
   flex-shrink: 0;
 }
 
@@ -90,10 +91,23 @@
   width: 100%;
 }
 
+.sm-edit-field--span-2 {
+  width: 524px;
+  max-width: 100%;
+}
+
 /* === Form.Item 样式覆盖 === */
 
 .sm-edit-form .ant-form-item-label {
   padding-bottom: 0;
+}
+
+/* 字段辅助说明弱于标签和正文，避免与校验信息或业务内容混淆。 */
+.sm-edit-form .ant-form-item-extra {
+  margin-top: 4px;
+  color: var(--ant-color-text-tertiary);
+  font-size: 12px;
+  line-height: 18px;
 }
 
 /* margin-bottom 设置为错误提示行高，让 antd margin-offset 机制精确补偿 */
@@ -108,9 +122,14 @@
 .sm-edit-readonly {
   display: flex;
   align-items: center;
-  height: 28px;
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
   color: var(--sm-color-text);
   font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* === 整单查看态 ===

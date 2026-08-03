@@ -5,23 +5,44 @@
 // src/domain/scm/procurement/purchaseRequisition/pageRegistration.ts
 import pageRegistrationModule1 from '../../scm/procurement/purchaseRequisition/pageRegistration';
 
-// src/domain/sys/app/pageRegistration.ts
-import pageRegistrationModule2 from '../../sys/app/pageRegistration';
+// src/domain/sys/base/app/pageRegistration.ts
+import pageRegistrationModule2 from '../../sys/base/app/pageRegistration';
 
-// src/domain/sys/cloud/pageRegistration.ts
-import pageRegistrationModule3 from '../../sys/cloud/pageRegistration';
+// src/domain/sys/base/cloud/pageRegistration.ts
+import pageRegistrationModule3 from '../../sys/base/cloud/pageRegistration';
 
-// src/domain/sys/menu/pageRegistration.ts
-import pageRegistrationModule4 from '../../sys/menu/pageRegistration';
+// src/domain/sys/base/fileConfig/pageRegistration.ts
+import pageRegistrationModule4 from '../../sys/base/fileConfig/pageRegistration';
 
-// src/domain/sys/permission/pageRegistration.ts
-import pageRegistrationModule5 from '../../sys/permission/pageRegistration';
+// src/domain/sys/base/menu/pageRegistration.ts
+import pageRegistrationModule5 from '../../sys/base/menu/pageRegistration';
 
-// src/domain/sys/role/pageRegistration.ts
-import pageRegistrationModule6 from '../../sys/role/pageRegistration';
+// src/domain/sys/base/permission/pageRegistration.ts
+import pageRegistrationModule6 from '../../sys/base/permission/pageRegistration';
 
-// src/domain/sys/user/pageRegistration.ts
-import pageRegistrationModule7 from '../../sys/user/pageRegistration';
+// src/domain/sys/base/role/pageRegistration.ts
+import pageRegistrationModule7 from '../../sys/base/role/pageRegistration';
+
+// src/domain/sys/base/sysParam/pageRegistration.ts
+import pageRegistrationModule8 from '../../sys/base/sysParam/pageRegistration';
+
+// src/domain/sys/base/uiConfig/pageRegistration.ts
+import pageRegistrationModule9 from '../../sys/base/uiConfig/pageRegistration';
+
+// src/domain/sys/base/user/pageRegistration.ts
+import pageRegistrationModule10 from '../../sys/base/user/pageRegistration';
+
+// src/domain/sys/monitor/loginLog/pageRegistration.ts
+import pageRegistrationModule11 from '../../sys/monitor/loginLog/pageRegistration';
+
+// src/domain/sys/monitor/operateLog/pageRegistration.ts
+import pageRegistrationModule12 from '../../sys/monitor/operateLog/pageRegistration';
+
+// src/domain/sys/scheduler/execution/pageRegistration.ts
+import pageRegistrationModule13 from '../../sys/scheduler/execution/pageRegistration';
+
+// src/domain/sys/scheduler/job/pageRegistration.ts
+import pageRegistrationModule14 from '../../sys/scheduler/job/pageRegistration';
 
 import { registerPageRegistrationModules } from './componentRegistry';
 
@@ -33,4 +54,11 @@ registerPageRegistrationModules([
   pageRegistrationModule5,
   pageRegistrationModule6,
   pageRegistrationModule7,
+  pageRegistrationModule8,
+  pageRegistrationModule9,
+  pageRegistrationModule10,
+  pageRegistrationModule11,
+  pageRegistrationModule12,
+  pageRegistrationModule13,
+  pageRegistrationModule14,
 ]);

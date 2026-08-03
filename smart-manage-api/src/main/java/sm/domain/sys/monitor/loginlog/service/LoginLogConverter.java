@@ -2,6 +2,7 @@ package sm.domain.sys.monitor.loginlog.service;
 
 import org.mapstruct.Mapper;
 import sm.domain.sys.monitor.loginlog.model.entity.LoginLogEntity;
+import sm.domain.sys.monitor.loginlog.model.vo.LoginLogDetailVO;
 import sm.domain.sys.monitor.loginlog.model.vo.LoginLogListVO;
 import sm.framework.mapping.SmMapperConfig;
 
@@ -9,4 +10,5 @@ import sm.framework.mapping.SmMapperConfig;
 @Mapper(config = SmMapperConfig.class)
 interface LoginLogConverter {
     LoginLogListVO toListVO(LoginLogEntity entity);
+    LoginLogDetailVO toDetailVO(LoginLogEntity entity);
 }

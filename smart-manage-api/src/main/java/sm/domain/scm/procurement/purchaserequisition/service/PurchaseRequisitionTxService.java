@@ -12,7 +12,7 @@ import sm.domain.scm.procurement.purchaserequisition.model.entity.PurchaseRequis
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionEntryForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSaveForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSubmitForm;
-import sm.domain.sys.base.common.helper.UserHelper;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
@@ -25,6 +25,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
 class PurchaseRequisitionTxService {
+	private final CurrentUserContext currentUserContext;
     private final PurchaseRequisitionMapper mapper;
     private final PurchaseRequisitionEntryMapper entryMapper;
 
@@ -32,8 +33,8 @@ class PurchaseRequisitionTxService {
         PurchaseRequisitionEntity entity;
         if (form.getId() == null) {
             entity = new PurchaseRequisitionEntity();
-            entity.setApplyOrgId(UserHelper.getCurrentOrgId());
-            entity.setApplicantId(UserHelper.getCurrentUserId());
+            entity.setApplyOrgId(currentUserContext.getOrgId());
+            entity.setApplicantId(currentUserContext.getUserId());
             entity.setBillStatus(BillStatusEnum.SAVED.getValue());
         } else {
             entity = requireEntity(form.getId());

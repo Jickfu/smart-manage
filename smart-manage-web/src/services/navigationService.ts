@@ -9,7 +9,7 @@
 
 import { useHeaderTabsStore } from '@/stores/headerTabs';
 import { useWorkbenchStore } from '@/stores/workbench';
-import { openByNumber } from '@/domain/sys/app/api';
+import { openByNumber } from '@/domain/sys/base/app/api';
 
 /** 请求序号 — 每次 openApp 递增，防止异步竞态导致旧数据覆盖新状态 */
 let requestSeq = 0;
