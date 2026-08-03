@@ -1,0 +1,15 @@
+.sm-cache-page {
+  padding: 16px;
+}
+.sm-cache-page .ant-card-extra {
+  display: flex;
+  gap: 8px;
+}
+.sm-cache-page .ant-alert {
+  margin-bottom: 16px;
+}
+.sm-cache-code {
+  color: var(--ant-color-text-secondary);
+  font-family: monospace;
+  font-size: 12px;
+}
