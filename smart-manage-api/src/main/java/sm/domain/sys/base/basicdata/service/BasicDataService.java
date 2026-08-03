@@ -11,6 +11,7 @@ import sm.domain.sys.base.basicdata.mapper.BasicDataMapper;
 import sm.domain.sys.base.basicdata.model.entity.BasicDataEntity;
 import sm.domain.sys.base.basicdata.model.entity.BasicDataEntryEntity;
 import sm.domain.sys.base.basicdata.model.form.BasicDataListForm;
+import sm.domain.sys.base.basicdata.model.form.BasicDataDeleteForm;
 import sm.domain.sys.base.basicdata.model.form.BasicDataSaveForm;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataCreateNewDataVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataDetailVO;
@@ -61,15 +62,7 @@ public class BasicDataService {
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "基础数据不存在");
         }
-        BasicDataDetailVO detailVO = new BasicDataDetailVO();
-        detailVO.setId(entity.getId());
-        detailVO.setNumber(entity.getNumber());
-        detailVO.setName(entity.getName());
-        detailVO.setRemark(entity.getRemark());
-        detailVO.setEnabled(entity.getEnabled());
-        detailVO.setCreateTime(entity.getCreateTime());
-        detailVO.setUpdateTime(entity.getUpdateTime());
-        detailVO.setVersion(entity.getVersion());
+        BasicDataDetailVO detailVO = converter.toDetailVO(entity);
         detailVO.setEntrys(listEntries(entity.getId()));
         return detailVO;
     }
@@ -86,13 +79,14 @@ public class BasicDataService {
     public List<BasicDataOptionVO> getOptionsByNumber(String number) {
         BasicDataEntity entity = mapper.selectOne(new LambdaQueryWrapper<BasicDataEntity>()
                 .eq(BasicDataEntity::getNumber, number));
-        if (entity == null) {
-            throw new BizException(ResultEnum.NOT_FOUND, "基础数据不存在");
+        if (entity == null || !Boolean.TRUE.equals(entity.getEnabled())) {
+            throw new BizException(ResultEnum.NOT_FOUND, "基础数据不存在或未启用");
         }
         return entryMapper.selectList(new LambdaQueryWrapper<BasicDataEntryEntity>()
                         .eq(BasicDataEntryEntity::getParentId, entity.getId())
                         .eq(BasicDataEntryEntity::getEnabled, true)
                         .orderByAsc(BasicDataEntryEntity::getSort)
+                        .orderByAsc(BasicDataEntryEntity::getNumber)
                         .orderByAsc(BasicDataEntryEntity::getId))
                 .stream()
                 .map(entry -> new BasicDataOptionVO(entry.getNumber(), entry.getName()))
@@ -105,8 +99,8 @@ public class BasicDataService {
     }
 
     @BizLog("删除基础数据")
-    public void deleteById(Long id) {
-        txService.deleteById(id);
+    public void delete(BasicDataDeleteForm form) {
+        txService.delete(form);
     }
 
     @BizLog("启用基础数据")

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import sm.domain.sys.base.basicdata.model.form.BasicDataListForm;
+import sm.domain.sys.base.basicdata.model.form.BasicDataDeleteForm;
 import sm.domain.sys.base.basicdata.model.form.BasicDataNumberForm;
 import sm.domain.sys.base.basicdata.model.form.BasicDataSaveForm;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataCreateNewDataVO;
@@ -66,8 +67,8 @@ public class BasicDataController {
     @PostMapping("/sys/base/basic-data/delete")
     @Operation(summary = "删除基础数据", description = "按ID删除基础数据")
     @SaCheckPermission("sys:base:basic-data:delete")
-    public Result<String> delete(@RequestBody @Valid IdForm form) {
-        service.deleteById(form.getId());
+    public Result<String> delete(@RequestBody @Valid BasicDataDeleteForm form) {
+        service.delete(form);
         return Result.success();
     }
 

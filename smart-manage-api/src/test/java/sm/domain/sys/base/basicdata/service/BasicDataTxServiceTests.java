@@ -13,16 +13,21 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import sm.domain.sys.base.basicdata.mapper.BasicDataEntryMapper;
 import sm.domain.sys.base.basicdata.mapper.BasicDataMapper;
 import sm.domain.sys.base.basicdata.model.entity.BasicDataEntity;
+import sm.domain.sys.base.basicdata.model.form.BasicDataEntryForm;
+import sm.domain.sys.base.basicdata.model.form.BasicDataSaveForm;
 import sm.domain.sys.base.common.constant.CacheConstant;
+import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
 
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class BasicDataTxServiceTests {
 
@@ -70,5 +75,50 @@ class BasicDataTxServiceTests {
 		}
 		verify(cache).remove("gender");
 		verify(cache).remove("currency");
+	}
+
+	@Test
+	void saveRejectsDuplicateEntryNumbersBeforeWriting() {
+		BasicDataSaveForm form = saveForm(null, null);
+		form.setEntrys(List.of(entry(null, "enabled"), entry(null, "enabled")));
+
+		assertThrows(BizException.class, () -> txService.save(form));
+
+		verify(mapper, never()).insert(isA(BasicDataEntity.class));
+	}
+
+	@Test
+	void saveRejectsEntryIdFromAnotherAggregate() {
+		BasicDataEntity entity = new BasicDataEntity();
+		entity.setId(1L);
+		entity.setNumber("status");
+		entity.setVersion(0);
+		when(mapper.selectById(1L)).thenReturn(entity);
+		when(mapper.selectCount(any())).thenReturn(0L);
+		when(mapper.updateById(isA(BasicDataEntity.class))).thenReturn(1);
+		BasicDataSaveForm form = saveForm(1L, 0);
+		form.setEntrys(List.of(entry(99L, "enabled")));
+
+		assertThrows(BizException.class, () -> txService.save(form));
+	}
+
+	private BasicDataSaveForm saveForm(Long id, Integer version) {
+		BasicDataSaveForm form = new BasicDataSaveForm();
+		form.setId(id);
+		form.setVersion(version);
+		form.setNumber("status");
+		form.setName("状态");
+		form.setEntrys(List.of());
+		return form;
+	}
+
+	private BasicDataEntryForm entry(Long id, String number) {
+		BasicDataEntryForm form = new BasicDataEntryForm();
+		form.setId(id);
+		form.setNumber(number);
+		form.setName("启用");
+		form.setSort(0);
+		form.setEnabled(true);
+		return form;
 	}
 }

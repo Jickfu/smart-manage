@@ -25,4 +25,8 @@ public class BasicDataListVO {
     private Boolean enabled;
 
     private LocalDateTime createTime;
+
+    private LocalDateTime updateTime;
+
+    private Integer version;
 }

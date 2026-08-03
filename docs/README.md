@@ -21,6 +21,7 @@
 
 ## 模块
 
+- [基础数据管理](./modules/system-basic-data.md)
 - [采购申请](./modules/purchase-requisition.md)
 - [缓存监控](./modules/system-cache-and-redis.md)
 - [系统监控日志](./modules/system-monitor-logs.md)
