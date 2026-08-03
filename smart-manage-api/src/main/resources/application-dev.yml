@@ -107,6 +107,10 @@ smart-manage:
   system:
     upload:
       dir: ${SMART_MANAGE_UPLOAD_DIR:E:/upload/}
+  security:
+    sm4:
+      # 公开开发密钥，仅用于本地开发和演示；生产环境禁止复用。
+      key-base64: ${SMART_MANAGE_SM4_KEY:c21hcnQtbWFuYWdlLWRldg==}
   sm2:
     js:
       # 开发密钥与 login.html 的公开开发公钥配套，禁止在生产环境复用。

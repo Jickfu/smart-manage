@@ -71,6 +71,8 @@ smart-manage:
         - ${SMART_MANAGE_CORS_ALLOWED_ORIGIN}
   security:
     initial-administrator-password: ${SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD}
+    sm4:
+      key-base64: ${SMART_MANAGE_SM4_KEY}
   system:
     upload:
       dir: ${SMART_MANAGE_UPLOAD_DIR}

@@ -25,6 +25,7 @@ Redis：localhost:6379，密码 redis123，数据库 1
 | `SMART_MANAGE_REDIS_PASSWORD` | Redis 密码 |
 | `SMART_MANAGE_REDIS_DATABASE` | Redis 数据库编号 |
 | `SMART_MANAGE_UPLOAD_DIR` | 上传文件目录 |
+| `SMART_MANAGE_SM4_KEY` | 服务端敏感配置加密密钥，Base64 编码后必须解码为 16 字节 |
 | `SMART_MANAGE_SM2_PRIVATE_KEY` | SM2 私钥 |
 | `SMART_MANAGE_SM2_PUBLIC_KEY` | SM2 公钥 |
 
@@ -37,6 +38,7 @@ Redis：localhost:6379，密码 redis123，数据库 1
 - 数据库地址、用户名和密码；
 - Redis 地址和密码；
 - SM2 公私钥；
+- SM4 敏感配置加密密钥；
 - 上传目录；
 - `SMART_MANAGE_CORS_ALLOWED_ORIGIN`；
 - `SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD`，且不能为 `admin`。
@@ -53,5 +55,9 @@ Redis：localhost:6379，密码 redis123，数据库 1
 | `SMART_MANAGE_REDIS_DATABASE` | `1` |
 
 敏感配置不得写入代码、文档、镜像、提交记录或日志。实际部署应使用受控的环境变量或密钥管理设施。
+
+`SMART_MANAGE_SM4_KEY` 用于加密文件存储密码等服务端敏感配置。生产环境缺失、Base64 格式错误或解码后不是 16 字节时，应用必须拒绝启动。轮换该密钥前必须先完成既有密文的重新加密，不能直接替换环境变量。
+
+从旧版本升级且系统参数中已经存在 `SM4_KEY` 时，必须在执行 `V23__remove_sm4_key_system_parameter.sql` 前，将原值通过安全渠道配置为 `SMART_MANAGE_SM4_KEY`。迁移只删除数据库中的密钥，不会也不能自动把密钥写入部署环境。
 
 配置的最终权威来源是 `smart-manage-api/src/main/resources/application-*.yml`；新增或删除配置项时必须同步更新本文档。
