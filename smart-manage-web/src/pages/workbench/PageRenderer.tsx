@@ -12,6 +12,7 @@ interface Props {
   pageType?: PageType;
   operationType?: OperationType;
   billId?: string;
+  context?: Record<string, string>;
   temporary?: boolean;
   /** 当前页签是否激活 */
   active: boolean;
@@ -26,6 +27,7 @@ const PageRenderer = ({
   pageType,
   operationType,
   billId,
+  context,
   temporary,
   active,
 }: Props) => {
@@ -87,6 +89,7 @@ const PageRenderer = ({
         title={title}
         operationType={operationType}
         billId={billId}
+        context={context}
         temporary={temporary}
         active={active}
       />

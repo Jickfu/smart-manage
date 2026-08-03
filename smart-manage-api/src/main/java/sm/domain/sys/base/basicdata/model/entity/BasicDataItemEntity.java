@@ -1,6 +1,7 @@
 package sm.domain.sys.base.basicdata.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.Version;
@@ -8,31 +9,25 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import sm.system.entity.BaseEntity;
 
-/**
- * 基础数据实体
- *
- * @author Chekfu
- */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("t_sys_basic_data")
-public class BasicDataEntity extends BaseEntity {
-
+@TableName("t_sys_basic_data_item")
+public class BasicDataItemEntity extends BaseEntity {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
-
-    /** 编码，唯一 */
+    private Long categoryId;
+    private Long parentId;
     private String number;
-
-    /** 名称 */
     private String name;
-
-    /** 备注 */
     private String remark;
-
-    /** 是否启用 */
+    private Integer sort;
     private Boolean enabled;
-
+    private Boolean systemPreset;
+    private Integer level;
+    private String numberPath;
+    private String namePath;
+    @TableField("is_leaf")
+    private Boolean isLeaf;
     @Version
     private Integer version;
 }

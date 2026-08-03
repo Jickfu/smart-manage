@@ -1,124 +1,104 @@
 package sm.domain.sys.base.basicdata.service;
 
 import com.alicp.jetcache.Cache;
-import com.alicp.jetcache.anno.CacheType;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-import sm.domain.sys.base.basicdata.mapper.BasicDataEntryMapper;
-import sm.domain.sys.base.basicdata.mapper.BasicDataMapper;
-import sm.domain.sys.base.basicdata.model.entity.BasicDataEntity;
-import sm.domain.sys.base.basicdata.model.form.BasicDataEntryForm;
-import sm.domain.sys.base.basicdata.model.form.BasicDataSaveForm;
-import sm.domain.sys.base.common.constant.CacheConstant;
+import sm.domain.sys.base.basicdata.mapper.BasicDataCategoryMapper;
+import sm.domain.sys.base.basicdata.mapper.BasicDataItemMapper;
+import sm.domain.sys.base.basicdata.model.entity.BasicDataCategoryEntity;
+import sm.domain.sys.base.basicdata.model.entity.BasicDataItemEntity;
+import sm.domain.sys.base.basicdata.model.form.BasicDataDeleteForm;
+import sm.domain.sys.base.basicdata.model.form.BasicDataItemSaveForm;
+import sm.domain.sys.base.cloud.mapper.CloudMapper;
 import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
 
-import java.util.List;
-
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class BasicDataTxServiceTests {
+    private final BasicDataCategoryMapper categoryMapper = mock(BasicDataCategoryMapper.class);
+    private final BasicDataItemMapper itemMapper = mock(BasicDataItemMapper.class);
+    private final CacheHelper cacheHelper = mock(CacheHelper.class);
+    private final BasicDataTxService txService = new BasicDataTxService(
+            categoryMapper, itemMapper, mock(CloudMapper.class), cacheHelper);
 
-	private final BasicDataMapper mapper = mock(BasicDataMapper.class);
-	private final CacheHelper cacheHelper = mock(CacheHelper.class);
-	@SuppressWarnings("unchecked")
-	private final Cache<Object, Object> cache = mock(Cache.class);
-	private final BasicDataTxService txService =
-			new BasicDataTxService(mapper, mock(BasicDataEntryMapper.class), cacheHelper);
+    @BeforeAll
+    static void initializeMybatisMetadata() {
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "category-test"),
+                BasicDataCategoryEntity.class);
+        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "item-test"),
+                BasicDataItemEntity.class);
+    }
 
-	@BeforeAll
-	static void initializeMybatisMetadata() {
-		TableInfoHelper.initTableInfo(
-				new MapperBuilderAssistant(new MybatisConfiguration(), "basic-data-test"),
-				BasicDataEntity.class);
-	}
+    @Test
+    void deletingNonLeafItemIsRejected() {
+        BasicDataItemEntity item = item(10L, null, false);
+        item.setVersion(2);
+        when(itemMapper.selectById(10L)).thenReturn(item);
+        BasicDataDeleteForm form = new BasicDataDeleteForm();
+        form.setId(10L);
+        form.setVersion(2);
 
-	@AfterEach
-	void clearTransactionSynchronization() {
-		if (TransactionSynchronizationManager.isSynchronizationActive()) {
-			TransactionSynchronizationManager.clearSynchronization();
-		}
-		TransactionSynchronizationManager.setActualTransactionActive(false);
-	}
+        assertThrows(BizException.class, () -> txService.deleteItem(form));
 
-	@Test
-	void enabledChangeInvalidatesAffectedLocalCachesOnlyAfterCommit() {
-		BasicDataEntity first = new BasicDataEntity();
-		first.setNumber("gender");
-		BasicDataEntity second = new BasicDataEntity();
-		second.setNumber("currency");
-		when(mapper.selectByIds(List.of(1L, 2L))).thenReturn(List.of(first, second));
-		when(mapper.selectCount(any())).thenReturn(2L);
-		when(mapper.update(any())).thenReturn(2);
-		when(cacheHelper.getCache(CacheConstant.BASIC_DATA_OPTIONS, CacheType.LOCAL))
-				.thenReturn(cache);
-		TransactionSynchronizationManager.setActualTransactionActive(true);
-		TransactionSynchronizationManager.initSynchronization();
+        verify(itemMapper, never()).delete(any());
+    }
 
-		txService.updateEnabled(List.of(1L, 2L), false);
+    @Test
+    @SuppressWarnings("unchecked")
+    void creatingChildMarksParentAsNonLeaf() {
+        BasicDataCategoryEntity category = new BasicDataCategoryEntity();
+        category.setId(1L);
+        category.setNumber("industry");
+        BasicDataItemEntity parent = item(10L, null, true);
+        parent.setLevel(1);
+        parent.setNumberPath("A");
+        parent.setNamePath("农业");
+        when(categoryMapper.selectById(1L)).thenReturn(category);
+        when(itemMapper.selectById(10L)).thenReturn(parent);
+        when(itemMapper.selectCount(any())).thenReturn(0L, 1L);
+        when(itemMapper.insert(isA(BasicDataItemEntity.class))).thenAnswer(invocation -> {
+            BasicDataItemEntity inserted = invocation.getArgument(0);
+            inserted.setId(11L);
+            return 1;
+        });
+        when(itemMapper.updateById(isA(BasicDataItemEntity.class))).thenReturn(1);
+        when(cacheHelper.getCache(any(), any())).thenReturn(mock(Cache.class));
 
-		verify(cache, never()).remove(any());
-		for (TransactionSynchronization synchronization : TransactionSynchronizationManager.getSynchronizations()) {
-			synchronization.afterCommit();
-		}
-		verify(cache).remove("gender");
-		verify(cache).remove("currency");
-	}
+        txService.saveItem(saveForm(10L));
 
-	@Test
-	void saveRejectsDuplicateEntryNumbersBeforeWriting() {
-		BasicDataSaveForm form = saveForm(null, null);
-		form.setEntrys(List.of(entry(null, "enabled"), entry(null, "enabled")));
+        assertFalse(parent.getIsLeaf());
+        verify(itemMapper).updateById(parent);
+    }
 
-		assertThrows(BizException.class, () -> txService.save(form));
+    private BasicDataItemSaveForm saveForm(Long parentId) {
+        BasicDataItemSaveForm form = new BasicDataItemSaveForm();
+        form.setCategoryId(1L);
+        form.setParentId(parentId);
+        form.setNumber("A01");
+        form.setName("谷物种植");
+        form.setEnabled(true);
+        return form;
+    }
 
-		verify(mapper, never()).insert(isA(BasicDataEntity.class));
-	}
-
-	@Test
-	void saveRejectsEntryIdFromAnotherAggregate() {
-		BasicDataEntity entity = new BasicDataEntity();
-		entity.setId(1L);
-		entity.setNumber("status");
-		entity.setVersion(0);
-		when(mapper.selectById(1L)).thenReturn(entity);
-		when(mapper.selectCount(any())).thenReturn(0L);
-		when(mapper.updateById(isA(BasicDataEntity.class))).thenReturn(1);
-		BasicDataSaveForm form = saveForm(1L, 0);
-		form.setEntrys(List.of(entry(99L, "enabled")));
-
-		assertThrows(BizException.class, () -> txService.save(form));
-	}
-
-	private BasicDataSaveForm saveForm(Long id, Integer version) {
-		BasicDataSaveForm form = new BasicDataSaveForm();
-		form.setId(id);
-		form.setVersion(version);
-		form.setNumber("status");
-		form.setName("状态");
-		form.setEntrys(List.of());
-		return form;
-	}
-
-	private BasicDataEntryForm entry(Long id, String number) {
-		BasicDataEntryForm form = new BasicDataEntryForm();
-		form.setId(id);
-		form.setNumber(number);
-		form.setName("启用");
-		form.setSort(0);
-		form.setEnabled(true);
-		return form;
-	}
+    private BasicDataItemEntity item(Long id, Long parentId, boolean isLeaf) {
+        BasicDataItemEntity item = new BasicDataItemEntity();
+        item.setId(id);
+        item.setCategoryId(1L);
+        item.setParentId(parentId);
+        item.setIsLeaf(isLeaf);
+        item.setEnabled(true);
+        item.setSystemPreset(false);
+        return item;
+    }
 }

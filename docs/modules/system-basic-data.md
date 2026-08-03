@@ -2,48 +2,73 @@
 
 ## 模块定位
 
-基础数据是系统内核提供的可配置选项集，用于维护下拉框、筛选项和轻量枚举等跨模块引用数据。一个基础数据主记录代表一个选项集，`number` 是稳定的调用编码；明细 `number` 是提交给业务接口的选项值，`name` 是界面显示名称。
+基础数据是系统内核提供的可配置基础资料平台，适用于下拉框、树形选择、筛选项及行业、地区、设备类型等轻量级跨模块引用数据。
 
-基础数据不承载客户、供应商、物料、仓库等具有独立身份、生命周期、权限或复杂业务规则的主数据。这类数据必须位于所属业务领域，不能以通用选项集代替领域模型。
+基础数据不承载客户、供应商、物料、仓库等具有独立身份、生命周期、权限或复杂业务规则的主数据；这些数据必须位于所属业务领域。
 
-## 聚合边界
+## 数据层级
 
-- `BasicData` 是聚合根，负责编码、名称、备注、启停状态和乐观锁版本；
-- `BasicDataEntry` 是聚合内明细，不提供独立写接口，生命周期完全从属于聚合根；
-- 保存命令接收完整聚合，根版本控制主表与全部明细的并发修改；
-- 明细按 ID 增量同步，保留已有明细身份和审计信息；请求中的明细 ID 必须属于当前聚合；
-- 主记录编码全局唯一，明细编码在同一主记录下唯一；
-- 删除主记录前显式删除明细，不依赖数据库级联删除。
+```text
+云
+└── 基础资料分类
+    └── 基础资料节点
+        └── 下级基础资料节点
+```
 
-## 消费端语义
+- 云是分类的展示和归属维度；分类只能直接归属于一个云，分类本身不嵌套。
+- 分类 `number` 是供业务代码稳定引用的全局唯一标识。
+- 资料节点通过 `parent_id` 在同一分类内形成任意级树；平级资料是所有节点 `parent_id` 为空的特例。
+- 分类与资料节点分别按命令维护，不再一次性加载和保存整个分类的全部节点。
 
-- 消费端通过基础数据编码读取选项，不直接依赖 Mapper 或明细表；
-- 只有主记录和明细均启用时，明细才会出现在选项结果中；
-- 选项按 `sort`、`number`、`id` 稳定排序；
-- 选项结果使用 JetCache 本地缓存，保存、删除和启停命令在数据库事务提交后失效对应编码的缓存；
-- 当前项目声明为单节点运行。改为多节点部署前，必须将本地缓存失效策略重新纳入架构验收。
+## 资料节点派生字段
 
-## 接口与权限
+- `level`、`number_path`、`name_path` 和 `is_leaf` 只由后端生成和维护，前端不得提交。
+- 长编码和长名称使用 `/` 连接祖先路径，因此编码和名称禁止包含 `/`。
+- `is_leaf` 持久化，并与新增、移动、删除命令处于同一数据库事务。
+- 新增首个子节点时，上级改为非叶子；移动或删除最后一个子节点时，原上级恢复为叶子。
+- 业务选项接口只返回分类及所有祖先均启用的叶子节点。非叶子节点只承担分组和导航语义，不是有效业务选项。
+
+## 业务约束
+
+- 上级资料必须与当前资料属于同一分类。
+- 禁止选择自身或自己的后代作为上级，避免形成环。
+- 同一分类下资料编码唯一。
+- 资料不能跨分类移动；需要跨分类时应在目标分类新建并显式处理原资料。
+- 非叶子节点不能删除；分类下存在资料时不能删除分类。
+- 系统预置分类和资料不能删除。
+- 分类和资料节点都使用乐观锁版本号；路径变更在同一事务内更新全部后代。
+
+## 页面交互
+
+- `sys/base/basic-data` 使用左树右表：左树显示云和基础资料分类，右表显示具体资料。
+- 左树上方提供分类新增、编辑和删除；新增、编辑分类使用通用弹框编辑页。
+- 只有选择分类后才能新增基础资料；新增页将所选分类作为只读字段固定展示。
+- 基础资料新增、编辑和查看使用工作台通用编辑页，上级资料使用树形选择。
+- 右表遵循通用列表页的查询区、按钮区、分页、勾选和批量启停规范。
+
+## 接口
 
 | 能力 | 接口 | 权限码 |
 | --- | --- | --- |
-| 分页列表 | `/sys/base/basic-data/listPage` | `sys:base:basic-data:listPage` |
-| 详情 | `/sys/base/basic-data/detail` | `sys:base:basic-data:detail` |
-| 新增默认值 | `/sys/base/basic-data/createNewData` | `sys:base:basic-data:save` |
-| 保存聚合 | `/sys/base/basic-data/save` | `sys:base:basic-data:save` |
-| 删除聚合 | `/sys/base/basic-data/delete` | `sys:base:basic-data:delete` |
-| 批量启用 | `/sys/base/basic-data/enable` | `sys:base:basic-data:enable` |
-| 批量禁用 | `/sys/base/basic-data/disable` | `sys:base:basic-data:disable` |
-| 获取启用选项 | `/sys/base/basic-data/options` | 登录用户 |
+| 云与分类树 | `/sys/base/basic-data/categoryTree` | `sys:base:basic-data:listPage` |
+| 分类详情 | `/sys/base/basic-data/categoryDetail` | `sys:base:basic-data:detail` |
+| 保存分类 | `/sys/base/basic-data/saveCategory` | `sys:base:basic-data:save` |
+| 删除分类 | `/sys/base/basic-data/deleteCategory` | `sys:base:basic-data:delete` |
+| 资料分页 | `/sys/base/basic-data/listPage` | `sys:base:basic-data:listPage` |
+| 资料详情 | `/sys/base/basic-data/detail` | `sys:base:basic-data:detail` |
+| 保存资料 | `/sys/base/basic-data/save` | `sys:base:basic-data:save` |
+| 删除资料 | `/sys/base/basic-data/delete` | `sys:base:basic-data:delete` |
+| 批量启停 | `/sys/base/basic-data/enable`、`disable` | 对应启停权限 |
+| 上级资料选项 | `/sys/base/basic-data/parentOptions` | `sys:base:basic-data:detail` |
+| 有效叶子选项 | `/sys/base/basic-data/options` | 登录用户 |
 
-## 前端页面
+## 缓存
 
-- `sys/base/basic-data` 注册为标准列表页，提供搜索、分页、批量启停和单条删除；
-- `sys/base/basic-data/edit` 注册为标准编辑页，主信息与选项明细处于同一表单和脏数据保护范围；
-- 新增页使用临时页签，首次保存后替换为真实 ID 页签；保存后保留当前编辑页并重新查询服务端状态。
+业务消费端按分类编码读取有效叶子资料，结果使用 JetCache 本地缓存。分类或节点保存、删除、启停后，在数据库事务提交后失效对应分类缓存。当前只声明单节点运行边界；多节点部署前必须重新验收本地缓存失效策略。
 
 ## 数据库迁移
 
-- 基线表结构由 `V1__baseline_schema.sql` 建立；
-- `V22__harden_basic_data_aggregate.sql` 收紧明细排序约束并明确表语义；
-- 已执行迁移不可修改，后续结构和必要初始化数据继续通过新增 Flyway 迁移维护。
+- 基线表由 `V1__baseline_schema.sql` 建立。
+- `V22__harden_basic_data_aggregate.sql` 是旧主从模型的历史加固迁移。
+- `V24__rebuild_basic_data_as_hierarchy.sql` 将旧分类和明细迁移为云下分类与多级资料节点，并增加路径、级次、系统预置、叶子状态和资料节点乐观锁。
+- 已执行迁移不得修改，后续结构和初始化数据继续通过新增 Flyway 迁移维护。

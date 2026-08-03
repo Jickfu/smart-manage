@@ -22,6 +22,7 @@ export interface ContentTabItem {
   pageType?: 'LIST' | 'EDIT' | 'CUSTOM';
   operationType?: OperationType;
   billId?: string;
+  context?: Record<string, string>;
   /** 新增页临时标记 — 保存后替换为真实单据 tab */
   temporary?: boolean;
 }
@@ -64,7 +65,12 @@ interface WorkbenchState {
   addContentTab: (appNumber: string, tab: ContentTabItem) => AddTabResult;
   openListTab: (appNumber: string, componentKey: string, label: string) => AddTabResult;
   openCustomTab: (appNumber: string, componentKey: string, label: string) => AddTabResult;
-  openAddNewTab: (appNumber: string, componentKey: string, label: string) => AddTabResult;
+  openAddNewTab: (
+    appNumber: string,
+    componentKey: string,
+    label: string,
+    context?: Record<string, string>,
+  ) => AddTabResult;
   openBillTab: (
     appNumber: string,
     componentKey: string,
@@ -335,7 +341,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     });
   },
 
-  openAddNewTab: (appNumber, componentKey, label) => {
+  openAddNewTab: (appNumber, componentKey, label, context) => {
     return get().addContentTab(appNumber, {
       key: createAddNewTabKey(componentKey),
       label,
@@ -344,6 +350,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       pageType: 'EDIT',
       operationType: OperationType.ADDNEW,
       temporary: true,
+      context,
     });
   },
 

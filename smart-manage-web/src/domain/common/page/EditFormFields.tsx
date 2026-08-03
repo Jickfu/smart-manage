@@ -1,4 +1,4 @@
-import { DatePicker, Form, Input, InputNumber, Select, Switch } from 'antd';
+import { DatePicker, Form, Input, InputNumber, Select, Switch, TreeSelect } from 'antd';
 import RefSelector from '@/domain/common/component/RefSelector';
 import type { EditField } from './EditPage';
 import {
@@ -77,6 +77,24 @@ function renderFormControl(field: EditField, disabled: boolean) {
           placeholder={field.placeholder}
           disabled={disabled}
           options={field.options}
+        />
+      );
+    case 'tree-select':
+      return (
+        <TreeSelect
+          variant="underlined"
+          className="sm-edit-control-full"
+          placeholder={field.placeholder}
+          disabled={disabled}
+          allowClear
+          showSearch={{
+            filterTreeNode: (input, node) =>
+              String(node.title ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase()),
+          }}
+          treeDefaultExpandAll
+          treeData={field.treeData}
         />
       );
     case 'ref-selector':

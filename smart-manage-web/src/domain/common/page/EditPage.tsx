@@ -58,6 +58,12 @@ export interface RefSelectorFieldConfig {
   treeFieldNames?: { key: string; title: string; children: string };
 }
 
+export interface TreeSelectFieldNode {
+  value: string;
+  title: string;
+  children?: TreeSelectFieldNode[];
+}
+
 /** 编辑字段定义 — 按 type 分流为判别联合类型 */
 export type EditField = EditFieldBase &
   (
@@ -69,6 +75,10 @@ export type EditField = EditFieldBase &
     | { type: 'switch' }
     | { type: 'textarea' }
     | { type: 'select'; options?: { label: string; value: string | number }[] }
+    | {
+        type: 'tree-select';
+        treeData?: TreeSelectFieldNode[];
+      }
     | { type: 'custom'; content: ReactNode }
     | { type: 'readonly' }
     | { type: 'ref-selector'; refSelector: RefSelectorFieldConfig }

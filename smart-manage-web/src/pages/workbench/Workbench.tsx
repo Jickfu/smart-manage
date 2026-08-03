@@ -75,6 +75,7 @@ const Workbench = ({ appNumber }: Props) => {
                       pageType={tab.pageType}
                       operationType={tab.operationType}
                       billId={tab.billId}
+                      context={tab.context}
                       temporary={tab.temporary}
                       active={isActive}
                     />

@@ -50,6 +50,17 @@ describe('workbench store', () => {
     expect(workspace.contentTabs.find((tab) => tab.key === realTabKey)?.billId).toBe(billId);
   });
 
+  it('新增页签保留调用页面传入的初始化上下文', () => {
+    const store = useWorkbenchStore.getState();
+
+    store.openAddNewTab(APP_NUMBER, COMPONENT_KEY, '新增基础资料', { categoryId: '1001' });
+
+    const temporaryTab = useWorkbenchStore
+      .getState()
+      .workspaces[APP_NUMBER]!.contentTabs.find((tab) => tab.temporary);
+    expect(temporaryTab?.context).toEqual({ categoryId: '1001' });
+  });
+
   it('关闭存在脏数据的页签时尊重关闭保护结果', async () => {
     const store = useWorkbenchStore.getState();
     store.openBillTab(APP_NUMBER, COMPONENT_KEY, '采购申请', '100', OperationType.EDIT);

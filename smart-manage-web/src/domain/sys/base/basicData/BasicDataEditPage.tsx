@@ -1,8 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
-import type { Key } from 'react';
-import { Button, Form, Input, InputNumber, Switch, Table } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import type { FormListFieldData, FormListOperation } from 'antd/es/form';
+import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
@@ -13,99 +9,125 @@ import { useWorkbenchStore } from '@/stores/workbench';
 import { basicDataApi } from './api';
 import { basicDataAccess } from './permissions';
 import { basicDataQueryKeys } from './queryKeys';
-import type {
-  BasicDataCreateNewDataVO,
-  BasicDataDetailVO,
-  BasicDataEntry,
-  BasicDataSaveForm,
-} from './types';
-import './BasicDataEditPage.css';
+import type { BasicDataOption, BasicDataSaveForm } from './types';
 
-const fields: EditField[] = [
-  {
-    label: '编码',
-    dataIndex: 'number',
-    type: 'text',
-    rules: [
-      { required: true, whitespace: true, message: '编码不能为空' },
-      { max: 64, message: '编码不能超过64个字符' },
-    ],
-  },
-  {
-    label: '名称',
-    dataIndex: 'name',
-    type: 'text',
-    rules: [
-      { required: true, whitespace: true, message: '名称不能为空' },
-      { max: 128, message: '名称不能超过128个字符' },
-    ],
-  },
-  { label: '备注', dataIndex: 'remark', type: 'textarea', fullWidth: true },
-  { label: '创建时间', dataIndex: 'createTime', type: 'readonly' },
-  { label: '更新时间', dataIndex: 'updateTime', type: 'readonly' },
-];
+interface ParentTreeNode {
+  value: string;
+  title: string;
+  children: ParentTreeNode[];
+}
 
-function isDetail(
-  source: BasicDataDetailVO | BasicDataCreateNewDataVO,
-): source is BasicDataDetailVO {
-  return 'id' in source;
+function buildParentTree(options: BasicDataOption[]): ParentTreeNode[] {
+  const nodes = new Map(
+    options.map((option) => [
+      option.id,
+      {
+        value: option.id,
+        title: `${option.number} - ${option.name}`,
+        children: [] as ParentTreeNode[],
+      },
+    ]),
+  );
+  const roots: ParentTreeNode[] = [];
+  for (const option of options) {
+    const node = nodes.get(option.id)!;
+    const parent = option.parentId ? nodes.get(option.parentId) : undefined;
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  }
+  return roots;
 }
 
 const BasicDataEditPage = (props: PageComponentProps) => {
-  const [selectedEntryKeys, setSelectedEntryKeys] = useState<Key[]>([]);
-  const entryOperationsRef = useRef<FormListOperation | null>(null);
-  const entryFieldsRef = useRef<FormListFieldData[]>([]);
-  const { appNumber, tabKey, billId, operationType } = props;
+  const { appNumber, tabKey, billId, operationType, context } = props;
   const isAddNew = operationType === OperationType.ADDNEW;
   const queryClient = useQueryClient();
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
-  const sourceQuery = useQuery<BasicDataDetailVO | BasicDataCreateNewDataVO>({
-    queryKey: isAddNew
-      ? basicDataQueryKeys.createNewData(tabKey)
-      : basicDataQueryKeys.detail(billId),
-    queryFn: () => (isAddNew ? basicDataApi.createNewData() : basicDataApi.detail(billId!)),
-    enabled: isAddNew || Boolean(billId),
+  const detailQuery = useQuery({
+    queryKey: basicDataQueryKeys.detail(billId),
+    queryFn: () => basicDataApi.detail(billId!),
+    enabled: Boolean(!isAddNew && billId),
   });
-  const source = sourceQuery.data;
-  const detail = source && isDetail(source) ? source : undefined;
+  const categoryId = detailQuery.data?.categoryId ?? context?.categoryId;
+  const categoryQuery = useQuery({
+    queryKey: basicDataQueryKeys.category(categoryId),
+    queryFn: () => basicDataApi.categoryDetail(categoryId!),
+    enabled: Boolean(categoryId),
+  });
+  const parentsQuery = useQuery({
+    queryKey: basicDataQueryKeys.parentOptions(categoryId, billId),
+    queryFn: () => basicDataApi.parentOptions(categoryId!, billId),
+    enabled: Boolean(categoryId),
+  });
+  const detail = detailQuery.data;
+  const fields = useMemo<EditField[]>(
+    () => [
+      { label: '所属分类', dataIndex: 'categoryName', type: 'readonly' },
+      {
+        label: '上级基础资料',
+        dataIndex: 'parentId',
+        type: 'tree-select',
+        treeData: buildParentTree(parentsQuery.data ?? []),
+        placeholder: '不选择则为一级资料',
+      },
+      {
+        label: '编码',
+        dataIndex: 'number',
+        type: 'text',
+        rules: [
+          { required: true, whitespace: true, message: '编码不能为空' },
+          { max: 64, message: '编码不能超过64个字符' },
+        ],
+      },
+      {
+        label: '名称',
+        dataIndex: 'name',
+        type: 'text',
+        rules: [
+          { required: true, whitespace: true, message: '名称不能为空' },
+          { max: 128, message: '名称不能超过128个字符' },
+        ],
+      },
+      { label: '排序', dataIndex: 'sort', type: 'number' },
+      { label: '可用状态', dataIndex: 'enabled', type: 'switch' },
+      { label: '备注', dataIndex: 'remark', type: 'textarea', fullWidth: true },
+    ],
+    [parentsQuery.data],
+  );
   const initialValues = useMemo(
-    () =>
-      source
-        ? {
-            number: detail?.number ?? '',
-            name: detail?.name ?? '',
-            remark: detail?.remark ?? '',
-            createTime: detail?.createTime ?? '',
-            updateTime: detail?.updateTime ?? '',
-            entrys: source.entrys ?? [],
-          }
-        : {},
-    [detail, source],
+    () => ({
+      categoryName: detail?.categoryName ?? categoryQuery.data?.name ?? '',
+      parentId: detail?.parentId,
+      number: detail?.number ?? '',
+      name: detail?.name ?? '',
+      sort: detail?.sort ?? 0,
+      enabled: detail?.enabled ?? true,
+      remark: detail?.remark ?? '',
+    }),
+    [categoryQuery.data, detail],
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
-      const saveForm: BasicDataSaveForm = {
+      if (!categoryId) throw new Error('未指定基础资料分类');
+      const form: BasicDataSaveForm = {
         id: billId,
         version: detail?.version,
+        categoryId,
+        parentId: values.parentId ? String(values.parentId) : undefined,
         number: String(values.number).trim(),
         name: String(values.name).trim(),
         remark: values.remark ? String(values.remark).trim() : undefined,
-        entrys: (values.entrys as BasicDataEntry[]).map((entry) => ({
-          ...entry,
-          number: entry.number.trim(),
-          name: entry.name.trim(),
-          sort: entry.sort ?? 0,
-          enabled: entry.enabled ?? true,
-        })),
+        sort: Number(values.sort ?? 0),
+        enabled: Boolean(values.enabled),
       };
-      const savedId = await basicDataApi.save(saveForm);
+      const savedId = await basicDataApi.save(form);
       await queryClient.invalidateQueries({ queryKey: basicDataQueryKeys.all });
       if (isAddNew) {
         const nextKey = `bill:${props.componentKey}:${savedId}`;
         replaceContentTab(appNumber, tabKey, {
           key: nextKey,
-          label: saveForm.name,
+          label: form.name,
           closable: true,
           componentKey: props.componentKey,
           pageType: 'EDIT',
@@ -118,147 +140,21 @@ const BasicDataEditPage = (props: PageComponentProps) => {
     successMessage: isAddNew ? '新增成功' : '保存成功',
   });
 
-  const renderEntrys = (editable: boolean) => (
-    <Form.List
-      name="entrys"
-      rules={[
-        {
-          validator: async (_rule, entrys: BasicDataEntry[] | undefined) => {
-            const numbers = (entrys ?? []).map((entry) => entry.number?.trim()).filter(Boolean);
-            if (new Set(numbers).size !== numbers.length) {
-              throw new Error('明细编码不能重复');
-            }
-          },
-        },
-      ]}
-    >
-      {(entryFields, { add, remove, move }, { errors }) => {
-        entryOperationsRef.current = { add, remove, move };
-        entryFieldsRef.current = entryFields;
-        const columns: ColumnsType<FormListFieldData> = [
-          {
-            title: '编码',
-            width: 200,
-            render: (_value, field) => (
-              <>
-                <Form.Item name={[field.name, 'id']} hidden>
-                  <Input />
-                </Form.Item>
-                <Form.Item
-                  name={[field.name, 'number']}
-                  rules={[
-                    { required: true, whitespace: true, message: '请输入编码' },
-                    { max: 64, message: '编码不能超过64个字符' },
-                  ]}
-                >
-                  <Input disabled={!editable} />
-                </Form.Item>
-              </>
-            ),
-          },
-          {
-            title: '名称',
-            render: (_value, field) => (
-              <Form.Item
-                name={[field.name, 'name']}
-                rules={[
-                  { required: true, whitespace: true, message: '请输入名称' },
-                  { max: 128, message: '名称不能超过128个字符' },
-                ]}
-              >
-                <Input disabled={!editable} />
-              </Form.Item>
-            ),
-          },
-          {
-            title: '排序',
-            width: 120,
-            render: (_value, field) => (
-              <Form.Item name={[field.name, 'sort']}>
-                <InputNumber precision={0} disabled={!editable} />
-              </Form.Item>
-            ),
-          },
-          {
-            title: '启用',
-            width: 90,
-            align: 'center',
-            render: (_value, field) => (
-              <Form.Item name={[field.name, 'enabled']} valuePropName="checked">
-                <Switch size="small" disabled={!editable} />
-              </Form.Item>
-            ),
-          },
-        ];
-        return (
-          <div className="sm-basic-data-entrys">
-            <Table
-              rowKey="key"
-              columns={columns}
-              dataSource={entryFields}
-              pagination={false}
-              size="small"
-              scroll={{ x: 'max-content' }}
-              rowSelection={
-                editable
-                  ? {
-                      selectedRowKeys: selectedEntryKeys,
-                      onChange: setSelectedEntryKeys,
-                    }
-                  : undefined
-              }
-            />
-            {errors.length > 0 && (
-              <div className="sm-basic-data-entry-error">
-                <Form.ErrorList errors={errors} />
-              </div>
-            )}
-          </div>
-        );
-      }}
-    </Form.List>
-  );
-  const renderEntryActions = (editable: boolean) =>
-    editable ? (
-      <div className="sm-basic-data-entry-actions">
-        <Button
-          type="link"
-          onClick={() => entryOperationsRef.current?.add({ sort: 0, enabled: true })}
-        >
-          新增
-        </Button>
-        <Button
-          type="link"
-          danger
-          disabled={selectedEntryKeys.length === 0}
-          onClick={() => {
-            const indexes = entryFieldsRef.current
-              .filter((field) => selectedEntryKeys.includes(field.key))
-              .map((field) => field.name);
-            entryOperationsRef.current?.remove(indexes);
-            setSelectedEntryKeys([]);
-          }}
-        >
-          删除
-        </Button>
-      </div>
-    ) : undefined;
-
   return (
     <EditPage
       access={basicDataAccess}
-      title="基础数据管理"
+      title="基础资料"
       fields={fields}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
-      loading={sourceQuery.isLoading}
-      error={sourceQuery.error as Error | null}
-      onRetry={() => sourceQuery.refetch()}
+      loading={detailQuery.isLoading || categoryQuery.isLoading || parentsQuery.isLoading}
+      error={(detailQuery.error ?? categoryQuery.error ?? parentsQuery.error) as Error | null}
+      onRetry={() =>
+        Promise.all([detailQuery.refetch(), categoryQuery.refetch(), parentsQuery.refetch()])
+      }
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
-      detailContent={renderEntrys}
-      detailExtra={renderEntryActions}
       onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
     />
   );
