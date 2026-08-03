@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.test.util.ReflectionTestUtils;
 import sm.domain.sys.base.common.config.CaptchaConfig;
 import sm.domain.sys.base.common.constant.RedisKeyConstant;
 import sm.domain.sys.base.login.model.form.LoginForm;
@@ -51,8 +50,8 @@ class LoginServiceTests {
 				mock(CaptchaConfig.class),
 				userService,
 				mock(MenuService.class),
-				logWriteService);
-		ReflectionTestUtils.setField(loginService, "redisTemplate", redisTemplate);
+				logWriteService,
+				redisTemplate);
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 	}
 
