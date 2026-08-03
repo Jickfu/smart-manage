@@ -31,6 +31,15 @@ class RedisServiceTests {
     }
 
     @Test
+    void applicationTokenNamespaceMustNeverBeReturned() {
+        BizException exception = assertThrows(BizException.class,
+                () -> service.value("smtoken:login:last-active:secret"));
+
+        assertEquals(ResultEnum.PERMISSION_ERROR.getCode(), exception.getCode());
+        verify(currentUserContext).checkAdministrator();
+    }
+
+    @Test
     void deleteMustCheckAdministratorAndKeepBatchBoundedByValidatedForm() {
         when(redisTemplate.delete(List.of("example"))).thenReturn(1L);
 

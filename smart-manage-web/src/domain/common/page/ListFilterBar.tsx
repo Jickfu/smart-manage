@@ -35,16 +35,18 @@ const ListFilterBar = ({
             onSearch={(value) => onQuickSearch?.(value)}
           />
         </div>
-        <Button
-          className="sm-list-filter-toggle"
-          type="text"
-          icon={expanded ? <UpOutlined /> : <DownOutlined />}
-          onClick={() => setExpanded((current) => !current)}
-        >
-          {expanded ? '收起过滤' : '展开过滤'}
-        </Button>
+        {filterContent && (
+          <Button
+            className="sm-list-filter-toggle"
+            type="text"
+            icon={expanded ? <UpOutlined /> : <DownOutlined />}
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? '收起过滤' : '展开过滤'}
+          </Button>
+        )}
       </div>
-      {expanded && <div className="sm-list-filter-panel">{filterContent}</div>}
+      {expanded && filterContent && <div className="sm-list-filter-panel">{filterContent}</div>}
     </div>
   );
 };

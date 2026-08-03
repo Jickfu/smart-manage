@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Key } from 'react';
-import { App, Alert, Button, Drawer, Select, Space, Tag } from 'antd';
+import { App, Button, Tag, Tree } from 'antd';
+import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
@@ -8,23 +9,28 @@ import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import { OperationType } from '@/domain/common/page/types';
+import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { useWorkbenchStore } from '@/stores/workbench';
 import { cacheApi } from '../cache/api';
 import { cacheAccess } from '../cache/permissions';
 import { cacheQueryKeys } from '../cache/queryKeys';
 import type { CacheEntry, CacheEntryKey } from '../cache/types';
-import './redisPage.css';
 
 function entryKey(entry: CacheEntry): CacheEntryKey {
   return { storage: entry.storage, cacheName: entry.cacheName, key: entry.key };
 }
 
-export default function RedisPage(_: PageComponentProps) {
+const CACHE_VALUE_COMPONENT = 'sys/monitor/cache-value';
+
+export default function RedisPage(props: PageComponentProps) {
   const { modal } = App.useApp();
+  const openBillTab = useWorkbenchStore((state) => state.openBillTab);
+  const { can } = usePermissionAccess(cacheAccess.prefix);
   const queryClient = useQueryClient();
   const [storage, setStorage] = useState<string>();
   const [cacheName, setCacheName] = useState<string>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
-  const [valueEntry, setValueEntry] = useState<CacheEntry>();
   const catalogQuery = useQuery({
     queryKey: cacheQueryKeys.overview(),
     queryFn: cacheApi.overview,
@@ -33,11 +39,27 @@ export default function RedisPage(_: PageComponentProps) {
     queryKey: cacheQueryKeys.entries(storage, cacheName),
     queryFn: (params) => cacheApi.listPage({ ...params, storage, cacheName }),
   });
-  const valueQuery = useQuery({
-    queryKey: cacheQueryKeys.value(valueEntry?.identity),
-    queryFn: () => cacheApi.value(entryKey(valueEntry!)),
-    enabled: Boolean(valueEntry),
-  });
+  const treeData = useMemo<DataNode[]>(() => {
+    const caches = catalogQuery.data?.caches ?? [];
+    const cacheNodes = (type: 'LOCAL' | 'REMOTE') =>
+      caches
+        .filter((cache) => cache.type === type)
+        .map((cache) => ({
+          key: `cache:${type === 'LOCAL' ? 'LOCAL' : 'REDIS'}:${cache.name}`,
+          title: cache.displayName,
+          isLeaf: true,
+        }));
+    return [
+      {
+        key: 'all',
+        title: '全部缓存',
+        children: [
+          { key: 'storage:LOCAL', title: '本地缓存', children: cacheNodes('LOCAL') },
+          { key: 'storage:REDIS', title: 'Redis', children: cacheNodes('REMOTE') },
+        ],
+      },
+    ];
+  }, [catalogQuery.data]);
   const deleteMutation = useCommandMutation({
     mutationFn: cacheApi.delete,
     successMessage: (entries) => `已删除 ${entries.length} 个缓存条目`,
@@ -69,8 +91,16 @@ export default function RedisPage(_: PageComponentProps) {
         <Button
           type="link"
           size="small"
-          disabled={!record.valueReadable}
-          onClick={() => setValueEntry(record)}
+          disabled={!record.valueReadable || !can(cacheAccess.permissions.value)}
+          onClick={() =>
+            openBillTab(
+              props.appNumber,
+              CACHE_VALUE_COMPONENT,
+              `缓存值：${record.key.length > 18 ? `${record.key.slice(0, 18)}…` : record.key}`,
+              record.identity,
+              OperationType.VIEW,
+            )
+          }
         >
           {key}
         </Button>
@@ -136,35 +166,31 @@ export default function RedisPage(_: PageComponentProps) {
         pageSize={list.pageSize}
         quickSearchPlaceholder="搜索 Key 或缓存名称"
         filterSummary={[storage, cacheName].filter(Boolean).join(' / ') || undefined}
-        filterContent={
-          <Space wrap>
-            <Select
-              allowClear
-              placeholder="存储位置"
-              value={storage}
-              options={[
-                { label: '本地缓存', value: 'LOCAL' },
-                { label: 'Redis', value: 'REDIS' },
-              ]}
-              onChange={(value) => {
-                setStorage(value);
+        treePanel={
+          <div className="sm-list-tree-panel-inner">
+            <Tree
+              blockNode
+              treeData={treeData}
+              defaultExpandedKeys={['all', 'storage:LOCAL', 'storage:REDIS']}
+              defaultSelectedKeys={['all']}
+              onSelect={(keys) => {
+                const selectedKey = String(keys[0] ?? 'all');
+                if (selectedKey.startsWith('cache:')) {
+                  const [, nextStorage, ...cacheNameParts] = selectedKey.split(':');
+                  setStorage(nextStorage);
+                  setCacheName(cacheNameParts.join(':'));
+                } else if (selectedKey.startsWith('storage:')) {
+                  setStorage(selectedKey.slice('storage:'.length));
+                  setCacheName(undefined);
+                } else {
+                  setStorage(undefined);
+                  setCacheName(undefined);
+                }
+                list.resetPage();
                 setSelectedRowKeys([]);
               }}
             />
-            <Select
-              allowClear
-              placeholder="应用缓存"
-              value={cacheName}
-              options={catalogQuery.data?.caches.map((cache) => ({
-                label: cache.displayName,
-                value: cache.name,
-              }))}
-              onChange={(value) => {
-                setCacheName(value);
-                setSelectedRowKeys([]);
-              }}
-            />
-          </Space>
+          </div>
         }
         toolbarActions={[
           {
@@ -202,21 +228,6 @@ export default function RedisPage(_: PageComponentProps) {
         selectedRowKeys={selectedRowKeys}
         onSelectChange={setSelectedRowKeys}
       />
-      <Drawer
-        title={valueEntry ? `缓存值：${valueEntry.key}` : '缓存值'}
-        size="large"
-        open={Boolean(valueEntry)}
-        destroyOnHidden
-        onClose={() => setValueEntry(undefined)}
-      >
-        {valueQuery.error && <Alert type="error" showIcon title={valueQuery.error.message} />}
-        {valueQuery.data?.truncated && (
-          <Alert type="warning" showIcon title="内容过大，仅展示安全上限内的数据。" />
-        )}
-        <pre className="sm-redis-value">
-          {valueQuery.isLoading ? '加载中…' : JSON.stringify(valueQuery.data?.items ?? [], null, 2)}
-        </pre>
-      </Drawer>
     </>
   );
 }

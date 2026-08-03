@@ -41,7 +41,7 @@ public class RedisService {
     private static final Pattern SENSITIVE_FIELD = Pattern.compile(
             "(?i)(\\\"(?:password|token|secret|privateKey|captcha|credential)\\\"\\s*:\\s*)\\\"[^\\\"]*\\\"");
     private static final List<String> SENSITIVE_KEY_MARKERS = List.of(
-            "satoken", "sa-token", "sp:login", "session", "captcha", "password-change", "ticket",
+            "satoken", "sa-token", "smtoken", "sp:login", "session", "captcha", "password-change", "ticket",
             "user-info", "credential", "secret", "private-key");
 
     private final RedisTemplate<String, Object> redisTemplate;
