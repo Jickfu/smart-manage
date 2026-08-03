@@ -7,6 +7,7 @@ import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.RedisSystemException;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.monitor.redis.model.form.RedisKeysForm;
 import sm.domain.sys.monitor.redis.model.vo.RedisKeyVO;
@@ -45,6 +46,7 @@ public class RedisService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final CurrentUserContext currentUserContext;
+    private volatile boolean memoryUsageSupported = true;
 
     @Value("${spring.data.redis.database:0}")
     private int database;
@@ -89,7 +91,7 @@ public class RedisService {
                 String key = text(rawKey);
                 DataType dataType = connection.type(keyBytes);
                 Long ttl = connection.ttl(keyBytes);
-                Long memoryBytes = number(connection.execute("MEMORY", bytes("USAGE"), keyBytes));
+                Long memoryBytes = readMemoryUsage(connection, keyBytes);
                 records.add(RedisKeyVO.builder().key(key)
                         .type(dataType == null ? "unknown" : dataType.code())
                         .ttl(ttl == null ? -2 : ttl).memoryBytes(memoryBytes)
@@ -223,6 +225,27 @@ public class RedisService {
     /** 供统一缓存管理列表复用相同的敏感 Key 判定规则。 */
     public boolean isSensitive(String key) {
         return isSensitiveKey(key);
+    }
+
+    private Long readMemoryUsage(RedisConnection connection, byte[] keyBytes) {
+        if (!memoryUsageSupported) {
+            return null;
+        }
+        try {
+            return number(connection.execute("MEMORY", bytes("USAGE"), keyBytes));
+        } catch (RedisSystemException exception) {
+            Throwable current = exception;
+            while (current != null) {
+                String message = current.getMessage();
+                if (message != null && message.toLowerCase(Locale.ROOT).contains("unknown command")
+                        && message.toLowerCase(Locale.ROOT).contains("memory")) {
+                    memoryUsageSupported = false;
+                    return null;
+                }
+                current = current.getCause();
+            }
+            throw exception;
+        }
     }
 
     private static byte[] bytes(String value) {

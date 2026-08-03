@@ -6,6 +6,8 @@ import com.alicp.jetcache.support.CacheStat;
 import com.alicp.jetcache.support.DefaultCacheMonitor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.RedisSystemException;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -49,6 +51,7 @@ public class CacheService {
     private final CurrentUserContext currentUserContext;
     private final RedisService redisService;
     private final JsonMapper jsonMapper;
+    private volatile boolean memoryUsageSupported = true;
 
     public CacheOverviewVO overview() {
         List<ManagedCacheVO> caches = MANAGED_CACHES.values().stream().map(this::assembleCache).toList();
@@ -191,7 +194,7 @@ public class CacheService {
                     String key = new String(keyBytes, StandardCharsets.UTF_8);
                     CacheDefinition definition = remoteDefinition(key);
                     Long ttl = connection.ttl(keyBytes);
-                    Long memory = toLong(connection.execute("MEMORY", "USAGE".getBytes(StandardCharsets.UTF_8), keyBytes));
+                    Long memory = readMemoryUsage(connection, keyBytes);
                     entries.add(CacheEntryVO.builder().identity("REDIS||" + key).storage("REDIS")
                             .cacheName(definition == null ? null : definition.name())
                             .cacheDisplayName(definition == null ? "Redis Key" : definition.displayName())
@@ -236,6 +239,38 @@ public class CacheService {
         if (value instanceof Number number) return number.longValue();
         if (value instanceof byte[] bytes) return Long.valueOf(new String(bytes, StandardCharsets.UTF_8));
         return Long.valueOf(String.valueOf(value));
+    }
+
+    /**
+     * MEMORY USAGE 属于可选诊断能力；部分兼容 Redis 的服务端未实现该命令。
+     * 仅在明确返回 unknown command 时降级，连接或权限异常仍交由统一异常处理。
+     */
+    Long readMemoryUsage(RedisConnection connection, byte[] keyBytes) {
+        if (!memoryUsageSupported) {
+            return null;
+        }
+        try {
+            return toLong(connection.execute("MEMORY", "USAGE".getBytes(StandardCharsets.UTF_8), keyBytes));
+        } catch (RedisSystemException exception) {
+            if (!isUnsupportedMemoryCommand(exception)) {
+                throw exception;
+            }
+            memoryUsageSupported = false;
+            return null;
+        }
+    }
+
+    private static boolean isUnsupportedMemoryCommand(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase(Locale.ROOT).contains("unknown command")
+                    && message.toLowerCase(Locale.ROOT).contains("memory")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private CacheDefinition requireDefinition(String cacheName) {
