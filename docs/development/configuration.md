@@ -8,10 +8,10 @@
 JDBC：jdbc:postgresql://localhost:5432/smart_manage
 数据库用户：postgres
 数据库密码：postgres
-Redis：localhost:6379
+Redis：localhost:6379，密码 redis123，数据库 1
 ```
 
-这些默认值及开发环境 SM2 密钥均为公开配置，只允许用于本地开发和演示。
+这些默认值、Redis 密码及开发环境 SM2 密钥均为公开配置，只允许用于本地开发和演示。
 
 ## 常用环境变量
 

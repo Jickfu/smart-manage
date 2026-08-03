@@ -15,13 +15,14 @@ import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryListForm;
 import sm.domain.sys.monitor.cache.model.vo.CacheEntryVO;
 import sm.domain.sys.monitor.cache.model.vo.CacheOverviewVO;
+import sm.domain.sys.monitor.cache.model.vo.CacheRuntimeVO;
+import sm.domain.sys.monitor.cache.model.vo.CacheValueVO;
 import sm.domain.sys.monitor.cache.service.CacheService;
 import sm.system.response.Result;
 import sm.system.response.PageData;
-import sm.domain.sys.monitor.redis.model.vo.RedisValueVO;
 
 @RestController
-@Tag(name = "系统监控-应用缓存")
+@Tag(name = "系统监控-缓存监控")
 @RequiredArgsConstructor
 public class CacheController {
     private final CacheService service;
@@ -31,6 +32,13 @@ public class CacheController {
     @PostMapping("/sys/monitor/cache/overview")
     public Result<CacheOverviewVO> overview() {
         return Result.success(service.overview());
+    }
+
+    @Operation(summary = "Redis 实时运行状态")
+    @SaCheckPermission(CachePermission.LIST)
+    @PostMapping("/sys/monitor/cache/runtime")
+    public Result<CacheRuntimeVO> runtime() {
+        return Result.success(service.runtime());
     }
 
     @Operation(summary = "统一分页查询本地与 Redis 缓存条目")
@@ -43,7 +51,7 @@ public class CacheController {
     @Operation(summary = "安全查看缓存值")
     @SaCheckPermission(CachePermission.VALUE)
     @PostMapping("/sys/monitor/cache/value")
-    public Result<RedisValueVO> value(@Valid @RequestBody CacheEntryKeyForm form) {
+    public Result<CacheValueVO> value(@Valid @RequestBody CacheEntryKeyForm form) {
         return Result.success(service.value(form));
     }
 

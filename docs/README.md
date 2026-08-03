@@ -22,6 +22,9 @@
 ## 模块
 
 - [采购申请](./modules/purchase-requisition.md)
+- [缓存监控](./modules/system-cache-and-redis.md)
+- [系统监控日志](./modules/system-monitor-logs.md)
+- [任务调度](./modules/system-scheduler.md)
 
 每个可选业务模块都应记录边界、依赖、数据库迁移和移除方式。
 

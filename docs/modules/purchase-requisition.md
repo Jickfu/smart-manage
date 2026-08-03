@@ -11,7 +11,7 @@
 - 后端：`sm.domain.scm.procurement.purchaserequisition`
 - 前端：`src/domain/scm/procurement/purchaseRequisition`
 - 数据库：`t_scm_purchase_requisition`、`t_scm_purchase_requisition_entry`
-- Flyway：`V7__add_scm_purchase_requisition.sql`、`V8__add_procurement_menu_category.sql`
+- Flyway：`V7__add_scm_purchase_requisition.sql`、`V8__add_procurement_menu_category.sql`、`V12__standardize_bill_biz_date.sql`
 - 云：`scm`
 - 应用：`procurement`
 - 组件键：`scm/procurement/purchase-requisition`
@@ -23,6 +23,6 @@
 
 ## 移除方式
 
-仅在全新数据库从未执行 V7、V8，且相关迁移尚未进入共享历史时，才可以删除上述前后端目录及两个迁移，随后重新生成前端组件注册表。Flyway 版本允许存在空缺。
+仅在全新数据库从未执行 V7、V8、V12，且相关迁移尚未进入共享历史时，才可以删除上述前后端目录及相关迁移，随后重新生成前端组件注册表。Flyway 版本允许存在空缺。
 
-数据库已经执行 V7 后，禁止删除或修改 V7。应新增迁移，按“菜单与权限数据、明细表、主表、应用、云”的顺序卸载，并在确认没有业务数据后执行。
+数据库已经执行任一相关迁移后，禁止删除或修改历史迁移。应新增迁移，按“菜单与权限数据、明细表、主表、应用、云”的顺序卸载，并在确认没有业务数据后执行。

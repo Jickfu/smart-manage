@@ -4,8 +4,6 @@ import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
 import SmChart from '@/domain/common/chart/SmChart';
 import type { PageComponentProps } from '@/domain/common/page/types';
-import { redisApi } from '../redis/api';
-import { redisQueryKeys } from '../redis/queryKeys';
 import { cacheApi } from './api';
 import { cacheQueryKeys } from './queryKeys';
 import type { ManagedCache } from './types';
@@ -20,7 +18,7 @@ function formatBytes(bytes: number) {
 
 export default function CachePage(_: PageComponentProps) {
   const cacheQuery = useQuery({ queryKey: cacheQueryKeys.overview(), queryFn: cacheApi.overview });
-  const runtimeQuery = useQuery({ queryKey: redisQueryKeys.runtime(), queryFn: redisApi.runtime });
+  const runtimeQuery = useQuery({ queryKey: cacheQueryKeys.runtime(), queryFn: cacheApi.runtime });
   const memoryOption = useMemo(() => {
     const used = runtimeQuery.data?.usedMemoryBytes ?? 0;
     const maximum = runtimeQuery.data?.maxMemoryBytes ?? 0;

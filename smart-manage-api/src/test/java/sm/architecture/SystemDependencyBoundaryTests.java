@@ -96,7 +96,6 @@ class SystemDependencyBoundaryTests {
                 Path.of("src/main/java/sm/domain/sys/monitor/script/service/ScriptService.java"),
                 Path.of("src/main/java/sm/domain/sys/monitor/arthas/service/ArthasService.java"),
                 Path.of("src/main/java/sm/domain/sys/monitor/cache/service/CacheService.java"),
-                Path.of("src/main/java/sm/domain/sys/monitor/redis/service/RedisService.java"),
                 Path.of("src/main/java/sm/domain/sys/scheduler/service/JobService.java")
         );
         var violations = highRiskServices.stream()

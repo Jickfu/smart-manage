@@ -6,12 +6,6 @@ import com.alicp.jetcache.support.CacheStat;
 import com.alicp.jetcache.support.DefaultCacheMonitor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.data.redis.RedisSystemException;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.core.Cursor;
-import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ScanOptions;
 import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.monitor.cache.model.vo.CacheOverviewVO;
@@ -19,9 +13,9 @@ import sm.domain.sys.monitor.cache.model.vo.ManagedCacheVO;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryListForm;
 import sm.domain.sys.monitor.cache.model.vo.CacheEntryVO;
-import sm.domain.sys.monitor.redis.model.vo.RedisValueItemVO;
-import sm.domain.sys.monitor.redis.model.vo.RedisValueVO;
-import sm.domain.sys.monitor.redis.service.RedisService;
+import sm.domain.sys.monitor.cache.model.vo.CacheRuntimeVO;
+import sm.domain.sys.monitor.cache.model.vo.CacheValueItemVO;
+import sm.domain.sys.monitor.cache.model.vo.CacheValueVO;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
@@ -33,29 +27,32 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
-import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 受控应用缓存查询与清理服务。 */
+/** 缓存监控与受控管理的唯一公开业务入口。 */
 @Service
 @RequiredArgsConstructor
 public class CacheService {
     private static final Map<String, CacheDefinition> MANAGED_CACHES = managedCaches();
 
     private final CacheHelper cacheHelper;
-    private final RedisTemplate<String, Object> redisTemplate;
     private final CurrentUserContext currentUserContext;
-    private final RedisService redisService;
+    private final RedisCacheAccessor redisCacheAccessor;
     private final JsonMapper jsonMapper;
-    private volatile boolean memoryUsageSupported = true;
 
     public CacheOverviewVO overview() {
+        currentUserContext.checkAdministrator();
         List<ManagedCacheVO> caches = MANAGED_CACHES.values().stream().map(this::assembleCache).toList();
         return CacheOverviewVO.builder().caches(caches).collectedAt(LocalDateTime.now()).build();
+    }
+
+    public CacheRuntimeVO runtime() {
+        currentUserContext.checkAdministrator();
+        return redisCacheAccessor.runtime();
     }
 
     public PageData<CacheEntryVO> listPage(CacheEntryListForm form) {
@@ -80,10 +77,10 @@ public class CacheService {
         return PageData.of(filtered.size(), form.getPageNum(), form.getPageSize(), filtered.subList(fromIndex, toIndex));
     }
 
-    public RedisValueVO value(CacheEntryKeyForm form) {
+    public CacheValueVO value(CacheEntryKeyForm form) {
         currentUserContext.checkAdministrator();
         if ("REDIS".equalsIgnoreCase(form.getStorage())) {
-            return redisService.value(form.getKey());
+            return redisCacheAccessor.value(form.getKey());
         }
         CacheDefinition definition = requireLocalDefinition(form.getCacheName());
         if (definition.sensitiveValue()) {
@@ -98,13 +95,16 @@ public class CacheService {
         }
         boolean truncated = json.length() > 64 * 1024;
         String preview = truncated ? json.substring(0, 64 * 1024) : json;
-        return RedisValueVO.builder().key(form.getKey()).type("object").truncated(truncated)
-                .items(List.of(RedisValueItemVO.builder().value(preview).base64(false).build())).build();
+        return CacheValueVO.builder().key(form.getKey()).type("object").truncated(truncated)
+                .items(List.of(CacheValueItemVO.builder().value(preview).base64(false).build())).build();
     }
 
     @BizLog(value = "删除缓存条目", recordRequest = false, recordResponse = false)
     public long delete(List<CacheEntryKeyForm> entries) {
         currentUserContext.checkAdministrator();
+        if (entries == null || entries.isEmpty() || entries.size() > 100) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "单次只能删除 1 至 100 个缓存条目");
+        }
         List<String> redisKeys = new ArrayList<>();
         long deleted = 0;
         for (CacheEntryKeyForm entry : entries) {
@@ -120,8 +120,7 @@ public class CacheService {
             }
         }
         if (!redisKeys.isEmpty()) {
-            Long redisDeleted = redisTemplate.delete(redisKeys);
-            deleted += redisDeleted == null ? 0 : redisDeleted;
+            deleted += redisCacheAccessor.delete(redisKeys);
         }
         return deleted;
     }
@@ -187,22 +186,14 @@ public class CacheService {
     }
 
     private void appendRedisEntries(List<CacheEntryVO> entries) {
-        redisTemplate.execute((RedisCallback<Void>) connection -> {
-            try (Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().match("*").count(500).build())) {
-                while (cursor.hasNext()) {
-                    byte[] keyBytes = cursor.next();
-                    String key = new String(keyBytes, StandardCharsets.UTF_8);
-                    CacheDefinition definition = remoteDefinition(key);
-                    Long ttl = connection.ttl(keyBytes);
-                    Long memory = readMemoryUsage(connection, keyBytes);
-                    entries.add(CacheEntryVO.builder().identity("REDIS||" + key).storage("REDIS")
+        redisCacheAccessor.scanEntries().forEach(redisEntry -> {
+                    CacheDefinition definition = remoteDefinition(redisEntry.key());
+                    entries.add(CacheEntryVO.builder().identity("REDIS||" + redisEntry.key()).storage("REDIS")
                             .cacheName(definition == null ? null : definition.name())
                             .cacheDisplayName(definition == null ? "Redis Key" : definition.displayName())
-                            .key(key).type(connection.type(keyBytes).code()).ttl(ttl).memoryBytes(memory)
-                            .valueReadable(!redisService.isSensitive(key)).currentNodeOnly(false).build());
-                }
-            }
-            return null;
+                            .key(redisEntry.key()).type(redisEntry.type()).ttl(redisEntry.ttl())
+                            .memoryBytes(redisEntry.memoryBytes()).valueReadable(redisEntry.valueReadable())
+                            .currentNodeOnly(false).build());
         });
     }
 
@@ -234,45 +225,6 @@ public class CacheService {
         return value == null || value.isBlank() ? null : value.trim().toLowerCase(Locale.ROOT);
     }
 
-    private static Long toLong(Object value) {
-        if (value == null) return null;
-        if (value instanceof Number number) return number.longValue();
-        if (value instanceof byte[] bytes) return Long.valueOf(new String(bytes, StandardCharsets.UTF_8));
-        return Long.valueOf(String.valueOf(value));
-    }
-
-    /**
-     * MEMORY USAGE 属于可选诊断能力；部分兼容 Redis 的服务端未实现该命令。
-     * 仅在明确返回 unknown command 时降级，连接或权限异常仍交由统一异常处理。
-     */
-    Long readMemoryUsage(RedisConnection connection, byte[] keyBytes) {
-        if (!memoryUsageSupported) {
-            return null;
-        }
-        try {
-            return toLong(connection.execute("MEMORY", "USAGE".getBytes(StandardCharsets.UTF_8), keyBytes));
-        } catch (RedisSystemException exception) {
-            if (!isUnsupportedMemoryCommand(exception)) {
-                throw exception;
-            }
-            memoryUsageSupported = false;
-            return null;
-        }
-    }
-
-    private static boolean isUnsupportedMemoryCommand(Throwable exception) {
-        Throwable current = exception;
-        while (current != null) {
-            String message = current.getMessage();
-            if (message != null && message.toLowerCase(Locale.ROOT).contains("unknown command")
-                    && message.toLowerCase(Locale.ROOT).contains("memory")) {
-                return true;
-            }
-            current = current.getCause();
-        }
-        return false;
-    }
-
     private CacheDefinition requireDefinition(String cacheName) {
         CacheDefinition definition = MANAGED_CACHES.get(cacheName);
         if (definition == null) {
@@ -292,28 +244,8 @@ public class CacheService {
             caffeine.invalidateAll();
             return;
         }
-        clearRemoteCache(definition.name());
-    }
-
-    /** JetCache Redis Key 使用缓存名作为前缀；这里只允许清理受控目录中的前缀。 */
-    private void clearRemoteCache(String cacheName) {
-        redisTemplate.execute((RedisCallback<Void>) connection -> {
-            try (Cursor<byte[]> cursor = connection.scan(
-                    ScanOptions.scanOptions().match(cacheName + "*").count(500).build())) {
-                List<byte[]> batch = new ArrayList<>(500);
-                while (cursor.hasNext()) {
-                    batch.add(cursor.next());
-                    if (batch.size() == 500) {
-                        connection.del(batch.toArray(byte[][]::new));
-                        batch.clear();
-                    }
-                }
-                if (!batch.isEmpty()) {
-                    connection.del(batch.toArray(byte[][]::new));
-                }
-            }
-            return null;
-        });
+        // JetCache Redis Key 使用缓存名作为前缀；访问器只接收受控目录校验后的前缀。
+        redisCacheAccessor.clearByPrefix(definition.name());
     }
 
     private static Map<String, CacheDefinition> managedCaches() {

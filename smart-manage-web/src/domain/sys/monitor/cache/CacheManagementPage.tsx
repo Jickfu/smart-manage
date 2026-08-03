@@ -12,10 +12,10 @@ import type { PageComponentProps } from '@/domain/common/page/types';
 import { OperationType } from '@/domain/common/page/types';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
 import { useWorkbenchStore } from '@/stores/workbench';
-import { cacheApi } from '../cache/api';
-import { cacheAccess } from '../cache/permissions';
-import { cacheQueryKeys } from '../cache/queryKeys';
-import type { CacheEntry, CacheEntryKey } from '../cache/types';
+import { cacheApi } from './api';
+import { cacheAccess } from './permissions';
+import { cacheQueryKeys } from './queryKeys';
+import type { CacheEntry, CacheEntryKey } from './types';
 
 function entryKey(entry: CacheEntry): CacheEntryKey {
   return { storage: entry.storage, cacheName: entry.cacheName, key: entry.key };
@@ -23,7 +23,7 @@ function entryKey(entry: CacheEntry): CacheEntryKey {
 
 const CACHE_VALUE_COMPONENT = 'sys/monitor/cache-value';
 
-export default function RedisPage(props: PageComponentProps) {
+export default function CacheManagementPage(props: PageComponentProps) {
   const { modal } = App.useApp();
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const { can } = usePermissionAccess(cacheAccess.prefix);

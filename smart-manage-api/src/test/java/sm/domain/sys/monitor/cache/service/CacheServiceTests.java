@@ -1,16 +1,15 @@
 package sm.domain.sys.monitor.cache.service;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.RedisSystemException;
 import org.springframework.data.redis.connection.RedisConnection;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
-import sm.domain.sys.monitor.redis.service.RedisService;
 import tools.jackson.databind.json.JsonMapper;
 import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
+import sm.domain.sys.monitor.cache.model.vo.CacheRuntimeVO;
 import sm.system.response.ResultEnum;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,11 +27,10 @@ import static org.mockito.Mockito.verify;
 class CacheServiceTests {
 
     private final CacheHelper cacheHelper = mock(CacheHelper.class);
-    private final RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
     private final CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
-    private final RedisService redisService = mock(RedisService.class);
+    private final RedisCacheAccessor redisCacheAccessor = mock(RedisCacheAccessor.class);
     private final CacheService service = new CacheService(
-            cacheHelper, redisTemplate, currentUserContext, redisService, JsonMapper.builder().build());
+            cacheHelper, currentUserContext, redisCacheAccessor, JsonMapper.builder().build());
 
     @Test
     void clearMustRejectCachesOutsideManagedCatalog() {
@@ -54,6 +52,17 @@ class CacheServiceTests {
     }
 
     @Test
+    void runtimeMustCheckAdministratorBeforeDelegating() {
+        CacheRuntimeVO runtime = CacheRuntimeVO.builder().available(true).build();
+        when(redisCacheAccessor.runtime()).thenReturn(runtime);
+
+        assertEquals(runtime, service.runtime());
+
+        verify(currentUserContext).checkAdministrator();
+        verify(redisCacheAccessor).runtime();
+    }
+
+    @Test
     void unsupportedMemoryCommandMustDegradeWithoutRepeatedExecution() {
         RedisConnection connection = mock(RedisConnection.class);
         byte[] keyBytes = "example".getBytes();
@@ -61,8 +70,9 @@ class CacheServiceTests {
                 .thenThrow(new RedisSystemException("Error in execution",
                         new RuntimeException("ERR unknown command 'MEMORY'")));
 
-        assertNull(service.readMemoryUsage(connection, keyBytes));
-        assertNull(service.readMemoryUsage(connection, keyBytes));
+        RedisCacheAccessor accessor = new RedisCacheAccessor(mock(org.springframework.data.redis.core.RedisTemplate.class));
+        assertNull(accessor.readMemoryUsage(connection, keyBytes));
+        assertNull(accessor.readMemoryUsage(connection, keyBytes));
 
         verify(connection, times(1)).execute(eq("MEMORY"), any(byte[].class), same(keyBytes));
     }

@@ -9,6 +9,7 @@
 - 领域或应用公共能力放在对应 `common` 包，不额外拆分 Application、Domain、Infrastructure 层。
 - Controller 禁止依赖 Mapper 或 `*TxService`。
 - 每个单据只有一个公开 `*Service`；包级可见的 `*TxService` 只允许同单据 Service 委托调用。
+- 不形成独立业务入口的技术协作者不得命名为 `*Service`；应按职责使用 `*Accessor`、`*Gateway` 等名称，并尽量保持包级可见。
 - `sm.system.storage` 只能通过 `FileStorageConfigProvider` 获取配置，禁止依赖 `sm.domain.sys` 的实体或 Service。
 
 ## 接口与业务语义

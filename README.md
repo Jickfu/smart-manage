@@ -30,7 +30,7 @@ smart-manage/
 - Node.js 22+
 - pnpm 11+
 - PostgreSQL 16+
-- Redis
+- Redis（开发配置默认密码为 `redis123`，数据库编号为 `1`）
 
 ## 快速启动
 
