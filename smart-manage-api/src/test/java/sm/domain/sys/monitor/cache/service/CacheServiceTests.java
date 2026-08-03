@@ -6,7 +6,7 @@ import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
 import sm.domain.sys.monitor.redis.service.RedisService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
 import sm.system.response.ResultEnum;
@@ -24,7 +24,7 @@ class CacheServiceTests {
     private final CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
     private final RedisService redisService = mock(RedisService.class);
     private final CacheService service = new CacheService(
-            cacheHelper, redisTemplate, currentUserContext, redisService, new ObjectMapper());
+            cacheHelper, redisTemplate, currentUserContext, redisService, JsonMapper.builder().build());
 
     @Test
     void clearMustRejectCachesOutsideManagedCatalog() {

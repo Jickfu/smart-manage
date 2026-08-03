@@ -4,8 +4,6 @@ import com.alicp.jetcache.Cache;
 import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.support.CacheStat;
 import com.alicp.jetcache.support.DefaultCacheMonitor;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.data.redis.core.Cursor;
@@ -37,6 +35,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 /** 受控应用缓存查询与清理服务。 */
 @Service
@@ -48,7 +48,7 @@ public class CacheService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final CurrentUserContext currentUserContext;
     private final RedisService redisService;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
     public CacheOverviewVO overview() {
         List<ManagedCacheVO> caches = MANAGED_CACHES.values().stream().map(this::assembleCache).toList();
@@ -89,8 +89,8 @@ public class CacheService {
         Object value = findLocalEntry(definition, form.getKey()).getValue();
         String json;
         try {
-            json = objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException exception) {
+            json = jsonMapper.writeValueAsString(value);
+        } catch (JacksonException exception) {
             throw new BizException(ResultEnum.SERVER_ERROR, "缓存值序列化失败");
         }
         boolean truncated = json.length() > 64 * 1024;
