@@ -11,29 +11,45 @@ import { cacheQueryKeys } from './queryKeys';
 import type { ManagedCache } from './types';
 import './cachePage.css';
 
+function formatBytes(bytes: number) {
+  if (bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  return `${(bytes / 1024 ** unitIndex).toFixed(unitIndex === 0 ? 0 : 2)} ${units[unitIndex]}`;
+}
+
 export default function CachePage(_: PageComponentProps) {
   const cacheQuery = useQuery({ queryKey: cacheQueryKeys.overview(), queryFn: cacheApi.overview });
   const runtimeQuery = useQuery({ queryKey: redisQueryKeys.runtime(), queryFn: redisApi.runtime });
   const memoryOption = useMemo(() => {
     const used = runtimeQuery.data?.usedMemoryBytes ?? 0;
     const maximum = runtimeQuery.data?.maxMemoryBytes ?? 0;
-    const data =
-      maximum > 0
-        ? [
-            { name: '已使用', value: used },
-            { name: '可用', value: Math.max(maximum - used, 0) },
-          ]
-        : [{ name: '已使用（未设上限）', value: Math.max(used, 1) }];
+    const percentage = maximum > 0 ? Math.min((used / maximum) * 100, 100) : 0;
     return {
-      tooltip: { trigger: 'item', valueFormatter: (value: number) => `${value} B` },
-      legend: { bottom: 0 },
       series: [
         {
-          type: 'pie',
-          radius: ['48%', '70%'],
-          center: ['50%', '43%'],
-          label: { show: false },
-          data,
+          type: 'gauge',
+          startAngle: 210,
+          endAngle: -30,
+          min: 0,
+          max: 100,
+          radius: '86%',
+          center: ['50%', '55%'],
+          pointer: { show: false },
+          progress: { show: true, roundCap: true, width: 16 },
+          axisLine: { lineStyle: { width: 16 } },
+          axisTick: { show: false },
+          splitLine: { show: false },
+          axisLabel: { show: false },
+          title: { offsetCenter: [0, '38%'], fontSize: 13 },
+          detail: {
+            valueAnimation: true,
+            offsetCenter: [0, '2%'],
+            formatter: (value: number) => `${value.toFixed(1)}%`,
+            fontSize: 28,
+            fontWeight: 600,
+          },
+          data: [{ name: '内存使用率', value: percentage }],
         },
       ],
     };
@@ -106,10 +122,43 @@ export default function CachePage(_: PageComponentProps) {
               },
             ]}
           />
-          <Statistic title="已使用内存" value={runtimeQuery.data?.usedMemoryDisplay ?? '-'} />
         </Card>
         <Card title="Redis 内存快照" loading={runtimeQuery.isLoading}>
-          <SmChart option={memoryOption} ariaLabel="Redis 当前内存使用情况" />
+          <div className="sm-cache-memory-snapshot">
+            {runtimeQuery.data?.maxMemoryBytes ? (
+              <SmChart option={memoryOption} ariaLabel="Redis 当前内存使用率" />
+            ) : (
+              <div className="sm-cache-memory-unlimited">
+                <span>当前已使用</span>
+                <strong>{runtimeQuery.data?.usedMemoryDisplay ?? '-'}</strong>
+                <small>Redis 未设置 maxmemory 上限，无法计算使用率</small>
+              </div>
+            )}
+            <div className="sm-cache-memory-metrics">
+              <Statistic title="已使用内存" value={runtimeQuery.data?.usedMemoryDisplay ?? '-'} />
+              <Statistic
+                title="内存上限"
+                value={
+                  runtimeQuery.data?.maxMemoryBytes
+                    ? formatBytes(runtimeQuery.data.maxMemoryBytes)
+                    : '未设置'
+                }
+              />
+              <Statistic
+                title="剩余可用"
+                value={
+                  runtimeQuery.data?.maxMemoryBytes
+                    ? formatBytes(
+                        Math.max(
+                          runtimeQuery.data.maxMemoryBytes - runtimeQuery.data.usedMemoryBytes,
+                          0,
+                        ),
+                      )
+                    : '-'
+                }
+              />
+            </div>
+          </div>
         </Card>
       </div>
       <Card title="JetCache 实时统计" loading={cacheQuery.isLoading}>

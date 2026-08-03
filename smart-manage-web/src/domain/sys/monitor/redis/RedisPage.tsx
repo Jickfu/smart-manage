@@ -87,24 +87,28 @@ export default function RedisPage(props: PageComponentProps) {
       title: 'Key',
       dataIndex: 'key',
       ellipsis: true,
-      render: (key, record) => (
-        <Button
-          type="link"
-          size="small"
-          disabled={!record.valueReadable || !can(cacheAccess.permissions.value)}
-          onClick={() =>
-            openBillTab(
-              props.appNumber,
-              CACHE_VALUE_COMPONENT,
-              `缓存值：${record.key.length > 18 ? `${record.key.slice(0, 18)}…` : record.key}`,
-              record.identity,
-              OperationType.VIEW,
-            )
-          }
-        >
-          {key}
-        </Button>
-      ),
+      render: (key, record) => {
+        if (!record.valueReadable || !can(cacheAccess.permissions.value)) {
+          return <span>{key}</span>;
+        }
+        return (
+          <Button
+            type="link"
+            size="small"
+            onClick={() =>
+              openBillTab(
+                props.appNumber,
+                CACHE_VALUE_COMPONENT,
+                `缓存值：${record.key.length > 18 ? `${record.key.slice(0, 18)}…` : record.key}`,
+                record.identity,
+                OperationType.VIEW,
+              )
+            }
+          >
+            {key}
+          </Button>
+        );
+      },
     },
     { title: '缓存', dataIndex: 'cacheDisplayName', width: 140 },
     {
@@ -195,7 +199,7 @@ export default function RedisPage(props: PageComponentProps) {
         toolbarActions={[
           {
             key: 'delete',
-            label: `删除所选（${selectedRowKeys.length}）`,
+            label: '删除所选',
             permission: cacheAccess.permissions.delete,
             danger: true,
             disabled: selectedRowKeys.length === 0,
