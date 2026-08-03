@@ -32,17 +32,23 @@ import pageRegistrationModule9 from '../../sys/base/uiConfig/pageRegistration';
 // src/domain/sys/base/user/pageRegistration.ts
 import pageRegistrationModule10 from '../../sys/base/user/pageRegistration';
 
+// src/domain/sys/monitor/cache/pageRegistration.ts
+import pageRegistrationModule11 from '../../sys/monitor/cache/pageRegistration';
+
 // src/domain/sys/monitor/loginLog/pageRegistration.ts
-import pageRegistrationModule11 from '../../sys/monitor/loginLog/pageRegistration';
+import pageRegistrationModule12 from '../../sys/monitor/loginLog/pageRegistration';
 
 // src/domain/sys/monitor/operateLog/pageRegistration.ts
-import pageRegistrationModule12 from '../../sys/monitor/operateLog/pageRegistration';
+import pageRegistrationModule13 from '../../sys/monitor/operateLog/pageRegistration';
+
+// src/domain/sys/monitor/redis/pageRegistration.ts
+import pageRegistrationModule14 from '../../sys/monitor/redis/pageRegistration';
 
 // src/domain/sys/scheduler/execution/pageRegistration.ts
-import pageRegistrationModule13 from '../../sys/scheduler/execution/pageRegistration';
+import pageRegistrationModule15 from '../../sys/scheduler/execution/pageRegistration';
 
 // src/domain/sys/scheduler/job/pageRegistration.ts
-import pageRegistrationModule14 from '../../sys/scheduler/job/pageRegistration';
+import pageRegistrationModule16 from '../../sys/scheduler/job/pageRegistration';
 
 import { registerPageRegistrationModules } from './componentRegistry';
 
@@ -61,4 +67,6 @@ registerPageRegistrationModules([
   pageRegistrationModule12,
   pageRegistrationModule13,
   pageRegistrationModule14,
+  pageRegistrationModule15,
+  pageRegistrationModule16,
 ]);

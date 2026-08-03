@@ -1,228 +1,332 @@
 package sm.domain.sys.monitor.cache.service;
 
 import com.alicp.jetcache.Cache;
-import com.alicp.jetcache.CacheManager;
+import com.alicp.jetcache.anno.CacheType;
+import com.alicp.jetcache.support.CacheStat;
+import com.alicp.jetcache.support.DefaultCacheMonitor;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.data.redis.RedisSystemException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
-import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.CacheConstant;
-import sm.domain.sys.monitor.cache.model.vo.CacheStatsVO;
-import sm.domain.sys.monitor.cache.model.vo.CaffeineCacheVO;
-import sm.domain.sys.monitor.cache.model.vo.RedisInfoVO;
-import sm.domain.sys.monitor.cache.model.vo.RedisKeyVO;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.domain.sys.monitor.cache.model.vo.CacheOverviewVO;
+import sm.domain.sys.monitor.cache.model.vo.ManagedCacheVO;
+import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
+import sm.domain.sys.monitor.cache.model.form.CacheEntryListForm;
+import sm.domain.sys.monitor.cache.model.vo.CacheEntryVO;
+import sm.domain.sys.monitor.redis.model.vo.RedisValueItemVO;
+import sm.domain.sys.monitor.redis.model.vo.RedisValueVO;
+import sm.domain.sys.monitor.redis.service.RedisService;
 import sm.system.aop.log.BizLog;
+import sm.system.exception.BizException;
+import sm.system.helper.CacheHelper;
+import sm.system.response.ResultEnum;
+import sm.system.response.PageData;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Properties;
+import java.util.Map;
+import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
+import java.util.Locale;
+import java.util.Objects;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 缓存管理服务
- *
- * @author Chekfu
- */
+/** 受控应用缓存查询与清理服务。 */
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class CacheService {
+    private static final Map<String, CacheDefinition> MANAGED_CACHES = managedCaches();
+
+    private final CacheHelper cacheHelper;
     private final RedisTemplate<String, Object> redisTemplate;
-    private final CacheManager cacheManager;
+    private final CurrentUserContext currentUserContext;
+    private final RedisService redisService;
+    private final JsonMapper jsonMapper;
+    private volatile boolean memoryUsageSupported = true;
 
-    /** 单次扫描最大 key 数 */
-    private static final int MAX_SCAN_KEYS = 500;
-
-    /** 已知的 JetCache LOCAL 缓存名列表 */
-    private static final List<String> LOCAL_CACHE_NAMES = List.of(
-            CacheConstant.SYS_PARAM,
-            CacheConstant.UI_CONFIG,
-            CacheConstant.FILE_CONFIG,
-            CacheConstant.BASIC_DATA_OPTIONS);
-
-    // ==================== 统计 ====================
-
-    /** 获取缓存统计（Caffeine + Redis） */
-    public CacheStatsVO getStats() {
-        CacheStatsVO vo = new CacheStatsVO();
-
-        // Caffeine 本地缓存统计（从 JetCache 获取）
-        vo.setCaffeineCaches(buildCaffeineStats());
-
-        // Redis 信息
-        try {
-            vo.setRedisInfo(buildRedisInfo());
-        } catch (Exception e) {
-            log.warn("获取 Redis 信息失败: {}", e.getMessage());
-            vo.setRedisInfo(new RedisInfoVO());
-        }
-
-        return vo;
+    public CacheOverviewVO overview() {
+        List<ManagedCacheVO> caches = MANAGED_CACHES.values().stream().map(this::assembleCache).toList();
+        return CacheOverviewVO.builder().caches(caches).collectedAt(LocalDateTime.now()).build();
     }
 
-    private List<CaffeineCacheVO> buildCaffeineStats() {
-        List<CaffeineCacheVO> list = new ArrayList<>();
-        for (String cacheName : LOCAL_CACHE_NAMES) {
-            try {
-                Cache<?, ?> cache = cacheManager.getCache(cacheName);
-                if (cache != null) {
-                    // 通过 unwrap 获取底层 Caffeine Cache 实例
-                    com.github.benmanes.caffeine.cache.Cache<?, ?> caffeine = cache.unwrap(com.github.benmanes.caffeine.cache.Cache.class);
-                    if (caffeine != null) {
-                        CaffeineCacheVO vo = new CaffeineCacheVO();
-                        vo.setName(cacheName);
-                        vo.setEstimatedSize(caffeine.estimatedSize());
-                        vo.setHitCount(caffeine.stats().hitCount());
-                        vo.setMissCount(caffeine.stats().missCount());
-                        vo.setHitRate(caffeine.stats().hitRate());
-                        vo.setEvictionCount(caffeine.stats().evictionCount());
-                        vo.setRequestCount(caffeine.stats().requestCount());
-                        list.add(vo);
+    public PageData<CacheEntryVO> listPage(CacheEntryListForm form) {
+        currentUserContext.checkAdministrator();
+        List<CacheEntryVO> entries = new ArrayList<>();
+        appendLocalEntries(entries);
+        appendRedisEntries(entries);
+        String keyword = normalize(form.getKeyword());
+        String storage = normalize(form.getStorage());
+        String cacheName = normalize(form.getCacheName());
+        List<CacheEntryVO> filtered = entries.stream()
+                .filter(entry -> storage == null || entry.getStorage().toLowerCase(Locale.ROOT).equals(storage))
+                .filter(entry -> cacheName == null || Objects.equals(normalize(entry.getCacheName()), cacheName))
+                .filter(entry -> keyword == null
+                        || entry.getKey().toLowerCase(Locale.ROOT).contains(keyword)
+                        || normalize(entry.getCacheDisplayName()) != null
+                        && normalize(entry.getCacheDisplayName()).contains(keyword))
+                .sorted(Comparator.comparing(CacheEntryVO::getStorage).thenComparing(CacheEntryVO::getKey))
+                .toList();
+        int fromIndex = Math.min((form.getPageNum() - 1) * form.getPageSize(), filtered.size());
+        int toIndex = Math.min(fromIndex + form.getPageSize(), filtered.size());
+        return PageData.of(filtered.size(), form.getPageNum(), form.getPageSize(), filtered.subList(fromIndex, toIndex));
+    }
+
+    public RedisValueVO value(CacheEntryKeyForm form) {
+        currentUserContext.checkAdministrator();
+        if ("REDIS".equalsIgnoreCase(form.getStorage())) {
+            return redisService.value(form.getKey());
+        }
+        CacheDefinition definition = requireLocalDefinition(form.getCacheName());
+        if (definition.sensitiveValue()) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "安全敏感缓存不允许查看 Value");
+        }
+        Object value = findLocalEntry(definition, form.getKey()).getValue();
+        String json;
+        try {
+            json = jsonMapper.writeValueAsString(value);
+        } catch (JacksonException exception) {
+            throw new BizException(ResultEnum.SERVER_ERROR, "缓存值序列化失败");
+        }
+        boolean truncated = json.length() > 64 * 1024;
+        String preview = truncated ? json.substring(0, 64 * 1024) : json;
+        return RedisValueVO.builder().key(form.getKey()).type("object").truncated(truncated)
+                .items(List.of(RedisValueItemVO.builder().value(preview).base64(false).build())).build();
+    }
+
+    @BizLog(value = "删除缓存条目", recordRequest = false, recordResponse = false)
+    public long delete(List<CacheEntryKeyForm> entries) {
+        currentUserContext.checkAdministrator();
+        List<String> redisKeys = new ArrayList<>();
+        long deleted = 0;
+        for (CacheEntryKeyForm entry : entries) {
+            if ("REDIS".equalsIgnoreCase(entry.getStorage())) {
+                redisKeys.add(entry.getKey());
+                continue;
+            }
+            CacheDefinition definition = requireLocalDefinition(entry.getCacheName());
+            Map.Entry<?, ?> localEntry = findLocalEntry(definition, entry.getKey());
+            Cache<Object, Object> cache = cacheHelper.getCache(definition.name(), definition.cacheType());
+            if (cache.remove(localEntry.getKey())) {
+                deleted++;
+            }
+        }
+        if (!redisKeys.isEmpty()) {
+            Long redisDeleted = redisTemplate.delete(redisKeys);
+            deleted += redisDeleted == null ? 0 : redisDeleted;
+        }
+        return deleted;
+    }
+
+    @BizLog("清理应用缓存")
+    public void clear(String cacheName) {
+        currentUserContext.checkAdministrator();
+        clear(requireDefinition(cacheName));
+    }
+
+    @BizLog("清理全部应用缓存")
+    public void clearAll() {
+        currentUserContext.checkAdministrator();
+        MANAGED_CACHES.values().forEach(this::clear);
+    }
+
+    private ManagedCacheVO assembleCache(CacheDefinition definition) {
+        Long estimatedSize = null;
+        Cache<Object, Object> cache = cacheHelper.getCache(definition.name(), definition.cacheType());
+        CacheStat statistics = cache.config().getMonitors().stream()
+                .filter(DefaultCacheMonitor.class::isInstance)
+                .map(DefaultCacheMonitor.class::cast)
+                .map(DefaultCacheMonitor::getCacheStat)
+                .findFirst()
+                .orElse(null);
+        if (definition.cacheType() == CacheType.LOCAL) {
+            com.github.benmanes.caffeine.cache.Cache<?, ?> caffeine =
+                    cache.unwrap(com.github.benmanes.caffeine.cache.Cache.class);
+            if (caffeine != null) {
+                estimatedSize = caffeine.estimatedSize();
+            }
+        }
+        return ManagedCacheVO.builder()
+                .name(definition.name()).displayName(definition.displayName())
+                .type(definition.cacheType().name()).description(definition.description())
+                .expireSeconds(definition.expireSeconds()).estimatedSize(estimatedSize)
+                .statisticsAvailable(statistics != null)
+                .getCount(statistics == null ? 0 : statistics.getGetCount())
+                .hitCount(statistics == null ? 0 : statistics.getGetHitCount())
+                .missCount(statistics == null ? 0 : statistics.getGetMissCount())
+                .failCount(statistics == null ? 0 : statistics.getGetFailCount())
+                .hitRate(statistics == null ? 0 : statistics.hitRate())
+                .qps(statistics == null ? 0 : statistics.qps())
+                .averageGetTime(statistics == null ? 0 : statistics.avgGetTime())
+                .currentNodeOnly(definition.cacheType() == CacheType.LOCAL).build();
+    }
+
+    private void appendLocalEntries(List<CacheEntryVO> entries) {
+        MANAGED_CACHES.values().stream().filter(definition -> definition.cacheType() == CacheType.LOCAL)
+                .forEach(definition -> {
+                    Cache<Object, Object> cache = cacheHelper.getCache(definition.name(), definition.cacheType());
+                    com.github.benmanes.caffeine.cache.Cache<?, ?> caffeine =
+                            cache.unwrap(com.github.benmanes.caffeine.cache.Cache.class);
+                    if (caffeine == null) {
+                        return;
                     }
-                }
-            } catch (Exception e) {
-                log.warn("获取 JetCache 本地缓存 [{}] 统计失败: {}", cacheName, e.getMessage());
-            }
-        }
-        return list;
+                    caffeine.asMap().keySet().forEach(key -> entries.add(CacheEntryVO.builder()
+                            .identity("LOCAL|" + definition.name() + "|" + key)
+                            .storage("LOCAL").cacheName(definition.name()).cacheDisplayName(definition.displayName())
+                            .key(String.valueOf(key)).type("object").ttl(null).memoryBytes(null)
+                            .valueReadable(!definition.sensitiveValue()).currentNodeOnly(true).build()));
+                });
     }
 
-    private RedisInfoVO buildRedisInfo() {
-        RedisInfoVO vo = new RedisInfoVO();
-
-        Properties info = redisTemplate.execute((RedisCallback<Properties>) RedisConnection::info);
-        if (info != null) {
-            vo.setVersion(info.getProperty("redis_version", "-"));
-            String uptime = info.getProperty("uptime_in_days", "0");
-            vo.setUptimeDays(Long.parseLong(uptime));
-            vo.setUsedMemoryHuman(info.getProperty("used_memory_human", "-"));
-            vo.setConnectedClients(Integer.parseInt(info.getProperty("connected_clients", "0")));
-        }
-
-        Long dbSize = redisTemplate.execute(RedisConnection::dbSize);
-        vo.setDbSize(dbSize != null ? dbSize : 0);
-
-        return vo;
-    }
-
-    // ==================== Caffeine 操作 ====================
-
-    /** 清除 JetCache Caffeine 本地缓存 */
-    @BizLog("清理本地缓存")
-    public void clearCaffeine(String cacheName) {
-        if (cacheName == null || cacheName.isBlank()) {
-            // 清空所有已知本地缓存
-            for (String name : LOCAL_CACHE_NAMES) {
-                clearOneLocalCache(name);
-            }
-            log.info("已清空全部 Caffeine 本地缓存");
-        } else {
-            clearOneLocalCache(cacheName);
-        }
-    }
-
-    private void clearOneLocalCache(String cacheName) {
-        try {
-            Cache<?, ?> cache = cacheManager.getCache(cacheName);
-            if (cache != null) {
-                // 通过 unwrap 获取底层 Caffeine Cache 实例并清空
-                com.github.benmanes.caffeine.cache.Cache<?, ?> caffeine = cache.unwrap(com.github.benmanes.caffeine.cache.Cache.class);
-                if (caffeine != null) {
-                    caffeine.invalidateAll();
-                    log.info("Caffeine 本地缓存 [{}] 已清空", cacheName);
-                }
-            }
-        } catch (Exception e) {
-            log.warn("清除 Caffeine 本地缓存 [{}] 失败: {}", cacheName, e.getMessage());
-        }
-    }
-
-    // ==================== Redis 操作 ====================
-
-    /** 扫描 Redis key 列表 */
-    public List<RedisKeyVO> getRedisKeys(String pattern) {
-        String matchPattern = (pattern != null && !pattern.isBlank())
-                ? pattern : "*";
-
-        return redisTemplate.execute((RedisCallback<List<RedisKeyVO>>) connection -> {
-            List<RedisKeyVO> records = new ArrayList<>();
-            Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions()
-                    .match(matchPattern)
-                    .count(MAX_SCAN_KEYS)
-                    .build());
-
-            cursor.forEachRemaining(keyBytes -> {
-                if (records.size() >= MAX_SCAN_KEYS) {
-                    return;
-                }
-                String fullKey = new String(keyBytes, StandardCharsets.UTF_8);
-                RedisKeyVO vo = new RedisKeyVO();
-                vo.setKey(fullKey);
-                try {
-                    vo.setType(connection.type(keyBytes).code());
-                } catch (Exception e) {
-                    vo.setType("unknown");
-                }
-                Long ttl = connection.ttl(keyBytes);
-                vo.setTtl(ttl != null ? ttl : -2);
-                records.add(vo);
-            });
-
-            try {
-                cursor.close();
-            } catch (Exception e) {
-                log.warn("关闭 Redis cursor 失败: {}", e.getMessage());
-            }
-            return records;
-        });
-    }
-
-    /** 批量删除 Redis key */
-    @BizLog("删除Redis缓存")
-    public long deleteRedisKeys(List<String> keys) {
-        if (keys == null || keys.isEmpty()) {
-            return 0;
-        }
-        Long deleted = redisTemplate.delete(keys);
-        log.info("已删除 {} 个 Redis key", deleted != null ? deleted : 0);
-        return deleted != null ? deleted : 0;
-    }
-
-    /** 按前缀批量清除 Redis key */
-    @BizLog("按前缀清理Redis缓存")
-    public long clearRedisByPrefix(String prefix) {
-        String matchPattern = (prefix != null && !prefix.isBlank())
-                ? prefix + "*"
-                : "*";
-
-        List<String> keysToDelete = new ArrayList<>();
-
+    private void appendRedisEntries(List<CacheEntryVO> entries) {
         redisTemplate.execute((RedisCallback<Void>) connection -> {
-            Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions()
-                    .match(matchPattern)
-                    .count(MAX_SCAN_KEYS)
-                    .build());
-
-            cursor.forEachRemaining(keyBytes -> {
-                keysToDelete.add(new String(keyBytes, StandardCharsets.UTF_8));
-            });
-
-            try {
-                cursor.close();
-            } catch (Exception e) {
-                log.warn("关闭 Redis cursor 失败: {}", e.getMessage());
+            try (Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().match("*").count(500).build())) {
+                while (cursor.hasNext()) {
+                    byte[] keyBytes = cursor.next();
+                    String key = new String(keyBytes, StandardCharsets.UTF_8);
+                    CacheDefinition definition = remoteDefinition(key);
+                    Long ttl = connection.ttl(keyBytes);
+                    Long memory = readMemoryUsage(connection, keyBytes);
+                    entries.add(CacheEntryVO.builder().identity("REDIS||" + key).storage("REDIS")
+                            .cacheName(definition == null ? null : definition.name())
+                            .cacheDisplayName(definition == null ? "Redis Key" : definition.displayName())
+                            .key(key).type(connection.type(keyBytes).code()).ttl(ttl).memoryBytes(memory)
+                            .valueReadable(!redisService.isSensitive(key)).currentNodeOnly(false).build());
+                }
             }
             return null;
         });
+    }
 
-        if (!keysToDelete.isEmpty()) {
-            redisTemplate.delete(keysToDelete);
-            log.info("已按前缀 [{}] 清除 {} 个 Redis key", matchPattern, keysToDelete.size());
+    private CacheDefinition remoteDefinition(String key) {
+        return MANAGED_CACHES.values().stream()
+                .filter(definition -> definition.cacheType() == CacheType.REMOTE && key.startsWith(definition.name()))
+                .findFirst().orElse(null);
+    }
+
+    private CacheDefinition requireLocalDefinition(String cacheName) {
+        CacheDefinition definition = requireDefinition(cacheName);
+        if (definition.cacheType() != CacheType.LOCAL) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "缓存存储位置不匹配");
         }
-        return keysToDelete.size();
+        return definition;
+    }
+
+    private Map.Entry<?, ?> findLocalEntry(CacheDefinition definition, String key) {
+        Cache<Object, Object> cache = cacheHelper.getCache(definition.name(), definition.cacheType());
+        com.github.benmanes.caffeine.cache.Cache<?, ?> caffeine = cache.unwrap(com.github.benmanes.caffeine.cache.Cache.class);
+        if (caffeine == null) {
+            throw new BizException(ResultEnum.SERVER_ERROR, "本地缓存实现不支持条目管理");
+        }
+        return caffeine.asMap().entrySet().stream().filter(entry -> String.valueOf(entry.getKey()).equals(key))
+                .findFirst().orElseThrow(() -> new BizException(ResultEnum.NOT_FOUND, "缓存条目不存在"));
+    }
+
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static Long toLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number number) return number.longValue();
+        if (value instanceof byte[] bytes) return Long.valueOf(new String(bytes, StandardCharsets.UTF_8));
+        return Long.valueOf(String.valueOf(value));
+    }
+
+    /**
+     * MEMORY USAGE 属于可选诊断能力；部分兼容 Redis 的服务端未实现该命令。
+     * 仅在明确返回 unknown command 时降级，连接或权限异常仍交由统一异常处理。
+     */
+    Long readMemoryUsage(RedisConnection connection, byte[] keyBytes) {
+        if (!memoryUsageSupported) {
+            return null;
+        }
+        try {
+            return toLong(connection.execute("MEMORY", "USAGE".getBytes(StandardCharsets.UTF_8), keyBytes));
+        } catch (RedisSystemException exception) {
+            if (!isUnsupportedMemoryCommand(exception)) {
+                throw exception;
+            }
+            memoryUsageSupported = false;
+            return null;
+        }
+    }
+
+    private static boolean isUnsupportedMemoryCommand(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase(Locale.ROOT).contains("unknown command")
+                    && message.toLowerCase(Locale.ROOT).contains("memory")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private CacheDefinition requireDefinition(String cacheName) {
+        CacheDefinition definition = MANAGED_CACHES.get(cacheName);
+        if (definition == null) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "不允许管理该缓存");
+        }
+        return definition;
+    }
+
+    private void clear(CacheDefinition definition) {
+        if (definition.cacheType() == CacheType.LOCAL) {
+            Cache<Object, Object> cache = cacheHelper.getCache(definition.name(), definition.cacheType());
+            com.github.benmanes.caffeine.cache.Cache<?, ?> caffeine =
+                    cache.unwrap(com.github.benmanes.caffeine.cache.Cache.class);
+            if (caffeine == null) {
+                throw new BizException(ResultEnum.SERVER_ERROR, "本地缓存实现不支持整体清理");
+            }
+            caffeine.invalidateAll();
+            return;
+        }
+        clearRemoteCache(definition.name());
+    }
+
+    /** JetCache Redis Key 使用缓存名作为前缀；这里只允许清理受控目录中的前缀。 */
+    private void clearRemoteCache(String cacheName) {
+        redisTemplate.execute((RedisCallback<Void>) connection -> {
+            try (Cursor<byte[]> cursor = connection.scan(
+                    ScanOptions.scanOptions().match(cacheName + "*").count(500).build())) {
+                List<byte[]> batch = new ArrayList<>(500);
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() == 500) {
+                        connection.del(batch.toArray(byte[][]::new));
+                        batch.clear();
+                    }
+                }
+                if (!batch.isEmpty()) {
+                    connection.del(batch.toArray(byte[][]::new));
+                }
+            }
+            return null;
+        });
+    }
+
+    private static Map<String, CacheDefinition> managedCaches() {
+        Map<String, CacheDefinition> caches = new LinkedHashMap<>();
+        caches.put(CacheConstant.USER_INFO, new CacheDefinition(CacheConstant.USER_INFO, "用户信息", CacheType.REMOTE, "用户基础信息", 3600, true));
+        caches.put(CacheConstant.SYS_PARAM, new CacheDefinition(CacheConstant.SYS_PARAM, "系统参数", CacheType.LOCAL, "系统参数快照", 1800, false));
+        caches.put(CacheConstant.UI_CONFIG, new CacheDefinition(CacheConstant.UI_CONFIG, "界面配置", CacheType.LOCAL, "系统界面配置", 1800, false));
+        caches.put(CacheConstant.FILE_CONFIG, new CacheDefinition(CacheConstant.FILE_CONFIG, "文件配置", CacheType.LOCAL, "文件存储配置", 1800, true));
+        caches.put(CacheConstant.BASIC_DATA_OPTIONS, new CacheDefinition(CacheConstant.BASIC_DATA_OPTIONS, "基础数据选项", CacheType.LOCAL, "基础数据下拉选项", 1800, false));
+        return Map.copyOf(caches);
+    }
+
+    private record CacheDefinition(String name, String displayName, CacheType cacheType, String description,
+                                   long expireSeconds, boolean sensitiveValue) {
     }
 }

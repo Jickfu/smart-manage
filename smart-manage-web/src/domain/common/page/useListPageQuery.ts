@@ -71,6 +71,8 @@ export function useListPageQuery<T>({
     query.refetch();
   }, [query]);
 
+  const resetPage = useCallback(() => setPageNum(1), []);
+
   return {
     /** TanStack Query 原始结果（含 isLoading / isError / error 等） */
     query,
@@ -82,5 +84,6 @@ export function useListPageQuery<T>({
     onSearch,
     onPageChange,
     onRefresh,
+    resetPage,
   };
 }
