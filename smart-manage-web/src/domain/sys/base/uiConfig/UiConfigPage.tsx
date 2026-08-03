@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { App, Collapse, Form, Input } from 'antd';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -51,7 +52,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       headerLogo: query.data.headerLogo,
     });
   }, [form, query.data]);
-  const saveMutation = useMutation({
+  const saveMutation = useCommandMutation({
     mutationFn: async (values: UiConfigFormValues) => {
       const payload: UiConfigDetail = {
         id: query.data?.id,
@@ -68,7 +69,6 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       setDirty(false);
       message.success('界面配置保存成功，刷新登录页后可查看最新效果');
     },
-    onError: (error) => message.error(error instanceof Error ? error.message : '保存失败'),
   });
   const handleSave = async () => {
     try {

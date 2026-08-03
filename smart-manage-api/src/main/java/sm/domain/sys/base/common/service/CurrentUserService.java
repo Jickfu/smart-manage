@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.UserConstant;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
-import sm.domain.sys.base.user.mapper.UserMapper;
+import sm.domain.sys.base.user.service.CachedUserProvider;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
@@ -14,19 +14,15 @@ import sm.system.response.ResultEnum;
 @RequiredArgsConstructor
 public class CurrentUserService {
 	private final CurrentUserContext currentUserContext;
-	private final UserMapper userMapper;
+	private final CachedUserProvider cachedUserProvider;
 
 	public UserEntity requireCurrentUser() {
-		UserEntity user = userMapper.selectById(currentUserContext.getUserId());
-		if (user == null) {
-			throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
-		}
-		return user;
+		return cachedUserProvider.requireUser(currentUserContext.getUserId());
 	}
 
 	public boolean isAdministrator() {
 		return currentUserContext.isLogin()
-				&& UserConstant.SUPER_ADMIN.equalsIgnoreCase(requireCurrentUser().getUsername());
+				&& UserConstant.SUPER_ADMIN.equals(requireCurrentUser().getUsername());
 	}
 
 	/** 高风险能力必须校验真实账号身份，不能只依赖可配置的权限码。 */

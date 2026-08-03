@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { App } from 'antd';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import EditPage from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import type { EditField } from '@/domain/common/page/EditPage';
@@ -188,9 +189,8 @@ const MenuEditPage = (props: PageComponentProps) => {
     await queryClient.invalidateQueries({ queryKey: menuQueryKeys.all });
     message.success(isAddNew ? '新增成功' : '保存成功');
   };
-  const saveMutation = useMutation({
+  const saveMutation = useCommandMutation({
     mutationFn: handleSave,
-    onError: (error) => message.error(error instanceof Error ? error.message : '保存失败'),
   });
 
   return (

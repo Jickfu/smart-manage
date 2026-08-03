@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { App } from 'antd';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import EditPage from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import type { EditField } from '@/domain/common/page/EditPage';
@@ -43,7 +44,7 @@ const RoleEditPage = (props: PageComponentProps) => {
     () => (detail ? { number: detail.number ?? '', name: detail.name ?? '' } : {}),
     [detail],
   );
-  const saveMutation = useMutation({
+  const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
       const name = (values.name as string).trim();
       const savedId = await roleApi.save({

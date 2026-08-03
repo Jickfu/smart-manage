@@ -1,8 +1,6 @@
 package sm.domain.sys.base.user.service;
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.alicp.jetcache.anno.CacheType;
-import com.alicp.jetcache.anno.Cached;
 import com.alicp.jetcache.anno.CacheInvalidate;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -37,7 +35,6 @@ import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -59,6 +56,7 @@ public class UserService {
 	private final CurrentUserContext currentUserContext;
 	private final OrgConfig orgConfig;
 	private final CurrentUserService currentUserService;
+	private final CachedUserProvider cachedUserProvider;
 
 	public PageData<UserListVO> listPage(UserListForm form) {
 		LambdaQueryWrapper<UserEntity> qw = new LambdaQueryWrapper<UserEntity>().orderByAsc(UserEntity::getId);
@@ -141,7 +139,7 @@ public class UserService {
 				user.getId(),
 				user.getNickname(),
 				Boolean.TRUE.equals(user.getPasswordReset()),
-				UserConstant.SUPER_ADMIN.equalsIgnoreCase(user.getUsername()),
+				UserConstant.SUPER_ADMIN.equals(user.getUsername()),
 				null);
 	}
 
@@ -196,14 +194,9 @@ public class UserService {
 		return permissionService.getUserPermissionsByPrefix(currentUserContext.getUserId(), currentUserContext.getOrgId(), prefix);
 	}
 
-	/** Redis 远程缓存读取（外部调用时走代理生效，内部调用请直接使用 mapper） */
-	@Cached(cacheType = CacheType.REMOTE, name = CacheConstant.USER_INFO, key = "#id", expire = 1, timeUnit = TimeUnit.HOURS)
+	/** 保留用户查询公开 API，缓存策略统一由 CachedUserProvider 维护。 */
 	public UserEntity requireUser(Long id) {
-		UserEntity entity = mapper.selectById(id);
-		if (entity == null) {
-			throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
-		}
-		return entity;
+		return cachedUserProvider.requireUser(id);
 	}
 
 	/**

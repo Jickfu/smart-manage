@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { App, Avatar, Button, Input, Modal, Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useMutation } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
@@ -42,7 +42,7 @@ const UserListPage = (props: PageComponentProps) => {
     setSelectedRowKeys([]);
     await query.refetch();
   });
-  const resetPasswordMutation = useMutation({
+  const resetPasswordMutation = useCommandMutation({
     mutationFn: (id: string) => userApi.resetPassword(id),
     onSuccess: (result) => setResetPassword(result.password),
   });

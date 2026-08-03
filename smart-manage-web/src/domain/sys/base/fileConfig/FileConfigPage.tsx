@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { App, Collapse, Form, Input, InputNumber, Select, Switch } from 'antd';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useConfigDirtyGuard } from '@/domain/sys/base/configCommon/useConfigDirtyGuard';
@@ -33,7 +34,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     });
   }, [form, query.data]);
   const storageType = Form.useWatch('storageType', form) ?? 'LOCAL';
-  const saveMutation = useMutation({
+  const saveMutation = useCommandMutation({
     mutationFn: async (values: FileConfigSaveForm) => {
       await fileConfigApi.save({
         ...values,
@@ -45,7 +46,6 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       setDirty(false);
       message.success('文件配置保存成功');
     },
-    onError: (error) => message.error(error instanceof Error ? error.message : '保存失败'),
   });
   const testMutation = useMutation({
     mutationFn: (values: FileConfigSaveForm) =>

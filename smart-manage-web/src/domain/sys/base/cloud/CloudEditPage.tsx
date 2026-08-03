@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { App } from 'antd';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ModalEditPage from '@/domain/common/page/ModalEditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { cloudApi } from './api';
@@ -68,9 +69,8 @@ const CloudEditPage = ({ open, cloudId, onClose, onSaved }: Props) => {
     message.success(isAddNew ? '新增成功' : '保存成功');
     onSaved();
   };
-  const saveMutation = useMutation({
+  const saveMutation = useCommandMutation({
     mutationFn: handleSave,
-    onError: (error) => message.error(error instanceof Error ? error.message : '保存失败'),
   });
 
   return (

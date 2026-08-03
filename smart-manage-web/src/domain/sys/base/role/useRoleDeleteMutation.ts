@@ -1,5 +1,6 @@
 import { App } from 'antd';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { permissionQueryKeys } from '@/domain/sys/base/permission/queryKeys';
 import { roleApi } from './api';
 import { roleQueryKeys } from './queryKeys';
@@ -8,7 +9,7 @@ import { roleQueryKeys } from './queryKeys';
 export function useRoleDeleteMutation(onSuccess: () => void | Promise<void>) {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
-  return useMutation({
+  return useCommandMutation({
     mutationFn: (ids: string[]) => Promise.all(ids.map((id) => roleApi.delete(id))),
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: roleQueryKeys.details() });
@@ -19,6 +20,5 @@ export function useRoleDeleteMutation(onSuccess: () => void | Promise<void>) {
       message.success('删除成功');
       await onSuccess();
     },
-    onError: (error) => message.error(error instanceof Error ? error.message : '删除失败'),
   });
 }

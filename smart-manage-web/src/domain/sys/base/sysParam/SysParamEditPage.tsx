@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { App } from 'antd';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
@@ -94,7 +95,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
         : {},
     [detail],
   );
-  const saveMutation = useMutation({
+  const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
       const application = values.application as { id?: string } | null;
       const savedId = await sysParamApi.save({
@@ -122,7 +123,6 @@ const SysParamEditPage = (props: PageComponentProps) => {
       await queryClient.invalidateQueries({ queryKey: sysParamQueryKeys.all });
       message.success(isAddNew ? '新增成功' : '保存成功');
     },
-    onError: (error) => message.error(error instanceof Error ? error.message : '保存失败'),
   });
   return (
     <EditPage

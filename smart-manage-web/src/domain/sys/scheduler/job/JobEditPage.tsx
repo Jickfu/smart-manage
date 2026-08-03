@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { App } from 'antd';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
@@ -174,7 +175,7 @@ const JobEditPage = (props: PageComponentProps) => {
     }),
     [classesQuery.data, defaultQuery.data, detail],
   );
-  const saveMutation = useMutation({
+  const saveMutation = useCommandMutation({
     mutationFn: (values: Record<string, unknown>) => {
       const jobClass = values.jobClass as JobClassOption;
       return jobApi.save({
@@ -207,7 +208,6 @@ const JobEditPage = (props: PageComponentProps) => {
       await queryClient.invalidateQueries({ queryKey: jobQueryKeys.all });
       message.success(isAddNew ? '新增成功' : '保存成功');
     },
-    onError: (error) => message.error(error instanceof Error ? error.message : '保存失败'),
   });
 
   return (

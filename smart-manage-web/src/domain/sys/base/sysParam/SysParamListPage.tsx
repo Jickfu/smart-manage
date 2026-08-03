@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { App, Button, Tag, Tree } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { OperationType } from '@/domain/common/page/types';
@@ -46,14 +47,13 @@ const SysParamListPage = (props: PageComponentProps) => {
       queryKey: sysParamQueryKeys.list(scopeParams),
       queryFn: (params) => sysParamApi.listPage({ ...params, ...scopeParams }),
     });
-  const deleteMutation = useMutation({
+  const deleteMutation = useCommandMutation({
     mutationFn: sysParamApi.delete,
     onSuccess: async () => {
       setSelectedRowKeys([]);
       await queryClient.invalidateQueries({ queryKey: sysParamQueryKeys.all });
       message.success('删除成功');
     },
-    onError: (error) => message.error(error instanceof Error ? error.message : '删除失败'),
   });
   const treeData = useMemo<DataNode[]>(
     () => [

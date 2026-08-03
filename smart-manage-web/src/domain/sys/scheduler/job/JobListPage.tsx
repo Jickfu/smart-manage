@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { App, Button, Select, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { OperationType } from '@/domain/common/page/types';
@@ -32,7 +33,7 @@ const JobListPage = (props: PageComponentProps) => {
     await queryClient.invalidateQueries({ queryKey: jobQueryKeys.all });
     message.success(successMessage);
   };
-  const commandMutation = useMutation({
+  const commandMutation = useCommandMutation({
     mutationFn: async (command: 'delete' | 'pause' | 'resume' | 'trigger' | 'sync') => {
       if (command === 'sync') return jobApi.syncAll();
       if (command === 'pause' || command === 'resume') {
@@ -56,7 +57,6 @@ const JobListPage = (props: PageComponentProps) => {
           sync: '同步成功',
         }[command],
       ),
-    onError: (error) => message.error(error instanceof Error ? error.message : '操作失败'),
   });
   const columns: ColumnsType<JobVO> = [
     {
