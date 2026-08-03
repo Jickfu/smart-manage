@@ -15,7 +15,7 @@ import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitio
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionDetailVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionEntryVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionListVO;
-import sm.domain.sys.base.common.helper.UserHelper;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.system.aop.log.BizLog;
 import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
@@ -29,6 +29,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class PurchaseRequisitionService {
+	private final CurrentUserContext currentUserContext;
     private final PurchaseRequisitionMapper mapper;
     private final PurchaseRequisitionEntryMapper entryMapper;
     private final PurchaseRequisitionTxService txService;
@@ -64,8 +65,8 @@ public class PurchaseRequisitionService {
 
     public PurchaseRequisitionCreateNewDataVO createNewData() {
         PurchaseRequisitionCreateNewDataVO createNewDataVO = new PurchaseRequisitionCreateNewDataVO();
-        createNewDataVO.setApplyOrgId(UserHelper.getCurrentOrgId());
-        createNewDataVO.setApplicantId(UserHelper.getCurrentUserId());
+        createNewDataVO.setApplyOrgId(currentUserContext.getOrgId());
+        createNewDataVO.setApplicantId(currentUserContext.getUserId());
         createNewDataVO.setBizDate(LocalDate.now());
         createNewDataVO.setBillStatus(BillStatusEnum.SAVED.getValue());
         return createNewDataVO;

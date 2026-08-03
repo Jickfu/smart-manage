@@ -1,8 +1,8 @@
 package sm.domain.sys.base.login.service;
 
 import cn.dev33.satoken.stp.StpUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -34,22 +34,14 @@ import java.util.concurrent.TimeUnit;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class LoginService {
 	private static final long PASSWORD_CHANGE_TICKET_MINUTES = 5;
 	private final CaptchaConfig captchaConfig;
 	private final UserService userService;
 	private final MenuService menuService;
 	private final LogWriteService logWriteService;
-
-	@Autowired
-	private RedisTemplate<String, Object> redisTemplate;
-
-	public LoginService(CaptchaConfig captchaConfig, UserService userService, MenuService menuService, LogWriteService logWriteService) {
-		this.captchaConfig = captchaConfig;
-		this.userService = userService;
-		this.menuService = menuService;
-		this.logWriteService = logWriteService;
-	}
+	private final RedisTemplate<String, Object> redisTemplate;
 
 	public LoginVO login(LoginForm form) {
 		// 验证码校验

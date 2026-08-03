@@ -15,7 +15,7 @@ import sm.domain.sys.base.app.model.form.AppOpenByNumberForm;
 import sm.domain.sys.base.app.model.form.AppSaveForm;
 import sm.domain.sys.base.app.model.vo.*;
 import sm.domain.sys.base.app.service.AppService;
-import sm.domain.sys.base.common.helper.UserHelper;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.system.form.IdForm;
 import sm.system.form.IdsForm;
 import sm.system.response.PageData;
@@ -30,6 +30,7 @@ import java.util.List;
 @Tag(name = "系统建模-应用管理", description = "应用信息管理接口")
 @RequiredArgsConstructor
 public class AppController {
+	private final CurrentUserContext currentUserContext;
 	private final AppService service;
 
 	@Operation(summary = "应用列表", description = "获取应用分页列表数据")
@@ -85,7 +86,7 @@ public class AppController {
 	@Operation(summary = "云与应用列表", description = "获取云及其下应用")
 	@GetMapping("/sys/base/app/apps")
 	public Result<List<CloudAppsVO>> apps() {
-		return Result.success(service.getUserCloudApps(UserHelper.getCurrentUserId()));
+		return Result.success(service.getUserCloudApps(currentUserContext.getUserId()));
 	}
 
 	@Operation(summary = "云与应用列表（全量）", description = "获取所有云及其下应用（不按用户权限过滤）")
@@ -98,6 +99,6 @@ public class AppController {
 	@Operation(summary = "按应用编号打开应用", description = "返回当前用户有权限访问的应用信息")
 	@PostMapping("/sys/base/app/openByNumber")
 	public Result<AppVO> openByNumber(@RequestBody @Valid AppOpenByNumberForm form) {
-		return Result.success(service.getUserAppByNumber(UserHelper.getCurrentUserId(), form.getNumber()));
+		return Result.success(service.getUserAppByNumber(currentUserContext.getUserId(), form.getNumber()));
 	}
 }

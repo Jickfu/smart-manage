@@ -21,7 +21,7 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
-import sm.domain.sys.base.common.helper.UserHelper;
+import sm.domain.sys.base.common.service.CurrentUserService;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class JobService {
+    private final CurrentUserService currentUserService;
 
     private static final String MANAGED_JOB_ID_KEY = "smartManageJobId";
 
@@ -85,7 +86,7 @@ public class JobService {
 
     @BizLog("保存定时任务")
     public Long save(JobSaveForm form) {
-        UserHelper.checkAdmin();
+        currentUserService.checkAdministrator();
         definitionValidator.validate(form);
         JobEntity previous = form.getId() == null ? null : mapper.selectById(form.getId());
         Long id = txService.save(form);
@@ -100,7 +101,7 @@ public class JobService {
 
     @BizLog("删除定时任务")
     public void deleteById(Long id, Integer version) {
-        UserHelper.checkAdmin();
+        currentUserService.checkAdministrator();
         JobEntity entity = requireEntity(id);
         txService.deleteById(id, version);
         removeQuartzJob(entity.getJobName(), entity.getJobGroup());
@@ -110,14 +111,14 @@ public class JobService {
 
     @BizLog("暂停定时任务")
     public void pause(List<JobCommandForm> jobs) {
-        UserHelper.checkAdmin();
+        currentUserService.checkAdministrator();
         txService.pause(jobs);
         jobs.forEach(job -> synchronize(requireEntity(job.getId())));
     }
 
     @BizLog("恢复定时任务")
     public void resume(List<JobCommandForm> jobs) {
-        UserHelper.checkAdmin();
+        currentUserService.checkAdministrator();
         txService.resume(jobs);
         jobs.forEach(job -> synchronize(requireEntity(job.getId())));
     }
@@ -128,7 +129,7 @@ public class JobService {
      */
     @BizLog("重新同步定时任务")
     public void syncAll() {
-        UserHelper.checkAdmin();
+        currentUserService.checkAdministrator();
         List<JobEntity> entities = mapper.selectList(new LambdaQueryWrapper<>());
         Map<Long, JobKey> expectedKeys = new java.util.HashMap<>();
         for (JobEntity entity : entities) {
@@ -154,7 +155,7 @@ public class JobService {
 
     @BizLog("立即执行定时任务")
     public void trigger(Long id) {
-        UserHelper.checkAdmin();
+        currentUserService.checkAdministrator();
         JobEntity entity = requireEntity(id);
         try {
             JobKey jobKey = JobKey.jobKey(entity.getJobName(), entity.getJobGroup());
@@ -170,7 +171,7 @@ public class JobService {
      * 获取所有可用的 Job 实现类（Spring 容器中所有 Job 类型的 Bean）
      */
     public List<Map<String, String>> getAvailableJobClasses() {
-        UserHelper.checkAdmin();
+        currentUserService.checkAdministrator();
         return definitionValidator.availableJobClasses();
     }
 
@@ -178,7 +179,7 @@ public class JobService {
      * 新建任务时的默认值
      */
     public Map<String, Object> createNewData() {
-        UserHelper.checkAdmin();
+        currentUserService.checkAdministrator();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("jobGroup", "DEFAULT");
         data.put("status", JobStatus.PAUSED.name());

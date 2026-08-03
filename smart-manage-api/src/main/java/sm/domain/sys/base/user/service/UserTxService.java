@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sm.domain.sys.base.common.helper.UserHelper;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.model.entity.UserEntity;
@@ -34,6 +34,7 @@ import sm.system.util.EnabledCommandUtil;
 class UserTxService {
     private final UserMapper mapper;
     private final UserRoleMapper userRoleMapper;
+    private final CurrentUserContext currentUserContext;
 
     /** 新增/编辑用户 */
     public Long save(UserSaveForm form) {
@@ -146,7 +147,7 @@ class UserTxService {
     }
 
     public void updateEnabled(List<Long> ids, boolean enabled) {
-        if (!enabled && ids.contains(UserHelper.getCurrentUserId())) {
+        if (!enabled && ids.contains(currentUserContext.getUserId())) {
             throw new BizException(ResultEnum.BILL_STATUS_ERROR, "不能禁用当前登录用户");
         }
         EnabledCommandUtil.update(mapper, UserEntity::getId, UserEntity::getEnabled, ids, enabled, "用户");
@@ -158,7 +159,7 @@ class UserTxService {
             throw new BizException(ResultEnum.PARAM_ERROR, "用户ID不能为空");
         }
         // 不能删除自己
-        if (id.equals(UserHelper.getCurrentUserId())) {
+        if (id.equals(currentUserContext.getUserId())) {
             throw new BizException(ResultEnum.BILL_STATUS_ERROR, "不能删除当前登录用户");
         }
         userRoleMapper.delete(new LambdaQueryWrapper<UserRoleEntity>()
@@ -173,7 +174,7 @@ class UserTxService {
         if (mapper.selectById(form.getUserId()) == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
         }
-        Long orgId = UserHelper.getCurrentOrgId();
+        Long orgId = currentUserContext.getOrgId();
         userRoleMapper.delete(new LambdaQueryWrapper<UserRoleEntity>()
                 .eq(UserRoleEntity::getUserId, form.getUserId())
                 .eq(UserRoleEntity::getOrgId, orgId));

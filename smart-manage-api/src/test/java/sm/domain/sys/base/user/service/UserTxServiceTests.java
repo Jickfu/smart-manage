@@ -7,6 +7,7 @@ import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
+import sm.domain.sys.base.common.helper.CurrentUserContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,7 +21,8 @@ class UserTxServiceTests {
     @Test
     void newUserUsesDefaultThemeAndMustChangeInitialPassword() {
         UserMapper userMapper = mock(UserMapper.class);
-        UserTxService service = new UserTxService(userMapper, mock(UserRoleMapper.class));
+        UserTxService service = new UserTxService(
+                userMapper, mock(UserRoleMapper.class), mock(CurrentUserContext.class));
         UserSaveForm form = new UserSaveForm();
         form.setUsername("new-user");
         form.setPassword("InitialPassword1!");
