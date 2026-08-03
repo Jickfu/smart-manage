@@ -45,4 +45,14 @@ class RedisServiceTests {
         assertThrows(BizException.class, () -> service.delete(keys));
         verify(currentUserContext).checkAdministrator();
     }
+
+    @Test
+    void scanResultMustAcceptJedisObjectArrayShape() {
+        Object[] rawResult = {"0".getBytes(), new Object[]{"user-info1".getBytes()}};
+
+        List<?> result = RedisService.asList(rawResult, "unexpected");
+
+        assertEquals(2, result.size());
+        assertEquals(1, RedisService.asList(result.get(1), "unexpected").size());
+    }
 }

@@ -1,34 +1,5 @@
-.sm-redis-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-}
-.sm-redis-overview {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-.sm-redis-page .ant-card-extra {
-  max-width: 560px;
-}
-.sm-redis-page .ant-table-wrapper {
-  margin-top: 12px;
-}
-.sm-redis-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 16px;
-}
 .sm-redis-value {
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-all;
-}
-@media (max-width: 900px) {
-  .sm-redis-overview {
-    grid-template-columns: 1fr;
-  }
 }

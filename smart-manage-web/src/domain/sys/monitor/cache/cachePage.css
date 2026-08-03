@@ -1,12 +1,29 @@
 .sm-cache-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   padding: 16px;
 }
-.sm-cache-page .ant-card-extra {
+.sm-cache-status-toolbar {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+.sm-cache-status-toolbar h2 {
+  margin: 0;
+}
+.sm-cache-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 .sm-cache-page .ant-alert {
   margin-bottom: 16px;
+}
+@media (max-width: 900px) {
+  .sm-cache-status-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .sm-cache-code {
   color: var(--ant-color-text-secondary);

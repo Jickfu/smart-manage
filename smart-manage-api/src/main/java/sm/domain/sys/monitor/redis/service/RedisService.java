@@ -24,6 +24,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
@@ -219,6 +220,11 @@ public class RedisService {
         return SENSITIVE_KEY_MARKERS.stream().anyMatch(normalized::contains);
     }
 
+    /** 供统一缓存管理列表复用相同的敏感 Key 判定规则。 */
+    public boolean isSensitive(String key) {
+        return isSensitiveKey(key);
+    }
+
     private static byte[] bytes(String value) {
         return value.getBytes(StandardCharsets.UTF_8);
     }
@@ -231,9 +237,13 @@ public class RedisService {
         return value instanceof byte[] bytes ? new String(bytes, StandardCharsets.UTF_8) : String.valueOf(value);
     }
 
-    private static List<?> asList(Object value, String message) {
+    static List<?> asList(Object value, String message) {
         if (value instanceof List<?> list) {
             return list;
+        }
+        // Jedis 5 的通用命令接口以 Object[] 返回 SCAN/HSCAN 等嵌套结果。
+        if (value instanceof Object[] array) {
+            return Arrays.asList(array);
         }
         throw new BizException(ResultEnum.EXTERNAL_SERVICE_ERROR, message);
     }

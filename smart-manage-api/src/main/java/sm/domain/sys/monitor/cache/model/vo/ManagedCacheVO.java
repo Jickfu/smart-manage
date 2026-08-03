@@ -17,4 +17,11 @@ public class ManagedCacheVO {
     private Long estimatedSize;
     private boolean statisticsAvailable;
     private boolean currentNodeOnly;
+    private long getCount;
+    private long hitCount;
+    private long missCount;
+    private long failCount;
+    private double hitRate;
+    private double qps;
+    private double averageGetTime;
 }

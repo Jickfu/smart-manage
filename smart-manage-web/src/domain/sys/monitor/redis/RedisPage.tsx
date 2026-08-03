@@ -1,270 +1,222 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { Key } from 'react';
-import {
-  App,
-  Alert,
-  Button,
-  Card,
-  Descriptions,
-  Drawer,
-  Input,
-  Space,
-  Statistic,
-  Table,
-  Tag,
-} from 'antd';
+import { App, Alert, Button, Drawer, Select, Space, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import SmChart from '@/domain/common/chart/SmChart';
+import ListPage from '@/domain/common/page/ListPage';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import type { PageComponentProps } from '@/domain/common/page/types';
-import { redisApi } from './api';
-import { redisAccess } from './permissions';
-import { redisQueryKeys } from './queryKeys';
-import type { RedisKey } from './types';
+import { cacheApi } from '../cache/api';
+import { cacheAccess } from '../cache/permissions';
+import { cacheQueryKeys } from '../cache/queryKeys';
+import type { CacheEntry, CacheEntryKey } from '../cache/types';
 import './redisPage.css';
+
+function entryKey(entry: CacheEntry): CacheEntryKey {
+  return { storage: entry.storage, cacheName: entry.cacheName, key: entry.key };
+}
 
 export default function RedisPage(_: PageComponentProps) {
   const { modal } = App.useApp();
-  const { can } = usePermissionAccess(redisAccess.prefix);
   const queryClient = useQueryClient();
-  const [patternInput, setPatternInput] = useState('*');
-  const [pattern, setPattern] = useState('*');
-  const [cursor, setCursor] = useState('0');
-  const [cursorHistory, setCursorHistory] = useState<string[]>([]);
-  const [selectedKeys, setSelectedKeys] = useState<Key[]>([]);
-  const [valueKey, setValueKey] = useState<string>();
-  const runtimeQuery = useQuery({ queryKey: redisQueryKeys.runtime(), queryFn: redisApi.runtime });
-  const keysQuery = useQuery({
-    queryKey: redisQueryKeys.keys(cursor, pattern),
-    queryFn: () => redisApi.keys({ cursor, pattern, count: 30 }),
+  const [storage, setStorage] = useState<string>();
+  const [cacheName, setCacheName] = useState<string>();
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+  const [valueEntry, setValueEntry] = useState<CacheEntry>();
+  const catalogQuery = useQuery({
+    queryKey: cacheQueryKeys.overview(),
+    queryFn: cacheApi.overview,
+  });
+  const list = useListPageQuery({
+    queryKey: cacheQueryKeys.entries(storage, cacheName),
+    queryFn: (params) => cacheApi.listPage({ ...params, storage, cacheName }),
   });
   const valueQuery = useQuery({
-    queryKey: redisQueryKeys.value(valueKey),
-    queryFn: () => redisApi.value(valueKey!),
-    enabled: Boolean(valueKey),
+    queryKey: cacheQueryKeys.value(valueEntry?.identity),
+    queryFn: () => cacheApi.value(entryKey(valueEntry!)),
+    enabled: Boolean(valueEntry),
   });
   const deleteMutation = useCommandMutation({
-    mutationFn: redisApi.delete,
-    successMessage: (keys) => `已删除 ${keys.length} 个 Key`,
+    mutationFn: cacheApi.delete,
+    successMessage: (entries) => `已删除 ${entries.length} 个缓存条目`,
     onSuccess: async () => {
-      setSelectedKeys([]);
-      await queryClient.invalidateQueries({ queryKey: redisQueryKeys.all });
+      setSelectedRowKeys([]);
+      await queryClient.invalidateQueries({ queryKey: cacheQueryKeys.all });
     },
   });
-  const memoryOption = useMemo(
-    () => ({
-      series: [
-        {
-          type: 'gauge',
-          min: 0,
-          max: Math.max(
-            runtimeQuery.data?.maxMemoryBytes || runtimeQuery.data?.usedMemoryBytes || 1,
-            1,
-          ),
-          progress: { show: true },
-          detail: { formatter: runtimeQuery.data?.usedMemoryDisplay ?? '-' },
-          data: [{ value: runtimeQuery.data?.usedMemoryBytes ?? 0, name: 'Redis 内存' }],
-        },
-      ],
-    }),
-    [runtimeQuery.data],
-  );
-  const confirmDelete = (keys: string[]) =>
+  const clearAllMutation = useCommandMutation({
+    mutationFn: cacheApi.clearAll,
+    successMessage: '全部已登记应用缓存已清理',
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: cacheQueryKeys.all }),
+  });
+  const selectedEntries = list.records.filter((entry) => selectedRowKeys.includes(entry.identity));
+  const confirmDelete = (entries: CacheEntry[]) =>
     modal.confirm({
-      title: `删除 ${keys.length} 个 Redis Key？`,
-      content: '删除后无法恢复，不会自动清理关联业务状态。',
+      title: `删除 ${entries.length} 个缓存条目？`,
+      content: '删除后无法恢复，请确认这些缓存可以安全重建。',
       okText: '确认删除',
       okButtonProps: { danger: true },
-      onOk: () => deleteMutation.mutateAsync(keys),
+      onOk: () => deleteMutation.mutateAsync(entries.map(entryKey)),
     });
-  const columns: ColumnsType<RedisKey> = [
+  const columns: ColumnsType<CacheEntry> = [
     {
       title: 'Key',
       dataIndex: 'key',
+      ellipsis: true,
       render: (key, record) => (
         <Button
           type="link"
-          disabled={!record.valueReadable || !can(redisAccess.permissions.value)}
-          onClick={() => setValueKey(key)}
+          size="small"
+          disabled={!record.valueReadable}
+          onClick={() => setValueEntry(record)}
         >
           {key}
         </Button>
       ),
     },
-    { title: '类型', dataIndex: 'type', width: 100, render: (value) => <Tag>{value}</Tag> },
+    { title: '缓存', dataIndex: 'cacheDisplayName', width: 140 },
+    {
+      title: '存储位置',
+      dataIndex: 'storage',
+      width: 110,
+      render: (value) => <Tag color={value === 'LOCAL' ? 'blue' : 'purple'}>{value}</Tag>,
+    },
+    { title: '类型', dataIndex: 'type', width: 100 },
     {
       title: 'TTL',
       dataIndex: 'ttl',
-      width: 120,
-      render: (value) => (value === -1 ? '永久' : value === -2 ? '不存在' : `${value} 秒`),
+      width: 110,
+      render: (value) =>
+        value == null ? '-' : value === -1 ? '永久' : value === -2 ? '不存在' : `${value} 秒`,
     },
     {
       title: '内存',
       dataIndex: 'memoryBytes',
-      width: 120,
+      width: 110,
       render: (value) => (value == null ? '-' : `${value} B`),
     },
     {
       title: 'Value',
       dataIndex: 'valueReadable',
-      width: 110,
-      render: (value) => (value ? '可预览' : <Tag color="warning">敏感</Tag>),
+      width: 100,
+      render: (value) => (value ? '可查看' : <Tag color="warning">敏感</Tag>),
     },
     {
       title: '操作',
-      key: 'actions',
+      key: 'action',
       width: 90,
       render: (_, record) => (
         <PermissionActions
-          prefix={redisAccess.prefix}
+          prefix={cacheAccess.prefix}
           actions={[
             {
               key: 'delete',
               label: '删除',
-              permission: redisAccess.permissions.delete,
+              permission: cacheAccess.permissions.delete,
               danger: true,
-              onClick: () => confirmDelete([record.key]),
+              onClick: () => confirmDelete([record]),
             },
           ]}
         />
       ),
     },
   ];
-  const search = () => {
-    setPattern(patternInput.trim() || '*');
-    setCursor('0');
-    setCursorHistory([]);
-    setSelectedKeys([]);
-  };
-  const next = () => {
-    const nextCursor = keysQuery.data?.nextCursor;
-    if (!nextCursor || nextCursor === '0') return;
-    setCursorHistory((history) => [...history, cursor]);
-    setCursor(nextCursor);
-    setSelectedKeys([]);
-  };
-  const previous = () => {
-    const previousCursor = cursorHistory.at(-1);
-    if (previousCursor === undefined) return;
-    setCursorHistory((history) => history.slice(0, -1));
-    setCursor(previousCursor);
-    setSelectedKeys([]);
-  };
   return (
-    <div className="sm-redis-page">
-      <Alert
-        type="warning"
-        showIcon
-        title="Redis 管理属于高风险能力；敏感认证 Key 只展示元数据。"
-      />
-      {(runtimeQuery.error || keysQuery.error) && (
-        <Alert
-          type="error"
-          showIcon
-          title={(runtimeQuery.error ?? keysQuery.error)?.message ?? 'Redis 查询失败'}
-        />
-      )}
-      <div className="sm-redis-overview">
-        <Card title="Redis 实时状态">
-          <Descriptions
-            column={2}
-            items={[
-              { key: 'version', label: '版本', children: runtimeQuery.data?.version ?? '-' },
-              { key: 'database', label: 'DB', children: runtimeQuery.data?.database ?? '-' },
-              {
-                key: 'clients',
-                label: '客户端',
-                children: runtimeQuery.data?.connectedClients ?? '-',
-              },
-              { key: 'keys', label: 'Key 数', children: runtimeQuery.data?.dbSize ?? '-' },
-              {
-                key: 'uptime',
-                label: '运行时间',
-                children: runtimeQuery.data
-                  ? `${Math.floor(runtimeQuery.data.uptimeSeconds / 86400)} 天`
-                  : '-',
-              },
-              {
-                key: 'hitRate',
-                label: '命中率',
-                children:
-                  runtimeQuery.data?.hitRate == null
-                    ? '-'
-                    : `${(runtimeQuery.data.hitRate * 100).toFixed(1)}%`,
-              },
-            ]}
-          />
-          <Statistic title="已用内存" value={runtimeQuery.data?.usedMemoryDisplay ?? '-'} />
-        </Card>
-        <Card title="内存快照">
-          <SmChart option={memoryOption} ariaLabel="Redis 当前内存使用量" />
-        </Card>
-      </div>
-      <Card
-        title="Redis Key"
-        extra={
-          <Space>
-            <Input.Search
-              value={patternInput}
-              placeholder="SCAN Pattern，例如 sys:*"
-              enterButton="查询"
-              onChange={(event) => setPatternInput(event.target.value)}
-              onSearch={search}
+    <>
+      <ListPage<CacheEntry>
+        title="缓存管理"
+        access={cacheAccess}
+        loading={list.query.isLoading}
+        error={list.query.error as Error | null}
+        onRetry={() => list.query.refetch()}
+        total={list.total}
+        pageNum={list.pageNum}
+        pageSize={list.pageSize}
+        quickSearchPlaceholder="搜索 Key 或缓存名称"
+        filterSummary={[storage, cacheName].filter(Boolean).join(' / ') || undefined}
+        filterContent={
+          <Space wrap>
+            <Select
+              allowClear
+              placeholder="存储位置"
+              value={storage}
+              options={[
+                { label: '本地缓存', value: 'LOCAL' },
+                { label: 'Redis', value: 'REDIS' },
+              ]}
+              onChange={(value) => {
+                setStorage(value);
+                setSelectedRowKeys([]);
+              }}
             />
-            <Button onClick={() => keysQuery.refetch()}>刷新</Button>
+            <Select
+              allowClear
+              placeholder="应用缓存"
+              value={cacheName}
+              options={catalogQuery.data?.caches.map((cache) => ({
+                label: cache.displayName,
+                value: cache.name,
+              }))}
+              onChange={(value) => {
+                setCacheName(value);
+                setSelectedRowKeys([]);
+              }}
+            />
           </Space>
         }
-      >
-        <PermissionActions
-          prefix={redisAccess.prefix}
-          actions={[
-            {
-              key: 'batchDelete',
-              label: `删除所选（${selectedKeys.length}）`,
-              permission: redisAccess.permissions.delete,
-              danger: true,
-              disabled: selectedKeys.length === 0,
-              loading: deleteMutation.isPending,
-              onClick: () => confirmDelete(selectedKeys.map(String)),
-            },
-          ]}
-        />
-        <Table
-          rowKey="key"
-          loading={keysQuery.isLoading}
-          columns={columns}
-          dataSource={keysQuery.data?.records ?? []}
-          pagination={false}
-          rowSelection={{ selectedRowKeys: selectedKeys, onChange: setSelectedKeys }}
-          scroll={{ x: 900 }}
-        />
-        <div className="sm-redis-pagination">
-          <Button disabled={cursorHistory.length === 0} onClick={previous}>
-            上一页
-          </Button>
-          <span>游标：{cursor}</span>
-          <Button disabled={keysQuery.data?.finished} onClick={next}>
-            下一页
-          </Button>
-        </div>
-      </Card>
+        toolbarActions={[
+          {
+            key: 'delete',
+            label: `删除所选（${selectedRowKeys.length}）`,
+            permission: cacheAccess.permissions.delete,
+            danger: true,
+            disabled: selectedRowKeys.length === 0,
+            loading: deleteMutation.isPending,
+            onClick: () => confirmDelete(selectedEntries),
+          },
+          {
+            key: 'clearAll',
+            label: '清空全部应用缓存',
+            permission: cacheAccess.permissions.clearAll,
+            danger: true,
+            loading: clearAllMutation.isPending,
+            onClick: () =>
+              modal.confirm({
+                title: '清空全部已登记应用缓存？',
+                content: '包含当前节点本地缓存和共享 Redis 应用缓存；不会执行 FLUSHDB。',
+                okText: '确认清空',
+                okButtonProps: { danger: true },
+                onOk: () => clearAllMutation.mutateAsync(),
+              }),
+          },
+        ]}
+        onRefresh={list.onRefresh}
+        onQuickSearch={list.onSearch}
+        onPageChange={list.onPageChange}
+        rowKey="identity"
+        columns={columns}
+        dataSource={list.records}
+        selectMode="checkbox"
+        selectedRowKeys={selectedRowKeys}
+        onSelectChange={setSelectedRowKeys}
+      />
       <Drawer
-        title={valueKey ? `Value：${valueKey}` : 'Value'}
+        title={valueEntry ? `缓存值：${valueEntry.key}` : '缓存值'}
         size="large"
-        open={Boolean(valueKey)}
-        onClose={() => setValueKey(undefined)}
+        open={Boolean(valueEntry)}
+        destroyOnHidden
+        onClose={() => setValueEntry(undefined)}
       >
         {valueQuery.error && <Alert type="error" showIcon title={valueQuery.error.message} />}
         {valueQuery.data?.truncated && (
-          <Alert type="warning" showIcon title="Value 超过安全预览上限，仅展示部分内容。" />
+          <Alert type="warning" showIcon title="内容过大，仅展示安全上限内的数据。" />
         )}
         <pre className="sm-redis-value">
           {valueQuery.isLoading ? '加载中…' : JSON.stringify(valueQuery.data?.items ?? [], null, 2)}
         </pre>
       </Drawer>
-    </div>
+    </>
   );
 }
