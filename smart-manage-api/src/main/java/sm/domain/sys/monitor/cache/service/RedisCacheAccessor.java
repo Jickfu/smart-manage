@@ -1,21 +1,17 @@
-package sm.domain.sys.monitor.redis.service;
+package sm.domain.sys.monitor.cache.service;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.connection.DataType;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.data.redis.RedisSystemException;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
-import sm.domain.sys.monitor.redis.model.form.RedisKeysForm;
-import sm.domain.sys.monitor.redis.model.vo.RedisKeyVO;
-import sm.domain.sys.monitor.redis.model.vo.RedisKeysVO;
-import sm.domain.sys.monitor.redis.model.vo.RedisRuntimeVO;
-import sm.domain.sys.monitor.redis.model.vo.RedisValueItemVO;
-import sm.domain.sys.monitor.redis.model.vo.RedisValueVO;
-import sm.system.aop.log.BizLog;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
+import sm.domain.sys.monitor.cache.model.vo.CacheRuntimeVO;
+import sm.domain.sys.monitor.cache.model.vo.CacheValueItemVO;
+import sm.domain.sys.monitor.cache.model.vo.CacheValueVO;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -32,10 +28,9 @@ import java.util.Locale;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
-/** Redis 实例的高风险只读诊断与受限删除服务。 */
-@Service
-@RequiredArgsConstructor
-public class RedisService {
+/** 缓存模块内部的 Redis 原始访问器，不作为公开业务入口。 */
+@Component
+class RedisCacheAccessor {
     private static final int VALUE_ITEM_LIMIT = 100;
     private static final int STRING_BYTE_LIMIT = 64 * 1024;
     private static final Pattern SENSITIVE_FIELD = Pattern.compile(
@@ -45,21 +40,23 @@ public class RedisService {
             "user-info", "credential", "secret", "private-key");
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private final CurrentUserContext currentUserContext;
     private volatile boolean memoryUsageSupported = true;
 
     @Value("${spring.data.redis.database:0}")
     private int database;
 
-    public RedisRuntimeVO runtime() {
-        currentUserContext.checkAdministrator();
-        return redisTemplate.execute((RedisCallback<RedisRuntimeVO>) connection -> {
+    RedisCacheAccessor(RedisTemplate<String, Object> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
+
+    CacheRuntimeVO runtime() {
+        return redisTemplate.execute((RedisCallback<CacheRuntimeVO>) connection -> {
             Properties info = connection.info();
             long hits = longProperty(info, "keyspace_hits");
             long misses = longProperty(info, "keyspace_misses");
             long requests = hits + misses;
             Long dbSize = connection.dbSize();
-            return RedisRuntimeVO.builder()
+            return CacheRuntimeVO.builder()
                     .available(true)
                     .version(property(info, "redis_version", "-"))
                     .uptimeSeconds(longProperty(info, "uptime_in_seconds"))
@@ -74,47 +71,35 @@ public class RedisService {
         });
     }
 
-    public RedisKeysVO keys(RedisKeysForm form) {
-        currentUserContext.checkAdministrator();
-        String matchPattern = form.getPattern() == null || form.getPattern().isBlank() ? "*" : form.getPattern();
-        return redisTemplate.execute((RedisCallback<RedisKeysVO>) connection -> {
-            Object raw = connection.execute("SCAN", bytes(form.getCursor()), bytes("MATCH"), bytes(matchPattern),
-                    bytes("COUNT"), bytes(String.valueOf(form.getCount())));
-            List<?> scanResult = asList(raw, "Redis SCAN 返回格式异常");
-            if (scanResult.size() != 2) {
-                throw new BizException(ResultEnum.EXTERNAL_SERVICE_ERROR, "Redis SCAN 返回格式异常");
-            }
-            String nextCursor = text(scanResult.get(0));
-            List<RedisKeyVO> records = new ArrayList<>();
-            for (Object rawKey : asList(scanResult.get(1), "Redis SCAN Key 列表格式异常")) {
-                byte[] keyBytes = rawBytes(rawKey);
-                String key = text(rawKey);
+    List<RedisEntry> scanEntries() {
+        return redisTemplate.execute((RedisCallback<List<RedisEntry>>) connection -> {
+            List<RedisEntry> records = new ArrayList<>();
+            try (Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().match("*").count(500).build())) {
+                while (cursor.hasNext()) {
+                    byte[] keyBytes = cursor.next();
+                    String key = new String(keyBytes, StandardCharsets.UTF_8);
                 DataType dataType = connection.type(keyBytes);
                 Long ttl = connection.ttl(keyBytes);
                 Long memoryBytes = readMemoryUsage(connection, keyBytes);
-                records.add(RedisKeyVO.builder().key(key)
-                        .type(dataType == null ? "unknown" : dataType.code())
-                        .ttl(ttl == null ? -2 : ttl).memoryBytes(memoryBytes)
-                        .valueReadable(!isSensitiveKey(key)).build());
+                    records.add(new RedisEntry(key, dataType == null ? "unknown" : dataType.code(),
+                            ttl == null ? -2 : ttl, memoryBytes, !isSensitiveKey(key)));
+                }
             }
-            return RedisKeysVO.builder().nextCursor(nextCursor).finished("0".equals(nextCursor)).records(records).build();
+            return records;
         });
     }
 
-    public RedisValueVO value(String key) {
-        currentUserContext.checkAdministrator();
+    CacheValueVO value(String key) {
         if (key == null || key.isBlank() || key.length() > 1024) {
             throw new BizException(ResultEnum.PARAM_ERROR, "Redis Key 格式不正确");
         }
         if (isSensitiveKey(key)) {
             throw new BizException(ResultEnum.PERMISSION_ERROR, "安全敏感 Key 不允许查看 Value");
         }
-        return redisTemplate.execute((RedisCallback<RedisValueVO>) connection -> readValue(connection, key));
+        return redisTemplate.execute((RedisCallback<CacheValueVO>) connection -> readValue(connection, key));
     }
 
-    @BizLog(value = "删除Redis Key", recordRequest = false, recordResponse = false)
-    public long delete(List<String> keys) {
-        currentUserContext.checkAdministrator();
+    long delete(List<String> keys) {
         if (keys == null || keys.isEmpty() || keys.size() > 100) {
             throw new BizException(ResultEnum.PARAM_ERROR, "单次只能删除 1 至 100 个 Redis Key");
         }
@@ -122,14 +107,34 @@ public class RedisService {
         return deleted == null ? 0 : deleted;
     }
 
-    private RedisValueVO readValue(RedisConnection connection, String key) {
+    void clearByPrefix(String cacheName) {
+        redisTemplate.execute((RedisCallback<Void>) connection -> {
+            try (Cursor<byte[]> cursor = connection.scan(
+                    ScanOptions.scanOptions().match(cacheName + "*").count(500).build())) {
+                List<byte[]> batch = new ArrayList<>(500);
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() == 500) {
+                        connection.del(batch.toArray(byte[][]::new));
+                        batch.clear();
+                    }
+                }
+                if (!batch.isEmpty()) {
+                    connection.del(batch.toArray(byte[][]::new));
+                }
+            }
+            return null;
+        });
+    }
+
+    private CacheValueVO readValue(RedisConnection connection, String key) {
         byte[] keyBytes = bytes(key);
         DataType dataType = connection.type(keyBytes);
         if (dataType == null || dataType == DataType.NONE) {
             throw new BizException(ResultEnum.NOT_FOUND, "Redis Key 不存在");
         }
         String type = dataType.code();
-        List<RedisValueItemVO> items = new ArrayList<>();
+        List<CacheValueItemVO> items = new ArrayList<>();
         boolean truncated;
         switch (type) {
             case "string" -> {
@@ -177,7 +182,7 @@ public class RedisService {
                 for (Object rawEntry : entries) {
                     List<?> entry = asList(rawEntry, "Redis STREAM 条目格式异常");
                     String entryId = text(entry.get(0));
-                    items.add(RedisValueItemVO.builder().name(entryId)
+                    items.add(CacheValueItemVO.builder().name(entryId)
                             .value(streamFields(asList(entry.get(1), "Redis STREAM 字段格式异常")))
                             .base64(false).build());
                 }
@@ -186,12 +191,12 @@ public class RedisService {
             }
             default -> throw new BizException(ResultEnum.PARAM_ERROR, "暂不支持查看 " + type + " 类型的 Value");
         }
-        return RedisValueVO.builder().key(key).type(type).truncated(truncated).items(items).build();
+        return CacheValueVO.builder().key(key).type(type).truncated(truncated).items(items).build();
     }
 
-    private RedisValueItemVO valueItem(String name, byte[] value, Double score) {
+    private CacheValueItemVO valueItem(String name, byte[] value, Double score) {
         DecodedValue decoded = decode(value);
-        return RedisValueItemVO.builder().name(name).value(decoded.value()).score(score).base64(decoded.base64()).build();
+        return CacheValueItemVO.builder().name(name).value(decoded.value()).score(score).base64(decoded.base64()).build();
     }
 
     private DecodedValue decode(byte[] value) {
@@ -222,12 +227,7 @@ public class RedisService {
         return SENSITIVE_KEY_MARKERS.stream().anyMatch(normalized::contains);
     }
 
-    /** 供统一缓存管理列表复用相同的敏感 Key 判定规则。 */
-    public boolean isSensitive(String key) {
-        return isSensitiveKey(key);
-    }
-
-    private Long readMemoryUsage(RedisConnection connection, byte[] keyBytes) {
+    Long readMemoryUsage(RedisConnection connection, byte[] keyBytes) {
         if (!memoryUsageSupported) {
             return null;
         }
@@ -286,5 +286,8 @@ public class RedisService {
     }
 
     private record DecodedValue(String value, boolean base64) {
+    }
+
+    record RedisEntry(String key, String type, long ttl, Long memoryBytes, boolean valueReadable) {
     }
 }

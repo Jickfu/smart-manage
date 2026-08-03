@@ -1,4 +1,4 @@
-package sm.domain.sys.monitor.redis.model.vo;
+package sm.domain.sys.monitor.cache.model.vo;
 
 import lombok.Builder;
 import lombok.Data;
@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
-public class RedisRuntimeVO {
+public class CacheRuntimeVO {
     private boolean available;
     private String version;
     private long uptimeSeconds;

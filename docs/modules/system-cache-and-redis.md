@@ -8,6 +8,8 @@
 - “清空全部应用缓存”只清理服务端明确登记的 JetCache 缓存，不等同于 `FLUSHDB`；
 - 不提供 `KEYS *`、`FLUSHDB`、Value 修改或历史指标持久化；
 - LOCAL 缓存的统计和清理只作用于当前应用节点，当前项目仍按单节点部署声明。
+- 后端只公开 `CacheService` 作为缓存监控业务入口；Redis 原始命令封装在缓存模块内部的 `RedisCacheAccessor`，不得被 Controller 或其他领域直接调用；
+- 对外接口统一使用 `/sys/monitor/cache/*`，不保留 `/sys/monitor/redis/*` 兼容入口。
 
 ## 安全边界
 
@@ -27,9 +29,6 @@
 | 全部应用缓存清理 | `sys:monitor:cache:clearAll` |
 | 缓存 Value 预览 | `sys:monitor:cache:value` |
 | 缓存条目删除 | `sys:monitor:cache:delete` |
-| Redis 查询 | `sys:monitor:redis:listPage` |
-| Redis Value 预览 | `sys:monitor:redis:value` |
-| Redis Key 删除 | `sys:monitor:redis:delete` |
 
 ## 图表边界
 

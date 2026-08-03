@@ -12,4 +12,9 @@ export default definePageRegistrations([
     pageType: 'EDIT',
     component: lazy(() => import('./CacheValuePage')),
   },
+  {
+    componentKey: 'sys/monitor/cache-management',
+    pageType: 'CUSTOM',
+    component: lazy(() => import('./CacheManagementPage')),
+  },
 ]);

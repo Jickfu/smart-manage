@@ -1,8 +1,7 @@
-package sm.domain.sys.monitor.redis.service;
+package sm.domain.sys.monitor.cache.service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.RedisTemplate;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -12,56 +11,50 @@ import java.util.stream.IntStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class RedisServiceTests {
+class RedisCacheAccessorTests {
 
     private final RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
-    private final CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
-    private final RedisService service = new RedisService(redisTemplate, currentUserContext);
+    private final RedisCacheAccessor accessor = new RedisCacheAccessor(redisTemplate);
 
     @Test
     void sensitiveAuthenticationValueMustNeverBeReturned() {
         BizException exception = assertThrows(BizException.class,
-                () -> service.value("satoken:login:token-session:secret"));
+                () -> accessor.value("satoken:login:token-session:secret"));
 
         assertEquals(ResultEnum.PERMISSION_ERROR.getCode(), exception.getCode());
-        verify(currentUserContext).checkAdministrator();
     }
 
     @Test
     void applicationTokenNamespaceMustNeverBeReturned() {
         BizException exception = assertThrows(BizException.class,
-                () -> service.value("smtoken:login:last-active:secret"));
+                () -> accessor.value("smtoken:login:last-active:secret"));
 
         assertEquals(ResultEnum.PERMISSION_ERROR.getCode(), exception.getCode());
-        verify(currentUserContext).checkAdministrator();
     }
 
     @Test
-    void deleteMustCheckAdministratorAndKeepBatchBoundedByValidatedForm() {
+    void deleteMustKeepBatchBounded() {
         when(redisTemplate.delete(List.of("example"))).thenReturn(1L);
 
-        assertEquals(1L, service.delete(List.of("example")));
-        verify(currentUserContext).checkAdministrator();
+        assertEquals(1L, accessor.delete(List.of("example")));
     }
 
     @Test
     void deleteMustRejectOversizedBatchAtServiceBoundary() {
         List<String> keys = IntStream.rangeClosed(1, 101).mapToObj(index -> "key-" + index).toList();
 
-        assertThrows(BizException.class, () -> service.delete(keys));
-        verify(currentUserContext).checkAdministrator();
+        assertThrows(BizException.class, () -> accessor.delete(keys));
     }
 
     @Test
-    void scanResultMustAcceptJedisObjectArrayShape() {
+    void commandResultMustAcceptJedisObjectArrayShape() {
         Object[] rawResult = {"0".getBytes(), new Object[]{"user-info1".getBytes()}};
 
-        List<?> result = RedisService.asList(rawResult, "unexpected");
+        List<?> result = RedisCacheAccessor.asList(rawResult, "unexpected");
 
         assertEquals(2, result.size());
-        assertEquals(1, RedisService.asList(result.get(1), "unexpected").size());
+        assertEquals(1, RedisCacheAccessor.asList(result.get(1), "unexpected").size());
     }
 }
