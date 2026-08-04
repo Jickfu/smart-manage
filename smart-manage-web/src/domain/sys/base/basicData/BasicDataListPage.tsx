@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { App, Button, Input, Tag, Tree, Typography } from 'antd';
+import { App, Button, Input, Tag, Tree } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
@@ -20,6 +20,7 @@ import type { BasicDataListVO, BasicDataTreeNode } from './types';
 import './BasicDataListPage.css';
 
 const EDIT_KEY = 'sys/base/basic-data/edit';
+const ROOT_KEY = 'basic-data-root';
 
 const toTreeNode = (node: BasicDataTreeNode): DataNode => ({
   key: node.key,
@@ -39,7 +40,7 @@ const filterTree = (nodes: BasicDataTreeNode[], keyword: string): BasicDataTreeN
 };
 
 const BasicDataListPage = (props: PageComponentProps) => {
-  const { modal } = App.useApp();
+  const { message, modal } = App.useApp();
   const queryClient = useQueryClient();
   const [selectedNode, setSelectedNode] = useState<BasicDataTreeNode>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -66,7 +67,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
           cloud.children.some((category) => category.id === selectedCategoryId),
         )?.id;
 
-  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
+  const { records, total, pageNum, pageSize, query, onSearch, onPageChange, onRefresh } =
     useListPageQuery({
       queryKey: basicDataQueryKeys.list({ categoryId: listCategoryId }),
       queryFn: (params) => basicDataApi.listPage({ ...params, categoryId: listCategoryId }),
@@ -138,65 +139,72 @@ const BasicDataListPage = (props: PageComponentProps) => {
   const treePanel = (
     <div className="sm-basic-data-tree">
       <div className="sm-basic-data-tree-toolbar">
-        <Typography.Text strong>云与资料分类</Typography.Text>
-        <PermissionActions
-          prefix={basicDataAccess.prefix}
-          actions={[
-            {
-              key: 'add-category',
-              label: <PlusOutlined />,
-              permission: basicDataAccess.permissions.save,
-              disabled: !selectedCloudId,
-              onClick: () => {
-                setEditingCategoryId(null);
-                setCategoryModalOpen(true);
-              },
-            },
-            {
-              key: 'edit-category',
-              label: <EditOutlined />,
-              permission: basicDataAccess.permissions.save,
-              disabled: selectedNode?.type !== 'category',
-              onClick: () => {
-                setEditingCategoryId(selectedCategoryId ?? null);
-                setCategoryModalOpen(true);
-              },
-            },
-            {
-              key: 'delete-category',
-              label: <DeleteOutlined />,
-              permission: basicDataAccess.permissions.delete,
-              danger: true,
-              disabled: selectedNode?.type !== 'category',
-              onClick: async () => {
-                if (!selectedCategoryId) return;
-                const category = await basicDataApi.categoryDetail(selectedCategoryId);
-                modal.confirm({
-                  title: '确认删除基础资料分类？',
-                  content: `${category.number} - ${category.name}`,
-                  okButtonProps: { danger: true },
-                  onOk: () =>
-                    deleteCategoryMutation.mutateAsync({
-                      id: category.id,
-                      version: category.version,
-                    }),
-                });
-              },
-            },
-          ]}
+        <Input.Search
+          placeholder="搜索名称"
+          allowClear
+          className="sm-basic-data-tree-search"
+          onChange={(event) => setTreeKeyword(event.target.value)}
         />
+        <div className="sm-basic-data-tree-actions">
+          <PermissionActions
+            prefix={basicDataAccess.prefix}
+            actions={[
+              {
+                key: 'add-category',
+                label: <PlusOutlined />,
+                permission: basicDataAccess.permissions.save,
+                disabled: !selectedCloudId,
+                onClick: () => {
+                  setEditingCategoryId(null);
+                  setCategoryModalOpen(true);
+                },
+              },
+              {
+                key: 'edit-category',
+                label: <EditOutlined />,
+                permission: basicDataAccess.permissions.save,
+                disabled: selectedNode?.type !== 'category',
+                onClick: () => {
+                  setEditingCategoryId(selectedCategoryId ?? null);
+                  setCategoryModalOpen(true);
+                },
+              },
+              {
+                key: 'delete-category',
+                label: <DeleteOutlined />,
+                permission: basicDataAccess.permissions.delete,
+                danger: true,
+                disabled: selectedNode?.type !== 'category',
+                onClick: async () => {
+                  if (!selectedCategoryId) return;
+                  const category = await basicDataApi.categoryDetail(selectedCategoryId);
+                  modal.confirm({
+                    title: '确认删除基础资料分类？',
+                    content: `${category.number} - ${category.name}`,
+                    okButtonProps: { danger: true },
+                    onOk: () =>
+                      deleteCategoryMutation.mutateAsync({
+                        id: category.id,
+                        version: category.version,
+                      }),
+                  });
+                },
+              },
+            ]}
+          />
+        </div>
       </div>
-      <Input.Search
-        placeholder="搜索云/分类"
-        allowClear
-        className="sm-basic-data-tree-search"
-        onChange={(event) => setTreeKeyword(event.target.value)}
-      />
       <Tree
         blockNode
-        defaultExpandAll
+        defaultExpandedKeys={[ROOT_KEY]}
         selectedKeys={selectedNode ? [selectedNode.key] : []}
-        treeData={filterTree(treeQuery.data ?? [], treeKeyword).map(toTreeNode)}
+        treeData={[
+          {
+            key: ROOT_KEY,
+            title: '基础资料',
+            children: filterTree(treeQuery.data ?? [], treeKeyword).map(toTreeNode),
+          },
+        ]}
         onSelect={(keys) => {
           setSelectedRowKeys([]);
           setSelectedNode(flatNodes.find((node) => node.key === keys[0]));
@@ -219,21 +227,15 @@ const BasicDataListPage = (props: PageComponentProps) => {
         pageNum={pageNum}
         pageSize={pageSize}
         quickSearchPlaceholder="搜索编码/名称/长名称"
-        filterSummary={
-          selectedNode
-            ? `当前：${selectedNode.name}${keyword ? `；关键字：${keyword}` : ''}`
-            : keyword
-              ? `关键字：${keyword}`
-              : undefined
-        }
-        onAddNew={
-          selectedCategoryId
-            ? () =>
-                openAddNewTab(props.appNumber, EDIT_KEY, '新增基础资料', {
-                  categoryId: selectedCategoryId,
-                })
-            : undefined
-        }
+        onAddNew={() => {
+          if (!selectedCategoryId) {
+            void message.warning('请先选择基础资料分类');
+            return;
+          }
+          openAddNewTab(props.appNumber, EDIT_KEY, '新增基础资料', {
+            categoryId: selectedCategoryId,
+          });
+        }}
         onEnable={() => enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: true })}
         onDisable={() =>
           enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: false })

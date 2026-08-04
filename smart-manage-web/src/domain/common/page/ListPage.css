@@ -129,7 +129,8 @@
   min-width: 160px;
 }
 
-.sm-list-tree-panel-inner .ant-tree {
+/* 左树字号由通用左右列表统一控制，业务树不再各自覆盖。 */
+.sm-list-tree-panel .ant-tree {
   font-size: 12px;
 }
 

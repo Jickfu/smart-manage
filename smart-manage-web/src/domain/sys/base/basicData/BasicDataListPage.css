@@ -8,14 +8,28 @@
 .sm-basic-data-tree-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px;
+  gap: 4px;
+  padding: 8px 4px;
   border-bottom: 1px solid var(--sm-border-color);
 }
 
 .sm-basic-data-tree-search {
-  padding: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sm-basic-data-tree-actions {
+  flex-shrink: 0;
+}
+
+.sm-basic-data-tree-actions .ant-space {
+  gap: 2px !important;
+}
+
+.sm-basic-data-tree-actions .ant-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
 }
 
 .sm-basic-data-tree .ant-tree {

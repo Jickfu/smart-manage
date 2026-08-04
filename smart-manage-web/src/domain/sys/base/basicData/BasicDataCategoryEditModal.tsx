@@ -33,17 +33,6 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
   const fields = useMemo<EditField[]>(
     () => [
       {
-        label: '所属云',
-        dataIndex: 'cloudId',
-        type: 'select',
-        disabled: true,
-        options: (cloudsQuery.data?.records ?? []).map((cloud) => ({
-          label: cloud.name,
-          value: cloud.id,
-        })),
-        rules: [{ required: true, message: '所属云不能为空' }],
-      },
-      {
         label: '编码',
         dataIndex: 'number',
         type: 'text',
@@ -60,6 +49,17 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
           { required: true, whitespace: true, message: '名称不能为空' },
           { max: 128, message: '名称不能超过128个字符' },
         ],
+      },
+      {
+        label: '所属云',
+        dataIndex: 'cloudId',
+        type: 'select',
+        disabled: true,
+        options: (cloudsQuery.data?.records ?? []).map((cloud) => ({
+          label: cloud.name,
+          value: cloud.id,
+        })),
+        rules: [{ required: true, message: '所属云不能为空' }],
       },
       { label: '可用状态', dataIndex: 'enabled', type: 'switch' },
       { label: '备注', dataIndex: 'remark', type: 'textarea', fullWidth: true },
