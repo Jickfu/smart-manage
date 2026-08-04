@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * SQL 执行结果
@@ -17,13 +16,10 @@ public class SqlResultVO {
     private String type;
 
     @Schema(description = "列名列表（仅 QUERY 类型）")
-    private List<String> columns;
-
-    @Schema(description = "列注释列表（仅 QUERY 类型，与 columns 一一对应）")
-    private List<String> comments;
+    private List<SqlColumnVO> columns;
 
     @Schema(description = "数据行（仅 QUERY 类型）")
-    private List<Map<String, Object>> rows;
+    private List<List<Object>> rows;
 
     @Schema(description = "影响/返回行数")
     private Integer rowCount;
@@ -33,4 +29,13 @@ public class SqlResultVO {
 
     @Schema(description = "提示/错误消息")
     private String message;
+
+    @Schema(description = "查询结果是否因行数上限被截断")
+    private boolean truncated;
+
+    @Schema(description = "本次执行包含的语句数")
+    private Integer statementCount;
+
+    @Schema(description = "批量 INSERT 每条语句的影响行数")
+    private List<Integer> statementRowCounts;
 }
