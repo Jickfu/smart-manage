@@ -27,6 +27,7 @@ target/
 
 ### files ###
 logs
+.pnpm-store
 
 ### AI ###
 .claude
