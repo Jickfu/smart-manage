@@ -105,7 +105,7 @@ export function createThemeConfig(themeColor?: string | null): ThemeConfig {
         collapsedWidth: 50,
       },
       Table: {
-        headerBg: '#F2F2F2',
+        headerBg: '#F4F4F4',
         headerColor: '#404040',
         headerBorderRadius: 0,
         borderColor: '#E5E5E5',
