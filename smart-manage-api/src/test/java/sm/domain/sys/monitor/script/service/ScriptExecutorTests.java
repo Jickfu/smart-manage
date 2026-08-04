@@ -1,0 +1,87 @@
+package sm.domain.sys.monitor.script.service;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationContext;
+
+import sm.domain.test.DemoService;
+import tools.jackson.databind.json.JsonMapper;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+class ScriptExecutorTests {
+    private ScriptExecutor executor;
+
+    @AfterEach
+    void shutdownExecutor() {
+        if (executor != null) {
+            executor.shutdown();
+        }
+    }
+
+    @Test
+    void shouldInvokePublicDomainServiceWithStructuredArgument() {
+        ApplicationContext applicationContext = mock(ApplicationContext.class);
+        when(applicationContext.getBean("demoService")).thenReturn(new DemoService());
+        JsonMapper jsonMapper = JsonMapper.builder().build();
+        executor = executor(applicationContext, jsonMapper);
+
+        ScriptExecutionOutcome outcome = executor.execute(new ScriptExecutionConfig("ATOMIC", 5, 10000),
+                "const service = app.getService('demoService');\n"
+                        + "return service.echo({ name: 'Smart Manage' });");
+
+        assertThat(outcome.status()).as(outcome.errorMessage()).isEqualTo("SUCCESS");
+        assertThat(outcome.output()).contains("Smart Manage");
+    }
+
+    @Test
+    void shouldRejectNonServiceBean() {
+        ApplicationContext applicationContext = mock(ApplicationContext.class);
+        when(applicationContext.getBean("unsafeBean")).thenReturn(new UnsafeBean());
+        JsonMapper jsonMapper = JsonMapper.builder().build();
+        executor = executor(applicationContext, jsonMapper);
+
+        ScriptExecutionOutcome outcome = executor.execute(new ScriptExecutionConfig("ATOMIC", 5, 10000),
+                "return app.getService('unsafeBean');");
+
+        assertThat(outcome.status()).isEqualTo("ERROR");
+        assertThat(outcome.errorMessage()).contains("不允许访问该 Bean");
+    }
+
+    @Test
+    void shouldCancelInfiniteLoopAtDeadline() {
+        ApplicationContext applicationContext = mock(ApplicationContext.class);
+        JsonMapper jsonMapper = JsonMapper.builder().build();
+        executor = executor(applicationContext, jsonMapper);
+
+        ScriptExecutionOutcome outcome = executor.execute(new ScriptExecutionConfig("ATOMIC", 1, 10000),
+                "while (true) {};");
+
+        assertThat(outcome.status()).isEqualTo("TIMEOUT");
+        assertThat(outcome.executeDuration()).isGreaterThanOrEqualTo(900);
+    }
+
+    @Test
+    void shouldTruncateExcessiveOutput() {
+        ApplicationContext applicationContext = mock(ApplicationContext.class);
+        JsonMapper jsonMapper = JsonMapper.builder().build();
+        executor = executor(applicationContext, jsonMapper);
+
+        ScriptExecutionOutcome outcome = executor.execute(new ScriptExecutionConfig("ATOMIC", 5, 1000),
+                "console.log('x'.repeat(5000));");
+
+        assertThat(outcome.status()).isEqualTo("SUCCESS");
+        assertThat(outcome.truncated()).isTrue();
+        assertThat(outcome.output()).hasSizeLessThanOrEqualTo(1000);
+    }
+
+    public static class UnsafeBean {
+    }
+
+    private ScriptExecutor executor(ApplicationContext applicationContext, JsonMapper jsonMapper) {
+        ScriptServiceCatalog catalog = new ScriptServiceCatalog(applicationContext, jsonMapper);
+        return new ScriptExecutor(new ScriptServiceGateway(catalog, jsonMapper), jsonMapper);
+    }
+}

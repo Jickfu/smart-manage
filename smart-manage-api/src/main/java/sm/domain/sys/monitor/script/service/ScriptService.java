@@ -1,212 +1,223 @@
 package sm.domain.sys.monitor.script.service;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.extern.slf4j.Slf4j;
-import org.mozilla.javascript.*;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.sysparam.service.SysParamService;
-import sm.domain.sys.monitor.script.model.entity.ScriptEntity;
-import sm.domain.sys.monitor.script.model.form.ScriptExecuteForm;
-import sm.domain.sys.monitor.script.model.form.ScriptListForm;
-import sm.domain.sys.monitor.script.model.form.ScriptSaveForm;
-import sm.domain.sys.monitor.script.model.vo.ScriptDetailVO;
-import sm.domain.sys.monitor.script.model.vo.ScriptListVO;
-import sm.domain.sys.monitor.script.model.vo.ScriptResultVO;
+import sm.domain.sys.monitor.script.mapper.ScriptLogMapper;
 import sm.domain.sys.monitor.script.mapper.ScriptMapper;
-import sm.system.exception.BizException;
-import sm.system.response.ResultEnum;
+import sm.domain.sys.monitor.script.model.entity.ScriptEntity;
+import sm.domain.sys.monitor.script.model.entity.ScriptLogEntity;
+import sm.domain.sys.monitor.script.model.form.*;
+import sm.domain.sys.monitor.script.model.vo.*;
 import sm.system.aop.log.BizLog;
-import sm.system.helper.SpringContextHelper;
+import sm.system.exception.BizException;
 import sm.system.response.PageData;
+import sm.system.response.ResultEnum;
+import sm.system.util.ServletUtil;
 import sm.system.util.StringUtil;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.*;
-import sm.system.util.TraceIdUtil;
-import java.util.stream.Collectors;
+import java.util.Set;
 
-/**
- * 脚本控制台服务——Rhino 执行 JS + 脚本 CRUD
- */
-@Slf4j
+/** 脚本控制台与脚本管理的唯一公开业务入口。 */
 @Service
+@RequiredArgsConstructor
 public class ScriptService {
+    static final String TIMEOUT_PARAMETER = "SCRIPT_CONSOLE_TIMEOUT_SECONDS";
+    static final String MAX_SOURCE_PARAMETER = "SCRIPT_CONSOLE_MAX_SOURCE_LENGTH";
+    static final String MAX_OUTPUT_PARAMETER = "SCRIPT_CONSOLE_MAX_OUTPUT_LENGTH";
+    private static final Set<String> STATUSES = Set.of("SUCCESS", "ERROR", "TIMEOUT");
+    private static final Set<String> TRANSACTION_MODES = Set.of("ATOMIC", "NON_ATOMIC");
 
-    private final ScriptMapper mapper;
-    private final SysParamService sysParamService;
-    private final ScriptTxService txService;
+    private final ScriptMapper scriptMapper;
+    private final ScriptLogMapper scriptLogMapper;
+    private final ScriptTxService scriptTxService;
+    private final ScriptExecutionTxService executionTxService;
+    private final ScriptExecutionLogTxService executionLogTxService;
+    private final ScriptExecutor scriptExecutor;
+    private final ScriptServiceCatalog serviceCatalog;
     private final ScriptConverter converter;
     private final CurrentUserContext currentUserContext;
-
-    public ScriptService(
-            ScriptMapper mapper,
-            SysParamService sysParamService,
-            ScriptTxService txService,
-            ScriptConverter converter,
-            CurrentUserContext currentUserContext) {
-        this.mapper = mapper;
-        this.sysParamService = sysParamService;
-        this.txService = txService;
-        this.converter = converter;
-        this.currentUserContext = currentUserContext;
-    }
-
-    // ---- 脚本执行 ----
+    private final SysParamService sysParamService;
 
     @BizLog(value = "执行脚本", recordRequest = false, recordResponse = false)
     public ScriptResultVO execute(ScriptExecuteForm form) {
         currentUserContext.checkAdministrator();
         String content = form.getContent().trim();
-        if (content.isEmpty()) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "脚本内容不能为空");
+        ScriptExecutionConfig config = resolveExecutionConfig(content, form.getTransactionMode());
+        ScriptEntity savedScript = form.getScriptId() == null ? null : requireScript(form.getScriptId());
+        ScriptExecutionOutcome outcome;
+        if ("ATOMIC".equals(config.transactionMode())) {
+            try {
+                outcome = executionTxService.execute(config, content);
+            } catch (ScriptExecutionFailure failure) {
+                outcome = failure.getOutcome();
+            }
+        } else {
+            outcome = scriptExecutor.execute(config, content);
         }
-
-        ScriptResultVO result = new ScriptResultVO();
-        long start = System.currentTimeMillis();
-
-        // 从系统参数取超时时间，默认 60 秒
-        Integer timeoutParam = sysParamService.getInt("SCRIPT_EXECUTE_TIMEOUT");
-        int timeoutSeconds = timeoutParam != null && timeoutParam > 0 ? timeoutParam : 60;
-
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<ScriptResultVO> future = executor.submit(
-                TraceIdUtil.wrap(() -> executeScript(content)));
-
-        try {
-            ScriptResultVO r = future.get(timeoutSeconds, TimeUnit.SECONDS);
-            result.setOutput(r.getOutput());
-        } catch (TimeoutException e) {
-            future.cancel(true);
-            result.setOutput("Error: 脚本执行超时 (" + timeoutSeconds + "s)");
-        } catch (ExecutionException e) {
-            Throwable cause = e.getCause() != null ? e.getCause() : e;
-            log.warn("脚本执行异常: {}", cause.getMessage());
-            result.setOutput("Error: " + cause.getMessage());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            result.setOutput("Error: 执行被中断");
-        } finally {
-            executor.shutdownNow();
-        }
-
-        result.setExecuteDuration((int) (System.currentTimeMillis() - start));
+        ScriptResultVO result = toResult(outcome, config.transactionMode());
+        executionLogTxService.save(createLog(form, content, savedScript, result));
         return result;
     }
-
-    private ScriptResultVO executeScript(String jsContent) {
-        ScriptResultVO result = new ScriptResultVO();
-        ByteArrayOutputStream outStream = new ByteArrayOutputStream();
-        PrintStream printStream = new PrintStream(outStream, true, StandardCharsets.UTF_8);
-
-        Context cx = Context.enter();
-        try {
-            cx.setOptimizationLevel(-1);
-            cx.setLanguageVersion(Context.VERSION_ES6);
-
-            Scriptable scope = cx.initStandardObjects();
-
-            // 注入 ctx：Spring 容器，通过 ctx.getBean("xxx") 获取 Bean
-            Object wrappedCtx = Context.javaToJS(SpringContextHelper.getApplicationContext(), scope);
-            ScriptableObject.putProperty(scope, "ctx", wrappedCtx);
-
-            // 重定向 print() 函数，捕获输出
-            ScriptableObject.putProperty(scope, "print", new BaseFunction() {
-                @Override
-                public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-                    printStream.println(Context.toString(args.length == 0 ? Undefined.instance : args[0]));
-                    return Undefined.instance;
-                }
-            });
-
-            // 注入 console.log()
-            Scriptable console = cx.newObject(scope);
-            ScriptableObject.putProperty(console, "log", new BaseFunction() {
-                @Override
-                public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
-                    printStream.println(Context.toString(args.length == 0 ? Undefined.instance : args[0]));
-                    return Undefined.instance;
-                }
-            });
-            ScriptableObject.putProperty(scope, "console", console);
-
-            // 执行脚本，最后一行表达式的值作为返回值
-            Object evalResult = cx.evaluateString(scope, jsContent, "<script>", 1, null);
-
-            // 收集输出
-            printStream.flush();
-            String capturedOutput = outStream.toString(StandardCharsets.UTF_8).trim();
-
-            String returnValue = evalResult instanceof Undefined ? "" : Context.toString(evalResult);
-
-            StringBuilder output = new StringBuilder();
-            if (!capturedOutput.isEmpty()) {
-                output.append(capturedOutput);
-            }
-            if (!returnValue.isEmpty()) {
-                if (!output.isEmpty()) {
-                    output.append("\n");
-                }
-                output.append(returnValue);
-            }
-
-            result.setOutput(output.toString());
-        } catch (RhinoException e) {
-            printStream.flush();
-            String capturedOutput = outStream.toString(StandardCharsets.UTF_8).trim();
-
-            StringBuilder output = new StringBuilder();
-            if (!capturedOutput.isEmpty()) {
-                output.append(capturedOutput).append("\n");
-            }
-            output.append("Error: ").append(e.getMessage());
-            result.setOutput(output.toString());
-        } finally {
-            Context.exit();
-        }
-
-        return result;
-    }
-
-    // ---- 脚本 CRUD ----
 
     public PageData<ScriptListVO> listPage(ScriptListForm form) {
         currentUserContext.checkAdministrator();
-        LambdaQueryWrapper<ScriptEntity> qw = new LambdaQueryWrapper<ScriptEntity>();
-        if (StringUtil.isNotBlank(form.getKeyword())) {
-            qw.like(ScriptEntity::getNumber, form.getKeyword());
-        }
-        qw.orderByDesc(ScriptEntity::getCreateTime);
-
-        Page<ScriptEntity> page = mapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), qw);
-        List<ScriptListVO> vos = page.getRecords().stream().map(converter::toListVO).collect(Collectors.toList());
-        return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(), vos);
+        LambdaQueryWrapper<ScriptEntity> query = new LambdaQueryWrapper<>();
+        query.and(StringUtil.isNotBlank(form.getKeyword()), wrapper -> wrapper
+                        .like(ScriptEntity::getNumber, form.getKeyword())
+                        .or().like(ScriptEntity::getName, form.getKeyword()))
+                .orderByDesc(ScriptEntity::getUpdateTime).orderByDesc(ScriptEntity::getId);
+        Page<ScriptEntity> page = scriptMapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), query);
+        return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(),
+                page.getRecords().stream().map(converter::toListVO).toList());
     }
 
     public ScriptDetailVO detail(Long id) {
         currentUserContext.checkAdministrator();
-        ScriptEntity entity = mapper.selectById(id);
-        if (entity == null) {
-            throw new BizException(ResultEnum.NOT_FOUND, "脚本不存在");
-        }
-        return converter.toDetailVO(entity);
+        return converter.toDetailVO(requireScript(id));
+    }
+
+    public ScriptDetailVO createNewData() {
+        currentUserContext.checkAdministrator();
+        ScriptDetailVO result = new ScriptDetailVO();
+        result.setContent("console.log('Hello Smart Manage');\nreturn { success: true };");
+        return result;
+    }
+
+    public List<ScriptApiServiceVO> apiMetadata() {
+        currentUserContext.checkAdministrator();
+        return serviceCatalog.metadata();
     }
 
     @BizLog(value = "保存脚本", recordRequest = false)
     public Long save(ScriptSaveForm form) {
         currentUserContext.checkAdministrator();
-        return txService.save(form);
+        validateSourceLength(form.getContent());
+        return scriptTxService.save(form);
     }
 
     @BizLog("删除脚本")
-    public void delete(Long id) {
+    public void delete(ScriptDeleteForm form) {
         currentUserContext.checkAdministrator();
-        txService.delete(id);
+        scriptTxService.delete(form);
     }
 
+    public PageData<ScriptLogListVO> logListPage(ScriptLogListForm form) {
+        currentUserContext.checkAdministrator();
+        validateLogForm(form);
+        LambdaQueryWrapper<ScriptLogEntity> query = new LambdaQueryWrapper<>();
+        query.and(StringUtil.isNotBlank(form.getKeyword()), wrapper -> wrapper
+                        .like(ScriptLogEntity::getScriptName, form.getKeyword())
+                        .or().like(ScriptLogEntity::getScriptContent, form.getKeyword()))
+                .eq(StringUtil.isNotBlank(form.getStatus()), ScriptLogEntity::getExecuteStatus, form.getStatus())
+                .eq(StringUtil.isNotBlank(form.getTransactionMode()), ScriptLogEntity::getTransactionMode,
+                        form.getTransactionMode())
+                .ge(form.getStartTime() != null, ScriptLogEntity::getCreateTime, form.getStartTime())
+                .le(form.getEndTime() != null, ScriptLogEntity::getCreateTime, form.getEndTime())
+                .orderByDesc(ScriptLogEntity::getId);
+        Page<ScriptLogEntity> page = scriptLogMapper.selectPage(
+                new Page<>(form.getPageNum(), form.getPageSize()), query);
+        List<ScriptLogListVO> records = page.getRecords().stream().map(converter::toLogListVO).toList();
+        return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(), records);
+    }
+
+    public ScriptLogDetailVO logDetail(Long id) {
+        currentUserContext.checkAdministrator();
+        ScriptLogEntity entity = scriptLogMapper.selectById(id);
+        if (entity == null) {
+            throw new BizException(ResultEnum.NOT_FOUND, "脚本执行日志不存在");
+        }
+        return converter.toLogDetailVO(entity);
+    }
+
+    private ScriptExecutionConfig resolveExecutionConfig(String content, String requestedMode) {
+        if (content.isBlank()) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "脚本内容不能为空");
+        }
+        validateSourceLength(content);
+        String mode = requestedMode == null ? "ATOMIC" : requestedMode;
+        if (!TRANSACTION_MODES.contains(mode)) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "脚本事务模式不合法");
+        }
+        return new ScriptExecutionConfig(mode,
+                parameter(TIMEOUT_PARAMETER, 30, 1, 300),
+                parameter(MAX_OUTPUT_PARAMETER, 100000, 1000, 1000000));
+    }
+
+    private void validateSourceLength(String content) {
+        int maxLength = parameter(MAX_SOURCE_PARAMETER, 100000, 1000, 1000000);
+        if (content.length() > maxLength) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "脚本内容不能超过 " + maxLength + " 个字符");
+        }
+    }
+
+    private int parameter(String number, int defaultValue, int min, int max) {
+        Integer configured = sysParamService.getInt(number);
+        int value = configured == null ? defaultValue : configured;
+        if (value < min || value > max) {
+            throw new BizException(ResultEnum.CONFIG_ERROR,
+                    "系统参数 " + number + " 必须在 " + min + "～" + max + " 之间");
+        }
+        return value;
+    }
+
+    private ScriptEntity requireScript(Long id) {
+        ScriptEntity entity = scriptMapper.selectById(id);
+        if (entity == null) {
+            throw new BizException(ResultEnum.NOT_FOUND, "脚本不存在");
+        }
+        return entity;
+    }
+
+    private ScriptResultVO toResult(ScriptExecutionOutcome outcome, String mode) {
+        ScriptResultVO result = new ScriptResultVO();
+        result.setStatus(outcome.status());
+        result.setOutput(outcome.output());
+        result.setErrorMessage(outcome.errorMessage());
+        result.setExecuteDuration(outcome.executeDuration());
+        result.setTruncated(outcome.truncated());
+        result.setTransactionResult("ATOMIC".equals(mode)
+                ? ("SUCCESS".equals(outcome.status()) ? "COMMITTED" : "ROLLED_BACK")
+                : "NOT_APPLICABLE");
+        return result;
+    }
+
+    private ScriptLogEntity createLog(ScriptExecuteForm form, String content, ScriptEntity savedScript,
+                                      ScriptResultVO result) {
+        ScriptLogEntity log = new ScriptLogEntity();
+        log.setScriptId(form.getScriptId());
+        log.setScriptName(savedScript == null ? null : savedScript.getName());
+        log.setScriptContent(content);
+        log.setTransactionMode(form.getTransactionMode() == null ? "ATOMIC" : form.getTransactionMode());
+        log.setExecuteStatus(result.getStatus());
+        log.setExecuteDuration(result.getExecuteDuration());
+        log.setTransactionResult(result.getTransactionResult());
+        log.setOutput(result.getOutput());
+        log.setErrorMessage(result.getErrorMessage());
+        log.setCreateName(currentUserContext.getUsernameOrDefault("未知"));
+        try {
+            log.setCreateIp(ServletUtil.getClientIp());
+        } catch (RuntimeException ignored) {
+            log.setCreateIp(null);
+        }
+        return log;
+    }
+
+    private void validateLogForm(ScriptLogListForm form) {
+        if (form.getStartTime() != null && form.getEndTime() != null
+                && form.getStartTime().isAfter(form.getEndTime())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "开始时间不能晚于结束时间");
+        }
+        if (StringUtil.isNotBlank(form.getStatus()) && !STATUSES.contains(form.getStatus())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "执行状态不合法");
+        }
+        if (StringUtil.isNotBlank(form.getTransactionMode())
+                && !TRANSACTION_MODES.contains(form.getTransactionMode())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "事务模式不合法");
+        }
+    }
 }

@@ -1,0 +1,78 @@
+.sm-script-help {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+  padding: 16px;
+  overflow: auto;
+}
+
+.sm-script-help-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sm-script-help-heading .ant-typography {
+  margin: 0;
+}
+
+.sm-script-help-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1000px;
+}
+
+.sm-script-help-guide section {
+  padding: 16px;
+  border: 1px solid var(--sm-color-divider);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+}
+
+.sm-script-help-guide section > .ant-typography:first-child {
+  margin-top: 0;
+}
+
+.sm-script-help-guide pre,
+.sm-script-help-example pre {
+  margin: 12px 0 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--sm-color-divider);
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-fill-quaternary);
+  color: var(--ant-color-text);
+  font-family: var(--ant-font-family-code);
+  white-space: pre-wrap;
+}
+
+.sm-script-help-collapse {
+  width: 100%;
+}
+
+.sm-script-api-reference {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sm-script-api-reference > .ant-input-affix-wrapper {
+  max-width: 420px;
+}
+
+.sm-script-api-method {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.sm-script-api-method section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

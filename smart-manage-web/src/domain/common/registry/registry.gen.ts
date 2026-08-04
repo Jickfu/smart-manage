@@ -44,14 +44,17 @@ import pageRegistrationModule13 from '../../sys/monitor/loginLog/pageRegistratio
 // src/domain/sys/monitor/operateLog/pageRegistration.ts
 import pageRegistrationModule14 from '../../sys/monitor/operateLog/pageRegistration';
 
+// src/domain/sys/monitor/script/pageRegistration.ts
+import pageRegistrationModule15 from '../../sys/monitor/script/pageRegistration';
+
 // src/domain/sys/monitor/sql/pageRegistration.ts
-import pageRegistrationModule15 from '../../sys/monitor/sql/pageRegistration';
+import pageRegistrationModule16 from '../../sys/monitor/sql/pageRegistration';
 
 // src/domain/sys/scheduler/execution/pageRegistration.ts
-import pageRegistrationModule16 from '../../sys/scheduler/execution/pageRegistration';
+import pageRegistrationModule17 from '../../sys/scheduler/execution/pageRegistration';
 
 // src/domain/sys/scheduler/job/pageRegistration.ts
-import pageRegistrationModule17 from '../../sys/scheduler/job/pageRegistration';
+import pageRegistrationModule18 from '../../sys/scheduler/job/pageRegistration';
 
 import { registerPageRegistrationModules } from './componentRegistry';
 
@@ -73,4 +76,5 @@ registerPageRegistrationModules([
   pageRegistrationModule15,
   pageRegistrationModule16,
   pageRegistrationModule17,
+  pageRegistrationModule18,
 ]);

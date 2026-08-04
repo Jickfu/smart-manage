@@ -2,7 +2,10 @@ package sm.domain.sys.monitor.script.service;
 
 import org.mapstruct.Mapper;
 import sm.domain.sys.monitor.script.model.entity.ScriptEntity;
+import sm.domain.sys.monitor.script.model.entity.ScriptLogEntity;
 import sm.domain.sys.monitor.script.model.vo.ScriptDetailVO;
+import sm.domain.sys.monitor.script.model.vo.ScriptLogDetailVO;
+import sm.domain.sys.monitor.script.model.vo.ScriptLogListVO;
 import sm.domain.sys.monitor.script.model.vo.ScriptListVO;
 import sm.framework.mapping.SmMapperConfig;
 
@@ -11,4 +14,6 @@ import sm.framework.mapping.SmMapperConfig;
 interface ScriptConverter {
     ScriptListVO toListVO(ScriptEntity entity);
     ScriptDetailVO toDetailVO(ScriptEntity entity);
+    ScriptLogListVO toLogListVO(ScriptLogEntity entity);
+    ScriptLogDetailVO toLogDetailVO(ScriptLogEntity entity);
 }

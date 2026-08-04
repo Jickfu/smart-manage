@@ -10,5 +10,7 @@ public class ScriptListVO {
     private String number;
     private String name;
     private String remark;
+    private Integer version;
     private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }

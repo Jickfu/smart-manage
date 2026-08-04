@@ -9,5 +9,5 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 public class ScriptDetailVO extends ScriptListVO {
     private String content;
-    private LocalDateTime updateTime;
+    private Integer version;
 }
