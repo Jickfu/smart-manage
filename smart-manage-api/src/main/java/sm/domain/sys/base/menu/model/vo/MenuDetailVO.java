@@ -16,7 +16,10 @@ import java.time.LocalDateTime;
 public class MenuDetailVO {
 
 	@Schema(description = "ID")
-    private Long id;
+	private Long id;
+
+	@Schema(description = "乐观锁版本")
+	private Integer version;
 
 	@Schema(description = "编码")
 	private String number;

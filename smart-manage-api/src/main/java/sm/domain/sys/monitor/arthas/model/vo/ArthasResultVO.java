@@ -19,6 +19,14 @@ public class ArthasResultVO {
     @Schema(description = "持续命令的会话 ID，一次性命令为 null")
     private String sessionId;
 
+    @Schema(description = "会话所在应用实例 ID")
+    private String instanceId;
+
+    public ArthasResultVO withInstanceId(String value) {
+        setInstanceId(value);
+        return this;
+    }
+
     public static ArthasResultVO ok(String output) {
         ArthasResultVO vo = new ArthasResultVO();
         vo.setSuccess(true);

@@ -33,7 +33,8 @@ public class JobLogService {
     public PageData<JobLogListVO> listPage(JobLogListForm form) {
         LambdaQueryWrapper<JobLogEntity> qw = new LambdaQueryWrapper<JobLogEntity>();
         if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
-            qw.like(JobLogEntity::getJobName, "%" + form.getKeyword().trim() + "%");
+            // MyBatis-Plus 的 like 会添加两侧通配符；用户输入按模糊搜索语义处理。
+            qw.like(JobLogEntity::getJobName, form.getKeyword().trim());
         }
         if (form.getStatus() != null && !form.getStatus().isBlank()) {
             JobExecutionStatus.require(form.getStatus());

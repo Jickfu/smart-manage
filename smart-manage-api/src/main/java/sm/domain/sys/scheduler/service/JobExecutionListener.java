@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.JobListener;
+import org.quartz.SchedulerException;
 import org.springframework.stereotype.Component;
 import sm.domain.sys.scheduler.model.entity.JobEntity;
 import sm.domain.sys.scheduler.model.entity.JobLogEntity;
@@ -54,8 +55,12 @@ public class JobExecutionListener implements JobListener {
             logEntity.setStartTime(LocalDateTime.now());
             logEntity.setStatus(JobExecutionStatus.RUNNING.name());
             logEntity.setTraceId(TraceIdUtil.getTraceId());
+            logEntity.setInstanceId(resolveInstanceId(context));
+            logEntity.setFireInstanceId(context.getFireInstanceId());
             logEntity.setCreateTime(LocalDateTime.now());
-            jobLogMapper.insert(logEntity);
+            if (jobLogMapper.insert(logEntity) != 1) {
+                throw new IllegalStateException("任务 RUNNING 执行记录写入失败，拒绝执行任务");
+            }
 
             context.put("__jobLogId__", logEntity.getId());
         } catch (RuntimeException exception) {
@@ -92,14 +97,42 @@ public class JobExecutionListener implements JobListener {
             } else {
                 logEntity.setStatus(JobExecutionStatus.SUCCESS.name());
             }
-            jobLogMapper.updateById(logEntity);
+            if (jobLogMapper.updateById(logEntity) != 1) {
+                markUnknown(logEntity, "任务结果更新未命中执行记录");
+            }
+        } catch (RuntimeException exception) {
+            Long logId = (Long) context.get("__jobLogId__");
+            log.error("任务执行结果落库失败，执行状态需要对账: logId={}", logId, exception);
+            if (logId != null) {
+                JobLogEntity unknown = new JobLogEntity();
+                unknown.setId(logId);
+                markUnknown(unknown, "任务结果落库失败: " + truncate(exception.getMessage(), 1800));
+            }
         } finally {
             TraceIdUtil.clear();
         }
     }
 
+    private void markUnknown(JobLogEntity logEntity, String reason) {
+        logEntity.setStatus(JobExecutionStatus.UNKNOWN.name());
+        logEntity.setErrorMessage(reason);
+        try {
+            jobLogMapper.updateById(logEntity);
+        } catch (RuntimeException retryException) {
+            log.error("任务执行记录标记 UNKNOWN 失败，必须由监控对账: logId={}", logEntity.getId(), retryException);
+        }
+    }
+
     private boolean isMutexBusy(JobExecutionException exception) {
         return exception != null && exception.getCause() instanceof JobMutexBusyException;
+    }
+
+    private String resolveInstanceId(JobExecutionContext context) {
+        try {
+            return context.getScheduler().getSchedulerInstanceId();
+        } catch (SchedulerException exception) {
+            throw new IllegalStateException("无法读取 Quartz 实例 ID", exception);
+        }
     }
 
     private String truncate(String s, int maxLen) {

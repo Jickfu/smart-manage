@@ -10,5 +10,6 @@ import sm.framework.mapping.SmMapperConfig;
 @Mapper(config = SmMapperConfig.class)
 interface FileConfigConverter {
     @Mapping(target = "ftpPasswordConfigured", expression = "java(entity.getFtpPasswordCipher() != null)")
+    @Mapping(target = "s3SecretKeyConfigured", expression = "java(entity.getS3SecretKeyCipher() != null)")
     FileConfigDetailVO toDetailVO(FileConfigEntity entity);
 }

@@ -10,11 +10,12 @@ import { roleApi } from './api';
 import { roleQueryKeys } from './queryKeys';
 import type { RoleListVO } from './types';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { roleAccess } from './permissions';
 
 /** 角色编辑页 componentKey */
-const ROLE_EDIT_KEY = 'sys/base/role/edit';
-const ROLE_PERMISSION_ASSIGNMENT_KEY = 'sys/base/role/permission-assignment';
+const ROLE_EDIT_KEY = componentKeys.roleEdit;
+const ROLE_PERMISSION_ASSIGNMENT_KEY = componentKeys.rolePermissionAssignment;
 
 /** 角色管理列表页 */
 const RoleListPage = (props: PageComponentProps) => {

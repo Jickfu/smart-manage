@@ -4,6 +4,8 @@ spring:
   profiles:
     # 开源项目默认使用开发环境；部署时通过 SPRING_PROFILES_ACTIVE 显式覆盖为 prod。
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   jackson:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
@@ -52,9 +54,14 @@ spring:
       org.quartz.scheduler.instanceName: SmartManageScheduler
       org.quartz.scheduler.instanceId: AUTO
       org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+      org.quartz.jobStore.isClustered: true
+      org.quartz.jobStore.clusterCheckinInterval: 10000
+      org.quartz.jobStore.misfireThreshold: 60000
+      org.quartz.jobStore.tablePrefix: QRTZ_
       org.quartz.threadPool.threadCount: 10
 
 server:
+  shutdown: graceful
   servlet:
     context-path: /smart-manage-api
   compression:
@@ -109,6 +116,7 @@ sa-token:
   is-log: true
 
 smart-manage:
+  instance-id: ${SMART_MANAGE_INSTANCE_ID:${HOSTNAME:local}}
   framework:
     no-need-login: /sys/base/login,/sys/base/captcha
   org:
@@ -121,7 +129,7 @@ smart-manage:
   captcha:
     width: 160
     height: 50
-    length: 4
+    length: 5
     expire: 300
   system:
     log:

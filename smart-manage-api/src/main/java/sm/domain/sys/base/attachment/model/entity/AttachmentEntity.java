@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import sm.system.entity.BaseEntity;
+import java.time.LocalDateTime;
 
 /**
  * 附件实体
@@ -21,11 +22,13 @@ public class AttachmentEntity extends BaseEntity {
     private Long id;
 
     private String originalName;
-    private String storedName;
-    private String storedPath;
     private Long fileSize;
     private String mimeType;
     private String fileExt;
     private String storageType;
-    private Boolean isTemp;
+    private String objectKey;
+    private String status;
+    private String uploadSessionId;
+    private LocalDateTime expiresAt;
+    private String sha256;
 }

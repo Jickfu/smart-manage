@@ -14,7 +14,9 @@ import sm.domain.sys.base.user.service.UserService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
 import sm.domain.sys.monitor.loginlog.model.entity.LoginLogEntity;
-import sm.system.util.ServletUtil;
+import sm.system.web.ClientIpResolver;
+import sm.system.auth.SessionTerminationContext;
+import sm.system.auth.SessionTerminationReason;
 
 /**
  * Sa-Token 监听器 — 记录登录/登出日志
@@ -27,6 +29,7 @@ import sm.system.util.ServletUtil;
 public class AuthListener implements SaTokenListener {
     private final LogWriteService logWriteService;
     private final UserService userService;
+    private final ClientIpResolver clientIpResolver;
 
     /**
      * 登录
@@ -47,7 +50,7 @@ public class AuthListener implements SaTokenListener {
                 } catch (Exception ignored) {
                 }
             }
-            e.setEventType(LoginEventType.LOGIN.name());
+            e.setEventType(LoginEventType.LOGIN_SUCCESS.name());
             e.setSuccess(true);
             fillRequestMeta(e);
             logWriteService.writeLogin(e);
@@ -75,7 +78,7 @@ public class AuthListener implements SaTokenListener {
                 } catch (Exception ignored) {
                 }
             }
-            e.setEventType(LoginEventType.LOGOUT.name());
+            e.setEventType(resolveLogoutEvent().name());
             e.setSuccess(true);
             fillRequestMeta(e);
             logWriteService.writeLogin(e);
@@ -84,11 +87,17 @@ public class AuthListener implements SaTokenListener {
         }
     }
 
+    private LoginEventType resolveLogoutEvent() {
+        SessionTerminationReason reason = SessionTerminationContext.current();
+        return reason == null ? LoginEventType.LOGOUT : LoginEventType.valueOf(reason.name());
+    }
+
     /**
      * 被踢下线
      */
     @Override
     public void doKickout(String loginType, Object loginId, String tokenValue) {
+        writeSessionEvent(loginId, LoginEventType.SESSION_KICKED);
     }
 
     /**
@@ -96,6 +105,7 @@ public class AuthListener implements SaTokenListener {
      */
     @Override
     public void doReplaced(String loginType, Object loginId, String tokenValue) {
+        writeSessionEvent(loginId, LoginEventType.SESSION_REPLACED);
     }
 
     /**
@@ -103,6 +113,7 @@ public class AuthListener implements SaTokenListener {
      */
     @Override
     public void doDisable(String loginType, Object loginId, String service, int level, long disableTime) {
+        writeSessionEvent(loginId, LoginEventType.ACCOUNT_DISABLED);
     }
 
     /**
@@ -149,7 +160,7 @@ public class AuthListener implements SaTokenListener {
 
     private void fillRequestMeta(LoginLogEntity e) {
         try {
-            e.setIp(ServletUtil.getClientIp());
+            e.setIp(clientIpResolver.resolveCurrentRequest());
         } catch (Exception ignored) {
         }
         try {
@@ -163,6 +174,30 @@ public class AuthListener implements SaTokenListener {
             }
         } catch (Exception ignored) {
         }
+    }
+
+    private void writeSessionEvent(Object loginId, LoginEventType eventType) {
+        try {
+            LoginLogEntity entity = new LoginLogEntity();
+            fillIdentity(entity, loginId);
+            entity.setEventType(eventType.name());
+            entity.setSuccess(true);
+            fillRequestMeta(entity);
+            logWriteService.writeLogin(entity);
+        } catch (Exception exception) {
+            log.error("记录认证事件失败: {}", eventType, exception);
+        }
+    }
+
+    private void fillIdentity(LoginLogEntity entity, Object loginId) {
+        if (loginId == null) {
+            return;
+        }
+        long userId = Long.parseLong(String.valueOf(loginId));
+        entity.setUserId(userId);
+        UserEntity user = userService.requireUser(userId);
+        entity.setUsername(user.getUsername());
+        entity.setNickname(user.getNickname());
     }
 
 }

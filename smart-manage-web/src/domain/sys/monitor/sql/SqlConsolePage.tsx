@@ -5,7 +5,9 @@ import { PlayCircleOutlined, ClearOutlined } from '@ant-design/icons';
 import { useMutation } from '@tanstack/react-query';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
 import { sqlApi } from './api';
+import { sqlAccess } from './permissions';
 import SqlEditor from './SqlEditor';
 import type { SqlEditorRef } from './SqlEditor';
 import type { SqlExecutionResult } from './types';
@@ -28,6 +30,7 @@ export default function SqlConsolePage(_props: PageComponentProps) {
   const [sqlText, setSqlText] = useState(DEFAULT_SQL);
   const [result, setResult] = useState<SqlExecutionResult>();
   const editorRef = useRef<SqlEditorRef>(null);
+  const { can } = usePermissionAccess(sqlAccess.prefix);
   const executeMutation = useMutation({
     mutationFn: sqlApi.execute,
     onSuccess: (data) => setResult(data),
@@ -75,14 +78,16 @@ export default function SqlConsolePage(_props: PageComponentProps) {
       loading={false}
       actions={
         <>
-          <Button
-            type="primary"
-            icon={<PlayCircleOutlined />}
-            loading={executeMutation.isPending}
-            onClick={() => execute(editorRef.current?.getExecutableSql() ?? '')}
-          >
-            执行
-          </Button>
+          {can(sqlAccess.permissions.execute) && (
+            <Button
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              loading={executeMutation.isPending}
+              onClick={() => execute(editorRef.current?.getExecutableSql() ?? '')}
+            >
+              执行
+            </Button>
+          )}
           <Button
             icon={<ClearOutlined />}
             onClick={() =>

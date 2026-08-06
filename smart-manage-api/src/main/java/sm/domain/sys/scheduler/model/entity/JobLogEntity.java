@@ -46,6 +46,12 @@ public class JobLogEntity {
     /** 本次执行链路追踪ID */
     private String traceId;
 
+    /** 实际执行应用实例（Quartz instanceId）。 */
+    private String instanceId;
+
+    /** Quartz 本次触发实例 ID。 */
+    private String fireInstanceId;
+
     /** 创建时间 */
     private LocalDateTime createTime;
 }

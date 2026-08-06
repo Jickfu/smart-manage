@@ -22,12 +22,17 @@ export function useCommandMutation<TData = unknown, TVariables = void>({
   return useMutation<TData, Error, TVariables>({
     ...options,
     onSuccess: async (data, variables, result, context) => {
+      try {
+        await onSuccess?.(data, variables, result, context);
+      } catch {
+        message.warning('操作已成功，但页面数据刷新失败，请手动刷新');
+        return;
+      }
       if (successMessage) {
         message.success(
           typeof successMessage === 'function' ? successMessage(variables) : successMessage,
         );
       }
-      await onSuccess?.(data, variables, result, context);
     },
     onError: (error) => {
       if (error instanceof ApiError && error.code === DATA_CONFLICT_CODE) {

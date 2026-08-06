@@ -42,8 +42,10 @@
             description = #{description},
             sort = #{sort},
             enabled = #{enabled},
+            version = version + 1,
             update_time = #{updateTime},
             update_user = #{updateUser}
         WHERE id = #{id}
+          AND version = #{version}
     </update>
 </mapper>

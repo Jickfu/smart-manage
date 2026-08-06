@@ -11,6 +11,9 @@ import sm.domain.sys.base.user.model.entity.UserRoleEntity;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
+import sm.system.auth.SessionTerminationContext;
+import sm.system.auth.SessionTerminationReason;
 
 /**
  * 授权状态刷新组件。关系或启用状态变化后，使旧会话立即失效，避免继续使用历史权限。
@@ -21,15 +24,28 @@ public class AuthorizationStateHelper {
 	private final CacheHelper cacheHelper;
 	private final UserRoleMapper userRoleMapper;
 
-	public void invalidateUsers(Collection<Long> userIds) {
-		for (Long userId : userIds.stream().distinct().toList()) {
+	/** 只刷新共享授权缓存，保留现有登录会话。 */
+	public void refreshUsers(Collection<Long> userIds) {
+		for (Long userId : new LinkedHashSet<>(userIds)) {
 			cacheHelper.<Long, Object>getCache(CacheConstant.USER_INFO, CacheType.REMOTE).remove(userId);
-			StpUtil.logout(userId);
 		}
 	}
 
-	public void invalidateRoleUsers(Long roleId) {
-		invalidateUsers(userRoleMapper.selectList(new LambdaQueryWrapper<UserRoleEntity>()
+	/** 安全事件先刷新授权缓存，再终止用户的全部会话。 */
+	public void terminateUsers(Collection<Long> userIds) {
+		terminateUsers(userIds, SessionTerminationReason.SESSION_KICKED);
+	}
+
+	public void terminateUsers(Collection<Long> userIds, SessionTerminationReason reason) {
+		LinkedHashSet<Long> distinctUserIds = new LinkedHashSet<>(userIds);
+		refreshUsers(distinctUserIds);
+		for (Long userId : distinctUserIds) {
+			SessionTerminationContext.run(reason, () -> StpUtil.logout(userId));
+		}
+	}
+
+	public void refreshRoleUsers(Long roleId) {
+		refreshUsers(userRoleMapper.selectList(new LambdaQueryWrapper<UserRoleEntity>()
 				.select(UserRoleEntity::getUserId)
 				.eq(UserRoleEntity::getRoleId, roleId))
 				.stream()

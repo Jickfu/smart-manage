@@ -251,10 +251,8 @@ public class CacheService {
     private static Map<String, CacheDefinition> managedCaches() {
         Map<String, CacheDefinition> caches = new LinkedHashMap<>();
         caches.put(CacheConstant.USER_INFO, new CacheDefinition(CacheConstant.USER_INFO, "用户信息", CacheType.REMOTE, "用户基础信息", 3600, true));
-        caches.put(CacheConstant.SYS_PARAM, new CacheDefinition(CacheConstant.SYS_PARAM, "系统参数", CacheType.LOCAL, "系统参数快照", 1800, false));
-        caches.put(CacheConstant.UI_CONFIG, new CacheDefinition(CacheConstant.UI_CONFIG, "界面配置", CacheType.LOCAL, "系统界面配置", 1800, false));
-        caches.put(CacheConstant.FILE_CONFIG, new CacheDefinition(CacheConstant.FILE_CONFIG, "文件配置", CacheType.LOCAL, "文件存储配置", 1800, true));
-        caches.put(CacheConstant.BASIC_DATA_OPTIONS, new CacheDefinition(CacheConstant.BASIC_DATA_OPTIONS, "基础数据选项", CacheType.LOCAL, "基础数据下拉选项", 1800, false));
+        caches.put(CacheConstant.SYS_PARAM, new CacheDefinition(CacheConstant.SYS_PARAM, "系统参数", CacheType.REMOTE, "系统参数快照", 1800, false));
+        caches.put(CacheConstant.BASIC_DATA_OPTIONS, new CacheDefinition(CacheConstant.BASIC_DATA_OPTIONS, "基础数据选项", CacheType.REMOTE, "基础数据下拉选项", 1800, false));
         return Map.copyOf(caches);
     }
 

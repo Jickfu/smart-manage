@@ -1,0 +1,14 @@
+.sm-business-attachment-toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sm-business-attachment-panel .ant-table-wrapper {
+  width: 100%;
+}
+
+.sm-business-attachment-panel .ant-btn-link {
+  height: auto;
+  padding-inline: 0;
+}

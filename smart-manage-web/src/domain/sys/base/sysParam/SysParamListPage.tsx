@@ -8,6 +8,7 @@ import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { fetchAppsAll } from '@/domain/sys/base/app/api';
 import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';
@@ -17,7 +18,7 @@ import { sysParamAccess } from './permissions';
 import { sysParamQueryKeys } from './queryKeys';
 import type { SysParamVO } from './types';
 
-const EDIT_KEY = 'sys/base/sys-param/edit';
+const EDIT_KEY = componentKeys.sysParamEdit;
 
 type Scope =
   | { type: 'all' }

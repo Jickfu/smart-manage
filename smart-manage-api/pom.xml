@@ -165,6 +165,18 @@
             <artifactId>commons-net</artifactId>
             <version>3.10.0</version>
         </dependency>
+        <!-- S3 兼容对象存储（AWS S3 / MinIO） -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.46.8</version>
+        </dependency>
+        <!-- 文件内容类型探测：避免在附件模块硬编码有限的文件签名。 -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>3.3.1</version>
+        </dependency>
         <!-- 工具类：Hutool -->
         <dependency>
             <groupId>cn.hutool</groupId>

@@ -10,7 +10,8 @@ public enum JobExecutionStatus {
     RUNNING,
     SUCCESS,
     FAILED,
-    SKIPPED;
+    SKIPPED,
+    UNKNOWN;
 
     public static JobExecutionStatus require(String value) {
         return Arrays.stream(values())

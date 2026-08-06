@@ -5,12 +5,14 @@ import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
+import './ExecutionListPage.css';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { executionApi } from './api';
 import { executionQueryKeys } from './queryKeys';
 import type { ExecutionStatus, ExecutionVO } from './types';
 
-const DETAIL_KEY = 'sys/scheduler/execution/detail';
+const DETAIL_KEY = componentKeys.schedulerExecutionDetail;
 
 const ExecutionListPage = (props: PageComponentProps) => {
   const [status, setStatus] = useState<ExecutionStatus>();
@@ -84,7 +86,7 @@ const ExecutionListPage = (props: PageComponentProps) => {
             { label: '失败', value: 'FAILED' },
             { label: '互斥跳过', value: 'SKIPPED' },
           ]}
-          style={{ width: 140 }}
+          className="sm-execution-status-filter"
           onChange={(value) => setStatus(value)}
         />
       }

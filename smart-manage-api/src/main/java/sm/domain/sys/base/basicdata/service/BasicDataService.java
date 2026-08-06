@@ -27,9 +27,13 @@ import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -43,16 +47,23 @@ public class BasicDataService {
     public List<BasicDataTreeVO> categoryTree() {
         List<BasicDataCategoryEntity> categories = categoryMapper.selectList(
                 new LambdaQueryWrapper<BasicDataCategoryEntity>().orderByAsc(BasicDataCategoryEntity::getNumber));
-        return cloudMapper.selectList(new LambdaQueryWrapper<CloudEntity>()
-                        .orderByAsc(CloudEntity::getSeq).orderByAsc(CloudEntity::getId))
-                .stream()
-                .map(cloud -> new BasicDataTreeVO("cloud:" + cloud.getId(), "cloud", cloud.getId(),
-                        cloud.getName(), cloud.getEnabled(), categories.stream()
-                        .filter(category -> cloud.getId().equals(category.getCloudId()))
-                        .map(category -> new BasicDataTreeVO("category:" + category.getId(), "category",
-                                category.getId(), category.getName(), category.getEnabled(), List.of()))
-                        .toList()))
-                .toList();
+        Map<Long, List<BasicDataCategoryEntity>> categoriesByCloud = new LinkedHashMap<>();
+        for (BasicDataCategoryEntity category : categories) {
+            categoriesByCloud.computeIfAbsent(category.getCloudId(), ignored -> new ArrayList<>()).add(category);
+        }
+        List<CloudEntity> clouds = cloudMapper.selectList(new LambdaQueryWrapper<CloudEntity>()
+                .orderByAsc(CloudEntity::getSeq).orderByAsc(CloudEntity::getId));
+        List<BasicDataTreeVO> tree = new ArrayList<>(clouds.size());
+        for (CloudEntity cloud : clouds) {
+            List<BasicDataTreeVO> children = new ArrayList<>();
+            for (BasicDataCategoryEntity category : categoriesByCloud.getOrDefault(cloud.getId(), List.of())) {
+                children.add(new BasicDataTreeVO("category:" + category.getId(), "category",
+                        category.getId(), category.getName(), category.getEnabled(), List.of()));
+            }
+            tree.add(new BasicDataTreeVO("cloud:" + cloud.getId(), "cloud", cloud.getId(),
+                    cloud.getName(), cloud.getEnabled(), children));
+        }
+        return tree;
     }
 
     public BasicDataCategoryVO categoryDetail(Long id) {
@@ -75,13 +86,22 @@ public class BasicDataService {
         wrapper.orderByAsc(BasicDataItemEntity::getNumberPath).orderByAsc(BasicDataItemEntity::getId);
         Page<BasicDataItemEntity> result = itemMapper.selectPage(
                 new Page<>(form.getPageNum(), form.getPageSize()), wrapper);
+        Set<Long> categoryIds = new HashSet<>();
+        for (BasicDataItemEntity entity : result.getRecords()) {
+            categoryIds.add(entity.getCategoryId());
+        }
         Map<Long, String> categoryNames = new HashMap<>();
-        List<BasicDataListVO> records = result.getRecords().stream().map(entity -> {
+        if (!categoryIds.isEmpty()) {
+            for (BasicDataCategoryEntity category : categoryMapper.selectByIds(categoryIds)) {
+                categoryNames.put(category.getId(), category.getName());
+            }
+        }
+        List<BasicDataListVO> records = new ArrayList<>(result.getRecords().size());
+        for (BasicDataItemEntity entity : result.getRecords()) {
             BasicDataListVO item = converter.toListVO(entity);
-            item.setCategoryName(categoryNames.computeIfAbsent(entity.getCategoryId(),
-                    id -> requireCategory(id).getName()));
-            return item;
-        }).toList();
+            item.setCategoryName(categoryNames.get(entity.getCategoryId()));
+            records.add(item);
+        }
         return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
     }
 
@@ -93,17 +113,25 @@ public class BasicDataService {
     }
 
     public List<BasicDataOptionVO> parentOptions(Long categoryId, Long excludeId) {
-        return itemMapper.selectList(new LambdaQueryWrapper<BasicDataItemEntity>()
-                        .eq(BasicDataItemEntity::getCategoryId, categoryId)
-                        .ne(excludeId != null, BasicDataItemEntity::getId, excludeId)
-                        .orderByAsc(BasicDataItemEntity::getNumberPath))
-                .stream()
-                .filter(item -> excludeId == null || !isDescendantOf(item, excludeId))
-                .map(this::toOption)
-                .toList();
+        List<BasicDataItemEntity> items = itemMapper.selectList(new LambdaQueryWrapper<BasicDataItemEntity>()
+                .eq(BasicDataItemEntity::getCategoryId, categoryId)
+                .orderByAsc(BasicDataItemEntity::getNumberPath));
+        Map<Long, BasicDataItemEntity> itemById = new HashMap<>();
+        for (BasicDataItemEntity item : items) {
+            itemById.put(item.getId(), item);
+        }
+        List<BasicDataOptionVO> options = new ArrayList<>();
+        for (BasicDataItemEntity item : items) {
+            if (excludeId != null && (excludeId.equals(item.getId())
+                    || isDescendantOf(item, excludeId, itemById))) {
+                continue;
+            }
+            options.add(toOption(item));
+        }
+        return options;
     }
 
-    @Cached(cacheType = CacheType.LOCAL, name = CacheConstant.BASIC_DATA_OPTIONS,
+    @Cached(cacheType = CacheType.REMOTE, name = CacheConstant.BASIC_DATA_OPTIONS,
             key = "#number", expire = 30, timeUnit = java.util.concurrent.TimeUnit.MINUTES)
     public List<BasicDataOptionVO> getOptionsByNumber(String number) {
         BasicDataCategoryEntity category = categoryMapper.selectOne(
@@ -154,11 +182,12 @@ public class BasicDataService {
         txService.updateItemEnabled(ids, false);
     }
 
-    private boolean isDescendantOf(BasicDataItemEntity item, Long ancestorId) {
+    private boolean isDescendantOf(BasicDataItemEntity item, Long ancestorId,
+                                   Map<Long, BasicDataItemEntity> itemById) {
         Long parentId = item.getParentId();
         while (parentId != null) {
             if (parentId.equals(ancestorId)) return true;
-            BasicDataItemEntity parent = itemMapper.selectById(parentId);
+            BasicDataItemEntity parent = itemById.get(parentId);
             parentId = parent == null ? null : parent.getParentId();
         }
         return false;

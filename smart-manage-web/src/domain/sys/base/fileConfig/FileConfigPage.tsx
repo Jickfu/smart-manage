@@ -31,6 +31,12 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       ftpPassword: '',
       ftpDir: query.data.ftpDir,
       ftpPassiveMode: query.data.ftpPassiveMode ?? true,
+      s3Endpoint: query.data.s3Endpoint,
+      s3Region: query.data.s3Region ?? 'us-east-1',
+      s3Bucket: query.data.s3Bucket,
+      s3AccessKey: query.data.s3AccessKey,
+      s3SecretKey: '',
+      s3PathStyle: query.data.s3PathStyle ?? true,
     });
   }, [form, query.data]);
   const storageType = Form.useWatch('storageType', form) ?? 'LOCAL';
@@ -41,6 +47,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
         id: query.data?.id,
         version: query.data?.version,
         ftpPassword: values.ftpPassword?.trim() || undefined,
+        s3SecretKey: values.s3SecretKey?.trim() || undefined,
       });
       await query.refetch();
       setDirty(false);
@@ -161,6 +168,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
                         options={[
                           { label: '本地存储', value: 'LOCAL' },
                           { label: 'FTP 存储', value: 'FTP' },
+                          { label: 'S3 / MinIO', value: 'S3' },
                         ]}
                       />
                     </Form.Item>
@@ -173,7 +181,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
                       >
                         <Input variant="underlined" placeholder="例如 E:/upload/" />
                       </Form.Item>
-                    ) : (
+                    ) : storageType === 'FTP' ? (
                       <>
                         <Form.Item
                           className="sm-edit-field"
@@ -231,6 +239,72 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
                           className="sm-edit-field"
                           name="ftpPassiveMode"
                           label="被动模式"
+                          valuePropName="checked"
+                        >
+                          <Switch />
+                        </Form.Item>
+                      </>
+                    ) : (
+                      <>
+                        <Form.Item
+                          className="sm-edit-field"
+                          name="s3Endpoint"
+                          label="S3 Endpoint"
+                          rules={[{ required: true, message: 'S3 Endpoint 不能为空' }]}
+                        >
+                          <Input
+                            variant="underlined"
+                            placeholder="例如 https://minio.example.com"
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          className="sm-edit-field"
+                          name="s3Region"
+                          label="S3 Region"
+                          rules={[{ required: true, message: 'S3 Region 不能为空' }]}
+                        >
+                          <Input variant="underlined" />
+                        </Form.Item>
+                        <Form.Item
+                          className="sm-edit-field"
+                          name="s3Bucket"
+                          label="私有 Bucket"
+                          rules={[{ required: true, message: 'Bucket 不能为空' }]}
+                        >
+                          <Input variant="underlined" />
+                        </Form.Item>
+                        <Form.Item
+                          className="sm-edit-field"
+                          name="s3AccessKey"
+                          label="Access Key"
+                          rules={[{ required: true, message: 'Access Key 不能为空' }]}
+                        >
+                          <Input variant="underlined" autoComplete="off" />
+                        </Form.Item>
+                        <Form.Item
+                          className="sm-edit-field"
+                          name="s3SecretKey"
+                          label="Secret Key"
+                          extra={
+                            query.data?.s3SecretKeyConfigured
+                              ? '密钥已配置；留空保存时保留原密钥'
+                              : '尚未配置密钥'
+                          }
+                          rules={[
+                            {
+                              validator: (_, value) =>
+                                query.data?.s3SecretKeyConfigured || value
+                                  ? Promise.resolve()
+                                  : Promise.reject(new Error('Secret Key 不能为空')),
+                            },
+                          ]}
+                        >
+                          <Input.Password variant="underlined" autoComplete="new-password" />
+                        </Form.Item>
+                        <Form.Item
+                          className="sm-edit-field"
+                          name="s3PathStyle"
+                          label="Path Style（MinIO 通常启用）"
                           valuePropName="checked"
                         >
                           <Switch />

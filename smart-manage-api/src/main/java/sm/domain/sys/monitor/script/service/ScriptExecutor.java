@@ -9,6 +9,8 @@ import org.graalvm.polyglot.Value;
 import org.springframework.stereotype.Component;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
+import sm.system.concurrent.DistributedMutex;
+import sm.system.concurrent.DistributedMutexBusyException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -19,7 +21,6 @@ import java.time.Instant;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -29,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class ScriptExecutor {
     private final ScriptServiceGateway serviceGateway;
     private final JsonMapper jsonMapper;
-    private final Semaphore executionPermit = new Semaphore(1);
+    private final DistributedMutex distributedMutex;
     private final ScheduledExecutorService timeoutExecutor = Executors.newSingleThreadScheduledExecutor(runnable -> {
         Thread thread = new Thread(runnable, "script-console-timeout");
         thread.setDaemon(true);
@@ -37,13 +38,10 @@ class ScriptExecutor {
     });
 
     ScriptExecutionOutcome execute(ScriptExecutionConfig config, String content) {
-        if (!executionPermit.tryAcquire()) {
-            throw new BizException(ResultEnum.DATA_CONFLICT, "已有脚本正在执行，请稍后重试");
-        }
-        try {
+        try (DistributedMutex.LockHandle ignored = distributedMutex.acquire("script-console", "global")) {
             return executeExclusive(config, content);
-        } finally {
-            executionPermit.release();
+        } catch (DistributedMutexBusyException exception) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "已有脚本正在执行，请稍后重试");
         }
     }
 

@@ -53,6 +53,14 @@ class FileConfigTxService {
         }
         entity.setFtpDir(form.getFtpDir());
         entity.setFtpPassiveMode(form.getFtpPassiveMode());
+        entity.setS3Endpoint(form.getS3Endpoint());
+        entity.setS3Region(form.getS3Region());
+        entity.setS3Bucket(form.getS3Bucket());
+        entity.setS3AccessKey(form.getS3AccessKey());
+        if (form.getS3SecretKey() != null && !form.getS3SecretKey().isBlank()) {
+            entity.setS3SecretKeyCipher(sm4Helper.encrypt(form.getS3SecretKey()));
+        }
+        entity.setS3PathStyle(form.getS3PathStyle());
         if (form.getId() == null) {
             if (mapper.insert(entity) != 1) {
                 throw new BizException(sm.system.response.ResultEnum.PERSISTENCE_ERROR, "新增数据失败");

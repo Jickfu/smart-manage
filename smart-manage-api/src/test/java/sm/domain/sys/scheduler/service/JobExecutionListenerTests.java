@@ -11,6 +11,7 @@ import org.quartz.JobBuilder;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.JobKey;
+import org.quartz.Scheduler;
 import sm.domain.sys.scheduler.job.CleanTempFileJob;
 import sm.domain.sys.scheduler.mapper.JobLogMapper;
 import sm.domain.sys.scheduler.mapper.JobMapper;
@@ -46,12 +47,16 @@ class JobExecutionListenerTests {
 	}
 
 	@Test
-	void executionGetsIndependentTraceIdAndFailureIsRecorded() {
+	void executionGetsIndependentTraceIdAndFailureIsRecorded() throws org.quartz.SchedulerException {
 		JobExecutionContext context = mock(JobExecutionContext.class);
 		when(context.getJobDetail()).thenReturn(JobBuilder.newJob(CleanTempFileJob.class)
 				.withIdentity(JobKey.jobKey("clean-temp", "SYSTEM"))
 				.build());
 		when(context.get("__jobLogId__")).thenReturn(10L);
+		Scheduler scheduler = mock(Scheduler.class);
+		when(scheduler.getSchedulerInstanceId()).thenReturn("instance-a");
+		when(context.getScheduler()).thenReturn(scheduler);
+		when(context.getFireInstanceId()).thenReturn("fire-1");
 		JobEntity job = new JobEntity();
 		job.setId(1L);
 		when(jobMapper.selectOne(any())).thenReturn(job);
@@ -60,6 +65,7 @@ class JobExecutionListenerTests {
 			entity.setId(10L);
 			return 1;
 		});
+		when(jobLogMapper.updateById(any(JobLogEntity.class))).thenReturn(1);
 
 		listener.jobToBeExecuted(context);
 

@@ -5,6 +5,7 @@ import type { Dayjs } from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { OperationType } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { scriptApi } from './api';
@@ -17,7 +18,7 @@ import type {
 } from './types';
 import './scriptConsole.css';
 
-const DETAIL_KEY = 'sys/monitor/script-log/detail';
+const DETAIL_KEY = componentKeys.scriptLogDetail;
 const statusColor = { SUCCESS: 'success', ERROR: 'error', TIMEOUT: 'warning' } as const;
 
 export default function ScriptLogPage(props: PageComponentProps) {

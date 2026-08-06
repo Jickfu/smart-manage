@@ -1,14 +1,15 @@
 import { lazy } from 'react';
 import { definePageRegistrations } from '@/domain/common/registry/componentRegistry';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 
 export default definePageRegistrations([
   {
-    componentKey: 'sys/scheduler/job',
+    componentKey: componentKeys.schedulerJob,
     pageType: 'LIST',
     component: lazy(() => import('./JobListPage')),
   },
   {
-    componentKey: 'sys/scheduler/job/edit',
+    componentKey: componentKeys.schedulerJobEdit,
     pageType: 'EDIT',
     component: lazy(() => import('./JobEditPage')),
   },

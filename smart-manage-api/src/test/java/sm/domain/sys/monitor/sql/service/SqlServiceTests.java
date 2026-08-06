@@ -5,6 +5,7 @@ import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.sysparam.service.SysParamService;
 import sm.domain.sys.monitor.sql.mapper.SqlLogMapper;
 import sm.system.exception.BizException;
+import sm.system.web.ClientIpResolver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,7 +36,8 @@ class SqlServiceTests {
                 mock(SqlExecutionTxService.class),
                 mock(SqlLogConverter.class),
                 mock(CurrentUserContext.class),
-                sysParamService
+                sysParamService,
+                mock(ClientIpResolver.class)
         );
     }
 }

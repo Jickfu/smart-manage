@@ -10,7 +10,7 @@ class CleanTempFileJobTests {
     void cleanupJobProvidesCreationMetadata() {
         SchedulerJobDefinition definition =
                 CleanTempFileJob.class.getAnnotation(SchedulerJobDefinition.class);
-        assertTrue(definition.description().contains("临时文件"));
-        assertTrue(definition.parameterTemplate().contains("keepDays"));
+        assertTrue(definition.description().contains("临时附件"));
+        assertTrue(definition.parameterTemplate().equals("{}"));
 	}
 }

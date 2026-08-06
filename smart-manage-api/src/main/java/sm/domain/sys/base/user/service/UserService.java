@@ -30,6 +30,7 @@ import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.model.entity.UserRoleEntity;
 import sm.system.helper.Argon2Helper;
+import sm.system.auth.SessionTerminationReason;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
@@ -85,19 +86,19 @@ public class UserService {
 	@BizLog("启用用户")
 	public void enable(List<Long> ids) {
 		txService.updateEnabled(ids, true);
-		authorizationStateHelper.invalidateUsers(ids);
+		authorizationStateHelper.refreshUsers(ids);
 	}
 
 	@BizLog("禁用用户")
 	public void disable(List<Long> ids) {
 		txService.updateEnabled(ids, false);
-		authorizationStateHelper.invalidateUsers(ids);
+		authorizationStateHelper.terminateUsers(ids, SessionTerminationReason.ACCOUNT_DISABLED);
 	}
 
 	@BizLog("分配用户角色")
 	public void assignRoles(UserRoleAssignForm form) {
 		txService.assignRoles(form);
-		authorizationStateHelper.invalidateUsers(List.of(form.getUserId()));
+		authorizationStateHelper.refreshUsers(List.of(form.getUserId()));
 	}
 
 	/** 查询用户及当前组织下的角色明细。 */
@@ -161,7 +162,7 @@ public class UserService {
 	@BizLog(value = "重置用户密码", recordResponse = false)
 	public ResetPasswordVO resetPassword(Long userId) {
 		String password = txService.resetPassword(userId);
-		authorizationStateHelper.invalidateUsers(List.of(userId));
+		authorizationStateHelper.terminateUsers(List.of(userId), SessionTerminationReason.PASSWORD_RESET_TERMINATED);
 		return new ResetPasswordVO(password);
 	}
 
@@ -170,7 +171,7 @@ public class UserService {
 			throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能为空");
 		}
 		txService.changeResetPassword(userId, newPassword);
-		authorizationStateHelper.invalidateUsers(List.of(userId));
+		authorizationStateHelper.terminateUsers(List.of(userId), SessionTerminationReason.PASSWORD_RESET_TERMINATED);
 	}
 
 	public UserInfoVO current() {

@@ -1,19 +1,12 @@
 package sm.system.helper;
 
-import cn.hutool.core.util.HexUtil;
-import cn.hutool.crypto.BCUtil;
-import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.asymmetric.KeyType;
 import cn.hutool.crypto.asymmetric.SM2;
 import jakarta.annotation.PostConstruct;
 import org.bouncycastle.crypto.engines.SM2Engine;
-import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import sm.system.util.StringUtil;
-
-import java.security.KeyPair;
-
 
 /**
  * @author Chekfu
@@ -33,10 +26,6 @@ public class SM2Helper {
 	public void init() {
 		staticPrivateKey = this.privateKey;
 		staticPublicKey = this.publicKey;
-	}
-
-	public static KeyPair generateKeyPair() {
-		return SecureUtil.generateKeyPair("SM2");
 	}
 
 	/**
@@ -67,61 +56,25 @@ public class SM2Helper {
 			}
 			return data;
 		} catch (Exception e) {
-			throw new RuntimeException("sm2解密失败" + e);
+			throw new Sm2DecryptionException("SM2 解密失败", e);
 		}
+	}
+
+	/**
+	 * 解密浏览器端 sm2.js 产生的密文。
+	 *
+	 * <p>当前前端库省略非压缩椭圆曲线点的 {@code 04} 前缀。Hutool 仅在首字节不是
+	 * {@code 02}/{@code 03}/{@code 04} 时自动补齐，因此当 C1 的 X 坐标恰好以这些
+	 * 字节开头时会被误判为已带前缀并随机解密失败。此入口依据前端协议统一补齐前缀。</p>
+	 */
+	public static String decryptJsCiphertext(String data) {
+		if (data == null || data.length() < 192 || (data.length() & 1) != 0 || !data.matches("[0-9a-fA-F]+")) {
+			throw new Sm2DecryptionException("SM2 密文格式无效", null);
+		}
+		return decrypt("04" + data);
 	}
 
 	private static boolean checkKeyIsEmpty(String privateKey, String publicKey) {
 		return !StringUtil.isEmpty(privateKey) && !StringUtil.isEmpty(publicKey);
 	}
-
-	/**
-	 * 服务端密钥对
-	 */
-	private static void createServerKey() {
-		// 生成密钥对
-		KeyPair keyPair = SM2Helper.generateKeyPair();
-		// 生成私钥
-		String privateKey = HexUtil.encodeHexStr(keyPair.getPrivate().getEncoded());
-		staticPrivateKey = privateKey;
-		System.out.println("服务端privateKey：" + privateKey);
-		// 生成公钥
-		String publicKey = HexUtil.encodeHexStr(keyPair.getPublic().getEncoded());
-		staticPublicKey = publicKey;
-		System.out.println("服务端publicKey：" + publicKey);
-
-		//测试
-		String encrypt = SM2Helper.encrypt("测试" + System.currentTimeMillis());
-		System.out.println("服务端加密：" + encrypt);
-		String decrypt = SM2Helper.decrypt(encrypt);
-		System.out.println("服务端解密：" + decrypt);
-	}
-
-	/**
-	 * 前端密钥对
-	 */
-	private static void createClientKey() {
-		// 生成密钥对
-		KeyPair keyPair = SM2Helper.generateKeyPair();
-		// 生成公钥 Q，以Q值做为js端的加密公钥
-		String publicKeyQ = HexUtil.encodeHexStr(((BCECPublicKey) keyPair.getPublic()).getQ().getEncoded(false));
-		staticPublicKey = publicKeyQ;
-		System.out.println("前端公钥Q：" + publicKeyQ);
-		// 生成私钥 D，以D值做为js端的解密私钥
-		String privateKeyD = HexUtil.encodeHexStr(BCUtil.encodeECPrivateKey(keyPair.getPrivate()));
-		staticPrivateKey = privateKeyD;
-		System.out.println("前端私钥D：" + privateKeyD);
-
-		//测试
-		String encrypt = SM2Helper.encrypt("测试" + System.currentTimeMillis());
-		System.out.println("前端加密：" + encrypt);
-		String decrypt = SM2Helper.decrypt(encrypt);
-		System.out.println("前端解密：" + decrypt);
-	}
-
-	public static void main(String[] args) {
-		createServerKey();
-		createClientKey();
-	}
-
 }

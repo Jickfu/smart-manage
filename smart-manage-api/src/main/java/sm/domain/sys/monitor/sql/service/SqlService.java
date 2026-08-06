@@ -17,7 +17,7 @@ import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
-import sm.system.util.ServletUtil;
+import sm.system.web.ClientIpResolver;
 import sm.system.util.StringUtil;
 
 import java.util.List;
@@ -37,6 +37,7 @@ public class SqlService {
     private final SqlLogConverter converter;
     private final CurrentUserContext currentUserContext;
     private final SysParamService sysParamService;
+    private final ClientIpResolver clientIpResolver;
 
     @BizLog(value = "执行SQL", recordRequest = false, recordResponse = false)
     public SqlResultVO execute(SqlExecuteForm form) {
@@ -95,7 +96,7 @@ public class SqlService {
 
     private String resolveClientIp() {
         try {
-            return ServletUtil.getClientIp();
+            return clientIpResolver.resolveCurrentRequest();
         } catch (RuntimeException exception) {
             return null;
         }

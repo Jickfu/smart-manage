@@ -3,6 +3,7 @@ import { App, Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ListPage from '@/domain/common/page/ListPage';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { BillStatus, OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -12,7 +13,7 @@ import { purchaseRequisitionAccess } from './permissions';
 import { purchaseRequisitionQueryKeys } from './queryKeys';
 import type { PurchaseRequisitionListVO } from './types';
 
-const EDIT_COMPONENT_KEY = 'scm/procurement/purchase-requisition/edit';
+const EDIT_COMPONENT_KEY = componentKeys.purchaseRequisitionEdit;
 
 const statusView = {
   [BillStatus.SAVED]: { label: '暂存', color: 'default' },

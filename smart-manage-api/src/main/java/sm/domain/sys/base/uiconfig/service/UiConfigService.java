@@ -1,13 +1,9 @@
 package sm.domain.sys.base.uiconfig.service;
 
-import com.alicp.jetcache.anno.CacheType;
-import com.alicp.jetcache.anno.Cached;
-import com.alicp.jetcache.anno.CacheInvalidate;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.base.uiconfig.model.entity.UiConfigEntity;
 import sm.domain.sys.base.uiconfig.model.form.UiConfigSaveForm;
 import sm.domain.sys.base.uiconfig.model.vo.UiConfigDetailVO;
@@ -20,7 +16,6 @@ import sm.system.aop.log.BizLog;
 import sm.system.response.ResultEnum;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -51,17 +46,12 @@ public class UiConfigService {
     }
 
     /** 获取活跃配置（Caffeine 本地缓存） */
-    @Cached(cacheType = CacheType.LOCAL, name = CacheConstant.UI_CONFIG,
-            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY",
-            expire = 30, timeUnit = TimeUnit.MINUTES)
     public UiConfigDetailVO getActiveConfig() {
         List<UiConfigEntity> entityList = mapper.selectList(null);
         return entityList.isEmpty() ? new UiConfigDetailVO() : assembleDetailVO(entityList.get(0));
     }
 
     @BizLog("保存界面配置")
-    @CacheInvalidate(name = CacheConstant.UI_CONFIG,
-            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY")
     public Long save(UiConfigSaveForm form) {
         UiConfigEntity previous = form.getId() == null ? null : mapper.selectById(form.getId());
         Long configId = previous == null ? IdWorker.getId() : previous.getId();
@@ -97,8 +87,9 @@ public class UiConfigService {
         }
         AttachmentPromoteForm promoteForm = new AttachmentPromoteForm();
         promoteForm.setAttachmentIds(List.copyOf(attachmentIds));
-        promoteForm.setBizType("SYS_UI_CONFIG");
+        promoteForm.setBizType(UiConfigResourceRegistration.RESOURCE_TYPE);
         promoteForm.setBizId(String.valueOf(configId));
+        promoteForm.setUploadSessions(form.getAttachmentUploadSessions());
         try {
             attachmentService.promoteForAggregate(promoteForm);
         } catch (IOException exception) {
@@ -123,7 +114,7 @@ public class UiConfigService {
     private void deleteImagesForCompensation(List<Long> attachmentIds) {
         for (Long attachmentId : attachmentIds) {
             try {
-                attachmentService.delete(attachmentId);
+                attachmentService.deleteForAggregate(attachmentId);
             } catch (IOException | RuntimeException cleanupException) {
                 log.error("界面配置保存失败且新图片补偿删除失败: id={}", attachmentId, cleanupException);
             }
@@ -177,7 +168,7 @@ public class UiConfigService {
                 .toList());
         for (Long attachmentId : previousIds) {
             try {
-                attachmentService.delete(attachmentId);
+                attachmentService.deleteForAggregate(attachmentId);
             } catch (IOException | RuntimeException exception) {
                 log.warn("界面配置旧图片清理失败，需按附件ID重试: id={}", attachmentId, exception);
             }

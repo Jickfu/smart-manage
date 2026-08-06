@@ -11,6 +11,7 @@
     "predev": "pnpm gen:registry",
     "dev": "vite",
     "gen:registry": "node scripts/gen-registry.mjs",
+    "verify:permissions": "node scripts/verify-permissions.mjs",
     "prebuild": "pnpm gen:registry",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",

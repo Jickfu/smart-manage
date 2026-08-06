@@ -15,6 +15,9 @@ public class MenuSaveForm {
 	@Schema(description = "id，为空则新增")
 	private Long id;
 
+	@Schema(description = "乐观锁版本，编辑时必填")
+	private Integer version;
+
 	@Schema(description = "编号")
 	private String number;
 

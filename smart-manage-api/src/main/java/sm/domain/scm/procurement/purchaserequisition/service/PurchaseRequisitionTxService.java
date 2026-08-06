@@ -17,6 +17,8 @@ import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.util.BillStatusUtil;
+import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.service.AttachmentService;
 
 import java.util.Objects;
 
@@ -28,6 +30,7 @@ class PurchaseRequisitionTxService {
 	private final CurrentUserContext currentUserContext;
     private final PurchaseRequisitionMapper mapper;
     private final PurchaseRequisitionEntryMapper entryMapper;
+    private final AttachmentService attachmentService;
 
     public Long save(PurchaseRequisitionSaveForm form) {
         PurchaseRequisitionEntity entity;
@@ -74,6 +77,7 @@ class PurchaseRequisitionTxService {
             }
             sort++;
         }
+        promoteAttachments(form, entity.getId());
         return entity.getId();
     }
 
@@ -127,6 +131,23 @@ class PurchaseRequisitionTxService {
         }
         if (!Objects.equals(entity.getVersion(), version)) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "采购申请已被其他用户修改，请刷新后重试");
+        }
+    }
+
+    private void promoteAttachments(PurchaseRequisitionSaveForm form, Long purchaseRequisitionId) {
+        if (form.getAttachmentIds() == null || form.getAttachmentIds().isEmpty()) {
+            return;
+        }
+        AttachmentPromoteForm attachmentForm = new AttachmentPromoteForm();
+        attachmentForm.setAttachmentIds(form.getAttachmentIds().stream().distinct().toList());
+        attachmentForm.setUploadSessions(form.getAttachmentUploadSessions());
+        attachmentForm.setBizType(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE);
+        attachmentForm.setBizId(String.valueOf(purchaseRequisitionId));
+        try {
+            // 与采购申请写操作加入同一数据库事务；对象键不因 TEMP 提升而移动。
+            attachmentService.promoteForAggregate(attachmentForm);
+        } catch (java.io.IOException exception) {
+            throw new BizException(ResultEnum.PERSISTENCE_ERROR, "采购申请附件确认失败: " + exception.getMessage());
         }
     }
 }

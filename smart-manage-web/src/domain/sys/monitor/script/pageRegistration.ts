@@ -1,34 +1,35 @@
 import { lazy } from 'react';
 import { definePageRegistrations } from '@/domain/common/registry/componentRegistry';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 
 export default definePageRegistrations([
   {
-    componentKey: 'sys/monitor/script-console',
+    componentKey: componentKeys.scriptConsole,
     pageType: 'CUSTOM',
     component: lazy(() => import('./ScriptConsolePage')),
   },
   {
-    componentKey: 'sys/monitor/script-manage',
+    componentKey: componentKeys.scriptManage,
     pageType: 'LIST',
     component: lazy(() => import('./ScriptListPage')),
   },
   {
-    componentKey: 'sys/monitor/script-manage/edit',
+    componentKey: componentKeys.scriptManageEdit,
     pageType: 'EDIT',
     component: lazy(() => import('./ScriptEditPage')),
   },
   {
-    componentKey: 'sys/monitor/script-log',
+    componentKey: componentKeys.scriptLog,
     pageType: 'LIST',
     component: lazy(() => import('./ScriptLogPage')),
   },
   {
-    componentKey: 'sys/monitor/script-log/detail',
+    componentKey: componentKeys.scriptLogDetail,
     pageType: 'EDIT',
     component: lazy(() => import('./ScriptLogDetailPage')),
   },
   {
-    componentKey: 'sys/monitor/script-help',
+    componentKey: componentKeys.scriptHelp,
     pageType: 'CUSTOM',
     component: lazy(() => import('./ScriptHelpPage')),
   },

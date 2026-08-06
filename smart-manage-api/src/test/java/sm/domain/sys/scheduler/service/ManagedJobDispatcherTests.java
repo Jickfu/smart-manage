@@ -6,6 +6,8 @@ import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.springframework.context.ApplicationContext;
+import sm.system.concurrent.DistributedMutex;
+import sm.system.concurrent.DistributedMutexBusyException;
 
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -38,7 +40,14 @@ class ManagedJobDispatcherTests {
             }
         };
         when(applicationContext.getBeansOfType(Job.class)).thenReturn(Map.of("target", target));
-        ManagedJobDispatcher dispatcher = new ManagedJobDispatcher(applicationContext);
+        AtomicInteger lockState = new AtomicInteger();
+        DistributedMutex distributedMutex = (namespace, mutexKey) -> {
+            if (!lockState.compareAndSet(0, 1)) {
+                throw new DistributedMutexBusyException(mutexKey);
+            }
+            return () -> lockState.set(0);
+        };
+        ManagedJobDispatcher dispatcher = new ManagedJobDispatcher(applicationContext, distributedMutex);
         JobExecutionContext first = context(target.getClass().getName(), "shared-storage");
         JobExecutionContext second = context(target.getClass().getName(), "shared-storage");
 

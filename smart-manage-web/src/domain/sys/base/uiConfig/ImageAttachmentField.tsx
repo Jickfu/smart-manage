@@ -8,7 +8,7 @@ interface ImageAttachmentFieldProps {
   attachmentId?: string;
   imageUrl?: string;
   disabled?: boolean;
-  onChange: (attachmentId?: string, imageUrl?: string) => void;
+  onChange: (attachmentId?: string, imageUrl?: string, uploadSessionId?: string) => void;
 }
 
 export function ImageAttachmentField({
@@ -35,7 +35,7 @@ export function ImageAttachmentField({
   const customRequest: UploadProps['customRequest'] = async ({ file, onSuccess, onError }) => {
     try {
       const attachment = await uiConfigApi.uploadImage(file as File);
-      onChange(attachment.id, attachment.url);
+      onChange(attachment.id, attachment.url, attachment.uploadSessionId);
       onSuccess?.(attachment);
     } catch (error) {
       message.error(error instanceof Error ? error.message : '图片上传失败');
@@ -44,7 +44,7 @@ export function ImageAttachmentField({
   };
   return (
     <Upload
-      accept="image/*"
+      accept="image/png,image/jpeg,image/webp,image/gif"
       listType="picture-card"
       maxCount={1}
       fileList={fileList}

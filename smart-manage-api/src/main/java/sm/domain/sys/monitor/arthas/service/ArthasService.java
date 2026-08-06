@@ -1,9 +1,11 @@
 package sm.domain.sys.monitor.arthas.service;
 
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.net.telnet.TelnetClient;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.monitor.arthas.model.vo.ArthasResultVO;
 import sm.system.exception.BizException;
@@ -24,11 +26,16 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class ArthasService {
 	private final CurrentUserContext currentUserContext;
+	@Value("${smart-manage.instance-id}")
+	private String instanceId;
 
     private static final String HOST = "127.0.0.1";
     private static final int PORT = 3658;
     private static final int CONNECT_TIMEOUT = 5000;
     private static final int READ_TIMEOUT_MS = 30000;
+    private static final int MAX_SESSIONS = 4;
+    private static final int MAX_SESSION_OUTPUT_CHARS = 256 * 1024;
+    private static final long SESSION_IDLE_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(5);
     private static final Pattern ANSI_PATTERN = Pattern.compile("\\[[;\\d]*m");
 
     // 一次性命令
@@ -45,9 +52,10 @@ public class ArthasService {
 
     // 活跃的持续命令会话
     private final ConcurrentHashMap<String, ArthasSession> sessions = new ConcurrentHashMap<>();
+    private final Semaphore sessionPermits = new Semaphore(MAX_SESSIONS);
 
     // 线程池用于异步读取持续命令输出
-    private final ExecutorService executor = Executors.newCachedThreadPool(r -> {
+    private final ExecutorService executor = Executors.newFixedThreadPool(MAX_SESSIONS, r -> {
         Thread t = new Thread(r, "arthas-session-");
         t.setDaemon(true);
         return t;
@@ -67,7 +75,7 @@ public class ArthasService {
         }
         String fullCmd = args != null && !args.isEmpty() ? command + " " + args : command;
         String output = execAndRead(fullCmd);
-        return ArthasResultVO.ok(output);
+        return ArthasResultVO.ok(output).withInstanceId(instanceId);
     }
 
     /**
@@ -80,41 +88,60 @@ public class ArthasService {
             throw new BizException(ResultEnum.PARAM_ERROR, "命令 '" + command + "' 不是持续命令，请使用 /execute 端点");
         }
         String fullCmd = args != null && !args.isEmpty() ? command + " " + args : command;
+        if (!sessionPermits.tryAcquire()) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "Arthas 活跃会话已达到上限，请先结束已有会话");
+        }
         String sessionId = UUID.randomUUID().toString().substring(0, 8);
 
         ArthasSession session = new ArthasSession(sessionId, fullCmd);
         sessions.put(sessionId, session);
-
-        executor.submit(TraceIdUtil.wrap(() -> runSession(session)));
-        return ArthasResultVO.running(sessionId, "会话已启动，命令: " + fullCmd);
+        try {
+            executor.submit(TraceIdUtil.wrap(() -> runSession(session)));
+        } catch (RuntimeException exception) {
+            sessions.remove(sessionId, session);
+            sessionPermits.release();
+            throw exception;
+        }
+        return ArthasResultVO.running(sessionId, "会话已启动，命令: " + fullCmd).withInstanceId(instanceId);
     }
 
     /**
      * 停止持续命令
      */
     @BizLog("停止Arthas会话")
-    public ArthasResultVO stop(String sessionId) {
+    public ArthasResultVO stop(String requestedInstanceId, String sessionId) {
         currentUserContext.checkAdministrator();
+        requireCurrentInstance(requestedInstanceId);
         ArthasSession session = sessions.remove(sessionId);
         if (session == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "会话不存在或已结束: " + sessionId);
         }
         session.stop();
-        return ArthasResultVO.ok(session.getOutput());
+        return ArthasResultVO.ok(session.getOutput()).withInstanceId(instanceId);
     }
 
     /**
      * 读取持续命令输出
      */
-    public ArthasResultVO read(String sessionId) {
+    public ArthasResultVO read(String requestedInstanceId, String sessionId) {
         currentUserContext.checkAdministrator();
+        requireCurrentInstance(requestedInstanceId);
         ArthasSession session = sessions.get(sessionId);
         if (session == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "会话不存在或已结束: " + sessionId);
         }
+        session.touch();
         String output = session.getOutput();
         boolean running = !session.isStopped();
-        return running ? ArthasResultVO.running(sessionId, output) : ArthasResultVO.ok(output);
+        return (running ? ArthasResultVO.running(sessionId, output) : ArthasResultVO.ok(output))
+                .withInstanceId(instanceId);
+    }
+
+    private void requireCurrentInstance(String requestedInstanceId) {
+        if (!instanceId.equals(requestedInstanceId)) {
+            throw new BizException(ResultEnum.PARAM_ERROR,
+                    "Arthas 会话属于实例 " + requestedInstanceId + "，当前实例为 " + instanceId);
+        }
     }
 
     // ── 内部实现 ──
@@ -167,7 +194,7 @@ public class ArthasService {
 
             // 持续读取直到停止
             byte[] buf = new byte[4096];
-            while (!session.isStopped()) {
+            while (!session.isStopped() && !session.isIdleExpired()) {
                 int available = in.available();
                 if (available > 0) {
                     int len = in.read(buf, 0, Math.min(available, buf.length));
@@ -198,6 +225,8 @@ public class ArthasService {
             }
         } finally {
             session.markStopped();
+            sessions.remove(session.id, session);
+            sessionPermits.release();
             try {
                 client.disconnect();
             } catch (Exception ignored) {
@@ -248,6 +277,14 @@ public class ArthasService {
         return ANSI_PATTERN.matcher(text).replaceAll("");
     }
 
+    @PreDestroy
+    void shutdown() {
+        for (ArthasSession session : sessions.values()) {
+            session.stop();
+        }
+        executor.shutdownNow();
+    }
+
     // ── 会话内部类 ──
 
     private static class ArthasSession {
@@ -255,6 +292,7 @@ public class ArthasService {
         final String command;
         final StringBuilder output = new StringBuilder();
         volatile boolean stopped = false;
+        volatile long lastAccessTime = System.currentTimeMillis();
 
         ArthasSession(String id, String command) {
             this.id = id;
@@ -262,7 +300,15 @@ public class ArthasService {
         }
 
         synchronized void appendOutput(String text) {
-            output.append(text);
+            int remaining = MAX_SESSION_OUTPUT_CHARS - output.length();
+            if (remaining <= 0) {
+                stopped = true;
+                return;
+            }
+            output.append(text, 0, Math.min(text.length(), remaining));
+            if (text.length() > remaining) {
+                stopped = true;
+            }
         }
 
         synchronized String getOutput() {
@@ -275,6 +321,14 @@ public class ArthasService {
 
         boolean isStopped() {
             return stopped;
+        }
+
+        void touch() {
+            lastAccessTime = System.currentTimeMillis();
+        }
+
+        boolean isIdleExpired() {
+            return System.currentTimeMillis() - lastAccessTime >= SESSION_IDLE_TIMEOUT_MS;
         }
 
         void markStopped() {

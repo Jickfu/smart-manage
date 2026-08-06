@@ -15,9 +15,7 @@ import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
 import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.system.form.IdForm;
-import sm.system.exception.BizException;
 import sm.system.response.Result;
-import sm.system.response.ResultEnum;
 import sm.system.storage.FileStorageService;
 import sm.system.storage.FileStorageServiceFactory;
 
@@ -42,7 +40,7 @@ public class AttachmentController {
     @PostMapping("/sys/base/attachment/upload")
     @Operation(summary = "上传附件", description = "上传文件到临时目录")
     public Result<AttachmentVO> upload(@RequestParam("file") MultipartFile file,
-                                       @RequestParam(value = "bizType", required = false) String bizType) throws IOException {
+                                       @RequestParam("bizType") String bizType) throws IOException {
         return Result.success(service.upload(file, bizType));
     }
 
@@ -55,8 +53,9 @@ public class AttachmentController {
 
     @PostMapping("/sys/base/attachment/delete")
     @Operation(summary = "删除附件", description = "删除附件及其物理文件")
-    public Result<String> delete(@RequestBody @Valid IdForm form) throws IOException {
-        service.delete(form.getId());
+    public Result<String> delete(@RequestBody @Valid IdForm form,
+                                 @RequestHeader(value = "X-Upload-Session", required = false) String uploadSessionId) throws IOException {
+        service.delete(form.getId(), uploadSessionId);
         return Result.success();
     }
 
@@ -66,21 +65,13 @@ public class AttachmentController {
         return Result.success(service.listByBiz(form.getBizType(), form.getBizId()));
     }
 
-    @PostMapping("/sys/base/attachment/listByIds")
-    @Operation(summary = "按ID列表查询附件")
-    public Result<List<AttachmentVO>> listByIds(@RequestBody List<Long> ids) {
-        return Result.success(service.listByIds(ids));
-    }
-
     @PostMapping("/sys/base/attachment/download")
     @Operation(summary = "下载附件", description = "按附件ID下载文件")
-    public ResponseEntity<byte[]> download(@RequestBody @Valid IdForm form) throws IOException {
-        AttachmentEntity entity = service.requireDownloadableAttachment(form.getId());
-        if (entity == null) {
-            throw new BizException(ResultEnum.NOT_FOUND, "附件不存在：" + form.getId());
-        }
+    public ResponseEntity<byte[]> download(@RequestBody @Valid IdForm form,
+                                           @RequestHeader(value = "X-Upload-Session", required = false) String uploadSessionId) throws IOException {
+        AttachmentEntity entity = service.requireDownloadableAttachment(form.getId(), uploadSessionId);
         FileStorageService storage = storageFactory.getService(entity.getStorageType());
-        byte[] bytes = storage.getBytes(entity.getStoredPath());
+        byte[] bytes = storage.getBytes(entity.getObjectKey());
         String encodedName = URLEncoder.encode(entity.getOriginalName(), StandardCharsets.UTF_8)
                 .replace("+", "%20");
         return ResponseEntity.ok()

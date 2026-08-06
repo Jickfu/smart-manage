@@ -36,6 +36,9 @@ jobs:
       - name: Lint
         working-directory: smart-manage-web
         run: pnpm lint
+      - name: Verify permission catalog
+        working-directory: smart-manage-web
+        run: pnpm verify:permissions
       - name: Check formatting
         working-directory: smart-manage-web
         run: pnpm format:check

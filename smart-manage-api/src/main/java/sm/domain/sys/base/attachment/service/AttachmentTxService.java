@@ -23,6 +23,11 @@ import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalDateTime;
+import java.util.UUID;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 
 /**
  * 附件事务服务 —— 所有写操作在类级别事务中执行
@@ -39,11 +44,11 @@ class AttachmentTxService {
     private final FileStorageServiceFactory storageFactory;
 
     /** 上传附件：传 bizType 时存入临时目录（需 promote），否则直接存 sys 系统目录 */
-    public AttachmentVO upload(MultipartFile file, String bizType) throws IOException {
+    public AttachmentVO upload(MultipartFile file, String bizType, String objectPrefix, int tempExpireHours) throws IOException {
         FileStorageService storage = storageFactory.getService();
         boolean isTemp = bizType != null && !bizType.isBlank();
-        FileStoreResult result = isTemp ? storage.storeTemp(file) : storage.store("sys", file);
-        String originalName = file.getOriginalFilename();
+        FileStoreResult result = storage.store(objectPrefix, file);
+        String originalName = sanitizeOriginalName(file.getOriginalFilename());
         String ext = "";
         if (originalName != null && originalName.contains(".")) {
             ext = originalName.substring(originalName.lastIndexOf("."));
@@ -51,13 +56,15 @@ class AttachmentTxService {
         try {
             AttachmentEntity entity = new AttachmentEntity();
             entity.setOriginalName(originalName);
-            entity.setStoredName(result.getStoredName());
-            entity.setStoredPath(result.getStoredPath());
+            entity.setObjectKey(result.getStoredPath());
             entity.setFileSize(result.getFileSize());
             entity.setMimeType(file.getContentType());
             entity.setFileExt(ext);
             entity.setStorageType(storage.getType());
-            entity.setIsTemp(isTemp);
+            entity.setStatus(isTemp ? "TEMP" : "ACTIVE");
+            entity.setUploadSessionId(isTemp ? UUID.randomUUID().toString() : null);
+            entity.setExpiresAt(isTemp ? LocalDateTime.now().plusHours(tempExpireHours) : null);
+            entity.setSha256(sha256(file));
             if (mapper.insert(entity) != 1) {
                 throw new BizException(ResultEnum.PERSISTENCE_ERROR, "新增数据失败");
             }
@@ -81,27 +88,29 @@ class AttachmentTxService {
 
     /** 提升附件：关联业务单据 + 移出临时目录 */
     public void promote(AttachmentPromoteForm form) throws IOException {
-        List<String> promotedPaths = new ArrayList<>();
-        List<FileStorageService> promotedStorages = new ArrayList<>();
         try {
             for (Long attachmentId : form.getAttachmentIds()) {
                 AttachmentEntity entity = mapper.selectById(attachmentId);
                 if (entity == null) {
                     throw new BizException(ResultEnum.NOT_FOUND, "附件不存在: " + attachmentId);
                 }
-                if (Boolean.TRUE.equals(entity.getIsTemp())) {
-                    FileStorageService storage = storageFactory.getService(entity.getStorageType());
-                    String newPath = storage.promote(entity.getStoredPath(), "biz/" + form.getBizType());
-                    promotedPaths.add(newPath);
-                    promotedStorages.add(storage);
-                    entity.setStoredPath(newPath);
-                    entity.setIsTemp(false);
+                if ("TEMP".equals(entity.getStatus())) {
+                    entity.setStatus("ACTIVE");
+                    entity.setExpiresAt(null);
+                    entity.setUploadSessionId(null);
                     if (mapper.updateById(entity) != 1) {
                         throw new BizException(ResultEnum.DATA_CONFLICT, "数据已被其他用户修改");
                     }
                 }
                 BizAttachmentEntity bizEntity = selectBizByAttachmentId(attachmentId);
                 if (bizEntity != null) {
+                    if (!form.getBizType().equals(bizEntity.getBizType())) {
+                        throw new BizException(ResultEnum.PERMISSION_ERROR, "附件业务资源类型不匹配");
+                    }
+                    if (!"TEMP".equals(entity.getStatus()) && bizEntity.getBizId() != null
+                            && !form.getBizId().equals(bizEntity.getBizId())) {
+                        throw new BizException(ResultEnum.PERMISSION_ERROR, "已确认附件不能绑定到其他业务单据");
+                    }
                     bizEntity.setBizId(form.getBizId());
                     if (bizMapper.updateById(bizEntity) != 1) {
                         throw new BizException(ResultEnum.PERSISTENCE_ERROR, "聚合明细写入失败");
@@ -117,10 +126,7 @@ class AttachmentTxService {
                     }
                 }
             }
-        } catch (IOException | RuntimeException exception) {
-            for (int index = promotedPaths.size() - 1; index >= 0; index--) {
-                moveForCompensation(promotedStorages.get(index), promotedPaths.get(index));
-            }
+        } catch (RuntimeException exception) {
             throw exception;
         }
         log.info("附件提升: ids={}, bizType={}, bizId={}", form.getAttachmentIds(), form.getBizType(), form.getBizId());
@@ -137,15 +143,18 @@ class AttachmentTxService {
         }
         bizMapper.delete(new LambdaQueryWrapper<BizAttachmentEntity>()
                 .eq(BizAttachmentEntity::getAttachmentId, id));
-        if (mapper.deleteById(id) != 1) {
-            throw new BizException(sm.system.response.ResultEnum.DATA_CONFLICT, "数据已被其他用户删除");
+        entity.setStatus("PENDING_DELETE");
+        if (mapper.updateById(entity) != 1) {
+            throw new BizException(sm.system.response.ResultEnum.DATA_CONFLICT, "数据已被其他用户修改");
         }
         FileStorageService storage = storageFactory.getService(entity.getStorageType());
-        String storedPath = entity.getStoredPath();
+        String storedPath = entity.getObjectKey();
         // 数据库提交后再删除外部文件；失败会保留包含附件 ID 与路径的可恢复告警。
         TransactionUtil.afterCommit(() -> {
             try {
                 storage.delete(storedPath);
+                entity.setStatus("DELETED");
+                mapper.updateById(entity);
                 log.info("附件删除: id={}, path={}", id, storedPath);
             } catch (IOException exception) {
                 log.error("附件物理文件删除失败，需按附件ID和路径重试: id={}, path={}", id, storedPath, exception);
@@ -167,8 +176,9 @@ class AttachmentTxService {
         vo.setFileSize(entity.getFileSize());
         vo.setMimeType(entity.getMimeType());
         vo.setFileExt(entity.getFileExt());
-        vo.setIsTemp(entity.getIsTemp());
-        vo.setUrl(storageFactory.getService(entity.getStorageType()).getAccessUrl(entity.getStoredPath()));
+        vo.setIsTemp("TEMP".equals(entity.getStatus()));
+        vo.setUploadSessionId(entity.getUploadSessionId());
+        vo.setUrl(storageFactory.getService(entity.getStorageType()).getAccessUrl(entity.getObjectKey()));
         if (entity.getCreateTime() != null) {
             vo.setCreateTime(entity.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
@@ -183,11 +193,22 @@ class AttachmentTxService {
         }
     }
 
-    private void moveForCompensation(FileStorageService storage, String promotedPath) {
+    private String sha256(MultipartFile file) throws IOException {
         try {
-            storage.move(promotedPath, "temp");
-        } catch (IOException cleanupException) {
-            log.error("附件提升失败且反向移动补偿失败: path={}", promotedPath, cleanupException);
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(file.getBytes()));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("运行环境不支持 SHA-256", exception);
         }
+    }
+
+    private String sanitizeOriginalName(String originalName) {
+        if (originalName == null || originalName.isBlank()) return "file";
+        String normalized = originalName.replace('\\', '/');
+        normalized = normalized.substring(normalized.lastIndexOf('/') + 1)
+                .replaceAll("[\\x00-\\x1f\\x7f]", "_")
+                .replace('"', '_').replace('\r', '_').replace('\n', '_');
+        if (normalized.isBlank()) return "file";
+        return normalized.length() > 255 ? normalized.substring(normalized.length() - 255) : normalized;
     }
 }

@@ -5,6 +5,7 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
 
 @Data
 public class PurchaseRequisitionCreateNewDataVO {
@@ -13,4 +14,5 @@ public class PurchaseRequisitionCreateNewDataVO {
     private LocalDate bizDate;
     private String billStatus;
     private List<PurchaseRequisitionEntryVO> entrys = new ArrayList<>();
+    private List<AttachmentVO> attachments = new ArrayList<>();
 }

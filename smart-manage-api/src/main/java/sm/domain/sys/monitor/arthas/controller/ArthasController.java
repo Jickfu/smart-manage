@@ -44,14 +44,14 @@ public class ArthasController {
     @Operation(summary = "停止持续命令", description = "按会话 ID 停止正在执行的持续命令")
     @SaCheckPermission("sys:monitor:arthas:execute")
     public Result<ArthasResultVO> stop(@RequestBody @Valid SessionForm form) {
-        return Result.success(service.stop(form.getSessionId()));
+        return Result.success(service.stop(form.getInstanceId(), form.getSessionId()));
     }
 
     @PostMapping("/sys/monitor/arthas/read")
     @Operation(summary = "读取命令输出", description = "读取持续命令的当前输出")
     @SaCheckPermission("sys:monitor:arthas:execute")
     public Result<ArthasResultVO> read(@RequestBody @Valid SessionForm form) {
-        return Result.success(service.read(form.getSessionId()));
+        return Result.success(service.read(form.getInstanceId(), form.getSessionId()));
     }
 
     @Data
@@ -59,5 +59,9 @@ public class ArthasController {
         @NotBlank(message = "会话ID不能为空")
         @Parameter(description = "会话 ID")
         private String sessionId;
+
+        @NotBlank(message = "实例ID不能为空")
+        @Parameter(description = "start 返回的应用实例 ID")
+        private String instanceId;
     }
 }

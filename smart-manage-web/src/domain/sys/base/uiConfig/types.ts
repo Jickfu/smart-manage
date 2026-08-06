@@ -9,6 +9,7 @@ export interface UiConfigDetail {
   loginBannerAttachmentId?: string;
   loginLogoAttachmentId?: string;
   headerLogoAttachmentId?: string;
+  attachmentUploadSessions?: Record<string, string>;
 }
 
 export interface AttachmentVO {
@@ -17,5 +18,6 @@ export interface AttachmentVO {
   fileSize?: number;
   mimeType?: string;
   isTemp: boolean;
+  uploadSessionId?: string;
   url: string;
 }

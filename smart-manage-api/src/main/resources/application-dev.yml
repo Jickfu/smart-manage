@@ -104,6 +104,10 @@ smart-manage:
       allowed-origins:
         - "http://localhost:*"
         - "http://127.0.0.1:*"
+    trusted-proxy:
+      cidrs:
+        - 127.0.0.1/32
+        - ::1/128
   system:
     upload:
       dir: ${SMART_MANAGE_UPLOAD_DIR:E:/upload/}

@@ -16,10 +16,13 @@ import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.menu.service.MenuService;
 import sm.domain.sys.base.user.service.UserService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
+import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
 import sm.system.exception.BizException;
 import sm.system.helper.SM2Helper;
+import sm.system.helper.Sm2DecryptionException;
 import sm.system.response.ResultEnum;
 import sm.system.util.ServletUtil;
+import sm.system.web.ClientIpResolver;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -42,22 +45,25 @@ public class LoginService {
 	private final MenuService menuService;
 	private final LogWriteService logWriteService;
 	private final RedisTemplate<String, Object> redisTemplate;
+	private final ClientIpResolver clientIpResolver;
 
 	public LoginVO login(LoginForm form) {
 		// 验证码校验
-		String decryptedCaptcha = form.getCaptcha() != null ? SM2Helper.decrypt(form.getCaptcha()) : null;
+		String decryptedCaptcha = decryptLoginPayload(form.getCaptcha(), form.getUsername());
 		String captchaKey = RedisKeyConstant.CAPTCHA + form.getCaptchaId();
 		String captcha = (String) redisTemplate.opsForValue().get(captchaKey);
 		if (captcha == null) {
+			writeLoginFailure(form.getUsername(), "验证码已过期");
 			throw new BizException(ResultEnum.CAPTCHA_EXPIRE);
 		}
 		if (!captcha.equalsIgnoreCase(decryptedCaptcha)) {
+			writeLoginFailure(form.getUsername(), "验证码错误");
 			throw new BizException(ResultEnum.CAPTCHA_ERROR);
 		}
 		redisTemplate.delete(captchaKey);
 
 		// SM2 解密前端密码
-		String decryptedPassword = SM2Helper.decrypt(form.getPassword());
+		String decryptedPassword = decryptLoginPayload(form.getPassword(), form.getUsername());
 		var authentication = userService.authenticate(form.getUsername(), decryptedPassword);
 		if (!authentication.successful()) {
 			LoginVO failed = new LoginVO(authentication.message());
@@ -67,6 +73,7 @@ public class LoginService {
 			return failed;
 		}
 		if (authentication.passwordReset()) {
+			writePasswordChangeRequired(authentication);
 			String ticket = UUID.randomUUID().toString();
 			redisTemplate.opsForValue().set(
 					RedisKeyConstant.PASSWORD_CHANGE_TICKET + ticket,
@@ -85,26 +92,53 @@ public class LoginService {
 	 * 一次性凭证先原子取出再修改密码；无论后续成功与否都不能重放。
 	 */
 	public void changePassword(PasswordChangeForm form) {
+		// 先验证并解密请求，再消费一次性凭证，避免畸形密文无意义地作废合法凭证。
+		String newPassword = decryptLoginPayload(form.getNewPassword(), null);
 		Object userIdValue = redisTemplate.opsForValue().getAndDelete(
 				RedisKeyConstant.PASSWORD_CHANGE_TICKET + form.getTicket());
 		if (userIdValue == null) {
 			throw new BizException(ResultEnum.UNAUTHORIZED, "改密凭证已失效，请重新登录");
 		}
-		String newPassword = SM2Helper.decrypt(form.getNewPassword());
 		userService.changeResetPassword(Long.valueOf(String.valueOf(userIdValue)), newPassword);
 	}
 
-	private void writeLoginFailure(String username, String message) {
-			String ip = null;
-			String ua = null;
-			try {
-				ip = ServletUtil.getClientIp();
-				ua = ServletUtil.getRequest().getHeader("User-Agent");
-			} catch (Exception e) {
-				log.warn("获取客户端IP/UA失败", e);
+	private String decryptLoginPayload(String ciphertext, String username) {
+		try {
+			return SM2Helper.decryptJsCiphertext(ciphertext);
+		} catch (Sm2DecryptionException exception) {
+			log.warn("登录请求 SM2 密文无效: {}", exception.getMessage());
+			if (StringUtils.hasText(username)) {
+				writeLoginFailure(username, "登录加密数据无效");
 			}
-			logWriteService.writeLoginFailed(username, message, ip, ua);
+			throw new BizException(ResultEnum.PARAM_ERROR, "登录数据无效，请刷新页面后重试");
+		}
 	}
+
+	private void writeLoginFailure(String username, String message) {
+		RequestMeta requestMeta = requestMeta();
+		logWriteService.writeLoginFailed(username, message, requestMeta.ip(), requestMeta.userAgent());
+	}
+
+	private void writePasswordChangeRequired(sm.domain.sys.base.user.model.vo.UserAuthentication authentication) {
+		RequestMeta requestMeta = requestMeta();
+		logWriteService.writeAuthenticationEvent(authentication.userId(), authentication.username(),
+				authentication.nickname(), LoginEventType.PASSWORD_CHANGE_REQUIRED, true, null,
+				requestMeta.ip(), requestMeta.userAgent());
+	}
+
+	private RequestMeta requestMeta() {
+		String ip = null;
+		String userAgent = null;
+		try {
+			ip = clientIpResolver.resolveCurrentRequest();
+			userAgent = ServletUtil.getRequest().getHeader("User-Agent");
+		} catch (Exception e) {
+			log.warn("获取客户端IP/UA失败: {}", e.getMessage());
+		}
+		return new RequestMeta(ip, userAgent);
+	}
+
+	private record RequestMeta(String ip, String userAgent) { }
 
 	public CaptchaVO captcha() throws IOException {
 		// 生成验证码ID

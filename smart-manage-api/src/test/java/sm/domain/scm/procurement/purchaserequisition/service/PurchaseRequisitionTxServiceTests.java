@@ -9,13 +9,16 @@ import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisit
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSaveForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSubmitForm;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
 import java.math.BigDecimal;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,7 +31,7 @@ import static org.mockito.Mockito.when;
 class PurchaseRequisitionTxServiceTests {
 
     @Test
-    void newBillCanBeSubmittedWithoutSavingFirst() {
+    void newBillCanBeSubmittedWithoutSavingFirst() throws IOException {
         PurchaseRequisitionMapper mapper = mock(PurchaseRequisitionMapper.class);
         PurchaseRequisitionEntryMapper entryMapper = mock(PurchaseRequisitionEntryMapper.class);
         when(mapper.insert(any(PurchaseRequisitionEntity.class))).thenAnswer(invocation -> {
@@ -47,14 +50,19 @@ class PurchaseRequisitionTxServiceTests {
         CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
         when(currentUserContext.getOrgId()).thenReturn(1L);
         when(currentUserContext.getUserId()).thenReturn(1L);
-        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(currentUserContext, mapper, entryMapper);
+        AttachmentService attachmentService = mock(AttachmentService.class);
+        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(currentUserContext, mapper, entryMapper,
+                attachmentService);
         PurchaseRequisitionSubmitForm form = submitForm(null, null);
+        form.setAttachmentIds(List.of(99L));
+        form.setAttachmentUploadSessions(Map.of(99L, "upload-session"));
 
         assertEquals(1L, service.submit(form));
 
         verify(mapper).insert(any(PurchaseRequisitionEntity.class));
         verify(entryMapper).insert(any(PurchaseRequisitionEntryEntity.class));
         verify(mapper).update(any(PurchaseRequisitionEntity.class), any());
+        verify(attachmentService).promoteForAggregate(any());
     }
 
     @Test
@@ -67,7 +75,7 @@ class PurchaseRequisitionTxServiceTests {
         when(mapper.selectById(1L)).thenReturn(entity);
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
-                mock(CurrentUserContext.class), mapper, mock(PurchaseRequisitionEntryMapper.class));
+                mock(CurrentUserContext.class), mapper, mock(PurchaseRequisitionEntryMapper.class), mock(AttachmentService.class));
 
         BizException exception = assertThrows(BizException.class, () -> service.deleteById(1L, 1));
         assertEquals(ResultEnum.DATA_CONFLICT.getCode(), exception.getCode());
@@ -84,7 +92,7 @@ class PurchaseRequisitionTxServiceTests {
         when(mapper.delete(any())).thenReturn(0);
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
-                mock(CurrentUserContext.class), mapper, mock(PurchaseRequisitionEntryMapper.class));
+                mock(CurrentUserContext.class), mapper, mock(PurchaseRequisitionEntryMapper.class), mock(AttachmentService.class));
 
         BizException exception = assertThrows(BizException.class, () -> service.deleteById(1L, 2));
         assertEquals(ResultEnum.DATA_CONFLICT.getCode(), exception.getCode());
@@ -101,7 +109,7 @@ class PurchaseRequisitionTxServiceTests {
         when(mapper.selectById(1L)).thenReturn(entity);
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
-                mock(CurrentUserContext.class), mapper, entryMapper);
+                mock(CurrentUserContext.class), mapper, entryMapper, mock(AttachmentService.class));
 
         BizException exception = assertThrows(BizException.class, () -> service.deleteById(1L, 2));
         assertEquals(ResultEnum.BILL_STATUS_ERROR.getCode(), exception.getCode());
@@ -119,7 +127,7 @@ class PurchaseRequisitionTxServiceTests {
         when(mapper.selectById(1L)).thenReturn(entity);
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
-                mock(CurrentUserContext.class), mapper, mock(PurchaseRequisitionEntryMapper.class));
+                mock(CurrentUserContext.class), mapper, mock(PurchaseRequisitionEntryMapper.class), mock(AttachmentService.class));
 
         PurchaseRequisitionSubmitForm form = submitForm(1L, 1);
         BizException exception = assertThrows(BizException.class, () -> service.submit(form));
@@ -144,7 +152,7 @@ class PurchaseRequisitionTxServiceTests {
         when(mapper.update(any(PurchaseRequisitionEntity.class), any())).thenReturn(0);
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
-                mock(CurrentUserContext.class), mapper, entryMapper);
+                mock(CurrentUserContext.class), mapper, entryMapper, mock(AttachmentService.class));
 
         PurchaseRequisitionSubmitForm form = submitForm(1L, 2);
         BizException exception = assertThrows(BizException.class, () -> service.submit(form));
@@ -176,7 +184,7 @@ class PurchaseRequisitionTxServiceTests {
         form.setEntrys(List.of(entryForm));
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
-                mock(CurrentUserContext.class), mapper, entryMapper);
+                mock(CurrentUserContext.class), mapper, entryMapper, mock(AttachmentService.class));
 
         BizException exception = assertThrows(BizException.class, () -> service.save(form));
         assertEquals(ResultEnum.PERSISTENCE_ERROR.getCode(), exception.getCode());

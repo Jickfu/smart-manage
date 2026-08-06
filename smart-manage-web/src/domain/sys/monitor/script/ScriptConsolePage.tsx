@@ -3,9 +3,12 @@ import { App, Alert, Button, Empty, Select, Space, Splitter, Tag, Typography } f
 import { ClearOutlined, PlayCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { scriptApi } from './api';
+import { scriptAccess } from './permissions';
 import { scriptQueryKeys } from './queryKeys';
 import ScriptEditor from './ScriptEditor';
 import type { ScriptEditorRef } from './ScriptEditor';
@@ -18,12 +21,13 @@ return { success: true };`;
 
 const statusColor = { SUCCESS: 'success', ERROR: 'error', TIMEOUT: 'warning' } as const;
 
-const HELP_COMPONENT_KEY = 'sys/monitor/script-help';
+const HELP_COMPONENT_KEY = componentKeys.scriptHelp;
 
 export default function ScriptConsolePage(props: PageComponentProps) {
   const { modal, message } = App.useApp();
   const openCustomTab = useWorkbenchStore((state) => state.openCustomTab);
   const editorRef = useRef<ScriptEditorRef>(null);
+  const { can } = usePermissionAccess(scriptAccess.prefix);
   const [content, setContent] = useState(DEFAULT_SCRIPT);
   const [scriptId, setScriptId] = useState<string>();
   const [transactionMode, setTransactionMode] = useState<ScriptTransactionMode>('ATOMIC');
@@ -69,14 +73,16 @@ export default function ScriptConsolePage(props: PageComponentProps) {
       loading={false}
       actions={
         <>
-          <Button
-            type="primary"
-            icon={<PlayCircleOutlined />}
-            loading={executeMutation.isPending}
-            onClick={() => execute(editorRef.current?.getExecutableScript() ?? '')}
-          >
-            执行
-          </Button>
+          {can(scriptAccess.permissions.execute) && (
+            <Button
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              loading={executeMutation.isPending}
+              onClick={() => execute(editorRef.current?.getExecutableScript() ?? '')}
+            >
+              执行
+            </Button>
+          )}
           <Button
             icon={<ClearOutlined />}
             onClick={() =>

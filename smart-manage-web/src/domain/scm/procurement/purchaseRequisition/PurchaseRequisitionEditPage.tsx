@@ -25,6 +25,8 @@ import type {
 } from './types';
 import './PurchaseRequisitionEditPage.css';
 
+const ATTACHMENT_RESOURCE_TYPE = 'scm.procurement.purchase-requisition';
+
 const fields: EditField[] = [
   {
     label: '编码',
@@ -71,6 +73,7 @@ function isDetail(
 const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
   const [selectedEntryKeys, setSelectedEntryKeys] = useState<Key[]>([]);
   const entryOperationsRef = useRef<FormListOperation | null>(null);
+  const entryIndexByKeyRef = useRef(new Map<Key, number>());
   const { appNumber, tabKey, billId, operationType } = props;
   const isAddNew = operationType === OperationType.ADDNEW;
   const queryClient = useQueryClient();
@@ -111,6 +114,10 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
       bizDate: String(values.bizDate),
       requiredDate: values.requiredDate ? String(values.requiredDate) : undefined,
       reason: values.reason ? String(values.reason) : undefined,
+      attachmentIds: values.attachmentIds as string[] | undefined,
+      attachmentUploadSessions: values.attachmentUploadSessions as
+        | Record<string, string>
+        | undefined,
       entrys: (values.entrys as PurchaseRequisitionEntry[]).map((entry, index) => ({
         ...entry,
         materialName: entry.materialName.trim(),
@@ -160,6 +167,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
     >
       {(entryFields, { add, remove, move }, { errors }) => {
         entryOperationsRef.current = { add, remove, move };
+        entryIndexByKeyRef.current = new Map(entryFields.map((field) => [field.key, field.name]));
         const columns: ColumnsType<FormListFieldData> = [
           {
             title: '物料名称',
@@ -238,7 +246,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
         return (
           <div className="sm-purchase-requisition-entrys">
             <Table
-              rowKey="name"
+              rowKey={(field) => field.key}
               columns={columns}
               dataSource={entryFields}
               pagination={false}
@@ -275,7 +283,10 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
           danger
           disabled={selectedEntryKeys.length === 0}
           onClick={() => {
-            entryOperationsRef.current?.remove(selectedEntryKeys.map(Number));
+            const selectedIndexes = selectedEntryKeys
+              .map((key) => entryIndexByKeyRef.current.get(key))
+              .filter((index): index is number => index !== undefined);
+            entryOperationsRef.current?.remove(selectedIndexes);
             setSelectedEntryKeys([]);
           }}
         >
@@ -301,6 +312,10 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
       saving={saveMutation.isPending || submitMutation.isPending}
       detailContent={renderEntrys}
       detailExtra={renderEntryActions}
+      attachmentResource={{
+        resourceType: ATTACHMENT_RESOURCE_TYPE,
+        initialAttachments: source?.attachments,
+      }}
       onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
     />
   );

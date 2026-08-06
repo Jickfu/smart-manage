@@ -7,7 +7,7 @@
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-0AhZtmQLOGHX4MI1Fx5aNvM4VgNsPopv5Uj8v2LWyd4='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-n+D8VYkO1l/8kEqtLnunqcSOE1VoJtdo5oPrTuMecP8='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
     <title>Smart Manage - 登录</title>
     <script src="js/sm2.js"></script>
@@ -301,6 +301,10 @@
           return;
         }
         captchaLoading = true;
+        // 刷新开始即废弃旧图片对应的 ID，避免请求尚未返回时再次提交旧验证码。
+        captchaId = '';
+        captchaEl.value = '';
+        captchaImgEl.style.opacity = '0.35';
         fetch(API_BASE + '/sys/base/captcha')
           .then(function (res) {
             return res.json();
@@ -309,6 +313,7 @@
             if (result.code === 0) {
               captchaId = result.data.captchaId;
               captchaImgEl.src = result.data.imageData;
+              captchaImgEl.style.opacity = '1';
             } else {
               showError(result.msg || '获取验证码失败');
             }

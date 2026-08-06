@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import sm.system.helper.CurrentOperatorProvider;
 import sm.system.util.ServletUtil;
 import sm.system.util.TraceIdUtil;
+import sm.system.web.ClientIpResolver;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -32,6 +33,7 @@ public class BizLogAspect {
     private final JsonMapper jsonMapper;
     private final OperateLogWriter operateLogWriter;
     private final CurrentOperatorProvider currentOperatorProvider;
+    private final ClientIpResolver clientIpResolver;
 
     @Pointcut("@annotation(sm.system.aop.log.BizLog)")
     private void getLogPointCut() {
@@ -50,7 +52,7 @@ public class BizLogAspect {
         String requestMethod = null;
         try {
             var req = ServletUtil.getRequest();
-            ip = ServletUtil.getClientIp();
+            ip = clientIpResolver.resolve(req);
             userAgent = req.getHeader("User-Agent");
             requestUri = req.getRequestURI();
             requestMethod = req.getMethod();

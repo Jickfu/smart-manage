@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getCurrentPermissions } from '@/api/user';
 
@@ -9,7 +10,7 @@ export function usePermissionAccess(prefix?: string) {
     enabled: Boolean(prefix),
     staleTime: 5 * 60 * 1000,
   });
-  const permissionSet = new Set(query.data ?? []);
+  const permissionSet = useMemo(() => new Set(query.data ?? []), [query.data]);
   return {
     can: (permission?: string) =>
       !permission || permissionSet.has('*') || permissionSet.has(permission),

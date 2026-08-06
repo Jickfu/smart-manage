@@ -14,13 +14,19 @@ export const uiConfigApi = {
   uploadImage: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('bizType', 'SYS_UI_CONFIG');
+    formData.append('bizType', 'sys.base.ui-config');
     return request
       .post<Result<AttachmentVO>>('/sys/base/attachment/upload', formData)
       .then((response) => response.data.data);
   },
-  deleteAttachment: (id: string) =>
+  deleteAttachment: (id: string, uploadSessionId?: string) =>
     request
-      .post<Result<string>>('/sys/base/attachment/delete', { id })
+      .post<Result<string>>(
+        '/sys/base/attachment/delete',
+        { id },
+        {
+          headers: uploadSessionId ? { 'X-Upload-Session': uploadSessionId } : undefined,
+        },
+      )
       .then((response) => response.data.data),
 };

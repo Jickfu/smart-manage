@@ -1,0 +1,52 @@
+.sm-attachment-config-rule-tables {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.sm-attachment-config-rule-table {
+  flex: 1;
+  min-width: 320px;
+}
+
+.sm-attachment-config-rule-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  margin-bottom: 10px;
+}
+
+.sm-attachment-config-rule-title {
+  font-weight: 500;
+}
+
+.sm-attachment-config-rule-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sm-attachment-config-rule-table .ant-form-item {
+  margin-bottom: 0;
+}
+
+.sm-attachment-config-rule-table .ant-table-tbody > tr > td {
+  padding-block: 3px;
+}
+
+.sm-attachment-config-rule-table .ant-form-item-explain-error,
+.sm-attachment-config-rule-table > .ant-form-item-explain-error {
+  margin-top: 6px;
+  color: var(--sm-danger);
+}
+
+@media (max-width: 900px) {
+  .sm-attachment-config-rule-tables {
+    flex-direction: column;
+  }
+
+  .sm-attachment-config-rule-table {
+    width: 100%;
+  }
+}

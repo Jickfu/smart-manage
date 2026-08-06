@@ -44,45 +44,45 @@ class AttachmentTxServiceTests {
 	void uploadDeletesStoredFileWhenMetadataInsertFails() throws IOException {
 		MultipartFile file = mock(MultipartFile.class);
 		when(file.getOriginalFilename()).thenReturn("test.txt");
+		when(file.getBytes()).thenReturn("test".getBytes(java.nio.charset.StandardCharsets.UTF_8));
 		when(storageFactory.getService()).thenReturn(storage);
-		when(storage.store("sys", file)).thenReturn(FileStoreResult.of("stored.txt", "sys/stored.txt", 10));
+		when(storage.store("asset/sys/base/ui-config", file)).thenReturn(
+				FileStoreResult.of("stored.txt", "asset/sys/stored.txt", 10));
 		when(mapper.insert(any(AttachmentEntity.class))).thenReturn(0);
 
-		assertThrows(BizException.class, () -> txService.upload(file, null));
+		assertThrows(BizException.class, () -> txService.upload(file, "sys.base.ui-config", "asset/sys/base/ui-config", 24));
 
-		verify(storage).delete("sys/stored.txt");
+		verify(storage).delete("asset/sys/stored.txt");
 	}
 
 	@Test
-	void promoteMovesFileBackToTempWhenDatabaseUpdateFails() throws IOException {
+	void promoteDoesNotMoveObjectWhenDatabaseUpdateFails() throws IOException {
 		AttachmentEntity entity = new AttachmentEntity();
 		entity.setId(1L);
-		entity.setStoredPath("temp/stored.txt");
+		entity.setObjectKey("temp/stored.txt");
 		entity.setStorageType("LOCAL");
-		entity.setIsTemp(true);
+		entity.setStatus("TEMP");
 		AttachmentPromoteForm form = new AttachmentPromoteForm();
 		form.setAttachmentIds(List.of(1L));
 		form.setBizType("purchase-requisition");
 		form.setBizId("100");
-		when(storageFactory.getService("LOCAL")).thenReturn(storage);
 		when(mapper.selectById(1L)).thenReturn(entity);
-		when(storage.promote("temp/stored.txt", "biz/purchase-requisition"))
-				.thenReturn("biz/purchase-requisition/stored.txt");
 		when(mapper.updateById(entity)).thenReturn(0);
 
 		assertThrows(BizException.class, () -> txService.promote(form));
 
-		verify(storage).move("biz/purchase-requisition/stored.txt", "temp");
+		verify(storage, never()).move(any(), any());
 	}
 
 	@Test
 	void deleteRemovesPhysicalFileOnlyAfterDatabaseCommit() throws IOException {
 		AttachmentEntity entity = new AttachmentEntity();
 		entity.setId(1L);
-		entity.setStoredPath("sys/stored.txt");
+		entity.setObjectKey("sys/stored.txt");
+		entity.setObjectKey("sys/stored.txt");
 		entity.setStorageType("LOCAL");
 		when(mapper.selectById(1L)).thenReturn(entity);
-		when(mapper.deleteById(1L)).thenReturn(1);
+		when(mapper.updateById(entity)).thenReturn(1);
 		when(storageFactory.getService("LOCAL")).thenReturn(storage);
 		TransactionSynchronizationManager.setActualTransactionActive(true);
 		TransactionSynchronizationManager.initSynchronization();

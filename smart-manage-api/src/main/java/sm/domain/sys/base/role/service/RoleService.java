@@ -122,7 +122,7 @@ public class RoleService {
 	@BizLog("分配角色权限")
 	public void assignPermissions(RolePermissionAssignForm form) {
 		txService.assignPermissions(form);
-		authorizationStateHelper.invalidateRoleUsers(form.getRoleId());
+		authorizationStateHelper.refreshRoleUsers(form.getRoleId());
 	}
 
 	/** 查询用户在当前组织下拥有的稳定角色编码，供 Sa-Token 角色能力使用。 */

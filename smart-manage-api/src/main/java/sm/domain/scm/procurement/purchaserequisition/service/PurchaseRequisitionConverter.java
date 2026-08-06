@@ -16,6 +16,7 @@ interface PurchaseRequisitionConverter {
     PurchaseRequisitionListVO toListVO(PurchaseRequisitionEntity entity);
 
     @Mapping(target = "entrys", ignore = true)
+    @Mapping(target = "attachments", ignore = true)
     PurchaseRequisitionDetailVO toDetailVO(PurchaseRequisitionEntity entity);
 
     PurchaseRequisitionEntryVO toEntryVO(PurchaseRequisitionEntryEntity entity);

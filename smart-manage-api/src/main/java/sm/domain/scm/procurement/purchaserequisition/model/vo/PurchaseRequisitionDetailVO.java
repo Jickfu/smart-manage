@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
 
 @Data
 public class PurchaseRequisitionDetailVO {
@@ -22,4 +23,5 @@ public class PurchaseRequisitionDetailVO {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private List<PurchaseRequisitionEntryVO> entrys = new ArrayList<>();
+    private List<AttachmentVO> attachments = new ArrayList<>();
 }

@@ -21,8 +21,12 @@ import sm.system.response.ResultEnum;
 import sm.system.util.EnabledCommandUtil;
 import sm.system.util.TransactionUtil;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -151,8 +155,12 @@ class BasicDataTxService {
         List<BasicDataItemEntity> items = itemMapper.selectByIds(ids);
         EnabledCommandUtil.update(itemMapper, BasicDataItemEntity::getId, BasicDataItemEntity::getEnabled,
                 ids, enabled, "基础资料");
-        List<String> categoryNumbers = items.stream().map(BasicDataItemEntity::getCategoryId).distinct()
-                .map(this::requireCategory).map(BasicDataCategoryEntity::getNumber).toList();
+        Set<Long> categoryIds = new HashSet<>();
+        for (BasicDataItemEntity item : items) {
+            categoryIds.add(item.getCategoryId());
+        }
+        List<String> categoryNumbers = categoryIds.isEmpty() ? List.of()
+                : categoryMapper.selectByIds(categoryIds).stream().map(BasicDataCategoryEntity::getNumber).toList();
         TransactionUtil.afterCommit(() -> categoryNumbers.forEach(this::removeOptionsCache));
     }
 
@@ -181,8 +189,12 @@ class BasicDataTxService {
         // 节点改名、改编码或移动后，所有后代的物化路径和级次必须在同一事务内同步。
         List<BasicDataItemEntity> allItems = itemMapper.selectList(new LambdaQueryWrapper<BasicDataItemEntity>()
                 .eq(BasicDataItemEntity::getCategoryId, root.getCategoryId()));
+        Map<Long, BasicDataItemEntity> itemById = new HashMap<>();
+        for (BasicDataItemEntity item : allItems) {
+            itemById.put(item.getId(), item);
+        }
         for (BasicDataItemEntity descendant : allItems) {
-            if (descendant.getId().equals(rootId) || !isDescendant(descendant, rootId, allItems)) continue;
+            if (descendant.getId().equals(rootId) || !isDescendant(descendant, rootId, itemById)) continue;
             descendant.setNumberPath(root.getNumberPath()
                     + descendant.getNumberPath().substring(oldNumberPath.length()));
             descendant.setNamePath(root.getNamePath()
@@ -192,13 +204,13 @@ class BasicDataTxService {
         }
     }
 
-    private boolean isDescendant(BasicDataItemEntity item, Long rootId, List<BasicDataItemEntity> allItems) {
+    private boolean isDescendant(BasicDataItemEntity item, Long rootId,
+                                 Map<Long, BasicDataItemEntity> itemById) {
         Long parentId = item.getParentId();
         while (parentId != null) {
             if (parentId.equals(rootId)) return true;
-            Long currentParentId = parentId;
-            parentId = allItems.stream().filter(candidate -> candidate.getId().equals(currentParentId))
-                    .map(BasicDataItemEntity::getParentId).findFirst().orElse(null);
+            BasicDataItemEntity parent = itemById.get(parentId);
+            parentId = parent == null ? null : parent.getParentId();
         }
         return false;
     }
@@ -269,6 +281,6 @@ class BasicDataTxService {
 
     private void removeOptionsCache(String number) {
         if (number != null) cacheHelper.<String, List<BasicDataOptionVO>>getCache(
-                CacheConstant.BASIC_DATA_OPTIONS, CacheType.LOCAL).remove(number);
+                CacheConstant.BASIC_DATA_OPTIONS, CacheType.REMOTE).remove(number);
     }
 }

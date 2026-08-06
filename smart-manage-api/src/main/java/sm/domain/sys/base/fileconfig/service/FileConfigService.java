@@ -1,8 +1,6 @@
 package sm.domain.sys.base.fileconfig.service;
 
 import com.alicp.jetcache.anno.CacheType;
-import com.alicp.jetcache.anno.Cached;
-import com.alicp.jetcache.anno.CacheInvalidate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTPClient;
@@ -57,25 +55,25 @@ public class FileConfigService implements FileStorageConfigProvider {
 
     /** 获取服务端内部使用的活跃配置，敏感字段不得通过 Controller 暴露。 */
     @Override
-    @Cached(cacheType = CacheType.LOCAL, name = CacheConstant.FILE_CONFIG,
-            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY",
-            expire = 30, timeUnit = TimeUnit.MINUTES)
     public FileStorageConfig getFileStorageConfig() {
         List<FileConfigEntity> entityList = mapper.selectList(null);
         if (entityList.isEmpty()) {
-            return new FileStorageConfig("LOCAL", "E:/upload/", null, null, null, null, null, null);
+            return new FileStorageConfig("LOCAL", "E:/upload/", null, null, null, null, null, null,
+                    null, null, null, null, null, null);
         }
         FileConfigEntity entity = entityList.get(0);
         String ftpPassword = entity.getFtpPasswordCipher() == null
                 ? null : sm4Helper.decrypt(entity.getFtpPasswordCipher());
+        String s3SecretKey = entity.getS3SecretKeyCipher() == null
+                ? null : sm4Helper.decrypt(entity.getS3SecretKeyCipher());
         return new FileStorageConfig(
                 entity.getStorageType(), entity.getLocalDir(), entity.getFtpHost(), entity.getFtpPort(),
-                entity.getFtpUsername(), ftpPassword, entity.getFtpDir(), entity.getFtpPassiveMode());
+                entity.getFtpUsername(), ftpPassword, entity.getFtpDir(), entity.getFtpPassiveMode(),
+                entity.getS3Endpoint(), entity.getS3Region(), entity.getS3Bucket(), entity.getS3AccessKey(),
+                s3SecretKey, entity.getS3PathStyle());
     }
 
     @BizLog("保存文件存储配置")
-    @CacheInvalidate(name = CacheConstant.FILE_CONFIG,
-            key = "T(sm.domain.sys.base.common.constant.CacheConstant).SINGLETON_KEY")
     public Long save(FileConfigSaveForm form) {
         // 存储目录和凭据影响全系统文件读写，除权限码外必须校验管理员身份。
         currentUserContext.checkAdministrator();
@@ -88,6 +86,23 @@ public class FileConfigService implements FileStorageConfigProvider {
         if ("LOCAL".equalsIgnoreCase(form.getStorageType())) {
             if (form.getLocalDir() == null || form.getLocalDir().isBlank()) {
                 throw new BizException(ResultEnum.PARAM_ERROR, "本地存储目录不能为空");
+            }
+            return;
+        }
+        if ("S3".equalsIgnoreCase(form.getStorageType())) {
+            if (form.getS3Endpoint() == null || form.getS3Endpoint().isBlank()
+                    || form.getS3Region() == null || form.getS3Region().isBlank()
+                    || form.getS3Bucket() == null || form.getS3Bucket().isBlank()
+                    || form.getS3AccessKey() == null || form.getS3AccessKey().isBlank()) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "S3 Endpoint、Region、Bucket 和 Access Key 不能为空");
+            }
+            boolean secretConfigured = false;
+            if (form.getId() != null) {
+                FileConfigEntity existing = mapper.selectById(form.getId());
+                secretConfigured = existing != null && existing.getS3SecretKeyCipher() != null;
+            }
+            if (!secretConfigured && (form.getS3SecretKey() == null || form.getS3SecretKey().isBlank())) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "S3 Secret Key 不能为空");
             }
             return;
         }
@@ -124,7 +139,9 @@ public class FileConfigService implements FileStorageConfigProvider {
         boolean topologyChanged = !Objects.equals(existing.getStorageType(), form.getStorageType())
                 || !Objects.equals(existing.getLocalDir(), form.getLocalDir())
                 || !Objects.equals(existing.getFtpHost(), form.getFtpHost())
-                || !Objects.equals(existing.getFtpDir(), form.getFtpDir());
+                || !Objects.equals(existing.getFtpDir(), form.getFtpDir())
+                || !Objects.equals(existing.getS3Endpoint(), form.getS3Endpoint())
+                || !Objects.equals(existing.getS3Bucket(), form.getS3Bucket());
         if (topologyChanged) {
             throw new BizException(ResultEnum.CONFIG_ERROR,
                     "系统已有附件，不能直接切换存储类型、根目录或FTP主机；请先完成文件迁移");

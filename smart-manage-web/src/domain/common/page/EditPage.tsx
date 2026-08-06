@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { App, Collapse, Form } from 'antd';
 import type { FormInstance } from 'antd';
 import type { Rule } from 'antd/es/form';
@@ -9,6 +9,11 @@ import type { AccessResource, PermissionAction } from './access';
 import { PermissionActions } from './PermissionActions';
 import { EditPageShell } from './EditPageShell';
 import { useWorkbenchStore } from '@/stores/workbench';
+import { BusinessAttachmentPanel } from '@/domain/common/attachment/BusinessAttachmentPanel';
+import type {
+  BusinessAttachment,
+  BusinessAttachmentFormValues,
+} from '@/domain/common/attachment/types';
 import './EditPage.css';
 
 /** 编辑字段公共属性 */
@@ -109,6 +114,11 @@ interface EditPageProps {
   detailContent?: (editable: boolean) => ReactNode;
   /** 明细标题栏右侧操作区。 */
   detailExtra?: (editable: boolean) => ReactNode;
+  /** 启用业务附件面板；附件上传、删除和表单字段组装统一由通用编辑页处理。 */
+  attachmentResource?: {
+    resourceType: string;
+    initialAttachments?: BusinessAttachment[];
+  };
   /** 注册页签关闭前的脏数据检查。 */
   closeGuard?: { appNumber: string; tabKey: string };
   onValuesChange?: (
@@ -142,17 +152,50 @@ const EditPage = ({
   headerActions,
   detailContent,
   detailExtra,
+  attachmentResource,
   closeGuard,
   onValuesChange,
 }: EditPageProps) => {
   const { modal } = App.useApp();
   const [form] = Form.useForm();
-  const [dirty, setDirty] = useState(false);
-  const [activeCollapseKeys, setActiveCollapseKeys] = useState<string[]>(
-    detailContent ? ['basic', 'detail'] : ['basic'],
-  );
+  const revisionRef = useRef(0);
+  const dirtyRef = useRef(false);
+  const [activeCollapseKeys, setActiveCollapseKeys] = useState<string[]>([
+    'basic',
+    ...(detailContent ? ['detail'] : []),
+    ...(attachmentResource ? ['attachments'] : []),
+  ]);
+  const [attachmentState, setAttachmentState] = useState<{
+    source: BusinessAttachment[] | undefined;
+    values: BusinessAttachment[];
+  }>({ source: undefined, values: [] });
   const editable = isEditable(operationType, billStatus);
   const detailExpanded = activeCollapseKeys.includes('detail');
+  const attachments =
+    attachmentState.source === attachmentResource?.initialAttachments
+      ? attachmentState.values
+      : (attachmentResource?.initialAttachments ?? []);
+
+  const withAttachmentValues = (
+    values: Record<string, unknown>,
+  ): Record<string, unknown> & Partial<BusinessAttachmentFormValues> => {
+    if (!attachmentResource) return values;
+    return {
+      ...values,
+      attachmentIds: attachments.map((attachment) => attachment.id),
+      attachmentUploadSessions: Object.fromEntries(
+        attachments
+          .filter((attachment) => attachment.isTemp && attachment.uploadSessionId)
+          .map((attachment) => [attachment.id, attachment.uploadSessionId!]),
+      ),
+    };
+  };
+
+  const updateAttachments = (values: BusinessAttachment[]) => {
+    revisionRef.current += 1;
+    dirtyRef.current = true;
+    setAttachmentState({ source: attachmentResource?.initialAttachments, values });
+  };
 
   // 后端数据加载完成后同步到 Form
   useEffect(() => {
@@ -165,7 +208,7 @@ const EditPage = ({
     if (!closeGuard) return;
     const store = useWorkbenchStore.getState();
     store.registerBeforeClose(closeGuard.appNumber, closeGuard.tabKey, async () => {
-      if (!dirty) return true;
+      if (!dirtyRef.current) return true;
       return new Promise<boolean>((resolve) => {
         modal.confirm({
           title: '存在未保存的修改',
@@ -178,14 +221,17 @@ const EditPage = ({
       });
     });
     return () => store.unregisterBeforeClose(closeGuard.appNumber, closeGuard.tabKey);
-  }, [closeGuard, dirty, modal]);
+  }, [closeGuard, modal]);
 
   const handleSave = async () => {
     if (!onSave) return;
     try {
       const values = await form.validateFields();
-      await onSave(values);
-      setDirty(false);
+      const savedRevision = revisionRef.current;
+      await onSave(withAttachmentValues(values));
+      if (revisionRef.current === savedRevision) {
+        dirtyRef.current = false;
+      }
     } catch (err) {
       // 表单校验错误由 Form 展示，命令错误由领域 Mutation 统一处理。
       if ((err as { errorFields?: unknown[] }).errorFields) return;
@@ -196,8 +242,11 @@ const EditPage = ({
     if (!onSubmit) return;
     try {
       const values = await form.validateFields();
-      await onSubmit(values);
-      setDirty(false);
+      const submittedRevision = revisionRef.current;
+      await onSubmit(withAttachmentValues(values));
+      if (revisionRef.current === submittedRevision) {
+        dirtyRef.current = false;
+      }
     } catch (err) {
       if ((err as { errorFields?: unknown[] }).errorFields) return;
     }
@@ -247,7 +296,8 @@ const EditPage = ({
         layout="vertical"
         className={`sm-edit-form${editable ? '' : ' sm-edit-form--view'}`}
         onValuesChange={(changedValues, allValues) => {
-          setDirty(true);
+          revisionRef.current += 1;
+          dirtyRef.current = true;
           onValuesChange?.(changedValues, allValues, form);
         }}
       >
@@ -269,6 +319,22 @@ const EditPage = ({
                     label: '明细信息',
                     children: detailContent(editable),
                     extra: detailExpanded ? detailExtra?.(editable) : undefined,
+                  },
+                ]
+              : []),
+            ...(attachmentResource
+              ? [
+                  {
+                    key: 'attachments',
+                    label: '附件',
+                    children: (
+                      <BusinessAttachmentPanel
+                        resourceType={attachmentResource.resourceType}
+                        attachments={attachments}
+                        editable={editable}
+                        onChange={updateAttachments}
+                      />
+                    ),
                   },
                 ]
               : []),

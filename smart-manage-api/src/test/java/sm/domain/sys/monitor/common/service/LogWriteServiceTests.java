@@ -33,7 +33,7 @@ class LogWriteServiceTests {
         ArgumentCaptor<LoginLogEntity> captor = ArgumentCaptor.forClass(LoginLogEntity.class);
         verify(loginLogMapper).insert(captor.capture());
         LoginLogEntity entity = captor.getValue();
-        assertEquals(LoginEventType.LOGIN.name(), entity.getEventType());
+        assertEquals(LoginEventType.LOGIN_FAILURE.name(), entity.getEventType());
         assertEquals(false, entity.getSuccess());
         assertEquals("trace-failure", entity.getTraceId());
         assertEquals(1024, entity.getUserAgent().length());

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 附件提升表单
@@ -27,4 +28,7 @@ public class AttachmentPromoteForm {
     @NotBlank(message = "业务单据ID不能为空")
     @Schema(description = "业务单据ID")
     private String bizId;
+
+    @Schema(description = "临时附件ID到上传会话ID的映射")
+    private Map<Long, String> uploadSessions;
 }

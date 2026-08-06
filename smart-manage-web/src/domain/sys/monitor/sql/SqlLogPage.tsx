@@ -2,16 +2,18 @@ import { useState } from 'react';
 import { Button, DatePicker, Select, Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
+import './SqlLogPage.css';
 import { useQuery } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { OperationType } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { sqlApi } from './api';
 import { sqlQueryKeys } from './queryKeys';
 import type { SqlLogListForm, SqlLogListItem, SqlResultType } from './types';
 
-const DETAIL_KEY = 'sys/monitor/sql-log/detail';
+const DETAIL_KEY = componentKeys.sqlLogDetail;
 
 export default function SqlLogPage(props: PageComponentProps) {
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
@@ -88,7 +90,7 @@ export default function SqlLogPage(props: PageComponentProps) {
           <Select
             allowClear
             placeholder="执行结果"
-            style={{ width: 160 }}
+            className="sm-sql-log-result-filter"
             value={resultType}
             options={['QUERY', 'DML', 'DDL', 'ERROR'].map((value) => ({ value, label: value }))}
             onChange={(value) => {

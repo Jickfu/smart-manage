@@ -39,7 +39,7 @@ class CacheServiceTests {
     }
 
     @Test
-    void sensitiveLocalCacheValueMustNeverBeReturned() {
+    void credentialBearingFileConfigMustNotBeInManagedCacheCatalog() {
         CacheEntryKeyForm form = new CacheEntryKeyForm();
         form.setStorage("LOCAL");
         form.setCacheName(CacheConstant.FILE_CONFIG);
@@ -47,7 +47,7 @@ class CacheServiceTests {
 
         BizException exception = assertThrows(BizException.class, () -> service.value(form));
 
-        assertEquals(ResultEnum.PERMISSION_ERROR.getCode(), exception.getCode());
+        assertEquals(ResultEnum.PARAM_ERROR.getCode(), exception.getCode());
         verify(currentUserContext).checkAdministrator();
     }
 

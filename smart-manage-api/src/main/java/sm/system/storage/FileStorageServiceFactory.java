@@ -16,6 +16,7 @@ public class FileStorageServiceFactory {
 
     private final LocalFileStorageService localFileStorageService;
     private final FtpFileStorageService ftpFileStorageService;
+    private final S3FileStorageService s3FileStorageService;
     private final FileStorageConfigProvider configProvider;
 
     public FileStorageService getService() {
@@ -30,6 +31,9 @@ public class FileStorageServiceFactory {
         }
         if ("LOCAL".equalsIgnoreCase(storageType)) {
             return localFileStorageService;
+        }
+        if ("S3".equalsIgnoreCase(storageType)) {
+            return s3FileStorageService;
         }
         // 未知存储类型属于配置错误，禁止静默回退到本地存储。
         throw new BizException(ResultEnum.CONFIG_ERROR, "不支持的文件存储类型: " + storageType);

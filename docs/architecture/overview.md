@@ -31,7 +31,7 @@ smart-manage/
 | 对象映射 | 纯字段映射使用模块内 MapStruct Converter，业务组装留在 Service |
 | 前端状态 | TanStack Query 管理服务端状态，Zustand 管理跨页面客户端状态，Form 管理编辑状态 |
 | 页面架构 | 组件注册白名单、ERP 双页签和通用列表/编辑/自定义页面 |
-| 部署边界 | 当前按单节点设计，不声明多节点缓存、Quartz、文件存储和故障切换能力 |
+| 部署架构 | 目标支持 Nginx 负载均衡后的多个无状态应用实例；共享 PostgreSQL、Redis、S3/MinIO 对象存储和 Quartz JDBC 集群状态 |
 | 纵向样板 | 采购申请验证标准主从单据、状态、乐观锁和页签生命周期 |
 
 ## 请求与页面主链路
@@ -64,6 +64,7 @@ CorsFilter（跨域处理）
 详细规则：
 
 - [后端架构](./backend.md)
+- [部署与多实例架构](./deployment.md)
 - [前端架构](./frontend.md)
 - [安全架构](./security.md)
 - [质量验证](../development/verification.md)

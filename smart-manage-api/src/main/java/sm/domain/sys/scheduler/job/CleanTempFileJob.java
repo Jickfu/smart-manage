@@ -1,84 +1,62 @@
 package sm.domain.sys.scheduler.job;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.stereotype.Component;
+import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
+import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
+import sm.domain.sys.base.attachment.model.entity.BizAttachmentEntity;
+import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
+import sm.system.storage.FileStorageService;
+import sm.system.storage.FileStorageServiceFactory;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDateTime;
+import java.util.List;
 
-/**
- * 清理临时文件任务
- *
- * @author Chekfu
- */
+/** 按数据库生命周期清理共享存储中的过期临时对象和待删除对象。 */
 @Component
 @Slf4j
-@SchedulerJobDefinition(
-        description = "删除超过保留期限的临时文件",
-        parameterTemplate = "{\"tempDir\":\"E:/upload/temp\",\"keepDays\":\"7\"}")
+@RequiredArgsConstructor
+@SchedulerJobDefinition(description = "清理过期临时附件和待删除对象", parameterTemplate = "{}")
 public class CleanTempFileJob extends QuartzJobBean {
-
-    /** 默认临时文件目录 */
-    private static final String DEFAULT_TEMP_DIR = "E:/upload/temp";
-
-    /** 默认保留天数 */
-    private static final int DEFAULT_KEEP_DAYS = 7;
+    private final AttachmentMapper attachmentMapper;
+    private final BizAttachmentMapper bizAttachmentMapper;
+    private final FileStorageServiceFactory storageFactory;
 
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
-        String tempDir = context.getMergedJobDataMap().getString("tempDir");
-        if (tempDir == null || tempDir.isBlank()) {
-            tempDir = DEFAULT_TEMP_DIR;
-        }
-        int keepDays = DEFAULT_KEEP_DAYS;
-        try {
-            String keepDaysStr = context.getMergedJobDataMap().getString("keepDays");
-            if (keepDaysStr != null && !keepDaysStr.isBlank()) {
-                keepDays = Integer.parseInt(keepDaysStr);
-            }
-        } catch (NumberFormatException e) {
-            log.warn("keepDays 参数解析失败，使用默认值 {}", DEFAULT_KEEP_DAYS);
-        }
-
-        Path dir = Paths.get(tempDir);
-        if (!Files.exists(dir)) {
-            log.info("临时文件目录不存在，跳过清理: {}", tempDir);
-            return;
-        }
-
-        Instant cutoff = Instant.now().minus(keepDays, ChronoUnit.DAYS);
-        int deleted = 0;
+        List<AttachmentEntity> candidates = attachmentMapper.selectList(
+                new LambdaQueryWrapper<AttachmentEntity>()
+                        .and(wrapper -> wrapper
+                                .eq(AttachmentEntity::getStatus, "PENDING_DELETE")
+                                .or(expired -> expired.eq(AttachmentEntity::getStatus, "TEMP")
+                                        .lt(AttachmentEntity::getExpiresAt, LocalDateTime.now())))
+                        .orderByAsc(AttachmentEntity::getId));
         int failed = 0;
-        try (var stream = Files.list(dir)) {
-            var files = stream.filter(Files::isRegularFile).toList();
-            for (Path file : files) {
-                try {
-                    BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
-                    if (attrs.lastModifiedTime().toInstant().isBefore(cutoff)) {
-                        Files.delete(file);
-                        deleted++;
-                        log.debug("删除过期临时文件: {}", file.getFileName());
-                    }
-                } catch (IOException e) {
-                    failed++;
-                    log.warn("删除文件失败: {}", file.getFileName(), e);
+        for (AttachmentEntity attachment : candidates) {
+            try {
+                FileStorageService storage = storageFactory.getService(attachment.getStorageType());
+                storage.delete(attachment.getObjectKey());
+                attachment.setStatus("DELETED");
+                if (attachmentMapper.updateById(attachment) != 1) {
+                    throw new IllegalStateException("附件清理状态更新失败: " + attachment.getId());
                 }
+                bizAttachmentMapper.delete(new LambdaQueryWrapper<BizAttachmentEntity>()
+                        .eq(BizAttachmentEntity::getAttachmentId, attachment.getId()));
+            } catch (IOException | RuntimeException exception) {
+                failed++;
+                log.warn("附件清理失败，等待下次幂等重试: id={}, storageType={}",
+                        attachment.getId(), attachment.getStorageType(), exception);
             }
-        } catch (IOException e) {
-            log.error("扫描临时文件目录失败", e);
-            throw new JobExecutionException("扫描临时文件目录失败", e);
         }
-        log.info("临时文件清理完成，目录: {}, 保留天数: {}, 删除文件数: {}", tempDir, keepDays, deleted);
+        log.info("附件清理完成: candidates={}, failed={}", candidates.size(), failed);
         if (failed > 0) {
-            throw new JobExecutionException("临时文件清理部分失败，失败文件数: " + failed);
+            throw new JobExecutionException("附件清理部分失败: " + failed);
         }
     }
 }

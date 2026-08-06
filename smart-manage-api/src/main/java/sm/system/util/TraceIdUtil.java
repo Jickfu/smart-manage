@@ -1,6 +1,7 @@
 package sm.system.util;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.MDC;
 
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -38,6 +39,7 @@ public class TraceIdUtil {
 			return;
 		}
 		TRACE_ID.set(traceId);
+		MDC.put(TRACE_ID_STRING, traceId);
 	}
 
 	public static void setTraceId(HttpServletRequest request) {
@@ -50,6 +52,7 @@ public class TraceIdUtil {
 
 	public static void clear() {
 		TRACE_ID.remove();
+		MDC.remove(TRACE_ID_STRING);
 	}
 
 	/**

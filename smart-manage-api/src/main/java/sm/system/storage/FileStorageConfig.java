@@ -9,5 +9,11 @@ public record FileStorageConfig(
         String ftpUsername,
         String ftpPassword,
         String ftpDir,
-        Boolean ftpPassiveMode) {
+        Boolean ftpPassiveMode,
+        String s3Endpoint,
+        String s3Region,
+        String s3Bucket,
+        String s3AccessKey,
+        String s3SecretKey,
+        Boolean s3PathStyle) {
 }

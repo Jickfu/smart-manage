@@ -1,19 +1,20 @@
 import { lazy } from 'react';
 import { definePageRegistrations } from '@/domain/common/registry/componentRegistry';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 
 export default definePageRegistrations([
   {
-    componentKey: 'sys/monitor/sql-console',
+    componentKey: componentKeys.sqlConsole,
     pageType: 'CUSTOM',
     component: lazy(() => import('./SqlConsolePage')),
   },
   {
-    componentKey: 'sys/monitor/sql-log',
+    componentKey: componentKeys.sqlLog,
     pageType: 'LIST',
     component: lazy(() => import('./SqlLogPage')),
   },
   {
-    componentKey: 'sys/monitor/sql-log/detail',
+    componentKey: componentKeys.sqlLogDetail,
     pageType: 'EDIT',
     component: lazy(() => import('./SqlLogDetailPage')),
   },

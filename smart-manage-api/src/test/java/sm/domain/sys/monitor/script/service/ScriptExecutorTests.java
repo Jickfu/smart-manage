@@ -6,6 +6,7 @@ import org.springframework.context.ApplicationContext;
 
 import sm.domain.test.DemoService;
 import tools.jackson.databind.json.JsonMapper;
+import sm.system.concurrent.DistributedMutex;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -77,11 +78,25 @@ class ScriptExecutorTests {
         assertThat(outcome.output()).hasSizeLessThanOrEqualTo(1000);
     }
 
+    @Test
+    void timeoutDuringHighFrequencyOutputDoesNotRaceWithContextClose() {
+        ApplicationContext applicationContext = mock(ApplicationContext.class);
+        JsonMapper jsonMapper = JsonMapper.builder().build();
+        executor = executor(applicationContext, jsonMapper);
+
+        ScriptExecutionOutcome outcome = executor.execute(new ScriptExecutionConfig("ATOMIC", 1, 4096),
+                "while (true) { console.log('0123456789'.repeat(100)); }");
+
+        assertThat(outcome.status()).isEqualTo("TIMEOUT");
+        assertThat(outcome.output()).hasSizeLessThanOrEqualTo(4096);
+    }
+
     public static class UnsafeBean {
     }
 
     private ScriptExecutor executor(ApplicationContext applicationContext, JsonMapper jsonMapper) {
         ScriptServiceCatalog catalog = new ScriptServiceCatalog(applicationContext, jsonMapper);
-        return new ScriptExecutor(new ScriptServiceGateway(catalog, jsonMapper), jsonMapper);
+        DistributedMutex mutex = (namespace, key) -> () -> { };
+        return new ScriptExecutor(new ScriptServiceGateway(catalog, jsonMapper), jsonMapper, mutex);
     }
 }

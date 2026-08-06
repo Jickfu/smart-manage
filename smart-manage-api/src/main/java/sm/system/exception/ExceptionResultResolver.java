@@ -96,10 +96,6 @@ public final class ExceptionResultResolver {
             log.error("SQL 语法异常", exception);
             return Result.error(ResultEnum.SQL_ERROR);
         }
-        if (exception instanceof DataAccessException) {
-            log.error("数据持久化异常", exception);
-            return Result.error(ResultEnum.PERSISTENCE_ERROR);
-        }
         if (exception instanceof SerializationException) {
             log.error("Redis 序列化异常", exception);
             return Result.error(ResultEnum.CONFIG_ERROR);
@@ -107,6 +103,10 @@ public final class ExceptionResultResolver {
         if (exception instanceof RedisConnectionFailureException) {
             log.error("Redis 连接失败", exception);
             return Result.error(ResultEnum.CONFIG_ERROR);
+        }
+        if (exception instanceof DataAccessException) {
+            log.error("数据持久化异常", exception);
+            return Result.error(ResultEnum.PERSISTENCE_ERROR);
         }
 
         log.error("服务器异常，请求地址：{}", ServletUtil.getRequest().getRequestURL(), exception);

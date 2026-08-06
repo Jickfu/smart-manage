@@ -7,13 +7,15 @@ import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
+import './JobListPage.css';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { jobApi } from './api';
 import { jobAccess } from './permissions';
 import { jobQueryKeys } from './queryKeys';
 import type { JobStatus, JobVO } from './types';
 
-const EDIT_KEY = 'sys/scheduler/job/edit';
+const EDIT_KEY = componentKeys.schedulerJobEdit;
 
 const JobListPage = (props: PageComponentProps) => {
   const { modal, message } = App.useApp();
@@ -122,7 +124,7 @@ const JobListPage = (props: PageComponentProps) => {
             { label: '已启用', value: 'ENABLED' },
             { label: '已暂停', value: 'PAUSED' },
           ]}
-          style={{ width: 140 }}
+          className="sm-job-status-filter"
           onChange={(value) => setStatus(value)}
         />
       }

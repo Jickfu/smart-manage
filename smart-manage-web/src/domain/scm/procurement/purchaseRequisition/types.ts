@@ -1,4 +1,5 @@
 import type { PageForm } from '@/types/api';
+import type { BusinessAttachment } from '@/domain/common/attachment/types';
 
 export interface PurchaseRequisitionEntry {
   id?: string;
@@ -46,6 +47,7 @@ export interface PurchaseRequisitionDetailVO {
   createTime?: string;
   updateTime?: string;
   entrys: PurchaseRequisitionEntry[];
+  attachments: BusinessAttachment[];
 }
 
 export interface PurchaseRequisitionCreateNewDataVO {
@@ -54,6 +56,7 @@ export interface PurchaseRequisitionCreateNewDataVO {
   bizDate: string;
   billStatus: string;
   entrys: PurchaseRequisitionEntry[];
+  attachments: BusinessAttachment[];
 }
 
 export interface PurchaseRequisitionSaveForm {
@@ -64,6 +67,8 @@ export interface PurchaseRequisitionSaveForm {
   bizDate: string;
   requiredDate?: string;
   reason?: string;
+  attachmentIds?: string[];
+  attachmentUploadSessions?: Record<string, string>;
   entrys: PurchaseRequisitionEntry[];
 }
 

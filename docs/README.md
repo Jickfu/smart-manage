@@ -40,5 +40,6 @@
 
 - [企业级架构优化计划（2026-07）](./archive/enterprise-architecture-optimization-plan-2026-07.md)
 - [架构收口报告（2026-07）](./archive/architecture-closure-report-2026-07.md)
+- [领域服务审查与整改记录（2026-08）](./archive/reviews-2026-08/sys-domain-service-remediation-2026-08.md)
 
 归档只用于追溯，不代表当前架构、规则或项目状态。

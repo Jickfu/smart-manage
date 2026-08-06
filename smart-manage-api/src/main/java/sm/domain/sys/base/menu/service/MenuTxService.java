@@ -14,6 +14,7 @@ import sm.system.response.ResultEnum;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import sm.system.util.EnabledCommandUtil;
 
 /**
@@ -32,9 +33,15 @@ class MenuTxService {
     public Long save(MenuSaveForm form) {
         MenuEntity entity = new MenuEntity();
         if (form.getId() != null) {
+            if (form.getVersion() == null) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "编辑菜单时版本不能为空");
+            }
             entity = mapper.selectById(form.getId());
             if (entity == null) {
                 throw new BizException(ResultEnum.NOT_FOUND, "菜单不存在");
+            }
+            if (!form.getVersion().equals(entity.getVersion())) {
+                throw new BizException(ResultEnum.DATA_CONFLICT, "菜单已被其他用户修改");
             }
         }
         entity.setNumber(form.getNumber());
@@ -78,7 +85,9 @@ class MenuTxService {
             // 使用全字段 XML 更新，确保分组菜单可以把 permissionId/path/component 清空为 null。
             entity.setUpdateTime(LocalDateTime.now());
             entity.setUpdateUser(currentUserContext.isLogin() ? currentUserContext.getUserId() : null);
-            mapper.updateAllColumns(entity);
+            if (mapper.updateAllColumns(entity) != 1) {
+                throw new BizException(ResultEnum.DATA_CONFLICT, "菜单已被其他用户修改");
+            }
         }
         return entity.getId();
     }
@@ -90,6 +99,11 @@ class MenuTxService {
         MenuEntity entity = mapper.selectById(id);
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "菜单不存在");
+        }
+        Long childCount = mapper.selectCount(new LambdaQueryWrapper<MenuEntity>()
+                .eq(MenuEntity::getParentId, id));
+        if (childCount != null && childCount > 0) {
+            throw new BizException(ResultEnum.FOREIGN_KEY_CONFLICT, "存在子菜单，不能删除");
         }
         if (mapper.deleteById(id) != 1) {
             throw new BizException(sm.system.response.ResultEnum.DATA_CONFLICT, "数据已被其他用户删除");

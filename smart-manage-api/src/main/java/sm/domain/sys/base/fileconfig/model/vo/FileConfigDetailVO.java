@@ -29,4 +29,11 @@ public class FileConfigDetailVO {
     private String ftpDir;
 
     private Boolean ftpPassiveMode;
+
+    private String s3Endpoint;
+    private String s3Region;
+    private String s3Bucket;
+    private String s3AccessKey;
+    private Boolean s3SecretKeyConfigured;
+    private Boolean s3PathStyle;
 }

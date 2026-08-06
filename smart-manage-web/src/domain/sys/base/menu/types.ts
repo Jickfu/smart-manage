@@ -37,6 +37,7 @@ export interface MenuTreeVO {
 /** 菜单详情 */
 export interface MenuDetailVO {
   id: string;
+  version: number;
   number: string;
   name: string;
   level: number;
@@ -60,6 +61,7 @@ export interface MenuDetailVO {
 /** 菜单保存 — ID 均以字符串传递 */
 export interface MenuSaveForm {
   id?: string;
+  version?: number;
   number?: string;
   name: string;
   level: number;

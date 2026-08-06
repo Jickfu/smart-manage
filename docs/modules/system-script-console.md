@@ -40,7 +40,7 @@ return result;
 - 仅允许访问 `sm.domain.*` 下、类名以 `Service` 结尾的公开领域 Service；脚本模块自身不可被脚本调用；
 - 不向脚本暴露 Mapper、TxService、DataSource、ApplicationContext、Environment 或任意 Spring Bean；
 - 禁止 HostAccess、Java 类查找、反射、文件、网络、进程、本地能力和线程创建；
-- 每次执行创建独立 Context；单节点同一时间只允许执行一个脚本，超时后主动取消 Context；
+- 每次执行创建独立 Context；同一时间只允许一个脚本执行的约束通过 PostgreSQL 会话级 advisory lock 跨实例生效，不依赖单实例 `Semaphore`；连接异常退出时数据库自动释放锁；超时后主动取消 Context；
 - 源码、输出和超时分别受系统参数限制；错误响应不包含服务端异常堆栈；
 - 脚本正文、输出及错误只写入专用执行审计，不写入通用操作日志正文。
 

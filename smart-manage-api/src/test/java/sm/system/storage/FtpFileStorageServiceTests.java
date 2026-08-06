@@ -67,7 +67,8 @@ class FtpFileStorageServiceTests {
 	}
 
 	private FileStorageConfig config() {
-		return new FileStorageConfig("FTP", null, "localhost", 21, "user", "password", null, false);
+		return new FileStorageConfig("FTP", null, "localhost", 21, "user", "password", null, false,
+				null, null, null, null, null, null);
 	}
 
 	private static class TestFtpFileStorageService extends FtpFileStorageService {

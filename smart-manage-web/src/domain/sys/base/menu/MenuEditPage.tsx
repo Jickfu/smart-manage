@@ -161,6 +161,7 @@ const MenuEditPage = (props: PageComponentProps) => {
 
     const savedId = await menuApi.save({
       id: billId ?? undefined,
+      version: detail?.version,
       name,
       number: (values.number as string) ?? undefined,
       level: values.level as number,

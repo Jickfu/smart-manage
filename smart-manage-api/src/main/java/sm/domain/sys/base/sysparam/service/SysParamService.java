@@ -79,7 +79,7 @@ public class SysParamService {
     // ==================== 消费端（带缓存） ====================
 
     /** 全量获取 number → value 映射（Caffeine 本地缓存） */
-    @Cached(cacheType = CacheType.LOCAL, name = CacheConstant.SYS_PARAM,
+    @Cached(cacheType = CacheType.REMOTE, name = CacheConstant.SYS_PARAM,
             key = "T(sm.domain.sys.base.common.constant.CacheConstant).ALL_KEY",
             expire = 30, timeUnit = TimeUnit.MINUTES)
     public Map<String, String> getAll() {

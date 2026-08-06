@@ -16,6 +16,7 @@ public class AttachmentVO {
     private String mimeType;
     private String fileExt;
     private Boolean isTemp;
+    private String uploadSessionId;
     /** 公开访问 URL */
     private String url;
     private String createTime;

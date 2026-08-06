@@ -3,7 +3,9 @@ package sm.domain.sys.base.common.constant;
 /**
  * @author Chekfu
  */
-public class UserConstant {
+public final class UserConstant {
+	private UserConstant() {
+	}
 	/**
 	 * 超级管理员账号
 	 */

@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { OperationType } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { scriptApi } from './api';
@@ -12,7 +13,7 @@ import { scriptAccess } from './permissions';
 import { scriptQueryKeys } from './queryKeys';
 import type { ScriptListItem } from './types';
 
-const EDIT_KEY = 'sys/monitor/script-manage/edit';
+const EDIT_KEY = componentKeys.scriptManageEdit;
 
 export default function ScriptListPage(props: PageComponentProps) {
   const { modal, message } = App.useApp();

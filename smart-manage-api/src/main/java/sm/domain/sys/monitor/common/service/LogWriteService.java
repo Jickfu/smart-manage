@@ -102,9 +102,26 @@ public class LogWriteService implements OperateLogWriter {
     public void writeLoginFailed(String username, String failReason, String ip, String userAgent) {
         LoginLogEntity entity = new LoginLogEntity();
         entity.setUsername(username);
-        entity.setEventType(LoginEventType.LOGIN.name());
+        entity.setEventType(LoginEventType.LOGIN_FAILURE.name());
         entity.setSuccess(false);
         entity.setFailReason(failReason);
+        entity.setIp(ip);
+        entity.setUserAgent(StringUtils.hasText(userAgent) ? userAgent : null);
+        entity.setCreateTime(LocalDateTime.now());
+        writeLogin(entity);
+    }
+
+    /** 在请求线程完成身份快照后写入非正式会话认证事件。 */
+    public void writeAuthenticationEvent(Long userId, String username, String nickname,
+                                         LoginEventType eventType, boolean success,
+                                         String reason, String ip, String userAgent) {
+        LoginLogEntity entity = new LoginLogEntity();
+        entity.setUserId(userId);
+        entity.setUsername(username);
+        entity.setNickname(nickname);
+        entity.setEventType(eventType.name());
+        entity.setSuccess(success);
+        entity.setFailReason(reason);
         entity.setIp(ip);
         entity.setUserAgent(StringUtils.hasText(userAgent) ? userAgent : null);
         entity.setCreateTime(LocalDateTime.now());

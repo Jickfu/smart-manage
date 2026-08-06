@@ -28,6 +28,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
   const [form] = Form.useForm<UiConfigFormValues>();
   const [dirty, setDirty] = useState(false);
   const sessionUploadedIds = useRef(new Set<string>());
+  const uploadSessions = useRef<Record<string, string>>({});
   const query = useQuery({
     queryKey: ['sys', 'ui-config', 'singleton'],
     queryFn: uiConfigApi.singleton,
@@ -62,9 +63,11 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
         loginBannerAttachmentId: values.loginBannerAttachmentId,
         loginLogoAttachmentId: values.loginLogoAttachmentId,
         headerLogoAttachmentId: values.headerLogoAttachmentId,
+        attachmentUploadSessions: uploadSessions.current,
       };
       await uiConfigApi.save(payload);
       sessionUploadedIds.current.clear();
+      uploadSessions.current = {};
       await query.refetch();
       setDirty(false);
       message.success('界面配置保存成功，刷新登录页后可查看最新效果');
@@ -93,15 +96,16 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       <ImageAttachmentField
         attachmentId={attachmentId}
         imageUrl={imageUrl}
-        onChange={(nextAttachmentId, nextImageUrl) => {
+        onChange={(nextAttachmentId, nextImageUrl, uploadSessionId) => {
           if (attachmentId && sessionUploadedIds.current.has(attachmentId)) {
             sessionUploadedIds.current.delete(attachmentId);
             void uiConfigApi
-              .deleteAttachment(attachmentId)
+              .deleteAttachment(attachmentId, uploadSessions.current[attachmentId])
               .catch(() => message.warning('未使用的临时图片清理失败，将由临时文件任务处理'));
           }
           if (nextAttachmentId) {
             sessionUploadedIds.current.add(nextAttachmentId);
+            if (uploadSessionId) uploadSessions.current[nextAttachmentId] = uploadSessionId;
           }
           form.setFieldValue(idName, nextAttachmentId);
           form.setFieldValue(urlName, nextImageUrl);

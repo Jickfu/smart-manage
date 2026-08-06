@@ -213,12 +213,13 @@ body {
 }
 
 .sm-captcha-img {
-  flex: 0 0 100px;
-  width: 100px;
+  /* 后端验证码默认尺寸为 160×50；按同一比例展示，禁止 object-fit 裁切字符。 */
+  flex: 0 0 141px;
+  width: 141px;
   height: 44px;
   border: 1px solid var(--sm-border);
   border-radius: 2px;
-  object-fit: cover;
+  object-fit: contain;
   cursor: pointer;
   background: #f7f9fc;
 }

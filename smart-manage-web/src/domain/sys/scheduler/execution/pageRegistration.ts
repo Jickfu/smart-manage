@@ -1,14 +1,15 @@
 import { lazy } from 'react';
 import { definePageRegistrations } from '@/domain/common/registry/componentRegistry';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 
 export default definePageRegistrations([
   {
-    componentKey: 'sys/scheduler/execution',
+    componentKey: componentKeys.schedulerExecution,
     pageType: 'LIST',
     component: lazy(() => import('./ExecutionListPage')),
   },
   {
-    componentKey: 'sys/scheduler/execution/detail',
+    componentKey: componentKeys.schedulerExecutionDetail,
     pageType: 'EDIT',
     component: lazy(() => import('./ExecutionDetailPage')),
   },

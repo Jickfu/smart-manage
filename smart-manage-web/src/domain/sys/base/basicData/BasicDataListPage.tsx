@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { OperationType } from '@/domain/common/page/types';
@@ -19,7 +20,7 @@ import { basicDataQueryKeys } from './queryKeys';
 import type { BasicDataListVO, BasicDataTreeNode } from './types';
 import './BasicDataListPage.css';
 
-const EDIT_KEY = 'sys/base/basic-data/edit';
+const EDIT_KEY = componentKeys.basicDataEdit;
 const ROOT_KEY = 'basic-data-root';
 
 const toTreeNode = (node: BasicDataTreeNode): DataNode => ({

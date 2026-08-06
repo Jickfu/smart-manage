@@ -16,7 +16,7 @@ import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
-import sm.system.util.ServletUtil;
+import sm.system.web.ClientIpResolver;
 import sm.system.util.StringUtil;
 
 import java.util.List;
@@ -42,6 +42,7 @@ public class ScriptService {
     private final ScriptConverter converter;
     private final CurrentUserContext currentUserContext;
     private final SysParamService sysParamService;
+    private final ClientIpResolver clientIpResolver;
 
     @BizLog(value = "执行脚本", recordRequest = false, recordResponse = false)
     public ScriptResultVO execute(ScriptExecuteForm form) {
@@ -200,7 +201,7 @@ public class ScriptService {
         log.setErrorMessage(result.getErrorMessage());
         log.setCreateName(currentUserContext.getUsernameOrDefault("未知"));
         try {
-            log.setCreateIp(ServletUtil.getClientIp());
+            log.setCreateIp(clientIpResolver.resolveCurrentRequest());
         } catch (RuntimeException ignored) {
             log.setCreateIp(null);
         }

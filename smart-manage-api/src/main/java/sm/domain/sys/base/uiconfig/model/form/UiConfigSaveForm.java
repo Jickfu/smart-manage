@@ -3,6 +3,7 @@ package sm.domain.sys.base.uiconfig.model.form;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import java.util.Map;
 
 /**
  * 界面配置保存表单
@@ -44,4 +45,7 @@ public class UiConfigSaveForm {
 
     @Schema(description = "顶部Logo附件ID")
     private Long headerLogoAttachmentId;
+
+    @Schema(description = "本次上传附件的上传会话")
+    private Map<Long, String> attachmentUploadSessions;
 }

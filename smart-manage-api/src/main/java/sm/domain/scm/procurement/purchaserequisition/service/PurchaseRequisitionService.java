@@ -21,6 +21,7 @@ import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.domain.sys.base.attachment.service.AttachmentService;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -34,6 +35,7 @@ public class PurchaseRequisitionService {
     private final PurchaseRequisitionEntryMapper entryMapper;
     private final PurchaseRequisitionTxService txService;
     private final PurchaseRequisitionConverter converter;
+    private final AttachmentService attachmentService;
 
     public PageData<PurchaseRequisitionListVO> listPage(PurchaseRequisitionListForm form) {
         LambdaQueryWrapper<PurchaseRequisitionEntity> queryWrapper = new LambdaQueryWrapper<>();
@@ -60,6 +62,8 @@ public class PurchaseRequisitionService {
                         .orderByAsc(PurchaseRequisitionEntryEntity::getSort)
                         .orderByAsc(PurchaseRequisitionEntryEntity::getId))
                 .stream().map(converter::toEntryVO).toList());
+        detailVO.setAttachments(attachmentService.listByBiz(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE,
+                String.valueOf(id)));
         return detailVO;
     }
 

@@ -16,8 +16,10 @@ import sm.domain.sys.base.user.model.vo.UserAuthentication;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.system.exception.BizException;
 import sm.system.helper.SM2Helper;
+import sm.system.helper.Sm2DecryptionException;
 import sm.system.response.ResultEnum;
 import sm.system.util.ServletUtil;
+import sm.system.web.ClientIpResolver;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -43,6 +45,7 @@ class LoginServiceTests {
 	@SuppressWarnings("unchecked")
 	private final ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
 	private LoginService loginService;
+	private final ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
 
 	@BeforeEach
 	void setUp() {
@@ -51,7 +54,8 @@ class LoginServiceTests {
 				userService,
 				mock(MenuService.class),
 				logWriteService,
-				redisTemplate);
+				redisTemplate,
+				clientIpResolver);
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 	}
 
@@ -61,7 +65,7 @@ class LoginServiceTests {
 		when(valueOperations.get(CAPTCHA_KEY)).thenReturn(null);
 
 		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
-			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-captcha")).thenReturn("ABCD");
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-captcha")).thenReturn("ABCD");
 
 			BizException exception = assertThrows(BizException.class, () -> loginService.login(form));
 
@@ -77,7 +81,7 @@ class LoginServiceTests {
 		when(valueOperations.get(CAPTCHA_KEY)).thenReturn("WXYZ");
 
 		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
-			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-captcha")).thenReturn("ABCD");
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-captcha")).thenReturn("ABCD");
 
 			BizException exception = assertThrows(BizException.class, () -> loginService.login(form));
 
@@ -99,8 +103,8 @@ class LoginServiceTests {
 		when(userService.completeLogin(authentication)).thenReturn(expected);
 
 		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
-			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-captcha")).thenReturn("abcd");
-			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-password")).thenReturn("password");
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-captcha")).thenReturn("abcd");
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password")).thenReturn("password");
 
 			LoginVO actual = loginService.login(form);
 
@@ -122,10 +126,10 @@ class LoginServiceTests {
 
 		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class);
 			 MockedStatic<ServletUtil> servletUtil = mockStatic(ServletUtil.class)) {
-			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-captcha")).thenReturn("ABCD");
-			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-password")).thenReturn("password");
-			servletUtil.when(ServletUtil::getClientIp).thenReturn("127.0.0.1");
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-captcha")).thenReturn("ABCD");
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password")).thenReturn("password");
 			servletUtil.when(ServletUtil::getRequest).thenReturn(request);
+			when(clientIpResolver.resolveCurrentRequest()).thenReturn("127.0.0.1");
 
 			LoginVO actual = loginService.login(form);
 
@@ -147,8 +151,8 @@ class LoginServiceTests {
 		when(userService.authenticate("administrator", "password")).thenReturn(authentication);
 
 		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
-			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-captcha")).thenReturn("ABCD");
-			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-password")).thenReturn("password");
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-captcha")).thenReturn("ABCD");
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password")).thenReturn("password");
 
 			LoginVO actual = loginService.login(form);
 
@@ -171,7 +175,7 @@ class LoginServiceTests {
 				.thenReturn(9L);
 
 		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
-			sm2Helper.when(() -> SM2Helper.decrypt("encrypted-new-password")).thenReturn("new-password");
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-new-password")).thenReturn("new-password");
 
 			loginService.changePassword(form);
 
@@ -187,10 +191,31 @@ class LoginServiceTests {
 		when(valueOperations.getAndDelete(RedisKeyConstant.PASSWORD_CHANGE_TICKET + "expired-ticket"))
 				.thenReturn(null);
 
-		BizException exception = assertThrows(BizException.class, () -> loginService.changePassword(form));
+		BizException exception;
+		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-new-password")).thenReturn("new-password");
+			exception = assertThrows(BizException.class, () -> loginService.changePassword(form));
+		}
 
 		assertEquals(ResultEnum.UNAUTHORIZED.getCode(), exception.getCode());
 		verify(userService, never()).changeResetPassword(9L, "new-password");
+	}
+
+	@Test
+	void invalidSm2CiphertextIsAControlledLoginFailure() {
+		LoginForm form = loginForm();
+
+		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-captcha"))
+					.thenThrow(new Sm2DecryptionException("SM2 密文格式无效", null));
+
+			BizException exception = assertThrows(BizException.class, () -> loginService.login(form));
+
+			assertEquals(ResultEnum.PARAM_ERROR.getCode(), exception.getCode());
+			verify(userService, never()).authenticate("administrator", "password");
+			verify(redisTemplate, never()).delete(CAPTCHA_KEY);
+			verify(logWriteService).writeLoginFailed(eq("administrator"), eq("登录加密数据无效"), eq(null), eq(null));
+		}
 	}
 
 	private LoginForm loginForm() {
