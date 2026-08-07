@@ -86,9 +86,7 @@ const SysParamListPage = (props: PageComponentProps) => {
         <Button
           type="link"
           size="small"
-          onClick={() =>
-            openBillTab(props.appNumber, EDIT_KEY, '编辑系统参数', record.id, OperationType.EDIT)
-          }
+          onClick={() => openBillTab(props.appNumber, EDIT_KEY, record.id, OperationType.EDIT)}
         >
           {text}
         </Button>
@@ -136,7 +134,7 @@ const SysParamListPage = (props: PageComponentProps) => {
       }
       quickSearchPlaceholder="搜索编码/名称"
       filterSummary={keyword ? `关键字：${keyword}` : undefined}
-      onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY, '新增系统参数')}
+      onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY)}
       toolbarActions={[
         {
           key: 'delete',

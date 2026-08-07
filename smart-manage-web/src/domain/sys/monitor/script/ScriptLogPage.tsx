@@ -52,9 +52,7 @@ export default function ScriptLogPage(props: PageComponentProps) {
         <Button
           type="link"
           size="small"
-          onClick={() =>
-            openBillTab(props.appNumber, DETAIL_KEY, '脚本执行详情', record.id, OperationType.VIEW)
-          }
+          onClick={() => openBillTab(props.appNumber, DETAIL_KEY, record.id, OperationType.VIEW)}
         >
           {value}
         </Button>
@@ -77,7 +75,7 @@ export default function ScriptLogPage(props: PageComponentProps) {
   return (
     <ListPage<ScriptLogListItem>
       {...props}
-      title="脚本执行历史"
+      title="脚本执行记录"
       loading={query.isLoading}
       error={query.error as Error | null}
       onRetry={() => query.refetch()}

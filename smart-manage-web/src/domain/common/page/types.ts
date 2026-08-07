@@ -39,6 +39,8 @@ export interface PageComponentProps {
 /** 页面注册项 */
 export interface PageRegistration {
   componentKey: string;
+  /** 页面定义的基础标题；LIST 页签会统一追加“列表”，其他类型直接使用。 */
+  title: string;
   pageType: PageType;
   component:
     | ComponentType<PageComponentProps>

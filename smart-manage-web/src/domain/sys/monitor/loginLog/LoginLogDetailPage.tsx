@@ -46,7 +46,7 @@ const LoginLogDetailPage = (props: PageComponentProps) => {
 
   return (
     <EditPage
-      title="登录日志详情"
+      title="登录日志"
       fields={fields}
       initialValues={initialValues}
       operationType={OperationType.VIEW}

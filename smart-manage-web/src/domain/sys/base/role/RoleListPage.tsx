@@ -5,6 +5,7 @@ import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { useRoleDeleteMutation } from './useRoleDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
+import { getRegisteredTabTitle } from '@/domain/common/registry/componentRegistry';
 import { OperationType } from '@/domain/common/page/types';
 import { roleApi } from './api';
 import { roleQueryKeys } from './queryKeys';
@@ -37,13 +38,13 @@ const RoleListPage = (props: PageComponentProps) => {
 
   const handleOpenEdit = useCallback(
     (id: string) => {
-      openBillTab(props.appNumber, ROLE_EDIT_KEY, '编辑角色', id, OperationType.EDIT);
+      openBillTab(props.appNumber, ROLE_EDIT_KEY, id, OperationType.EDIT);
     },
     [props.appNumber, openBillTab],
   );
 
   const handleOpenAdd = useCallback(() => {
-    openAddNewTab(props.appNumber, ROLE_EDIT_KEY, '新增角色');
+    openAddNewTab(props.appNumber, ROLE_EDIT_KEY);
   }, [props.appNumber, openAddNewTab]);
 
   const handleDelete = useCallback(() => {
@@ -63,7 +64,7 @@ const RoleListPage = (props: PageComponentProps) => {
     const roleId = String(selectedRowKeys[0]);
     addContentTab(props.appNumber, {
       key: `assignment:${ROLE_PERMISSION_ASSIGNMENT_KEY}:${roleId}`,
-      label: '分配权限',
+      label: getRegisteredTabTitle(ROLE_PERMISSION_ASSIGNMENT_KEY, 'CUSTOM'),
       closable: true,
       componentKey: ROLE_PERMISSION_ASSIGNMENT_KEY,
       pageType: 'CUSTOM',
@@ -89,7 +90,7 @@ const RoleListPage = (props: PageComponentProps) => {
   return (
     <ListPage<RoleListVO>
       {...props}
-      title="角色管理"
+      title="角色"
       access={roleAccess}
       loading={query.isLoading}
       error={query.error as Error | null}

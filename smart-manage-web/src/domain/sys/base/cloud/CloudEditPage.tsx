@@ -76,7 +76,7 @@ const CloudEditPage = ({ open, cloudId, onClose, onSaved }: Props) => {
   return (
     <ModalEditPage
       access={cloudAccess}
-      title={isAddNew ? '新增云' : '编辑云'}
+      title="云"
       open={open}
       onClose={onClose}
       fields={fields}

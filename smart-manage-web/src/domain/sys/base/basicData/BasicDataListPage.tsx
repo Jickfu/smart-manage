@@ -104,9 +104,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
         <Button
           type="link"
           size="small"
-          onClick={() =>
-            openBillTab(props.appNumber, EDIT_KEY, '编辑基础资料', record.id, OperationType.EDIT)
-          }
+          onClick={() => openBillTab(props.appNumber, EDIT_KEY, record.id, OperationType.EDIT)}
         >
           {text}
         </Button>
@@ -218,7 +216,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
     <>
       <ListPage<BasicDataListVO>
         {...props}
-        title="基础数据管理"
+        title="基础资料"
         access={basicDataAccess}
         treePanel={treePanel}
         loading={query.isLoading || treeQuery.isLoading}
@@ -233,7 +231,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
             void message.warning('请先选择基础资料分类');
             return;
           }
-          openAddNewTab(props.appNumber, EDIT_KEY, '新增基础资料', {
+          openAddNewTab(props.appNumber, EDIT_KEY, {
             categoryId: selectedCategoryId,
           });
         }}

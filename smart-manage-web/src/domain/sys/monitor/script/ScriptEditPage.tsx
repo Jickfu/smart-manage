@@ -69,7 +69,6 @@ export default function ScriptEditPage(props: PageComponentProps) {
         const nextKey = createBillTabKey(props.componentKey, savedId);
         replaceContentTab(props.appNumber, props.tabKey, {
           key: nextKey,
-          label: name,
           closable: true,
           componentKey: props.componentKey,
           pageType: 'EDIT',
@@ -84,7 +83,7 @@ export default function ScriptEditPage(props: PageComponentProps) {
   });
   return (
     <EditPage
-      title="脚本管理"
+      title="脚本"
       access={scriptAccess}
       fields={fields}
       initialValues={initialValues}

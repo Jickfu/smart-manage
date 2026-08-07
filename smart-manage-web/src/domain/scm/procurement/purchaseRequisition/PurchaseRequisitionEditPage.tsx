@@ -134,7 +134,6 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
     if (isAddNew || submit) {
       replaceContentTab(appNumber, tabKey, {
         key: nextKey,
-        label: form.number,
         closable: true,
         componentKey: props.componentKey,
         pageType: 'EDIT',

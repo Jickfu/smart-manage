@@ -81,7 +81,7 @@ const PermissionListPage = (props: PageComponentProps) => {
     <>
       <ListPage<PermissionListVO>
         {...props}
-        title="权限管理"
+        title="权限"
         access={permissionAccess}
         loading={query.isLoading}
         error={query.error as Error | null}

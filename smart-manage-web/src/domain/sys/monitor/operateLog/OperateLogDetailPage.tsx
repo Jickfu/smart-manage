@@ -68,7 +68,7 @@ const OperateLogDetailPage = (props: PageComponentProps) => {
 
   return (
     <EditPage
-      title="操作日志详情"
+      title="操作日志"
       fields={fields}
       initialValues={initialValues}
       operationType={OperationType.VIEW}

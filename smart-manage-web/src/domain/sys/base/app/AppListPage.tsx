@@ -71,11 +71,11 @@ const AppListPage = (props: PageComponentProps) => {
   };
 
   const handleOpenEdit = (id: string) => {
-    openBillTab(props.appNumber, APP_EDIT_KEY, '编辑应用', id, OperationType.EDIT);
+    openBillTab(props.appNumber, APP_EDIT_KEY, id, OperationType.EDIT);
   };
 
   const handleOpenAdd = () => {
-    openAddNewTab(props.appNumber, APP_EDIT_KEY, '新增应用');
+    openAddNewTab(props.appNumber, APP_EDIT_KEY);
   };
 
   const columns: ColumnsType<AppListVO> = [
@@ -118,7 +118,7 @@ const AppListPage = (props: PageComponentProps) => {
   return (
     <ListPage<AppListVO>
       {...props}
-      title="应用管理"
+      title="应用"
       access={appAccess}
       loading={query.isLoading}
       error={query.error as Error | null}

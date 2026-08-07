@@ -126,6 +126,7 @@ const AttachmentConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
   });
   return (
     <EditPageShell
+      title="附件配置"
       loading={query.isLoading}
       error={query.error as Error | null}
       onRetry={() => query.refetch()}

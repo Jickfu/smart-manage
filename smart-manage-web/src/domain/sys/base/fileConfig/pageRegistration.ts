@@ -4,6 +4,7 @@ import { definePageRegistrations } from '@/domain/common/registry/componentRegis
 export default definePageRegistrations([
   {
     componentKey: 'sys/base/file-config',
+    title: '文件配置',
     pageType: 'CUSTOM',
     component: lazy(() => import('./FileConfigPage')),
   },

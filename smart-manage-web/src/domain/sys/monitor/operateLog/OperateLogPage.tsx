@@ -31,13 +31,7 @@ const OperateLogPage = (props: PageComponentProps) => {
           type="link"
           size="small"
           onClick={() =>
-            openBillTab(
-              props.appNumber,
-              OPERATE_LOG_DETAIL_KEY,
-              '操作日志详情',
-              record.id,
-              OperationType.VIEW,
-            )
+            openBillTab(props.appNumber, OPERATE_LOG_DETAIL_KEY, record.id, OperationType.VIEW)
           }
         >
           {id}

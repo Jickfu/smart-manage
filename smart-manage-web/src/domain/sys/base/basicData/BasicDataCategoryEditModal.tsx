@@ -96,7 +96,7 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
 
   return (
     <ModalEditPage
-      title={categoryId ? '编辑基础资料分类' : '新增基础资料分类'}
+      title="基础资料分类"
       open={open}
       onClose={onClose}
       fields={fields}

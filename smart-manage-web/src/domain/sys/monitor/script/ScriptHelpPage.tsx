@@ -72,6 +72,7 @@ export default function ScriptHelpPage(_props: PageComponentProps) {
 
   return (
     <EditPageShell
+      title="脚本使用帮助"
       loading={apiQuery.isLoading}
       error={apiQuery.error}
       onRetry={() => apiQuery.refetch()}

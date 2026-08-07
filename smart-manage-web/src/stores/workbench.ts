@@ -5,7 +5,9 @@ import {
   createListTabKey,
 } from '@/domain/common/page/tabKeys';
 import { OperationType } from '@/domain/common/page/types';
+import type { PageType } from '@/domain/common/page/types';
 import type { AppVO } from '@/domain/sys/base/app/types';
+import { getRegisteredTabTitle } from '@/domain/common/registry/componentRegistry';
 import { pushTabHistory, resolveNextActiveTabKey } from './tabHistory';
 
 /** 内容页签最大数量（不含首页） */
@@ -26,6 +28,11 @@ export interface ContentTabItem {
   /** 新增页临时标记 — 保存后替换为真实单据 tab */
   temporary?: boolean;
 }
+
+type ReplaceContentTabItem = Omit<ContentTabItem, 'label' | 'componentKey' | 'pageType'> & {
+  componentKey: string;
+  pageType: PageType;
+};
 
 interface WorkspaceState {
   appInfo: AppVO;
@@ -63,22 +70,21 @@ interface WorkbenchState {
   unregisterBeforeClose: (appNumber: string, tabKey: string) => void;
   /** 添加/激活 content tab — 返回操作结果供调用层反馈 */
   addContentTab: (appNumber: string, tab: ContentTabItem) => AddTabResult;
-  openListTab: (appNumber: string, componentKey: string, label: string) => AddTabResult;
-  openCustomTab: (appNumber: string, componentKey: string, label: string) => AddTabResult;
+  openListTab: (appNumber: string, componentKey: string) => AddTabResult;
+  openCustomTab: (appNumber: string, componentKey: string) => AddTabResult;
   openAddNewTab: (
     appNumber: string,
     componentKey: string,
-    label: string,
     context?: Record<string, string>,
   ) => AddTabResult;
   openBillTab: (
     appNumber: string,
     componentKey: string,
-    label: string,
     billId: string,
     operationType: OperationType,
   ) => AddTabResult;
-  replaceContentTab: (appNumber: string, oldTabKey: string, nextTab: ContentTabItem) => void;
+  replaceContentTab: (appNumber: string, oldTabKey: string, nextTab: ReplaceContentTabItem) => void;
+  updateContentTabLabel: (appNumber: string, tabKey: string, label: string) => void;
   removeContentTab: (appNumber: string, tabKey: string) => Promise<void>;
   activateContentTab: (appNumber: string, tabKey: string) => void;
 }
@@ -321,30 +327,30 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     return 'opened';
   },
 
-  openListTab: (appNumber, componentKey, label) => {
+  openListTab: (appNumber, componentKey) => {
     return get().addContentTab(appNumber, {
       key: createListTabKey(componentKey),
-      label,
+      label: getRegisteredTabTitle(componentKey, 'LIST'),
       closable: true,
       componentKey,
       pageType: 'LIST',
     });
   },
 
-  openCustomTab: (appNumber, componentKey, label) => {
+  openCustomTab: (appNumber, componentKey) => {
     return get().addContentTab(appNumber, {
       key: createListTabKey(componentKey),
-      label,
+      label: getRegisteredTabTitle(componentKey, 'CUSTOM'),
       closable: true,
       componentKey,
       pageType: 'CUSTOM',
     });
   },
 
-  openAddNewTab: (appNumber, componentKey, label, context) => {
+  openAddNewTab: (appNumber, componentKey, context) => {
     return get().addContentTab(appNumber, {
       key: createAddNewTabKey(componentKey),
-      label,
+      label: getRegisteredTabTitle(componentKey, 'EDIT'),
       closable: true,
       componentKey,
       pageType: 'EDIT',
@@ -354,10 +360,10 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     });
   },
 
-  openBillTab: (appNumber, componentKey, label, billId, operationType) => {
+  openBillTab: (appNumber, componentKey, billId, operationType) => {
     return get().addContentTab(appNumber, {
       key: createBillTabKey(componentKey, billId),
-      label,
+      label: getRegisteredTabTitle(componentKey, 'EDIT'),
       closable: true,
       componentKey,
       pageType: 'EDIT',
@@ -380,7 +386,11 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       delete nextCallbacks[oldCbKey];
     }
 
-    const contentTabs = ws.contentTabs.map((tab) => (tab.key === oldTabKey ? nextTab : tab));
+    const replacementTab: ContentTabItem = {
+      ...nextTab,
+      label: getRegisteredTabTitle(nextTab.componentKey, nextTab.pageType),
+    };
+    const contentTabs = ws.contentTabs.map((tab) => (tab.key === oldTabKey ? replacementTab : tab));
     const activeContentTabKey =
       ws.activeContentTabKey === oldTabKey ? nextTab.key : ws.activeContentTabKey;
     const activeContentTabHistory = pushTabHistory(
@@ -393,6 +403,30 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         [appNumber]: { ...ws, contentTabs, activeContentTabKey, activeContentTabHistory },
       },
       beforeCloseCallbacks: nextCallbacks,
+    });
+  },
+
+  updateContentTabLabel: (appNumber, tabKey, label) => {
+    const normalizedLabel = label.trim();
+    if (!normalizedLabel) {
+      throw new Error('[workbench] 页签标题不能为空。');
+    }
+    set((state) => {
+      const ws = state.workspaces[appNumber];
+      if (!ws) return state;
+      const targetTab = ws.contentTabs.find((tab) => tab.key === tabKey);
+      if (!targetTab || targetTab.label === normalizedLabel) return state;
+      return {
+        workspaces: {
+          ...state.workspaces,
+          [appNumber]: {
+            ...ws,
+            contentTabs: ws.contentTabs.map((tab) =>
+              tab.key === tabKey ? { ...tab, label: normalizedLabel } : tab,
+            ),
+          },
+        },
+      };
     });
   },
 

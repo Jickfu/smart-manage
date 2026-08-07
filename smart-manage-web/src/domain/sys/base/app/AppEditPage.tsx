@@ -117,7 +117,6 @@ const AppEditPage = (props: PageComponentProps) => {
     if (isAddNew && tabKey !== String(savedId)) {
       replaceContentTab(appNumber, tabKey, {
         key: createBillTabKey(props.componentKey, savedId),
-        label: name,
         closable: true,
         componentKey: props.componentKey,
         pageType: 'EDIT',
@@ -136,7 +135,7 @@ const AppEditPage = (props: PageComponentProps) => {
   return (
     <EditPage
       access={appAccess}
-      title="应用管理"
+      title="应用"
       fields={fields}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}

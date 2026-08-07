@@ -74,6 +74,7 @@ export default function SqlConsolePage(_props: PageComponentProps) {
   );
   return (
     <EditPageShell
+      title="SQL 控制台"
       loading={false}
       actions={
         <>

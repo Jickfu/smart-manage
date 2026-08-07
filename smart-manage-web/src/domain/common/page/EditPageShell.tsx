@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import { Button, Result, Spin } from 'antd';
 import './EditPage.css';
+import { usePageTabTitle } from './usePageTabTitle';
 
 interface EditPageShellProps {
+  title: string;
   loading: boolean;
   error?: Error | null;
   onRetry?: () => void;
@@ -11,7 +13,15 @@ interface EditPageShellProps {
 }
 
 /** 编辑页壳层：只负责布局、加载、错误和按钮区域，不感知业务命令与单据状态。 */
-export function EditPageShell({ loading, error, onRetry, actions, children }: EditPageShellProps) {
+export function EditPageShell({
+  title,
+  loading,
+  error,
+  onRetry,
+  actions,
+  children,
+}: EditPageShellProps) {
+  usePageTabTitle(title);
   if (error) {
     return (
       <section className="sm-common-page sm-edit-page">

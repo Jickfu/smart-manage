@@ -41,7 +41,7 @@ export default function ScriptLogDetailPage(props: PageComponentProps) {
   };
   return (
     <EditPage
-      title="脚本执行详情"
+      title="脚本执行记录"
       fields={fields}
       initialValues={query.data ? { ...query.data } : {}}
       operationType={OperationType.VIEW}

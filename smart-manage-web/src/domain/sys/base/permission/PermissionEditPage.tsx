@@ -103,7 +103,7 @@ const PermissionEditPage = ({ open, permissionId, onClose, onSaved }: Props) => 
   return (
     <ModalEditPage
       access={permissionAccess}
-      title={isAddNew ? '新增权限' : '编辑权限'}
+      title="权限"
       open={open}
       onClose={onClose}
       fields={fields}

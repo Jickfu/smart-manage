@@ -128,7 +128,6 @@ const BasicDataEditPage = (props: PageComponentProps) => {
         const nextKey = createBillTabKey(props.componentKey, savedId);
         replaceContentTab(appNumber, tabKey, {
           key: nextKey,
-          label: form.name,
           closable: true,
           componentKey: props.componentKey,
           pageType: 'EDIT',

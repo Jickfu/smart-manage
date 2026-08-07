@@ -8,6 +8,7 @@ import type { AccessResource } from './access';
 import type { PermissionAction } from './access';
 import { PermissionActions } from './PermissionActions';
 import './ListPage.css';
+import { usePageTabTitle } from './usePageTabTitle';
 
 interface StandardListPermissions {
   save: string;
@@ -99,6 +100,7 @@ function ListPage<T>({
   selectedRowKeys,
   onSelectChange,
 }: ListPageProps<T>) {
+  usePageTabTitle(title);
   const rowSelection: TableRowSelection<T> | undefined = useMemo(
     () =>
       selectMode

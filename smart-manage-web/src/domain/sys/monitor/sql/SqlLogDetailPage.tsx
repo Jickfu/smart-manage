@@ -39,7 +39,7 @@ export default function SqlLogDetailPage(props: PageComponentProps) {
   };
   return (
     <EditPage
-      title="SQL 执行详情"
+      title="SQL 执行记录"
       fields={fields}
       initialValues={query.data ? { ...query.data } : {}}
       operationType={OperationType.VIEW}

@@ -31,9 +31,7 @@ const ExecutionListPage = (props: PageComponentProps) => {
         <Button
           type="link"
           size="small"
-          onClick={() =>
-            openBillTab(props.appNumber, DETAIL_KEY, '执行实例详情', id, OperationType.VIEW)
-          }
+          onClick={() => openBillTab(props.appNumber, DETAIL_KEY, id, OperationType.VIEW)}
         >
           {id}
         </Button>

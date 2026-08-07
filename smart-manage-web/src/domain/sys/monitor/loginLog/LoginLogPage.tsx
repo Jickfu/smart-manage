@@ -40,13 +40,7 @@ const LoginLogPage = (props: PageComponentProps) => {
           type="link"
           size="small"
           onClick={() =>
-            openBillTab(
-              props.appNumber,
-              LOGIN_LOG_DETAIL_KEY,
-              '登录日志详情',
-              record.id,
-              OperationType.VIEW,
-            )
+            openBillTab(props.appNumber, LOGIN_LOG_DETAIL_KEY, record.id, OperationType.VIEW)
           }
         >
           {id}

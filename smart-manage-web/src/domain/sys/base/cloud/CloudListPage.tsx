@@ -72,7 +72,7 @@ const CloudListPage = (props: PageComponentProps) => {
     <>
       <ListPage<CloudListVO>
         {...props}
-        title="云管理"
+        title="云"
         access={cloudAccess}
         loading={query.isLoading}
         error={query.error as Error | null}

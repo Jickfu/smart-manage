@@ -47,9 +47,7 @@ export default function ScriptListPage(props: PageComponentProps) {
         <Button
           type="link"
           size="small"
-          onClick={() =>
-            openBillTab(props.appNumber, EDIT_KEY, record.name, record.id, OperationType.EDIT)
-          }
+          onClick={() => openBillTab(props.appNumber, EDIT_KEY, record.id, OperationType.EDIT)}
         >
           {value}
         </Button>
@@ -63,7 +61,7 @@ export default function ScriptListPage(props: PageComponentProps) {
   return (
     <ListPage<ScriptListItem>
       {...props}
-      title="脚本管理"
+      title="脚本"
       access={scriptAccess}
       loading={query.isLoading}
       error={query.error as Error | null}
@@ -76,7 +74,7 @@ export default function ScriptListPage(props: PageComponentProps) {
       onQuickSearch={onSearch}
       onRefresh={onRefresh}
       onPageChange={onPageChange}
-      onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY, '新增脚本')}
+      onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY)}
       onDelete={() => {
         if (selectedKeys.length === 0) {
           message.warning('请选择要删除的脚本');

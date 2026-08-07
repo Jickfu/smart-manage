@@ -179,7 +179,6 @@ const MenuEditPage = (props: PageComponentProps) => {
     if (isAddNew && tabKey !== createBillTabKey(props.componentKey, savedId)) {
       replaceContentTab(appNumber, tabKey, {
         key: createBillTabKey(props.componentKey, savedId),
-        label: name,
         closable: true,
         componentKey: props.componentKey,
         pageType: 'EDIT',
@@ -198,7 +197,7 @@ const MenuEditPage = (props: PageComponentProps) => {
   return (
     <EditPage
       access={menuAccess}
-      title="菜单管理"
+      title="菜单"
       fields={fields}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}

@@ -114,13 +114,13 @@ const MenuListPage = (props: PageComponentProps) => {
 
   const handleOpenEdit = useCallback(
     (id: string) => {
-      openBillTab(props.appNumber, MENU_EDIT_KEY, '编辑菜单', id, OperationType.EDIT);
+      openBillTab(props.appNumber, MENU_EDIT_KEY, id, OperationType.EDIT);
     },
     [props.appNumber, openBillTab],
   );
 
   const handleOpenAdd = useCallback(() => {
-    openAddNewTab(props.appNumber, MENU_EDIT_KEY, '新增菜单');
+    openAddNewTab(props.appNumber, MENU_EDIT_KEY);
   }, [props.appNumber, openAddNewTab]);
 
   const handleDelete = useCallback(() => {
@@ -183,7 +183,7 @@ const MenuListPage = (props: PageComponentProps) => {
   return (
     <ListPage<MenuListVO>
       {...props}
-      title="菜单管理"
+      title="菜单"
       access={menuAccess}
       loading={loading ? true : false}
       error={error as Error | null}

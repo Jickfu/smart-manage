@@ -48,7 +48,7 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
   const openDetail = (record: PurchaseRequisitionListVO) => {
     const operationType =
       record.billStatus === BillStatus.SAVED ? OperationType.EDIT : OperationType.VIEW;
-    openBillTab(props.appNumber, EDIT_COMPONENT_KEY, record.number, record.id, operationType);
+    openBillTab(props.appNumber, EDIT_COMPONENT_KEY, record.id, operationType);
   };
 
   const columns: ColumnsType<PurchaseRequisitionListVO> = [
@@ -101,7 +101,7 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
       pageSize={listQuery.pageSize}
       quickSearchPlaceholder="搜索编码/主题"
       filterSummary={listQuery.keyword ? `关键字：${listQuery.keyword}` : undefined}
-      onAddNew={() => openAddNewTab(props.appNumber, EDIT_COMPONENT_KEY, '新增采购申请')}
+      onAddNew={() => openAddNewTab(props.appNumber, EDIT_COMPONENT_KEY)}
       onDelete={confirmDelete}
       onRefresh={listQuery.onRefresh}
       onQuickSearch={listQuery.onSearch}

@@ -7,6 +7,7 @@ import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { useUserDeleteMutation } from './useUserDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
+import { getRegisteredTabTitle } from '@/domain/common/registry/componentRegistry';
 import { OperationType } from '@/domain/common/page/types';
 import { userApi } from './api';
 import { userQueryKeys } from './queryKeys';
@@ -49,13 +50,13 @@ const UserListPage = (props: PageComponentProps) => {
 
   const handleOpenEdit = useCallback(
     (id: string) => {
-      openBillTab(props.appNumber, USER_EDIT_KEY, '编辑用户', id, OperationType.EDIT);
+      openBillTab(props.appNumber, USER_EDIT_KEY, id, OperationType.EDIT);
     },
     [props.appNumber, openBillTab],
   );
 
   const handleOpenAdd = useCallback(() => {
-    openAddNewTab(props.appNumber, USER_EDIT_KEY, '新增用户');
+    openAddNewTab(props.appNumber, USER_EDIT_KEY);
   }, [props.appNumber, openAddNewTab]);
 
   const handleDelete = useCallback(() => {
@@ -75,7 +76,7 @@ const UserListPage = (props: PageComponentProps) => {
     const userId = String(selectedRowKeys[0]);
     addContentTab(props.appNumber, {
       key: `assignment:${USER_ROLE_ASSIGNMENT_KEY}:${userId}`,
-      label: '分配角色',
+      label: getRegisteredTabTitle(USER_ROLE_ASSIGNMENT_KEY, 'CUSTOM'),
       closable: true,
       componentKey: USER_ROLE_ASSIGNMENT_KEY,
       pageType: 'CUSTOM',
@@ -145,7 +146,7 @@ const UserListPage = (props: PageComponentProps) => {
     <>
       <ListPage<UserListVO>
         {...props}
-        title="用户管理"
+        title="用户"
         access={userAccess}
         loading={query.isLoading}
         error={query.error as Error | null}

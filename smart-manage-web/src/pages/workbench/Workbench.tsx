@@ -32,8 +32,8 @@ const Workbench = ({ appNumber }: Props) => {
       const componentKey = item.component?.trim() || item.path?.trim() || item.name;
       const result =
         componentRegistry[componentKey]?.pageType === 'CUSTOM'
-          ? openCustomTab(appNumber, componentKey, item.name)
-          : openListTab(appNumber, componentKey, item.name);
+          ? openCustomTab(appNumber, componentKey)
+          : openListTab(appNumber, componentKey);
       if (result === 'limit_reached') {
         modal.warning({
           title: '页签数量已达上限',

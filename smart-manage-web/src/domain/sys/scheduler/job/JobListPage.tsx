@@ -70,9 +70,7 @@ const JobListPage = (props: PageComponentProps) => {
         <Button
           type="link"
           size="small"
-          onClick={() =>
-            openBillTab(props.appNumber, EDIT_KEY, '编辑定时任务', record.id, OperationType.EDIT)
-          }
+          onClick={() => openBillTab(props.appNumber, EDIT_KEY, record.id, OperationType.EDIT)}
         >
           {value}
         </Button>
@@ -129,7 +127,7 @@ const JobListPage = (props: PageComponentProps) => {
         />
       }
       filterSummary={status ? `状态：${status === 'ENABLED' ? '已启用' : '已暂停'}` : undefined}
-      onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY, '新增定时任务')}
+      onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY)}
       toolbarActions={[
         {
           key: 'pause',

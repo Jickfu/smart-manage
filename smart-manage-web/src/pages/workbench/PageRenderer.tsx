@@ -1,7 +1,9 @@
-import { Suspense } from 'react';
+import { Suspense, useCallback } from 'react';
 import { Empty, Result, Spin, Typography } from 'antd';
 import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import type { OperationType, PageType } from '@/domain/common/page/types';
+import { PageTabTitleProvider } from '@/domain/common/page/PageTabTitleProvider';
+import { useWorkbenchStore } from '@/stores/workbench';
 import './PageRenderer.css';
 
 interface Props {
@@ -31,6 +33,11 @@ const PageRenderer = ({
   temporary,
   active,
 }: Props) => {
+  const updateContentTabLabel = useWorkbenchStore((state) => state.updateContentTabLabel);
+  const setTabTitle = useCallback(
+    (nextTitle: string) => updateContentTabLabel(appNumber, tabKey, nextTitle),
+    [appNumber, tabKey, updateContentTabLabel],
+  );
   if (!componentKey) {
     return (
       <div className="sm-page-renderer-empty">
@@ -82,17 +89,19 @@ const PageRenderer = ({
         </div>
       }
     >
-      <RegisteredComponent
-        appNumber={appNumber}
-        componentKey={componentKey}
-        tabKey={tabKey}
-        title={title}
-        operationType={operationType}
-        billId={billId}
-        context={context}
-        temporary={temporary}
-        active={active}
-      />
+      <PageTabTitleProvider pageType={registration.pageType} setTabTitle={setTabTitle}>
+        <RegisteredComponent
+          appNumber={appNumber}
+          componentKey={componentKey}
+          tabKey={tabKey}
+          title={title}
+          operationType={operationType}
+          billId={billId}
+          context={context}
+          temporary={temporary}
+          active={active}
+        />
+      </PageTabTitleProvider>
     </Suspense>
   );
 };

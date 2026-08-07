@@ -4,11 +4,13 @@ import { definePageRegistrations } from '@/domain/common/registry/componentRegis
 export default definePageRegistrations([
   {
     componentKey: 'sys/base/menu',
+    title: '菜单',
     pageType: 'LIST',
     component: lazy(() => import('./MenuListPage')),
   },
   {
     componentKey: 'sys/base/menu/edit',
+    title: '菜单',
     pageType: 'EDIT',
     component: lazy(() => import('./MenuEditPage')),
   },

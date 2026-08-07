@@ -137,6 +137,7 @@ function isEditable(opType: OperationType, status?: BillStatus): boolean {
 
 /** 通用编辑页 — 使用 antd Form 驱动校验与字段状态 */
 const EditPage = ({
+  title,
   fields,
   initialValues,
   billStatus,
@@ -236,6 +237,7 @@ const EditPage = ({
 
   return (
     <EditPageShell
+      title={title}
       loading={loading}
       error={error}
       onRetry={onRetry}

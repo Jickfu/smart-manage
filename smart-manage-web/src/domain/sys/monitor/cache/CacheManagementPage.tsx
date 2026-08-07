@@ -88,7 +88,6 @@ export default function CacheManagementPage(props: PageComponentProps) {
               openBillTab(
                 props.appNumber,
                 CACHE_VALUE_COMPONENT,
-                `缓存值：${record.key.length > 18 ? `${record.key.slice(0, 18)}…` : record.key}`,
                 record.identity,
                 OperationType.VIEW,
               )

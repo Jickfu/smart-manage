@@ -116,6 +116,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
   );
   return (
     <EditPageShell
+      title="界面配置"
       loading={query.isLoading}
       error={query.error as Error | null}
       onRetry={() => query.refetch()}

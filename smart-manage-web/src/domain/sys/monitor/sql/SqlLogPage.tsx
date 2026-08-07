@@ -44,9 +44,7 @@ export default function SqlLogPage(props: PageComponentProps) {
         <Button
           type="link"
           size="small"
-          onClick={() =>
-            openBillTab(props.appNumber, DETAIL_KEY, 'SQL 执行详情', record.id, OperationType.VIEW)
-          }
+          onClick={() => openBillTab(props.appNumber, DETAIL_KEY, record.id, OperationType.VIEW)}
         >
           {value}
         </Button>
@@ -73,7 +71,7 @@ export default function SqlLogPage(props: PageComponentProps) {
   return (
     <ListPage<SqlLogListItem>
       {...props}
-      title="SQL 执行历史"
+      title="SQL 执行记录"
       loading={query.isLoading}
       error={query.error as Error | null}
       onRetry={() => query.refetch()}

@@ -70,6 +70,7 @@ export default function ScriptConsolePage(props: PageComponentProps) {
 
   return (
     <EditPageShell
+      title="脚本控制台"
       loading={false}
       actions={
         <>
@@ -104,7 +105,7 @@ export default function ScriptConsolePage(props: PageComponentProps) {
           <Button
             icon={<QuestionCircleOutlined />}
             onClick={() => {
-              const openResult = openCustomTab(props.appNumber, HELP_COMPONENT_KEY, '脚本使用帮助');
+              const openResult = openCustomTab(props.appNumber, HELP_COMPONENT_KEY);
               if (openResult === 'limit_reached') {
                 modal.warning({
                   title: '页签数量已达上限',

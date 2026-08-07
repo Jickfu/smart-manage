@@ -58,7 +58,6 @@ const RoleEditPage = (props: PageComponentProps) => {
         const nextKey = createBillTabKey(props.componentKey, savedId);
         replaceContentTab(appNumber, tabKey, {
           key: nextKey,
-          label: name,
           closable: true,
           componentKey: props.componentKey,
           pageType: 'EDIT',
@@ -75,7 +74,7 @@ const RoleEditPage = (props: PageComponentProps) => {
   return (
     <EditPage
       access={roleAccess}
-      title="角色管理"
+      title="角色"
       fields={fields}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}

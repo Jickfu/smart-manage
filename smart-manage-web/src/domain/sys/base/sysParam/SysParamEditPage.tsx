@@ -112,7 +112,6 @@ const SysParamEditPage = (props: PageComponentProps) => {
         const nextKey = createBillTabKey(props.componentKey, savedId);
         replaceContentTab(appNumber, tabKey, {
           key: nextKey,
-          label: String(values.name),
           closable: true,
           componentKey: props.componentKey,
           pageType: 'EDIT',

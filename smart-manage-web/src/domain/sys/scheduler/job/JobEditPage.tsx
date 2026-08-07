@@ -192,12 +192,11 @@ const JobEditPage = (props: PageComponentProps) => {
         remark: String(values.remark ?? ''),
       });
     },
-    onSuccess: async (savedId, values) => {
+    onSuccess: async (savedId) => {
       if (isAddNew) {
         const nextKey = createBillTabKey(props.componentKey, savedId);
         useWorkbenchStore.getState().replaceContentTab(props.appNumber, props.tabKey, {
           key: nextKey,
-          label: String(values.jobName),
           closable: true,
           componentKey: props.componentKey,
           pageType: 'EDIT',

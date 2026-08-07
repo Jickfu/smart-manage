@@ -97,7 +97,6 @@ const UserEditPage = (props: PageComponentProps) => {
         const nextKey = createBillTabKey(props.componentKey, savedId);
         replaceContentTab(appNumber, tabKey, {
           key: nextKey,
-          label: username,
           closable: true,
           componentKey: props.componentKey,
           pageType: 'EDIT',
@@ -114,7 +113,7 @@ const UserEditPage = (props: PageComponentProps) => {
   return (
     <EditPage
       access={userAccess}
-      title="用户管理"
+      title="用户"
       fields={fields}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
