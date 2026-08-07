@@ -5,7 +5,6 @@ import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
-import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -15,51 +14,41 @@ import { useWorkbenchStore } from '@/stores/workbench';
 import { cacheApi } from './api';
 import { cacheAccess } from './permissions';
 import { cacheQueryKeys } from './queryKeys';
-import type { CacheEntry, CacheEntryKey } from './types';
+import { scopeNodeKey, scopeNodeKeyFromFilter, toTreeNode } from './scopeTree';
+import type { CacheEntry, CacheEntryKey, CacheScopeFilter } from './types';
 
 function entryKey(entry: CacheEntry): CacheEntryKey {
   return { storage: entry.storage, cacheName: entry.cacheName, key: entry.key };
 }
 
 const CACHE_VALUE_COMPONENT = 'sys/monitor/cache-value';
+const ALL_SCOPE: CacheScopeFilter = { scopeType: 'ALL' };
 
 export default function CacheManagementPage(props: PageComponentProps) {
   const { modal } = App.useApp();
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const { can } = usePermissionAccess(cacheAccess.prefix);
   const queryClient = useQueryClient();
-  const [storage, setStorage] = useState<string>();
-  const [cacheName, setCacheName] = useState<string>();
+  const [scope, setScope] = useState<CacheScopeFilter>(ALL_SCOPE);
+  const [scopeLabel, setScopeLabel] = useState('全部缓存');
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
-  const catalogQuery = useQuery({
-    queryKey: cacheQueryKeys.overview(),
-    queryFn: cacheApi.overview,
+  const scopeTreeQuery = useQuery({
+    queryKey: cacheQueryKeys.scopeTree(),
+    queryFn: cacheApi.scopeTree,
   });
   const list = useListPageQuery({
-    queryKey: cacheQueryKeys.entries(storage, cacheName),
-    queryFn: (params) => cacheApi.listPage({ ...params, storage, cacheName }),
+    queryKey: cacheQueryKeys.entries(scope),
+    queryFn: (params) => cacheApi.listPage({ ...params, ...scope }),
   });
   const treeData = useMemo<DataNode[]>(() => {
-    const caches = catalogQuery.data?.caches ?? [];
-    const cacheNodes = (type: 'LOCAL' | 'REMOTE') =>
-      caches
-        .filter((cache) => cache.type === type)
-        .map((cache) => ({
-          key: `cache:${type === 'LOCAL' ? 'LOCAL' : 'REDIS'}:${cache.name}`,
-          title: cache.displayName,
-          isLeaf: true,
-        }));
     return [
       {
         key: 'all',
         title: '全部缓存',
-        children: [
-          { key: 'storage:LOCAL', title: '本地缓存', children: cacheNodes('LOCAL') },
-          { key: 'storage:REDIS', title: 'Redis', children: cacheNodes('REMOTE') },
-        ],
+        children: (scopeTreeQuery.data ?? []).map(toTreeNode),
       },
     ];
-  }, [catalogQuery.data]);
+  }, [scopeTreeQuery.data]);
   const deleteMutation = useCommandMutation({
     mutationFn: cacheApi.delete,
     successMessage: (entries) => `已删除 ${entries.length} 个缓存条目`,
@@ -137,25 +126,6 @@ export default function CacheManagementPage(props: PageComponentProps) {
       width: 100,
       render: (value) => (value ? '可查看' : <Tag color="warning">敏感</Tag>),
     },
-    {
-      title: '操作',
-      key: 'action',
-      width: 90,
-      render: (_, record) => (
-        <PermissionActions
-          prefix={cacheAccess.prefix}
-          actions={[
-            {
-              key: 'delete',
-              label: '删除',
-              permission: cacheAccess.permissions.delete,
-              danger: true,
-              onClick: () => confirmDelete([record]),
-            },
-          ]}
-        />
-      ),
-    },
   ];
   return (
     <>
@@ -169,27 +139,33 @@ export default function CacheManagementPage(props: PageComponentProps) {
         pageNum={list.pageNum}
         pageSize={list.pageSize}
         quickSearchPlaceholder="搜索 Key 或缓存名称"
-        filterSummary={[storage, cacheName].filter(Boolean).join(' / ') || undefined}
+        filterSummary={scope.scopeType === 'ALL' ? undefined : scopeLabel}
         treePanel={
           <div className="sm-list-tree-panel-inner">
             <Tree
+              key={scopeTreeQuery.data ? 'scope-tree-loaded' : 'scope-tree-loading'}
               blockNode
               treeData={treeData}
-              defaultExpandedKeys={['all', 'storage:LOCAL', 'storage:REDIS']}
-              defaultSelectedKeys={['all']}
-              onSelect={(keys) => {
-                const selectedKey = String(keys[0] ?? 'all');
-                if (selectedKey.startsWith('cache:')) {
-                  const [, nextStorage, ...cacheNameParts] = selectedKey.split(':');
-                  setStorage(nextStorage);
-                  setCacheName(cacheNameParts.join(':'));
-                } else if (selectedKey.startsWith('storage:')) {
-                  setStorage(selectedKey.slice('storage:'.length));
-                  setCacheName(undefined);
+              defaultExpandedKeys={[
+                'all',
+                ...(scopeTreeQuery.data ?? [])
+                  .filter((item) => item.type === 'CLOUD')
+                  .map(scopeNodeKey),
+              ]}
+              selectedKeys={[scopeNodeKeyFromFilter(scope)]}
+              onSelect={(_, info) => {
+                const selectedKey = String(info.node.key);
+                if (selectedKey.startsWith('app:')) {
+                  const [, cloudNumber, appNumber] = selectedKey.split(':');
+                  setScope({ scopeType: 'APP', cloudNumber, appNumber });
+                } else if (selectedKey.startsWith('cloud:')) {
+                  setScope({ scopeType: 'CLOUD', cloudNumber: selectedKey.slice('cloud:'.length) });
+                } else if (selectedKey === 'other') {
+                  setScope({ scopeType: 'OTHER' });
                 } else {
-                  setStorage(undefined);
-                  setCacheName(undefined);
+                  setScope(ALL_SCOPE);
                 }
+                setScopeLabel(String(info.node.title ?? '全部缓存'));
                 list.resetPage();
                 setSelectedRowKeys([]);
               }}

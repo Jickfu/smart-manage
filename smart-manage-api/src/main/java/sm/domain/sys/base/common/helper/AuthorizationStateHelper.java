@@ -4,7 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.alicp.jetcache.anno.CacheType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import sm.domain.sys.base.common.constant.CacheConstant;
+import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.system.helper.CacheHelper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.model.entity.UserRoleEntity;
@@ -27,7 +27,7 @@ public class AuthorizationStateHelper {
 	/** 只刷新共享授权缓存，保留现有登录会话。 */
 	public void refreshUsers(Collection<Long> userIds) {
 		for (Long userId : new LinkedHashSet<>(userIds)) {
-			cacheHelper.<Long, Object>getCache(CacheConstant.USER_INFO, CacheType.REMOTE).remove(userId);
+			cacheHelper.<Long, Object>getCache(BaseCacheName.USER_INFO, CacheType.REMOTE).remove(userId);
 		}
 	}
 

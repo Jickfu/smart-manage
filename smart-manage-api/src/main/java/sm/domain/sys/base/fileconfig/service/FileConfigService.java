@@ -1,11 +1,9 @@
 package sm.domain.sys.base.fileconfig.service;
 
-import com.alicp.jetcache.anno.CacheType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.base.fileconfig.model.entity.FileConfigEntity;
 import sm.domain.sys.base.fileconfig.model.form.FileConfigSaveForm;
 import sm.domain.sys.base.fileconfig.model.form.FtpTestForm;
@@ -20,7 +18,6 @@ import sm.system.storage.FileStorageConfigProvider;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.Objects;
 
 /**

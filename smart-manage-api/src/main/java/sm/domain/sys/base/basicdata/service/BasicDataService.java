@@ -21,7 +21,7 @@ import sm.domain.sys.base.basicdata.model.vo.BasicDataOptionVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataTreeVO;
 import sm.domain.sys.base.cloud.mapper.CloudMapper;
 import sm.domain.sys.base.cloud.model.entity.CloudEntity;
-import sm.domain.sys.base.common.constant.CacheConstant;
+import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
@@ -131,7 +131,7 @@ public class BasicDataService {
         return options;
     }
 
-    @Cached(cacheType = CacheType.REMOTE, name = CacheConstant.BASIC_DATA_OPTIONS,
+    @Cached(cacheType = CacheType.REMOTE, name = BaseCacheName.BASIC_DATA_OPTIONS,
             key = "#number", expire = 30, timeUnit = java.util.concurrent.TimeUnit.MINUTES)
     public List<BasicDataOptionVO> getOptionsByNumber(String number) {
         BasicDataCategoryEntity category = categoryMapper.selectOne(

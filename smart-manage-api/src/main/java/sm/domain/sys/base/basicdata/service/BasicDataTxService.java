@@ -14,7 +14,7 @@ import sm.domain.sys.base.basicdata.model.form.BasicDataDeleteForm;
 import sm.domain.sys.base.basicdata.model.form.BasicDataItemSaveForm;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataOptionVO;
 import sm.domain.sys.base.cloud.mapper.CloudMapper;
-import sm.domain.sys.base.common.constant.CacheConstant;
+import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
 import sm.system.response.ResultEnum;
@@ -281,6 +281,6 @@ class BasicDataTxService {
 
     private void removeOptionsCache(String number) {
         if (number != null) cacheHelper.<String, List<BasicDataOptionVO>>getCache(
-                CacheConstant.BASIC_DATA_OPTIONS, CacheType.REMOTE).remove(number);
+                BaseCacheName.BASIC_DATA_OPTIONS, CacheType.REMOTE).remove(number);
     }
 }

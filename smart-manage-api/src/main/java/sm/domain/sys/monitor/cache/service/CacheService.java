@@ -6,14 +6,18 @@ import com.alicp.jetcache.support.CacheStat;
 import com.alicp.jetcache.support.DefaultCacheMonitor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.common.constant.CacheConstant;
+import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.domain.sys.base.app.model.vo.AppVO;
+import sm.domain.sys.base.app.model.vo.CloudAppsVO;
+import sm.domain.sys.base.app.service.AppService;
 import sm.domain.sys.monitor.cache.model.vo.CacheOverviewVO;
 import sm.domain.sys.monitor.cache.model.vo.ManagedCacheVO;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryListForm;
 import sm.domain.sys.monitor.cache.model.vo.CacheEntryVO;
 import sm.domain.sys.monitor.cache.model.vo.CacheRuntimeVO;
+import sm.domain.sys.monitor.cache.model.vo.CacheScopeVO;
 import sm.domain.sys.monitor.cache.model.vo.CacheValueItemVO;
 import sm.domain.sys.monitor.cache.model.vo.CacheValueVO;
 import sm.system.aop.log.BizLog;
@@ -29,7 +33,7 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Locale;
-import java.util.Objects;
+import java.util.Set;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -38,11 +42,13 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 public class CacheService {
     private static final Map<String, CacheDefinition> MANAGED_CACHES = managedCaches();
+    private static final Set<String> SCOPE_TYPES = Set.of("ALL", "CLOUD", "APP", "OTHER");
 
     private final CacheHelper cacheHelper;
     private final CurrentUserContext currentUserContext;
     private final RedisCacheAccessor redisCacheAccessor;
     private final JsonMapper jsonMapper;
+    private final AppService appService;
 
     public CacheOverviewVO overview() {
         currentUserContext.checkAdministrator();
@@ -55,17 +61,34 @@ public class CacheService {
         return redisCacheAccessor.runtime();
     }
 
+    public List<CacheScopeVO> scopeTree() {
+        currentUserContext.checkAdministrator();
+        List<CacheScopeVO> clouds = new ArrayList<>();
+        for (CloudAppsVO cloud : appService.getAllCloudApps()) {
+            List<CacheScopeVO> applications = cloud.getAppList().stream()
+                    .map(application -> CacheScopeVO.builder().type("APP").name(application.getName())
+                            .cloudNumber(cloud.getNumber()).appNumber(application.getNumber()).children(List.of())
+                            .build())
+                    .toList();
+            clouds.add(CacheScopeVO.builder().type("CLOUD").name(cloud.getName())
+                    .cloudNumber(cloud.getNumber()).children(applications).build());
+        }
+        clouds.add(CacheScopeVO.builder().type("OTHER").name("其他缓存").children(List.of()).build());
+        return clouds;
+    }
+
     public PageData<CacheEntryVO> listPage(CacheEntryListForm form) {
         currentUserContext.checkAdministrator();
+        String scopeType = normalizeScopeType(form.getScopeType());
+        List<CloudAppsVO> cloudApps = appService.getAllCloudApps();
+        List<AppScope> applicationScopes = applicationScopes(cloudApps);
+        validateScope(form, scopeType, cloudApps, applicationScopes);
         List<CacheEntryVO> entries = new ArrayList<>();
         appendLocalEntries(entries);
         appendRedisEntries(entries);
         String keyword = normalize(form.getKeyword());
-        String storage = normalize(form.getStorage());
-        String cacheName = normalize(form.getCacheName());
         List<CacheEntryVO> filtered = entries.stream()
-                .filter(entry -> storage == null || entry.getStorage().toLowerCase(Locale.ROOT).equals(storage))
-                .filter(entry -> cacheName == null || Objects.equals(normalize(entry.getCacheName()), cacheName))
+                .filter(entry -> matchesScope(entry, form, scopeType, applicationScopes))
                 .filter(entry -> keyword == null
                         || entry.getKey().toLowerCase(Locale.ROOT).contains(keyword)
                         || normalize(entry.getCacheDisplayName()) != null
@@ -75,6 +98,65 @@ public class CacheService {
         int fromIndex = Math.min((form.getPageNum() - 1) * form.getPageSize(), filtered.size());
         int toIndex = Math.min(fromIndex + form.getPageSize(), filtered.size());
         return PageData.of(filtered.size(), form.getPageNum(), form.getPageSize(), filtered.subList(fromIndex, toIndex));
+    }
+
+    private List<AppScope> applicationScopes(List<CloudAppsVO> cloudApps) {
+        List<AppScope> scopes = new ArrayList<>();
+        for (CloudAppsVO cloud : cloudApps) {
+            for (AppVO application : cloud.getAppList()) {
+                scopes.add(new AppScope(cloud.getNumber(), application.getNumber()));
+            }
+        }
+        return scopes;
+    }
+
+    private String normalizeScopeType(String scopeType) {
+        String normalized = scopeType == null || scopeType.isBlank()
+                ? "ALL" : scopeType.trim().toUpperCase(Locale.ROOT);
+        if (!SCOPE_TYPES.contains(normalized)) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "缓存归属范围不合法");
+        }
+        return normalized;
+    }
+
+    private void validateScope(CacheEntryListForm form, String scopeType, List<CloudAppsVO> cloudApps,
+                               List<AppScope> applicationScopes) {
+        if ("CLOUD".equals(scopeType)) {
+            boolean exists = cloudApps.stream().anyMatch(cloud -> cloud.getNumber().equals(form.getCloudNumber()));
+            if (!exists) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "缓存所属云不存在");
+            }
+        }
+        if ("APP".equals(scopeType)) {
+            boolean exists = applicationScopes.stream().anyMatch(scope ->
+                    scope.cloudNumber().equals(form.getCloudNumber())
+                            && scope.appNumber().equals(form.getAppNumber()));
+            if (!exists) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "缓存所属应用不存在");
+            }
+        }
+    }
+
+    private boolean matchesScope(CacheEntryVO entry, CacheEntryListForm form, String scopeType,
+                                 List<AppScope> applicationScopes) {
+        if ("ALL".equals(scopeType)) {
+            return true;
+        }
+        if ("OTHER".equals(scopeType)) {
+            return applicationScopes.stream().noneMatch(scope -> belongsTo(entry, scope));
+        }
+        if ("CLOUD".equals(scopeType)) {
+            return applicationScopes.stream()
+                    .filter(scope -> scope.cloudNumber().equals(form.getCloudNumber()))
+                    .anyMatch(scope -> belongsTo(entry, scope));
+        }
+        AppScope requested = new AppScope(form.getCloudNumber(), form.getAppNumber());
+        return belongsTo(entry, requested);
+    }
+
+    private boolean belongsTo(CacheEntryVO entry, AppScope scope) {
+        String classifiedKey = "LOCAL".equals(entry.getStorage()) ? entry.getCacheName() : entry.getKey();
+        return classifiedKey != null && classifiedKey.startsWith(scope.prefix());
     }
 
     public CacheValueVO value(CacheEntryKeyForm form) {
@@ -279,13 +361,19 @@ public class CacheService {
 
     private static Map<String, CacheDefinition> managedCaches() {
         Map<String, CacheDefinition> caches = new LinkedHashMap<>();
-        caches.put(CacheConstant.USER_INFO, new CacheDefinition(CacheConstant.USER_INFO, "用户信息", CacheType.REMOTE, "用户基础信息", 3600, true));
-        caches.put(CacheConstant.SYS_PARAM, new CacheDefinition(CacheConstant.SYS_PARAM, "系统参数", CacheType.REMOTE, "系统参数快照", 1800, false));
-        caches.put(CacheConstant.BASIC_DATA_OPTIONS, new CacheDefinition(CacheConstant.BASIC_DATA_OPTIONS, "基础数据选项", CacheType.REMOTE, "基础数据下拉选项", 1800, false));
+        caches.put(BaseCacheName.USER_INFO, new CacheDefinition(BaseCacheName.USER_INFO, "用户信息", CacheType.REMOTE, "用户基础信息", 3600, true));
+        caches.put(BaseCacheName.SYS_PARAM, new CacheDefinition(BaseCacheName.SYS_PARAM, "系统参数", CacheType.REMOTE, "系统参数快照", 1800, false));
+        caches.put(BaseCacheName.BASIC_DATA_OPTIONS, new CacheDefinition(BaseCacheName.BASIC_DATA_OPTIONS, "基础数据选项", CacheType.REMOTE, "基础数据下拉选项", 1800, false));
         return Map.copyOf(caches);
     }
 
     private record CacheDefinition(String name, String displayName, CacheType cacheType, String description,
                                    long expireSeconds, boolean sensitiveValue) {
+    }
+
+    private record AppScope(String cloudNumber, String appNumber) {
+        String prefix() {
+            return cloudNumber + ":" + appNumber + ":";
+        }
     }
 }

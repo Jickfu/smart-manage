@@ -7,7 +7,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import sm.domain.sys.base.common.config.CaptchaConfig;
-import sm.domain.sys.base.common.constant.RedisKeyConstant;
+import sm.domain.sys.base.common.constant.BaseRedisKey;
 import sm.domain.sys.base.common.util.CaptchaUtil;
 import sm.domain.sys.base.login.model.form.LoginForm;
 import sm.domain.sys.base.login.model.form.PasswordChangeForm;
@@ -50,7 +50,7 @@ public class LoginService {
 	public LoginVO login(LoginForm form) {
 		// 验证码校验
 		String decryptedCaptcha = decryptLoginPayload(form.getCaptcha(), form.getUsername());
-		String captchaKey = RedisKeyConstant.CAPTCHA + form.getCaptchaId();
+		String captchaKey = BaseRedisKey.CAPTCHA + form.getCaptchaId();
 		String captcha = (String) redisTemplate.opsForValue().get(captchaKey);
 		if (captcha == null) {
 			writeLoginFailure(form.getUsername(), "验证码已过期");
@@ -76,7 +76,7 @@ public class LoginService {
 			writePasswordChangeRequired(authentication);
 			String ticket = UUID.randomUUID().toString();
 			redisTemplate.opsForValue().set(
-					RedisKeyConstant.PASSWORD_CHANGE_TICKET + ticket,
+					BaseRedisKey.PASSWORD_CHANGE_TICKET + ticket,
 					authentication.userId(),
 					PASSWORD_CHANGE_TICKET_MINUTES,
 					TimeUnit.MINUTES);
@@ -95,7 +95,7 @@ public class LoginService {
 		// 先验证并解密请求，再消费一次性凭证，避免畸形密文无意义地作废合法凭证。
 		String newPassword = decryptLoginPayload(form.getNewPassword(), null);
 		Object userIdValue = redisTemplate.opsForValue().getAndDelete(
-				RedisKeyConstant.PASSWORD_CHANGE_TICKET + form.getTicket());
+				BaseRedisKey.PASSWORD_CHANGE_TICKET + form.getTicket());
 		if (userIdValue == null) {
 			throw new BizException(ResultEnum.UNAUTHORIZED, "改密凭证已失效，请重新登录");
 		}
@@ -149,7 +149,7 @@ public class LoginService {
 		BufferedImage image = CaptchaUtil.generateCaptchaImage(captcha, captchaConfig.getWidth(), captchaConfig.getHeight());
 
 		// 将验证码存入Redis
-		redisTemplate.opsForValue().set(RedisKeyConstant.CAPTCHA + captchaId, captcha, captchaConfig.getExpire(), TimeUnit.SECONDS);
+		redisTemplate.opsForValue().set(BaseRedisKey.CAPTCHA + captchaId, captcha, captchaConfig.getExpire(), TimeUnit.SECONDS);
 
 		// 将图片转换为Base64
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();

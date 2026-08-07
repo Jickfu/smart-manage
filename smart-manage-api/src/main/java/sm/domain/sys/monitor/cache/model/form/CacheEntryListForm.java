@@ -9,6 +9,7 @@ import sm.system.form.PageForm;
 @EqualsAndHashCode(callSuper = true)
 public class CacheEntryListForm extends PageForm {
     private String keyword;
-    private String storage;
-    private String cacheName;
+    private String scopeType;
+    private String cloudNumber;
+    private String appNumber;
 }

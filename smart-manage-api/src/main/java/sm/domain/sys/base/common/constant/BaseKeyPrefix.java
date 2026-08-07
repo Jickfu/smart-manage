@@ -1,0 +1,9 @@
+package sm.domain.sys.base.common.constant;
+
+/** 系统服务云下系统建模应用的统一缓存与 Redis Key 前缀。 */
+public final class BaseKeyPrefix {
+    public static final String VALUE = "sys:base:";
+
+    private BaseKeyPrefix() {
+    }
+}

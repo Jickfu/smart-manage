@@ -16,10 +16,13 @@ import sm.domain.sys.monitor.cache.model.form.CacheEntryListForm;
 import sm.domain.sys.monitor.cache.model.vo.CacheEntryVO;
 import sm.domain.sys.monitor.cache.model.vo.CacheOverviewVO;
 import sm.domain.sys.monitor.cache.model.vo.CacheRuntimeVO;
+import sm.domain.sys.monitor.cache.model.vo.CacheScopeVO;
 import sm.domain.sys.monitor.cache.model.vo.CacheValueVO;
 import sm.domain.sys.monitor.cache.service.CacheService;
 import sm.system.response.Result;
 import sm.system.response.PageData;
+
+import java.util.List;
 
 @RestController
 @Tag(name = "系统监控-缓存监控")
@@ -39,6 +42,13 @@ public class CacheController {
     @PostMapping("/sys/monitor/cache/runtime")
     public Result<CacheRuntimeVO> runtime() {
         return Result.success(service.runtime());
+    }
+
+    @Operation(summary = "缓存所属云与应用树")
+    @SaCheckPermission(CachePermission.LIST)
+    @PostMapping("/sys/monitor/cache/scopeTree")
+    public Result<List<CacheScopeVO>> scopeTree() {
+        return Result.success(service.scopeTree());
     }
 
     @Operation(summary = "统一分页查询本地与 Redis 缓存条目")

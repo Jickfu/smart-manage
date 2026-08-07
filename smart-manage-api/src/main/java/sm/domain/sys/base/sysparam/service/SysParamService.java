@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.common.constant.CacheConstant;
+import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.domain.sys.base.sysparam.model.form.SysParamListForm;
 import sm.domain.sys.base.sysparam.model.form.SysParamSaveForm;
 import sm.domain.sys.base.sysparam.model.vo.SysParamCreateNewDataVO;
@@ -55,16 +55,16 @@ public class SysParamService {
 
     /** 新增/编辑，委托事务服务处理 */
     @BizLog("保存系统参数")
-    @CacheInvalidate(name = CacheConstant.SYS_PARAM,
-            key = "T(sm.domain.sys.base.common.constant.CacheConstant).ALL_KEY")
+    @CacheInvalidate(name = BaseCacheName.SYS_PARAM,
+            key = "T(sm.domain.sys.base.common.constant.BaseCacheName).ALL_KEY")
     public Long save(SysParamSaveForm form) {
         return txService.save(form);
     }
 
     /** 删除，委托事务服务处理 */
     @BizLog("删除系统参数")
-    @CacheInvalidate(name = CacheConstant.SYS_PARAM,
-            key = "T(sm.domain.sys.base.common.constant.CacheConstant).ALL_KEY")
+    @CacheInvalidate(name = BaseCacheName.SYS_PARAM,
+            key = "T(sm.domain.sys.base.common.constant.BaseCacheName).ALL_KEY")
     public void deleteById(Long id) {
         txService.deleteById(id);
     }

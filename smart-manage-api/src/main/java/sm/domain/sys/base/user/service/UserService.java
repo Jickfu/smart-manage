@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.UserConstant;
-import sm.domain.sys.base.common.constant.CacheConstant;
+import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.domain.sys.base.common.config.OrgConfig;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
@@ -72,13 +72,13 @@ public class UserService {
 	}
 
 	@BizLog("保存用户")
-	@CacheInvalidate(name = CacheConstant.USER_INFO, key = "#form.id", condition = "#form.id != null")
+	@CacheInvalidate(name = BaseCacheName.USER_INFO, key = "#form.id", condition = "#form.id != null")
 	public Long save(UserSaveForm form) {
 		return txService.save(form);
 	}
 
 	@BizLog("删除用户")
-	@CacheInvalidate(name = CacheConstant.USER_INFO, key = "#id")
+	@CacheInvalidate(name = BaseCacheName.USER_INFO, key = "#id")
 	public void deleteById(Long id) {
 		txService.deleteById(id);
 	}
@@ -181,7 +181,7 @@ public class UserService {
 	}
 
 	@BizLog("修改个人主题")
-	@CacheInvalidate(name = CacheConstant.USER_INFO, key = "@currentUserContext.getUserId()")
+	@CacheInvalidate(name = BaseCacheName.USER_INFO, key = "@currentUserContext.getUserId()")
 	public void updateCurrentTheme(String themeColor) {
 		txService.updateCurrentTheme(currentUserContext.getUserId(), themeColor);
 	}
@@ -197,7 +197,7 @@ public class UserService {
 	}
 
 	/** Redis 远程缓存读取；仅供其他 Spring Bean 外部调用，确保缓存代理生效。 */
-	@Cached(cacheType = CacheType.REMOTE, name = CacheConstant.USER_INFO,
+	@Cached(cacheType = CacheType.REMOTE, name = BaseCacheName.USER_INFO,
 			key = "#id", expire = 1, timeUnit = TimeUnit.HOURS)
 	public UserEntity requireUser(Long id) {
 		UserEntity entity = mapper.selectById(id);

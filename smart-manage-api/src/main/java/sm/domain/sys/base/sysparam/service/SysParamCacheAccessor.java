@@ -4,7 +4,7 @@ import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.Cached;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import sm.domain.sys.base.common.constant.CacheConstant;
+import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.domain.sys.base.sysparam.mapper.SysParamMapper;
 import sm.domain.sys.base.sysparam.model.entity.SysParamEntity;
 
@@ -25,8 +25,8 @@ class SysParamCacheAccessor {
     private final SysParamMapper mapper;
 
     /** 全量获取 number → value 映射（Redis 远程缓存）。 */
-    @Cached(cacheType = CacheType.REMOTE, name = CacheConstant.SYS_PARAM,
-            key = "T(sm.domain.sys.base.common.constant.CacheConstant).ALL_KEY",
+    @Cached(cacheType = CacheType.REMOTE, name = BaseCacheName.SYS_PARAM,
+            key = "T(sm.domain.sys.base.common.constant.BaseCacheName).ALL_KEY",
             expire = 30, timeUnit = TimeUnit.MINUTES)
     public Map<String, String> getAll() {
         List<SysParamEntity> entityList = mapper.selectList(null);

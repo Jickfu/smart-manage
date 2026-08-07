@@ -6,7 +6,7 @@ import org.mockito.MockedStatic;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import sm.domain.sys.base.common.config.CaptchaConfig;
-import sm.domain.sys.base.common.constant.RedisKeyConstant;
+import sm.domain.sys.base.common.constant.BaseRedisKey;
 import sm.domain.sys.base.login.model.form.LoginForm;
 import sm.domain.sys.base.login.model.form.PasswordChangeForm;
 import sm.domain.sys.base.login.model.vo.LoginVO;
@@ -36,7 +36,7 @@ import static org.mockito.ArgumentMatchers.eq;
 class LoginServiceTests {
 
 	private static final String CAPTCHA_ID = "captcha-id";
-	private static final String CAPTCHA_KEY = RedisKeyConstant.CAPTCHA + CAPTCHA_ID;
+	private static final String CAPTCHA_KEY = BaseRedisKey.CAPTCHA + CAPTCHA_ID;
 
 	private final UserService userService = mock(UserService.class);
 	private final LogWriteService logWriteService = mock(LogWriteService.class);
@@ -159,7 +159,7 @@ class LoginServiceTests {
 			assertEquals(true, actual.getPasswordReset());
 			verify(userService, never()).completeLogin(authentication);
 			verify(valueOperations).set(
-					org.mockito.ArgumentMatchers.startsWith(RedisKeyConstant.PASSWORD_CHANGE_TICKET),
+					org.mockito.ArgumentMatchers.startsWith(BaseRedisKey.PASSWORD_CHANGE_TICKET),
 					eq(9L),
 					eq(5L),
 					eq(java.util.concurrent.TimeUnit.MINUTES));
@@ -171,7 +171,7 @@ class LoginServiceTests {
 		PasswordChangeForm form = new PasswordChangeForm();
 		form.setTicket("ticket");
 		form.setNewPassword("encrypted-new-password");
-		when(valueOperations.getAndDelete(RedisKeyConstant.PASSWORD_CHANGE_TICKET + "ticket"))
+		when(valueOperations.getAndDelete(BaseRedisKey.PASSWORD_CHANGE_TICKET + "ticket"))
 				.thenReturn(9L);
 
 		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
@@ -188,7 +188,7 @@ class LoginServiceTests {
 		PasswordChangeForm form = new PasswordChangeForm();
 		form.setTicket("expired-ticket");
 		form.setNewPassword("encrypted-new-password");
-		when(valueOperations.getAndDelete(RedisKeyConstant.PASSWORD_CHANGE_TICKET + "expired-ticket"))
+		when(valueOperations.getAndDelete(BaseRedisKey.PASSWORD_CHANGE_TICKET + "expired-ticket"))
 				.thenReturn(null);
 
 		BizException exception;

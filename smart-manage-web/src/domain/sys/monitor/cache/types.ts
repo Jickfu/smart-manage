@@ -40,6 +40,20 @@ export interface CacheOverview {
   collectedAt: string;
 }
 
+export interface CacheScope {
+  type: 'CLOUD' | 'APP' | 'OTHER';
+  name: string;
+  cloudNumber?: string;
+  appNumber?: string;
+  children: CacheScope[];
+}
+
+export interface CacheScopeFilter {
+  scopeType: 'ALL' | 'CLOUD' | 'APP' | 'OTHER';
+  cloudNumber?: string;
+  appNumber?: string;
+}
+
 export interface CacheRuntime {
   available: boolean;
   version: string;
