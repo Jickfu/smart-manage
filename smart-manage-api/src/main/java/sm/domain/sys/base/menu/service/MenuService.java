@@ -16,6 +16,8 @@ import sm.domain.sys.base.menu.model.form.MenuSelectForm;
 import sm.domain.sys.base.menu.model.form.MenuTreeListForm;
 import sm.domain.sys.base.menu.model.vo.*;
 import sm.domain.sys.base.menu.mapper.MenuMapper;
+import sm.domain.sys.base.permission.mapper.PermissionMapper;
+import sm.domain.sys.base.permission.model.entity.PermissionEntity;
 import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
@@ -40,6 +42,7 @@ public class MenuService {
 	private final CurrentUserContext currentUserContext;
 	private final MenuMapper mapper;
 	private final AppMapper appMapper;
+	private final PermissionMapper permissionMapper;
 	private final MenuTxService txService;
 	private final MenuConverter converter;
 
@@ -277,18 +280,34 @@ public class MenuService {
 			throw new BizException(ResultEnum.NOT_FOUND, "菜单不存在");
 		}
 		MenuDetailVO vo = converter.toDetailVO(entity);
-		// 填充父菜单信息
+		AppEntity appEntity = appMapper.selectById(entity.getAppId());
+		if (appEntity != null) {
+			vo.setApp(toReferenceInfo(appEntity.getId(), appEntity.getNumber(), appEntity.getName()));
+		}
+		// 引用控件需要完整的标识、编码和名称，不能只返回外键 ID。
 		if (entity.getParentId() != null && entity.getParentId() > 0) {
 			MenuEntity parentEntity = mapper.selectById(entity.getParentId());
 			if (parentEntity != null) {
-				MenuDetailVO.ParentInfo info = new MenuDetailVO.ParentInfo();
-				info.setId(parentEntity.getId());
-				info.setNumber(parentEntity.getNumber());
-				info.setName(parentEntity.getName());
-				vo.setParent(info);
+				vo.setParent(toReferenceInfo(
+						parentEntity.getId(), parentEntity.getNumber(), parentEntity.getName()));
+			}
+		}
+		if (entity.getPermissionId() != null) {
+			PermissionEntity permissionEntity = permissionMapper.selectById(entity.getPermissionId());
+			if (permissionEntity != null) {
+				vo.setPermission(toReferenceInfo(
+						permissionEntity.getId(), permissionEntity.getNumber(), permissionEntity.getName()));
 			}
 		}
 		return vo;
+	}
+
+	private MenuDetailVO.ReferenceInfo toReferenceInfo(Long id, String number, String name) {
+		MenuDetailVO.ReferenceInfo info = new MenuDetailVO.ReferenceInfo();
+		info.setId(id);
+		info.setNumber(number);
+		info.setName(name);
+		return info;
 	}
 
 	public MenuCreateNewDataVO createNewData() {

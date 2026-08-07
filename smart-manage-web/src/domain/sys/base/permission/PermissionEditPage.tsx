@@ -4,12 +4,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ModalEditPage from '@/domain/common/page/ModalEditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
-import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
+import { useAppRefSelector } from '@/domain/sys/base/app/refSelector';
 import { permissionApi } from './api';
 import { permissionAccess } from './permissions';
 import { permissionQueryKeys } from './queryKeys';
-import { appApi } from '@/domain/sys/base/app/api';
-import type { AppListVO } from '@/domain/sys/base/app/types';
 
 interface Props {
   open: boolean;
@@ -18,49 +16,36 @@ interface Props {
   onSaved: () => void;
 }
 
-/** 权限编辑字段定义 */
-const fields: EditField[] = [
-  {
-    label: '编码',
-    dataIndex: 'number',
-    type: 'text',
-    rules: [{ required: true, message: '编码不能为空' }],
-  },
-  {
-    label: '名称',
-    dataIndex: 'name',
-    type: 'text',
-    rules: [{ required: true, message: '名称不能为空' }],
-  },
-  {
-    label: '所属应用',
-    dataIndex: 'app',
-    type: 'ref-selector',
-    rules: [{ required: true, message: '所属应用不能为空' }],
-    refSelector: defineRefSelector<AppListVO>({
-      selectorKey: 'sys-app-permission',
-      modalTitle: '选择应用',
-      fetchFn: (params) =>
-        appApi.listPage({
-          pageNum: params.pageNum,
-          pageSize: params.pageSize,
-          keyword: params.keyword,
-        }),
-      displayRender: (record) => record.name,
-      fieldNames: { key: 'id', label: 'name' },
-      columns: [
-        { title: '编码', dataIndex: 'number', width: 160 },
-        { title: '名称', dataIndex: 'name', width: 200 },
-      ],
-    }),
-  },
-];
-
 /** 权限编辑弹框 */
 const PermissionEditPage = ({ open, permissionId, onClose, onSaved }: Props) => {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const isAddNew = permissionId === null;
+  const appRefSelector = useAppRefSelector();
+  const fields = useMemo<EditField[]>(
+    () => [
+      {
+        label: '编码',
+        dataIndex: 'number',
+        type: 'text',
+        rules: [{ required: true, message: '编码不能为空' }],
+      },
+      {
+        label: '名称',
+        dataIndex: 'name',
+        type: 'text',
+        rules: [{ required: true, message: '名称不能为空' }],
+      },
+      {
+        label: '所属应用',
+        dataIndex: 'app',
+        type: 'ref-selector',
+        rules: [{ required: true, message: '所属应用不能为空' }],
+        refSelector: appRefSelector,
+      },
+    ],
+    [appRefSelector],
+  );
 
   const detailQuery = useQuery({
     queryKey: permissionQueryKeys.detail(permissionId),

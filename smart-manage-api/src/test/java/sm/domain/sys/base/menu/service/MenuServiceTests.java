@@ -9,6 +9,9 @@ import sm.domain.sys.base.menu.mapper.MenuMapper;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuTreeListForm;
 import sm.domain.sys.base.menu.model.vo.MenuTreeVO;
+import sm.domain.sys.base.menu.model.vo.MenuDetailVO;
+import sm.domain.sys.base.permission.mapper.PermissionMapper;
+import sm.domain.sys.base.permission.model.entity.PermissionEntity;
 
 import java.util.List;
 
@@ -21,10 +24,39 @@ class MenuServiceTests {
     private final CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
     private final MenuMapper mapper = mock(MenuMapper.class);
     private final AppMapper appMapper = mock(AppMapper.class);
+    private final PermissionMapper permissionMapper = mock(PermissionMapper.class);
     private final MenuTxService txService = mock(MenuTxService.class);
     private final MenuConverter converter = mock(MenuConverter.class);
     private final MenuService service =
-            new MenuService(currentUserContext, mapper, appMapper, txService, converter);
+            new MenuService(currentUserContext, mapper, appMapper, permissionMapper, txService, converter);
+
+    @Test
+    void detailAssemblesReferenceObjectsForEditForm() {
+        MenuEntity entity = menu(101L, 20L, 100L, MenuLevelEnum.PAGE, "用户", "/sys/base/user");
+        entity.setPermissionId(30L);
+        MenuEntity parent = menu(100L, 20L, 0L, MenuLevelEnum.CATEGORY, "基础设置", null);
+        parent.setNumber("base");
+        AppEntity app = new AppEntity();
+        app.setId(20L);
+        app.setNumber("sys");
+        app.setName("系统建模");
+        PermissionEntity permission = new PermissionEntity();
+        permission.setId(30L);
+        permission.setNumber("sys:user:view");
+        permission.setName("查看用户");
+
+        when(mapper.selectById(101L)).thenReturn(entity);
+        when(mapper.selectById(100L)).thenReturn(parent);
+        when(appMapper.selectById(20L)).thenReturn(app);
+        when(permissionMapper.selectById(30L)).thenReturn(permission);
+        when(converter.toDetailVO(entity)).thenReturn(new MenuDetailVO());
+
+        MenuDetailVO result = service.detail(101L);
+
+        assertEquals("系统建模", result.getApp().getName());
+        assertEquals("基础设置", result.getParent().getName());
+        assertEquals("查看用户", result.getPermission().getName());
+    }
 
     @Test
     void treeListReturnsMatchedPageWithParentGroupAndAppName() {

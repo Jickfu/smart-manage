@@ -1,5 +1,15 @@
-import { DatePicker, Form, Input, InputNumber, Select, Switch, TreeSelect } from 'antd';
+import {
+  ColorPicker,
+  DatePicker,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Switch,
+  TreeSelect,
+} from 'antd';
 import RefSelector from '@/domain/common/component/RefSelector';
+import IconSelector from '@/domain/common/component/IconSelector';
 import type { EditField } from './EditPage';
 import {
   getDatePickerValueProps,
@@ -13,6 +23,28 @@ const { TextArea } = Input;
 interface EditFormFieldsProps {
   fields: EditField[];
   editable?: boolean;
+}
+
+interface StringColorPickerProps {
+  value?: string;
+  onChange?: (value?: string) => void;
+  disabled?: boolean;
+}
+
+/** 将 ColorPicker 的 Color 对象边界转换为表单和接口使用的十六进制字符串。 */
+function StringColorPicker({ value, onChange, disabled }: StringColorPickerProps) {
+  return (
+    <ColorPicker
+      value={value || undefined}
+      format="hex"
+      disabled={disabled}
+      disabledAlpha
+      allowClear
+      showText={(color) => color.toHexString()}
+      onChange={(color) => onChange?.(color.toHexString())}
+      onClear={() => onChange?.(undefined)}
+    />
+  );
 }
 
 /** 只读字段展示组件，由 Form.Item 注入 value。 */
@@ -49,6 +81,10 @@ function renderFormControl(field: EditField, disabled: boolean) {
           format="YYYY-MM-DD HH:mm:ss"
         />
       );
+    case 'color':
+      return <StringColorPicker disabled={disabled} />;
+    case 'icon-selector':
+      return <IconSelector placeholder={field.placeholder} disabled={disabled} />;
     case 'number':
       return (
         <InputNumber

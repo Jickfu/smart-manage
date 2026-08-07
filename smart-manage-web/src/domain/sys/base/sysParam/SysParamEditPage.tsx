@@ -5,33 +5,13 @@ import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
-import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
-import { appApi } from '@/domain/sys/base/app/api';
-import type { AppListVO } from '@/domain/sys/base/app/types';
+import { useAppRefSelector } from '@/domain/sys/base/app/refSelector';
 import { sysParamApi } from './api';
 import { sysParamAccess } from './permissions';
 import { sysParamQueryKeys } from './queryKeys';
-
-const applicationSelector = defineRefSelector<AppListVO>({
-  selectorKey: 'sys-param-application',
-  modalTitle: '选择所属应用（留空表示全局参数）',
-  fetchFn: (params) =>
-    appApi.listPage({
-      pageNum: params.pageNum,
-      pageSize: params.pageSize,
-      keyword: params.keyword,
-    }),
-  displayRender: (record) => record.name,
-  fieldNames: { key: 'id', label: 'name' },
-  columns: [
-    { title: '编码', dataIndex: 'number', width: 160 },
-    { title: '名称', dataIndex: 'name', width: 200 },
-    { title: '所属云', dataIndex: 'cloudName', width: 160 },
-  ],
-});
 
 const SysParamEditPage = (props: PageComponentProps) => {
   const { message } = App.useApp();
@@ -40,6 +20,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
   const isAddNew = operationType === OperationType.ADDNEW;
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
+  const appRefSelector = useAppRefSelector();
   const detailQuery = useQuery({
     queryKey: sysParamQueryKeys.detail(billId),
     queryFn: () => sysParamApi.detail(billId!),
@@ -68,7 +49,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
         type: 'ref-selector',
         disabled: detail?.isSystem,
         placeholder: '留空表示全局参数',
-        refSelector: applicationSelector,
+        refSelector: appRefSelector,
       },
       { label: '参数值', dataIndex: 'value', type: 'textarea', fullWidth: true },
       {
@@ -79,7 +60,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
         disabled: detail?.isSystem,
       },
     ],
-    [detail?.isSystem],
+    [appRefSelector, detail?.isSystem],
   );
   const initialValues = useMemo(
     () =>

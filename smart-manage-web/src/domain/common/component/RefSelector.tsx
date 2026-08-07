@@ -298,6 +298,7 @@ function RefSelector<T extends Record<string, unknown>>({
       {
         title: '#',
         width: 44,
+        className: 'sm-ref-selector-sequence-column',
         align: 'center' as const,
         fixed: 'left' as const,
         render: (_text: unknown, _record: T, index: number) =>
@@ -307,6 +308,7 @@ function RefSelector<T extends Record<string, unknown>>({
         title: col.title,
         dataIndex: col.dataIndex,
         width: col.width,
+        ellipsis: true,
         render: col.render
           ? (text: unknown, record: T, index: number) => col.render!(text, record, index)
           : undefined,
@@ -357,6 +359,7 @@ function RefSelector<T extends Record<string, unknown>>({
         {/* 表格体 */}
         <div className="sm-ref-selector-table-body">
           <Table<T>
+            className="sm-ref-selector-table"
             rowKey={rowKey}
             rowSelection={rowSelection}
             columns={fullColumns}
@@ -366,6 +369,7 @@ function RefSelector<T extends Record<string, unknown>>({
             loading={query.fetching}
             onRow={onRow}
             sticky
+            tableLayout="fixed"
             scroll={{ x: 'max-content', y: 1 }}
           />
         </div>

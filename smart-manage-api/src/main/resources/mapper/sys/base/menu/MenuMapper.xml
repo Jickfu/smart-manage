@@ -20,7 +20,7 @@
         </if>
         WHERE a.app_id = #{appId}
           AND a.enabled = true
-          AND a.level IN (2, 3)
+          AND a.level IN (0, 1)
         <if test="!admin">
           AND c.user_id = #{userId}
           AND c.org_id = #{orgId}

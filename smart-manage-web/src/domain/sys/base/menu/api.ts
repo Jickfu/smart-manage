@@ -40,7 +40,14 @@ export const menuApi = {
       .post<Result<MenuTreeVO[]>>('/sys/base/menu/listTree', form)
       .then((res) => res.data.data),
 
-  select: (form: { pageNum: number; pageSize: number; keyword?: string; excludeId?: string }) =>
+  select: (form: {
+    pageNum: number;
+    pageSize: number;
+    keyword?: string;
+    appId: string;
+    level?: number;
+    excludeId?: string;
+  }) =>
     request
       .post<Result<PageData<MenuSelectVO>>>('/sys/base/menu/select', form)
       .then((res) => res.data.data),

@@ -51,8 +51,8 @@ export interface MenuDetailVO {
   number: string;
   name: string;
   level: number;
-  appId: string;
-  permissionId: string;
+  app?: MenuReferenceVO;
+  permission?: MenuReferenceVO;
   path: string;
   component: string;
   icon: string;
@@ -61,11 +61,13 @@ export interface MenuDetailVO {
   enabled: boolean;
   createTime?: string;
   updateTime?: string;
-  parent?: {
-    id: string;
-    number: string;
-    name: string;
-  };
+  parent?: MenuReferenceVO;
+}
+
+export interface MenuReferenceVO {
+  id: string;
+  number: string;
+  name: string;
 }
 
 /** 菜单保存 — ID 均以字符串传递 */

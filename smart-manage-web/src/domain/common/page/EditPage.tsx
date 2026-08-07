@@ -76,6 +76,8 @@ export type EditField = EditFieldBase &
     | { type: 'password' }
     | { type: 'date' }
     | { type: 'datetime' }
+    | { type: 'color' }
+    | { type: 'icon-selector' }
     | { type: 'number' }
     | { type: 'switch' }
     | { type: 'textarea' }

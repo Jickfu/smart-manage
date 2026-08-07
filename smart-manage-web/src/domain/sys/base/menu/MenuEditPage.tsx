@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -11,9 +11,8 @@ import { useWorkbenchStore } from '@/stores/workbench';
 import { menuApi } from './api';
 import { menuAccess } from './permissions';
 import { menuQueryKeys } from './queryKeys';
-import { appApi } from '@/domain/sys/base/app/api';
+import { useAppRefSelector } from '@/domain/sys/base/app/refSelector';
 import { permissionApi } from '@/domain/sys/base/permission/api';
-import type { AppListVO } from '@/domain/sys/base/app/types';
 import type { PermissionSelectVO } from '@/domain/sys/base/permission/types';
 import type { MenuSelectVO } from './types';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -32,18 +31,24 @@ const MenuEditPage = (props: PageComponentProps) => {
     queryFn: () => menuApi.detail(billId!),
     enabled: !!billId,
   });
+  const appRefSelector = useAppRefSelector();
 
   const detail = detailQuery.data;
-
+  const [appSelection, setAppSelection] = useState<{
+    billId?: string;
+    appId?: string;
+  }>();
+  const selectedAppId =
+    appSelection && appSelection.billId === billId ? appSelection.appId : detail?.app?.id;
   const initialValues = useMemo(() => {
     if (!detail) return {};
     return {
       number: detail.number ?? '',
       name: detail.name ?? '',
       level: detail.level ?? undefined,
-      app: detail.appId != null ? { id: detail.appId } : null,
+      app: detail.app ?? null,
       parent: detail.parent ?? null,
-      permission: detail.permissionId != null ? { id: detail.permissionId } : null,
+      permission: detail.permission ?? null,
       path: detail.path ?? '',
       component: detail.component ?? '',
       icon: detail.icon ?? '',
@@ -89,42 +94,31 @@ const MenuEditPage = (props: PageComponentProps) => {
       dataIndex: 'app',
       type: 'ref-selector',
       rules: [{ required: true, message: '所属应用不能为空' }],
-      refSelector: defineRefSelector<AppListVO>({
-        selectorKey: 'sys-app-menu',
-        modalTitle: '选择应用',
-        fetchFn: (params) =>
-          appApi.listPage({
-            pageNum: params.pageNum,
-            pageSize: params.pageSize,
-            keyword: params.keyword,
-          }),
-        displayRender: (record) => record.name,
-        fieldNames: { key: 'id', label: 'name' },
-        columns: [
-          { title: '编码', dataIndex: 'number', width: 160 },
-          { title: '名称', dataIndex: 'name', width: 200 },
-        ],
-      }),
+      refSelector: appRefSelector,
     },
     {
       label: '父菜单',
       dataIndex: 'parent',
       type: 'ref-selector',
+      disabled: !selectedAppId,
+      placeholder: selectedAppId ? '请选择父菜单' : '请先选择所属应用',
       refSelector: defineRefSelector<MenuSelectVO>({
-        selectorKey: 'sys-menu-parent',
+        selectorKey: ['sys-menu-parent', selectedAppId],
         modalTitle: '选择父菜单',
         fetchFn: (params) =>
           menuApi.select({
             pageNum: params.pageNum,
             pageSize: params.pageSize,
             keyword: params.keyword,
+            appId: selectedAppId!,
+            level: 0,
             excludeId: billId ?? undefined,
           }),
-        displayRender: (record) => `${record.number ?? '-'} / ${record.name}`,
+        displayRender: (record) => record.name,
         fieldNames: { key: 'id', label: 'name' },
         columns: [
           { title: '编码', dataIndex: 'number', width: 120 },
-          { title: '名称', dataIndex: 'name', width: 180 },
+          { title: '名称', dataIndex: 'name' },
           {
             title: '层级',
             dataIndex: 'level',
@@ -147,21 +141,21 @@ const MenuEditPage = (props: PageComponentProps) => {
             pageSize: params.pageSize,
             keyword: params.keyword,
           }),
-        displayRender: (record) => `${record.number} / ${record.name}`,
+        displayRender: (record) => record.name,
         fieldNames: { key: 'id', label: 'name' },
         columns: [
           { title: '编码', dataIndex: 'number', width: 200 },
-          { title: '名称', dataIndex: 'name', width: 200 },
+          { title: '名称', dataIndex: 'name' },
         ],
       }),
     },
     { label: '路径', dataIndex: 'path', type: 'text' },
     { label: '组件', dataIndex: 'component', type: 'text' },
-    { label: '图标', dataIndex: 'icon', type: 'text', placeholder: 'Ant Design 图标名' },
-    { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
+    { label: '图标', dataIndex: 'icon', type: 'icon-selector' },
     { label: '排序', dataIndex: 'sort', type: 'number' },
-    { label: '创建时间', dataIndex: 'createTime', type: 'readonly' },
-    { label: '更新时间', dataIndex: 'updateTime', type: 'readonly' },
+    { label: '创建时间', dataIndex: 'createTime', type: 'datetime', disabled: true },
+    { label: '更新时间', dataIndex: 'updateTime', type: 'datetime', disabled: true },
+    { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
   ];
 
   const handleSave = async (values: Record<string, unknown>) => {
@@ -219,6 +213,16 @@ const MenuEditPage = (props: PageComponentProps) => {
       onRetry={() => detailQuery.refetch()}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
+      onValuesChange={(changedValues, _allValues, form) => {
+        if (!Object.hasOwn(changedValues, 'app')) return;
+        const nextApp = changedValues.app as { id?: string } | null;
+        const nextAppId = nextApp?.id;
+        if (nextAppId !== selectedAppId) {
+          // 父菜单必须属于当前应用，应用变化后原引用不再有效。
+          form.setFieldValue('parent', null);
+        }
+        setAppSelection({ billId, appId: nextAppId });
+      }}
       onExit={() => {
         useWorkbenchStore.getState().removeContentTab(appNumber, tabKey);
       }}

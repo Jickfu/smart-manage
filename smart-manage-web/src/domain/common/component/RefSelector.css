@@ -94,13 +94,17 @@
 
 /* ---- Body 内容区 ---- */
 
+/* 内容区分隔线属于整个 Modal body，树表模式下需同时包住左树和右表。 */
+.sm-ref-selector-modal .ant-modal-body {
+  border-top: 1px solid var(--ant-color-border-secondary);
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
 .sm-ref-selector-body {
   display: flex;
   flex-direction: column;
   min-height: 360px;
   max-height: 56vh;
-  border-top: 1px solid var(--ant-color-border-secondary);
-  border-bottom: 1px solid var(--ant-color-border-secondary);
 }
 
 .sm-ref-selector-modal .ant-modal-footer {
@@ -202,6 +206,19 @@
   bottom: 0;
 }
 
+/* 选择列和序号列为固定辅助列，剩余宽度必须由未设 width 的业务列吸收。 */
+.sm-ref-selector-table .ant-table-selection-column {
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+}
+
+.sm-ref-selector-table .sm-ref-selector-sequence-column {
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+}
+
 /* ---- 多选模式：表格 + 右侧已选面板 ---- */
 
 .sm-ref-selector-body-multi {
@@ -293,6 +310,10 @@
   height: 100%;
   overflow: auto;
   padding: 8px 6px;
+}
+
+.sm-ref-selector-tree-panel .ant-tree {
+  font-size: 12px;
 }
 
 .sm-ref-selector-split {

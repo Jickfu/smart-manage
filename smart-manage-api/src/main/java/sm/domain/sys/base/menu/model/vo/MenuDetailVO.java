@@ -30,11 +30,11 @@ public class MenuDetailVO {
 	@Schema(description = "层级")
 	private MenuLevelEnum level;
 
-	@Schema(description = "应用ID")
-	private Long appId;
+	@Schema(description = "所属应用信息")
+	private ReferenceInfo app;
 
-	@Schema(description = "权限ID")
-	private Long permissionId;
+	@Schema(description = "权限信息")
+	private ReferenceInfo permission;
 
 	@Schema(description = "路径")
 	private String path;
@@ -67,11 +67,11 @@ public class MenuDetailVO {
 	private Long updateUser;
 
 	@Schema(description = "父菜单信息")
-	private ParentInfo parent;
+	private ReferenceInfo parent;
 
 	@Data
-	@Schema(description = "父菜单简要信息")
-	public static class ParentInfo {
+	@Schema(description = "引用对象简要信息")
+	public static class ReferenceInfo {
 		@Schema(description = "ID")
         private Long id;
 

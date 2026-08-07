@@ -1,0 +1,193 @@
+.sm-icon-selector-trigger {
+  display: flex;
+  align-items: center;
+  min-height: var(--ant-control-height);
+  border-bottom: var(--ant-line-width) var(--ant-line-type) var(--ant-color-border);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.sm-icon-selector-trigger:hover,
+.sm-icon-selector-trigger:focus-visible {
+  border-bottom-color: var(--ant-color-primary);
+  outline: none;
+}
+
+.sm-icon-selector-trigger--disabled {
+  color: var(--ant-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.sm-icon-selector-trigger--disabled:hover {
+  border-bottom-color: var(--ant-color-border);
+}
+
+.sm-icon-selector-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.sm-icon-selector-value,
+.sm-icon-selector-placeholder {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-icon-selector-placeholder {
+  color: var(--ant-color-text-quaternary);
+}
+
+.sm-icon-selector-clear {
+  flex-shrink: 0;
+  color: var(--ant-color-text-quaternary);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.sm-icon-selector-trigger:hover .sm-icon-selector-clear,
+.sm-icon-selector-clear:focus-visible {
+  opacity: 1;
+}
+
+.sm-icon-selector-search-icon {
+  margin: 0 8px;
+  flex-shrink: 0;
+  color: var(--ant-color-text-tertiary);
+}
+
+.sm-icon-selector-modal .ant-modal-container {
+  padding: 0;
+}
+
+.sm-icon-selector-modal .ant-modal-header {
+  margin: 0;
+  padding: 16px 24px 12px;
+}
+
+.sm-icon-selector-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sm-icon-selector-header-title {
+  flex-shrink: 0;
+  font-weight: 500;
+  color: var(--ant-color-text);
+  white-space: nowrap;
+}
+
+.sm-icon-selector-header-search {
+  width: 240px;
+  margin-left: auto;
+}
+
+.sm-icon-selector-body {
+  display: flex;
+  flex-direction: column;
+  height: 430px;
+  border-top: 1px solid var(--ant-color-border-secondary);
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.sm-icon-selector-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sm-icon-selector-meta .ant-pagination,
+.sm-icon-selector-meta .ant-pagination .ant-select {
+  font-size: 12px;
+}
+
+.sm-icon-selector-meta {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 4px 8px;
+  color: var(--ant-color-text-secondary);
+  font-size: var(--ant-font-size-sm);
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.sm-icon-selector-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px;
+}
+
+.sm-icon-selector-content > .ant-spin-nested-loading,
+.sm-icon-selector-content .ant-spin-container {
+  height: 100%;
+}
+
+.sm-icon-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  height: 100%;
+  padding: 2px;
+}
+
+.sm-icon-selector-option {
+  display: flex;
+  min-width: 0;
+  min-height: 76px;
+  padding: 8px 4px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  border: var(--ant-line-width) var(--ant-line-type) var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-bg-container);
+  color: var(--ant-color-text);
+  cursor: pointer;
+}
+
+.sm-icon-selector-option:hover {
+  border-color: var(--ant-color-primary-hover);
+  color: var(--ant-color-primary-hover);
+}
+
+.sm-icon-selector-option--selected {
+  border-color: var(--ant-color-primary);
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+}
+
+.sm-icon-selector-option > .anticon {
+  font-size: 22px;
+}
+
+.sm-icon-selector-option > span:last-child {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.sm-icon-selector-modal .ant-modal-footer {
+  margin: 0;
+  padding: 0;
+}
+
+.sm-icon-selector-footer {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 24px 16px;
+}
