@@ -1,14 +1,11 @@
 package sm.domain.sys.base.sysparam.service;
 
-import com.alicp.jetcache.anno.CacheType;
-import com.alicp.jetcache.anno.Cached;
 import com.alicp.jetcache.anno.CacheInvalidate;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.CacheConstant;
-import sm.domain.sys.base.sysparam.model.entity.SysParamEntity;
 import sm.domain.sys.base.sysparam.model.form.SysParamListForm;
 import sm.domain.sys.base.sysparam.model.form.SysParamSaveForm;
 import sm.domain.sys.base.sysparam.model.vo.SysParamCreateNewDataVO;
@@ -18,11 +15,6 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 系统参数服务
@@ -35,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 public class SysParamService {
     private final SysParamMapper mapper;
     private final SysParamTxService txService;
+    private final SysParamCacheAccessor cacheAccessor;
 
     /** 管理端分页列表 */
     public PageData<SysParamVO> listPage(SysParamListForm form) {
@@ -78,22 +71,9 @@ public class SysParamService {
 
     // ==================== 消费端（带缓存） ====================
 
-    /** 全量获取 number → value 映射（Redis 远程缓存） */
-    @Cached(cacheType = CacheType.REMOTE, name = CacheConstant.SYS_PARAM,
-            key = "T(sm.domain.sys.base.common.constant.CacheConstant).ALL_KEY",
-            expire = 30, timeUnit = TimeUnit.MINUTES)
-    public Map<String, String> getAll() {
-        List<SysParamEntity> entityList = mapper.selectList(null);
-        Map<String, String> map = new HashMap<>();
-        for (SysParamEntity entity : entityList) {
-            map.put(entity.getNumber(), entity.getValue());
-        }
-        return map;
-    }
-
     /** 获取字符串值 */
     public String getString(String number) {
-        return getAll().get(number);
+        return cacheAccessor.getAll().get(number);
     }
 
     /** 获取布尔值（"true" 或 "1" 为 true，其余 false） */

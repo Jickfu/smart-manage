@@ -15,7 +15,7 @@
 
 - 缓存条目查询、Value 预览、删除和应用缓存清理同时要求权限码和 `administrator` 身份；
 - Sa-Token、验证码、密码修改票据等安全 Key 只允许查看元数据，不返回 Value；
-- Redis Value 只按原始类型只读预览，不反序列化为 Java 对象；二进制内容使用 Base64；
+- 已登记且非敏感的 JetCache 应用缓存通过其受控缓存定义解码并以 JSON 只读预览；未登记 Redis Key 只按原始类型读取，二进制内容使用 Base64，禁止通用 Java 对象反序列化；
 - 文件存储配置不进入缓存目录和缓存 Value 查询；
 - 单次 Value 最多读取 100 项或 64 KiB，单次最多删除 100 个 Key；
 - 操作日志不得记录 Redis Value 或被删除 Key 的完整请求内容。

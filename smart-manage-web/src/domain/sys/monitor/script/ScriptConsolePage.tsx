@@ -169,8 +169,8 @@ export default function ScriptConsolePage(props: PageComponentProps) {
         </>
       }
     >
-      <Splitter orientation="vertical" className="sm-script-console-splitter">
-        <Splitter.Panel defaultSize="55%" min={180}>
+      <Splitter orientation="horizontal" className="sm-script-console-splitter">
+        <Splitter.Panel defaultSize="55%" min={320}>
           <section className="sm-script-console-panel">
             <ScriptEditor
               ref={editorRef}
@@ -180,7 +180,7 @@ export default function ScriptConsolePage(props: PageComponentProps) {
             />
           </section>
         </Splitter.Panel>
-        <Splitter.Panel min={160}>
+        <Splitter.Panel min={280}>
           <section className="sm-script-console-panel sm-script-result-panel">
             <div className="sm-script-result-summary">
               <Typography.Text strong>执行结果</Typography.Text>

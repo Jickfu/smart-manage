@@ -1,5 +1,6 @@
 package sm.domain.sys.monitor.cache.service;
 
+import com.alicp.jetcache.Cache;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.RedisSystemException;
 import org.springframework.data.redis.connection.RedisConnection;
@@ -11,6 +12,8 @@ import sm.domain.sys.base.common.constant.CacheConstant;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
 import sm.domain.sys.monitor.cache.model.vo.CacheRuntimeVO;
 import sm.system.response.ResultEnum;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -75,5 +78,39 @@ class CacheServiceTests {
         assertNull(accessor.readMemoryUsage(connection, keyBytes));
 
         verify(connection, times(1)).execute(eq("MEMORY"), any(byte[].class), same(keyBytes));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void managedSystemParameterValueMustUseJetCacheDecoding() {
+        Cache<Object, Object> cache = mock(Cache.class);
+        when(cacheHelper.getCache(CacheConstant.SYS_PARAM, com.alicp.jetcache.anno.CacheType.REMOTE))
+                .thenReturn(cache);
+        when(cache.get("all")).thenReturn(Map.of("SCRIPT_CONSOLE_TIMEOUT_SECONDS", "30"));
+        CacheEntryKeyForm form = new CacheEntryKeyForm();
+        form.setStorage("REDIS");
+        form.setCacheName(CacheConstant.SYS_PARAM);
+        form.setKey(CacheConstant.SYS_PARAM + "all");
+
+        var result = service.value(form);
+
+        assertEquals("object", result.getType());
+        assertEquals(false, result.getItems().getFirst().isBase64());
+        assertEquals("{\"SCRIPT_CONSOLE_TIMEOUT_SECONDS\":\"30\"}", result.getItems().getFirst().getValue());
+        verify(cache).get("all");
+        verify(redisCacheAccessor, org.mockito.Mockito.never()).value(any());
+    }
+
+    @Test
+    void managedSensitiveRemoteCacheMustNotBeDecoded() {
+        CacheEntryKeyForm form = new CacheEntryKeyForm();
+        form.setStorage("REDIS");
+        form.setCacheName(CacheConstant.USER_INFO);
+        form.setKey(CacheConstant.USER_INFO + "1");
+
+        BizException exception = assertThrows(BizException.class, () -> service.value(form));
+
+        assertEquals(ResultEnum.PERMISSION_ERROR.getCode(), exception.getCode());
+        verify(redisCacheAccessor, org.mockito.Mockito.never()).value(any());
     }
 }

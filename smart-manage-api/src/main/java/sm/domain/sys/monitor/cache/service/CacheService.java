@@ -80,6 +80,10 @@ public class CacheService {
     public CacheValueVO value(CacheEntryKeyForm form) {
         currentUserContext.checkAdministrator();
         if ("REDIS".equalsIgnoreCase(form.getStorage())) {
+            CacheDefinition definition = remoteDefinition(form.getKey());
+            if (definition != null) {
+                return managedRemoteValue(definition, form.getKey());
+            }
             return redisCacheAccessor.value(form.getKey());
         }
         CacheDefinition definition = requireLocalDefinition(form.getCacheName());
@@ -96,6 +100,31 @@ public class CacheService {
         boolean truncated = json.length() > 64 * 1024;
         String preview = truncated ? json.substring(0, 64 * 1024) : json;
         return CacheValueVO.builder().key(form.getKey()).type("object").truncated(truncated)
+                .items(List.of(CacheValueItemVO.builder().value(preview).base64(false).build())).build();
+    }
+
+    private CacheValueVO managedRemoteValue(CacheDefinition definition, String physicalKey) {
+        if (definition.sensitiveValue()) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "安全敏感缓存不允许查看 Value");
+        }
+        String logicalKey = physicalKey.substring(definition.name().length());
+        if (logicalKey.isEmpty()) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "应用缓存 Key 格式不正确");
+        }
+        Cache<Object, Object> cache = cacheHelper.getCache(definition.name(), CacheType.REMOTE);
+        Object value = cache.get(logicalKey);
+        if (value == null) {
+            throw new BizException(ResultEnum.NOT_FOUND, "缓存条目不存在");
+        }
+        String json;
+        try {
+            json = jsonMapper.writeValueAsString(value);
+        } catch (JacksonException exception) {
+            throw new BizException(ResultEnum.SERVER_ERROR, "缓存值序列化失败");
+        }
+        boolean truncated = json.length() > 64 * 1024;
+        String preview = truncated ? json.substring(0, 64 * 1024) : json;
+        return CacheValueVO.builder().key(physicalKey).type("object").truncated(truncated)
                 .items(List.of(CacheValueItemVO.builder().value(preview).base64(false).build())).build();
     }
 
