@@ -117,10 +117,14 @@ export function isSelectableIconName(name: string): boolean {
 }
 
 /** 根据图标名称解析组件；常用图标同步返回，其余图标按需补载。 */
-export function resolveIcon(name: string | undefined): ReactNode | undefined {
-  if (!name) return undefined;
+export function resolveIcon(name: string | undefined, fallback?: ReactNode): ReactNode | undefined {
+  if (!name) return fallback;
   const IconComponent = iconMap[name];
-  return IconComponent ? <IconComponent /> : <AsyncIcon name={name} loadIcons={loadAllIcons} />;
+  return IconComponent ? (
+    <IconComponent />
+  ) : (
+    <AsyncIcon name={name} loadIcons={loadAllIcons} fallback={fallback} />
+  );
 }
 
 /** 全量图标映射（懒加载）— 供图标选择器使用，主 bundle 不包含 */

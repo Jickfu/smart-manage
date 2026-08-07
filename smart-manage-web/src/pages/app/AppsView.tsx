@@ -2,10 +2,10 @@ import { memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';
 import { Empty, Spin } from 'antd';
-import { AppstoreOutlined } from '@ant-design/icons';
 import { fetchApps } from '@/domain/sys/base/app/api';
 import type { AppVO } from '@/domain/sys/base/app/types';
 import { openApp } from '@/services/navigationService';
+import AppCardIcon from './AppCardIcon';
 import './AppsView.css';
 
 const AppsView = () => {
@@ -29,7 +29,7 @@ const AppsView = () => {
             <div className="sm-cloud-apps">
               {cloud.appList?.map((app) => (
                 <div key={app.number} className="sm-app-card" onClick={() => handleAppClick(app)}>
-                  <AppstoreOutlined className="sm-app-card-icon" />
+                  <AppCardIcon icon={app.icon} iconColor={app.iconColor} />
                   <div className="sm-app-card-text">
                     <div className="sm-app-card-name">{app.name}</div>
                     <div className="sm-app-card-desc">{app.description}</div>
