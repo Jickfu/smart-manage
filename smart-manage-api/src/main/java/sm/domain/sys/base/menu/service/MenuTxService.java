@@ -14,6 +14,7 @@ import sm.system.response.ResultEnum;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.regex.Pattern;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import sm.system.util.EnabledCommandUtil;
 
@@ -27,6 +28,8 @@ import sm.system.util.EnabledCommandUtil;
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
 class MenuTxService {
+    private static final Pattern MENU_NUMBER_PATTERN = Pattern.compile("^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$");
+
     private final CurrentUserContext currentUserContext;
     private final MenuMapper mapper;
 
@@ -43,6 +46,9 @@ class MenuTxService {
             if (!form.getVersion().equals(entity.getVersion())) {
                 throw new BizException(ResultEnum.DATA_CONFLICT, "菜单已被其他用户修改");
             }
+        }
+        if (form.getNumber() == null || !MENU_NUMBER_PATTERN.matcher(form.getNumber()).matches()) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "菜单编码必须为小写字母、数字和下划线，且以小写字母开头");
         }
         entity.setNumber(form.getNumber());
         entity.setName(form.getName());

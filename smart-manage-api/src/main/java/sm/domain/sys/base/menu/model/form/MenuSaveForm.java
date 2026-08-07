@@ -3,6 +3,7 @@ package sm.domain.sys.base.menu.model.form;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
 
@@ -18,7 +19,9 @@ public class MenuSaveForm {
 	@Schema(description = "乐观锁版本，编辑时必填")
 	private Integer version;
 
-	@Schema(description = "编号")
+	@NotBlank(message = "编码不能为空")
+	@Pattern(regexp = "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$", message = "编码必须为小写字母、数字和下划线，且以小写字母开头")
+	@Schema(description = "编码：小写字母、数字和下划线组成，以下划线分隔单词")
 	private String number;
 
 	@NotBlank(message = "名称不能为空")

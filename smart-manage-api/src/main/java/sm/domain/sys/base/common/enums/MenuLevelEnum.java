@@ -9,8 +9,8 @@ import lombok.Getter;
  */
 @Getter
 public enum MenuLevelEnum {
-	CATEGORY(2, "分组"),
-	PAGE(3, "页面"),
+	CATEGORY(0, "分组"),
+	PAGE(1, "页面"),
 	;
 
 	@EnumValue

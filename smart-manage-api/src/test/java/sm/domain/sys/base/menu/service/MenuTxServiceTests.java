@@ -8,6 +8,7 @@ import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuSaveForm;
 import sm.system.exception.BizException;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -58,9 +59,26 @@ class MenuTxServiceTests {
         verify(mapper, never()).deleteById(1L);
     }
 
+    @Test
+    void menuNumberMustUseLowerSnakeCase() {
+        MenuSaveForm form = validEditForm();
+        form.setId(null);
+        form.setNumber("User-Management");
+
+        assertThrows(BizException.class, () -> txService.save(form));
+        verify(mapper, never()).updateAllColumns(any());
+    }
+
+    @Test
+    void menuLevelsUseZeroAndOne() {
+        assertEquals(0, MenuLevelEnum.CATEGORY.getCode());
+        assertEquals(1, MenuLevelEnum.PAGE.getCode());
+    }
+
     private MenuSaveForm validEditForm() {
         MenuSaveForm form = new MenuSaveForm();
         form.setId(1L);
+        form.setNumber("menu_management");
         form.setName("菜单");
         form.setLevel(MenuLevelEnum.CATEGORY);
         form.setAppId(31L);

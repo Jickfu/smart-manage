@@ -24,7 +24,7 @@ public class MenuTreeVO {
     @Schema(description = "名称")
     private String name;
 
-    @Schema(description = "菜单层级：2=分组，3=页面")
+    @Schema(description = "菜单层级：0=分组，1=页面")
     private Integer level;
 
     @Schema(description = "父菜单ID，一级菜单为0")

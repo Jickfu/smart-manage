@@ -160,7 +160,7 @@ const MenuListPage = (props: PageComponentProps) => {
       dataIndex: 'level',
       width: 80,
       render: (value) =>
-        value === 2 ? <Tag color="blue">分组</Tag> : <Tag color="green">页面</Tag>,
+        value === 0 ? <Tag color="blue">分组</Tag> : <Tag color="green">页面</Tag>,
     },
     { title: '路径', dataIndex: 'path', width: 180, ellipsis: true },
     { title: '组件', dataIndex: 'component', ellipsis: true },
@@ -227,12 +227,11 @@ const MenuListPage = (props: PageComponentProps) => {
       selectMode="checkbox"
       selectedRowKeys={selectedRowKeys}
       onSelectChange={setSelectedRowKeys}
-      showSequence={false}
       tableStateKey={`${treeQuery.dataUpdatedAt}:${pageNum}:${pageSize}`}
       expandable={{
         childrenColumnName: 'children',
         defaultExpandedRowKeys: pagedRecords.map((record) => record.id),
-        rowExpandable: (record) => record.level === 2,
+        rowExpandable: (record) => record.level === 0,
       }}
     />
   );
