@@ -13,6 +13,7 @@ import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuListForm;
 import sm.domain.sys.base.menu.model.form.MenuSaveForm;
 import sm.domain.sys.base.menu.model.form.MenuSelectForm;
+import sm.domain.sys.base.menu.model.form.MenuTreeListForm;
 import sm.domain.sys.base.menu.model.vo.*;
 import sm.domain.sys.base.menu.mapper.MenuMapper;
 import sm.system.exception.BizException;
@@ -23,7 +24,10 @@ import sm.system.response.ResultEnum;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.stream.Collectors;
 
 /**
@@ -83,6 +87,93 @@ public class MenuService {
 				.orderByAsc(MenuEntity::getSort)
 				.orderByAsc(MenuEntity::getId));
 		return entityList.stream().map(converter::toTreeVO).toList();
+	}
+
+	/**
+	 * 获取菜单管理树形列表。先限定云/应用范围，再一次性组装分组与页面，避免分页切断父子关系。
+	 */
+	public List<MenuTreeVO> listTree(MenuTreeListForm form) {
+		LambdaQueryWrapper<AppEntity> appWrapper = new LambdaQueryWrapper<AppEntity>()
+				.eq(form.getAppId() != null, AppEntity::getId, form.getAppId())
+				.eq(form.getAppId() == null && form.getCloudId() != null,
+						AppEntity::getCloudId, form.getCloudId())
+				.orderByAsc(AppEntity::getSeq)
+				.orderByAsc(AppEntity::getId);
+		List<AppEntity> apps = appMapper.selectList(appWrapper);
+		if (apps.isEmpty()) {
+			return List.of();
+		}
+
+		List<Long> appIds = new ArrayList<>();
+		Map<Long, String> appNames = new HashMap<>();
+		for (AppEntity app : apps) {
+			appIds.add(app.getId());
+			appNames.put(app.getId(), app.getName());
+		}
+
+		List<MenuEntity> menus = mapper.selectList(new LambdaQueryWrapper<MenuEntity>()
+				.in(MenuEntity::getAppId, appIds)
+				.orderByAsc(MenuEntity::getAppId)
+				.orderByAsc(MenuEntity::getLevel)
+				.orderByAsc(MenuEntity::getSort)
+				.orderByAsc(MenuEntity::getId));
+		menus = filterTreeMenus(menus, form.getKeyword());
+		return assembleMenuTree(menus, appNames);
+	}
+
+	/** 关键词命中页面时保留其父分组，保证返回结果始终可以组成完整层级。 */
+	private List<MenuEntity> filterTreeMenus(List<MenuEntity> menus, String keyword) {
+		if (keyword == null || keyword.isBlank()) {
+			return menus;
+		}
+		String normalizedKeyword = keyword.trim().toLowerCase(Locale.ROOT);
+		Set<Long> includedIds = new HashSet<>();
+		for (MenuEntity menu : menus) {
+			String name = menu.getName() == null ? "" : menu.getName().toLowerCase(Locale.ROOT);
+			String path = menu.getPath() == null ? "" : menu.getPath().toLowerCase(Locale.ROOT);
+			if (name.contains(normalizedKeyword) || path.contains(normalizedKeyword)) {
+				includedIds.add(menu.getId());
+				if (MenuLevelEnum.PAGE.equals(menu.getLevel()) && menu.getParentId() != null) {
+					includedIds.add(menu.getParentId());
+				}
+			}
+		}
+		List<MenuEntity> filteredMenus = new ArrayList<>();
+		for (MenuEntity menu : menus) {
+			if (includedIds.contains(menu.getId())) {
+				filteredMenus.add(menu);
+			}
+		}
+		return filteredMenus;
+	}
+
+	/** 按分组、页面两层结构组装 Ant Design Table 可直接消费的 children 数据。 */
+	private List<MenuTreeVO> assembleMenuTree(List<MenuEntity> menus, Map<Long, String> appNames) {
+		List<MenuTreeVO> roots = new ArrayList<>();
+		Map<Long, MenuTreeVO> groups = new HashMap<>();
+		List<MenuTreeVO> pages = new ArrayList<>();
+		for (MenuEntity menu : menus) {
+			MenuTreeVO node = converter.toTreeVO(menu);
+			node.setAppName(appNames.get(menu.getAppId()));
+			if (MenuLevelEnum.CATEGORY.equals(menu.getLevel())) {
+				node.setChildren(new ArrayList<>());
+				roots.add(node);
+				groups.put(menu.getId(), node);
+			} else if (MenuLevelEnum.PAGE.equals(menu.getLevel())) {
+				pages.add(node);
+			} else {
+				throw new BizException(ResultEnum.CONFIG_ERROR, "菜单层级配置无效：" + menu.getId());
+			}
+		}
+
+		for (MenuTreeVO page : pages) {
+			MenuTreeVO parent = groups.get(page.getParentId());
+			if (parent == null) {
+				throw new BizException(ResultEnum.CONFIG_ERROR, "页面菜单缺少父分组：" + page.getId());
+			}
+			parent.getChildren().add(page);
+		}
+		return roots;
 	}
 
 	/**

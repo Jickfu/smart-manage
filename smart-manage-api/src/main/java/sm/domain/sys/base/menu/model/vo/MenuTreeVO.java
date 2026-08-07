@@ -3,6 +3,8 @@ package sm.domain.sys.base.menu.model.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 菜单树 VO — 用于前端左树右表全量获取应用下所有菜单。
  * 包含 parentId 以便前端构建树形结构。
@@ -28,6 +30,12 @@ public class MenuTreeVO {
     @Schema(description = "父菜单ID，一级菜单为0")
     private Long parentId;
 
+    @Schema(description = "所属应用ID")
+    private Long appId;
+
+    @Schema(description = "所属应用名称")
+    private String appName;
+
     @Schema(description = "路径")
     private String path;
 
@@ -42,4 +50,7 @@ public class MenuTreeVO {
 
     @Schema(description = "是否启用")
     private Boolean enabled;
+
+    @Schema(description = "子菜单；仅分组节点包含页面子节点")
+    private List<MenuTreeVO> children;
 }

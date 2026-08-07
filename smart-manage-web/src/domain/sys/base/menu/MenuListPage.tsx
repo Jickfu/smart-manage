@@ -1,114 +1,121 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { App, Button, Tag, Tree } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
 import { useQuery } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
-import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { useMenuDeleteMutation } from './useMenuDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
+import type { PageComponentProps } from '@/domain/common/page/types';
 import { OperationType } from '@/domain/common/page/types';
 import { fetchAppsAll } from '@/domain/sys/base/app/api';
 import { menuApi } from './api';
 import { menuQueryKeys } from './queryKeys';
 import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';
-import type { MenuListVO } from './types';
-import type { PageComponentProps } from '@/domain/common/page/types';
+import type { MenuTreeVO } from './types';
 import { menuAccess } from './permissions';
 
 /** 菜单编辑页 componentKey */
 const MENU_EDIT_KEY = 'sys/base/menu/edit';
+const ROOT_NODE_KEY = '__all__';
+
+type MenuScope = { type: 'root' } | { type: 'cloud'; id: string } | { type: 'app'; id: string };
 
 /** 树节点 key 格式：cloud:{cloudId} | app:{appId} */
-function nodeKey(prefix: string, id: string) {
+function nodeKey(prefix: 'cloud' | 'app', id: string) {
   return `${prefix}:${id}`;
 }
 
-/** 菜单列表页 — 左树右表 */
+/** 菜单列表页 — 左侧按云/应用筛选，右侧按分组/页面展示完整层级。 */
 const MenuListPage = (props: PageComponentProps) => {
   const { modal } = App.useApp();
-  const [selectedNodeKey, setSelectedNodeKey] = useState<string | undefined>(undefined);
-  // 当前选中的应用节点；云节点仅用于展开，不作为列表过滤条件。
-  const [selectedFilter, setSelectedFilter] = useState<{ type: string; id: string } | null>(null);
+  const [selectedNodeKey, setSelectedNodeKey] = useState(ROOT_NODE_KEY);
+  const [selectedScope, setSelectedScope] = useState<MenuScope>({ type: 'root' });
+  const [keyword, setKeyword] = useState('');
+  const [pageNum, setPageNum] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const openBillTab = useWorkbenchStore((s) => s.openBillTab);
-  const openAddNewTab = useWorkbenchStore((s) => s.openAddNewTab);
+  const openBillTab = useWorkbenchStore((state) => state.openBillTab);
+  const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
 
-  // 左树只加载云和应用，菜单数据统一在右侧分页列表中展示。
   const appsQuery = useQuery({
     queryKey: appQueryKeys.cloudAppsAll(),
     queryFn: fetchAppsAll,
     staleTime: 5 * 60 * 1000,
   });
 
-  // 右侧列表
-  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange } =
-    useListPageQuery({
-      queryKey: menuQueryKeys.list({
-        type: selectedFilter?.type ?? '',
-        id: selectedFilter?.id ?? '',
+  const treeQuery = useQuery({
+    queryKey: menuQueryKeys.treeList({
+      type: selectedScope.type,
+      id: selectedScope.type === 'root' ? '' : selectedScope.id,
+      keyword,
+    }),
+    queryFn: () =>
+      menuApi.listTree({
+        cloudId: selectedScope.type === 'cloud' ? selectedScope.id : undefined,
+        appId: selectedScope.type === 'app' ? selectedScope.id : undefined,
+        keyword: keyword || undefined,
       }),
-      queryFn: (params) => {
-        const filter: { appId?: string; parentId?: string } = {};
-        if (selectedFilter?.type === 'app') filter.appId = selectedFilter.id;
-        return menuApi.listPage({ ...params, ...filter });
-      },
-    });
+  });
+  const records = useMemo(() => treeQuery.data ?? [], [treeQuery.data]);
+  const pagedRecords = useMemo(
+    () => records.slice((pageNum - 1) * pageSize, pageNum * pageSize),
+    [pageNum, pageSize, records],
+  );
+
   const deleteMutation = useMenuDeleteMutation(async () => {
     setSelectedRowKeys([]);
-    await query.refetch();
+    setPageNum(1);
+    await treeQuery.refetch();
   });
   const enabledMutation = useEnabledMutation(menuApi.setEnabled, async () => {
     setSelectedRowKeys([]);
-    await query.refetch();
+    await treeQuery.refetch();
   });
 
   const handleRefresh = useCallback(async () => {
     // 菜单管理是左树右表聚合页面，手动刷新必须同步更新两侧数据。
-    await Promise.all([appsQuery.refetch(), query.refetch()]);
-  }, [appsQuery, query]);
+    await Promise.all([appsQuery.refetch(), treeQuery.refetch()]);
+  }, [appsQuery, treeQuery]);
 
-  // 构建左侧树
-  const treeData: DataNode[] = useMemo(() => {
-    if (!appsQuery.data) return [];
-    const nodes: DataNode[] = [];
-    for (const cloud of appsQuery.data) {
-      const cloudChildren: DataNode[] = [];
-      for (const app of cloud.appList) {
-        const appNode: DataNode = {
-          key: nodeKey('app', app.id),
-          title: app.name,
-          isLeaf: true,
-        };
-        cloudChildren.push(appNode);
-      }
-      if (cloudChildren.length > 0) {
-        nodes.push({
-          key: nodeKey('cloud', cloud.id),
-          title: cloud.name,
-          children: cloudChildren,
-        });
-      }
-    }
-    return nodes;
-  }, [appsQuery.data]);
+  const treeData: DataNode[] = useMemo(
+    () => [
+      {
+        key: ROOT_NODE_KEY,
+        title: '全部',
+        children:
+          appsQuery.data?.map((cloud) => ({
+            key: nodeKey('cloud', cloud.id),
+            title: cloud.name,
+            children: cloud.appList.map((app) => ({
+              key: nodeKey('app', app.id),
+              title: app.name,
+              isLeaf: true,
+            })),
+          })) ?? [],
+      },
+    ],
+    [appsQuery.data],
+  );
 
   const handleTreeSelect = useCallback((keys: React.Key[]) => {
-    if (keys.length === 0) {
-      setSelectedFilter(null);
-      setSelectedNodeKey(undefined);
+    const key = keys.length === 0 ? ROOT_NODE_KEY : String(keys[0]);
+    setSelectedNodeKey(key);
+    setSelectedRowKeys([]);
+    setPageNum(1);
+    if (key === ROOT_NODE_KEY) {
+      setSelectedScope({ type: 'root' });
       return;
     }
-    const key = String(keys[0]);
-    setSelectedNodeKey(key);
 
-    const [type, id] = key.split(':') as [string, string];
-    if (type === 'app') {
-      setSelectedFilter({ type: 'app', id });
-    } else {
-      // 云节点用于展开应用，不附加菜单过滤条件。
-      setSelectedFilter(null);
+    const separatorIndex = key.indexOf(':');
+    const type = key.slice(0, separatorIndex);
+    const id = key.slice(separatorIndex + 1);
+    if (type === 'cloud') {
+      setSelectedScope({ type: 'cloud', id });
+    } else if (type === 'app') {
+      setSelectedScope({ type: 'app', id });
     }
   }, []);
 
@@ -135,23 +142,25 @@ const MenuListPage = (props: PageComponentProps) => {
     });
   }, [selectedRowKeys, deleteMutation, modal]);
 
-  const columns: ColumnsType<MenuListVO> = [
+  const columns: ColumnsType<MenuTreeVO> = [
     {
       title: '编码',
       dataIndex: 'number',
-      width: 120,
+      ellipsis: true,
       render: (text, record) => (
         <Button type="link" size="small" onClick={() => handleOpenEdit(record.id)}>
           {text || '-'}
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name', width: 180 },
+    { title: '名称', dataIndex: 'name', ellipsis: true },
+    { title: '所属应用', dataIndex: 'appName', width: 100 },
     {
       title: '层级',
       dataIndex: 'level',
       width: 80,
-      render: (val) => (val === 2 ? <Tag color="blue">分组</Tag> : <Tag color="green">页面</Tag>),
+      render: (value) =>
+        value === 2 ? <Tag color="blue">分组</Tag> : <Tag color="green">页面</Tag>,
     },
     { title: '路径', dataIndex: 'path', width: 180, ellipsis: true },
     { title: '组件', dataIndex: 'component', ellipsis: true },
@@ -164,8 +173,8 @@ const MenuListPage = (props: PageComponentProps) => {
     },
   ];
 
-  const loading = query.isLoading || appsQuery.isLoading;
-  const error = query.error || appsQuery.error;
+  const loading = treeQuery.isLoading || appsQuery.isLoading;
+  const error = treeQuery.error || appsQuery.error;
 
   const treePanel = (
     <div className="sm-list-tree-panel-inner">
@@ -173,25 +182,25 @@ const MenuListPage = (props: PageComponentProps) => {
         treeData={treeData}
         showLine={false}
         blockNode
-        defaultExpandedKeys={[]}
-        selectedKeys={selectedNodeKey ? [selectedNodeKey] : []}
+        defaultExpandedKeys={[ROOT_NODE_KEY]}
+        selectedKeys={[selectedNodeKey]}
         onSelect={handleTreeSelect}
       />
     </div>
   );
 
   return (
-    <ListPage<MenuListVO>
+    <ListPage<MenuTreeVO>
       {...props}
       title="菜单"
       access={menuAccess}
-      loading={loading ? true : false}
+      loading={loading}
       error={error as Error | null}
       onRetry={() => {
-        if (query.isError) query.refetch();
+        if (treeQuery.isError) treeQuery.refetch();
         if (appsQuery.isError) appsQuery.refetch();
       }}
-      total={total}
+      total={records.length}
       pageNum={pageNum}
       pageSize={pageSize}
       quickSearchPlaceholder="搜索名称/路径"
@@ -203,14 +212,28 @@ const MenuListPage = (props: PageComponentProps) => {
       onDisable={() => enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: false })}
       enabledCommandLoading={enabledMutation.isPending}
       onRefresh={handleRefresh}
-      onQuickSearch={onSearch}
-      onPageChange={onPageChange}
+      onQuickSearch={(value) => {
+        setSelectedRowKeys([]);
+        setKeyword(value);
+        setPageNum(1);
+      }}
+      onPageChange={(nextPageNum, nextPageSize) => {
+        setPageNum(nextPageNum);
+        setPageSize(nextPageSize);
+      }}
       rowKey="id"
       columns={columns}
-      dataSource={records}
+      dataSource={pagedRecords}
       selectMode="checkbox"
       selectedRowKeys={selectedRowKeys}
-      onSelectChange={(keys) => setSelectedRowKeys(keys)}
+      onSelectChange={setSelectedRowKeys}
+      showSequence={false}
+      tableStateKey={`${treeQuery.dataUpdatedAt}:${pageNum}:${pageSize}`}
+      expandable={{
+        childrenColumnName: 'children',
+        defaultExpandedRowKeys: pagedRecords.map((record) => record.id),
+        rowExpandable: (record) => record.level === 2,
+      }}
     />
   );
 };

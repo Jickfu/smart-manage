@@ -13,6 +13,8 @@ import sm.framework.mapping.SmMapperConfig;
 @Mapper(config = SmMapperConfig.class)
 interface MenuConverter {
     @Mapping(target = "level", expression = "java(entity.getLevel().getCode())")
+    @Mapping(target = "appName", ignore = true)
+    @Mapping(target = "children", ignore = true)
     MenuTreeVO toTreeVO(MenuEntity entity);
 
     MenuListVO toListVO(MenuEntity entity);

@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
+import type { TableProps } from 'antd';
 import { Button, Result, Spin, Table } from 'antd';
 import type { ColumnsType, TableRowSelection } from 'antd/es/table/interface';
 import ListFilterBar from './ListFilterBar';
 import ListTableShell from './ListTableShell';
-import type { AccessResource } from './access';
-import type { PermissionAction } from './access';
+import type { AccessResource, PermissionAction } from './access';
 import { PermissionActions } from './PermissionActions';
 import './ListPage.css';
 import { usePageTabTitle } from './usePageTabTitle';
@@ -47,6 +47,14 @@ interface ListPageProps<T> {
   onRefresh?: () => void;
   onQuickSearch?: (value: string) => void;
   onPageChange?: (pageNum: number, pageSize: number) => void;
+  /** 是否显示通用序号列；树形表格通常关闭，避免层级内序号重复。 */
+  showSequence?: boolean;
+  /** 是否显示分页器；一次性加载完整层级的树形表格应关闭。 */
+  showPagination?: boolean;
+  /** Ant Design Table 原生展开配置。 */
+  expandable?: TableProps<T>['expandable'];
+  /** 数据语义变化时用于重建 Table 内部状态，例如重新应用默认展开行。 */
+  tableStateKey?: React.Key;
 
   /** Table — 行 key */
   rowKey: string | ((record: T) => string);
@@ -93,6 +101,10 @@ function ListPage<T>({
   onRefresh,
   onQuickSearch,
   onPageChange,
+  showSequence = true,
+  showPagination = true,
+  expandable,
+  tableStateKey,
   rowKey,
   columns,
   dataSource,
@@ -143,18 +155,22 @@ function ListPage<T>({
 
   // 注入序号列 + 业务列（pageNum/pageSize 变化时更新序号公式）
   const fullColumns: ColumnsType<T> = useMemo(
-    () => [
-      {
-        title: '#',
-        width: 44,
-        className: 'sm-list-sequence-column',
-        align: 'center',
-        fixed: 'left' as const,
-        render: (_text, _record, index) => (pageNum - 1) * pageSize + index + 1,
-      },
-      ...columns,
-    ],
-    [columns, pageNum, pageSize],
+    () =>
+      showSequence
+        ? [
+            {
+              title: '#',
+              width: 44,
+              className: 'sm-list-sequence-column',
+              align: 'center' as const,
+              fixed: 'left' as const,
+              render: (_text: unknown, _record: T, index: number) =>
+                (pageNum - 1) * pageSize + index + 1,
+            },
+            ...columns,
+          ]
+        : columns,
+    [columns, pageNum, pageSize, showSequence],
   );
 
   // 错误态
@@ -262,12 +278,14 @@ function ListPage<T>({
           <ListTableShell
             table={
               <Table<T>
+                key={tableStateKey}
                 className="sm-list-table"
                 rowKey={rowKey}
                 rowSelection={rowSelection}
                 onRow={onRow}
                 columns={fullColumns}
                 dataSource={dataSource}
+                expandable={expandable}
                 size="small"
                 pagination={false}
                 sticky
@@ -279,6 +297,7 @@ function ListPage<T>({
             pageNum={pageNum}
             pageSize={pageSize}
             onPageChange={onPageChange}
+            showPagination={showPagination}
             treePanel={treePanel}
           />
         </Spin>

@@ -27,11 +27,21 @@ export interface MenuTreeVO {
   name: string;
   level: number;
   parentId: string;
+  appId: string;
+  appName: string;
   path: string;
   component: string;
   sort: number;
   icon: string;
   enabled: boolean;
+  children?: MenuTreeVO[];
+}
+
+/** 菜单管理树形列表筛选条件。 */
+export interface MenuTreeListForm {
+  cloudId?: string;
+  appId?: string;
+  keyword?: string;
 }
 
 /** 菜单详情 */

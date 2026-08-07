@@ -7,6 +7,7 @@ import type {
   MenuSaveForm,
   MenuSelectVO,
   MenuTreeVO,
+  MenuTreeListForm,
 } from './types';
 
 /** 根据应用 number 获取当前用户菜单树 */
@@ -32,6 +33,11 @@ export const menuApi = {
   listByApp: (appId: string) =>
     request
       .post<Result<MenuTreeVO[]>>('/sys/base/menu/listByApp', { appId })
+      .then((res) => res.data.data),
+
+  listTree: (form: MenuTreeListForm) =>
+    request
+      .post<Result<MenuTreeVO[]>>('/sys/base/menu/listTree', form)
       .then((res) => res.data.data),
 
   select: (form: { pageNum: number; pageSize: number; keyword?: string; excludeId?: string }) =>

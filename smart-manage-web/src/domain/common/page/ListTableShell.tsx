@@ -8,6 +8,7 @@ interface ListTableShellProps {
   pageNum?: number;
   pageSize?: number;
   onPageChange?: (pageNum: number, pageSize: number) => void;
+  showPagination?: boolean;
   /** 左侧树面板（左树右表布局） */
   treePanel?: ReactNode;
 }
@@ -24,6 +25,7 @@ const ListTableShell = ({
   pageNum = 1,
   pageSize = 20,
   onPageChange,
+  showPagination = true,
   treePanel,
 }: ListTableShellProps) => {
   const rightContent = (
@@ -34,16 +36,18 @@ const ListTableShell = ({
           <span>共 {total} 条</span>
           {selectedCount > 0 && <span>已选当前页 {selectedCount} 条</span>}
         </div>
-        <Pagination
-          size="small"
-          showSizeChanger
-          pageSizeOptions={['10', '20', '50', '100']}
-          current={pageNum}
-          pageSize={pageSize}
-          total={total}
-          showTotal={(t) => `共 ${t} 条`}
-          onChange={(nextPage, nextSize) => onPageChange?.(nextPage, nextSize)}
-        />
+        {showPagination && (
+          <Pagination
+            size="small"
+            showSizeChanger
+            pageSizeOptions={['10', '20', '50', '100']}
+            current={pageNum}
+            pageSize={pageSize}
+            total={total}
+            showTotal={(t) => `共 ${t} 条`}
+            onChange={(nextPage, nextSize) => onPageChange?.(nextPage, nextSize)}
+          />
+        )}
       </div>
       {/* 表格主体 */}
       <div className="sm-list-table-body">{table ?? <Empty description="暂无列表配置" />}</div>
