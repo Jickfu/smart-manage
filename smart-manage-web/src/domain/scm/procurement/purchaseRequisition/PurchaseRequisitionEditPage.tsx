@@ -13,6 +13,7 @@ import {
 import { BillStatus, OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { purchaseRequisitionApi } from './api';
 import { purchaseRequisitionAccess } from './permissions';
@@ -129,7 +130,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
     const savedId = submit
       ? await purchaseRequisitionApi.submit(form)
       : await purchaseRequisitionApi.save(form);
-    const nextKey = `bill:${props.componentKey}:${savedId}`;
+    const nextKey = createBillTabKey(props.componentKey, savedId);
     if (isAddNew || submit) {
       replaceContentTab(appNumber, tabKey, {
         key: nextKey,

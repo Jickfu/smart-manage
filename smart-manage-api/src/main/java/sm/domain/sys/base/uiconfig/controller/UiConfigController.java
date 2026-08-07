@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import sm.domain.sys.base.uiconfig.constant.UiConfigPermission;
 import sm.domain.sys.base.uiconfig.model.form.UiConfigSaveForm;
 import sm.domain.sys.base.uiconfig.model.vo.UiConfigDetailVO;
 import sm.domain.sys.base.uiconfig.service.UiConfigService;
@@ -30,14 +31,14 @@ public class UiConfigController {
 
     @GetMapping("/sys/base/ui-config/singleton")
     @Operation(summary = "获取界面配置")
-    @SaCheckPermission("sys:base:ui-config:detail")
+    @SaCheckPermission(UiConfigPermission.DETAIL)
     public Result<UiConfigDetailVO> singleton() {
         return Result.success(service.singleton());
     }
 
     @PostMapping("/sys/base/ui-config/save")
     @Operation(summary = "保存界面配置", description = "新增或更新界面配置")
-    @SaCheckPermission("sys:base:ui-config:save")
+    @SaCheckPermission(UiConfigPermission.SAVE)
     public Result<Long> save(@Valid @RequestBody UiConfigSaveForm form) {
         return Result.success(service.save(form));
     }

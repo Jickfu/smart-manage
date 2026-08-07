@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import type { EditField } from '@/domain/common/page/EditPage';
 import EditPage from '@/domain/common/page/EditPage';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -115,7 +116,7 @@ const AppEditPage = (props: PageComponentProps) => {
     // 新增成功后替换临时 tab key
     if (isAddNew && tabKey !== String(savedId)) {
       replaceContentTab(appNumber, tabKey, {
-        key: `bill:${props.componentKey}:${savedId}`,
+        key: createBillTabKey(props.componentKey, savedId),
         label: name,
         closable: true,
         componentKey: props.componentKey,
@@ -123,7 +124,7 @@ const AppEditPage = (props: PageComponentProps) => {
         operationType: OperationType.EDIT,
         billId: String(savedId),
       });
-      activateContentTab(appNumber, `bill:${props.componentKey}:${savedId}`);
+      activateContentTab(appNumber, createBillTabKey(props.componentKey, savedId));
     }
     await queryClient.invalidateQueries({ queryKey: appQueryKeys.all });
     message.success(isAddNew ? '新增成功' : '保存成功');

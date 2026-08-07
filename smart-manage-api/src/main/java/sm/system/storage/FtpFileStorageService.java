@@ -6,7 +6,7 @@ import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.UUID;
@@ -175,18 +175,32 @@ public class FtpFileStorageService implements FileStorageService {
     }
 
     @Override
-    public byte[] getBytes(String storedPath) throws IOException {
+    public InputStream openStream(String storedPath) throws IOException {
         FTPClient ftp = connect();
-        try {
-            try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-                if (!ftp.retrieveFile(storedPath, bos)) {
-                    throw new IOException("FTP 下载失败: " + ftp.getReplyString());
-                }
-                return bos.toByteArray();
-            }
-        } finally {
+        InputStream inputStream = ftp.retrieveFileStream(storedPath);
+        if (inputStream == null) {
             disconnect(ftp);
+            throw new IOException("FTP 下载失败: " + ftp.getReplyString());
         }
+        return new FilterInputStream(inputStream) {
+            @Override
+            public void close() throws IOException {
+                IOException failure = null;
+                try {
+                    super.close();
+                    if (!ftp.completePendingCommand()) {
+                        failure = new IOException("FTP 下载未正常完成: " + ftp.getReplyString());
+                    }
+                } catch (IOException exception) {
+                    failure = exception;
+                } finally {
+                    disconnect(ftp);
+                }
+                if (failure != null) {
+                    throw failure;
+                }
+            }
+        };
     }
 
     @Override

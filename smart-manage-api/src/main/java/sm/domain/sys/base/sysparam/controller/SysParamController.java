@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import sm.domain.sys.base.sysparam.constant.SysParamPermission;
 import sm.domain.sys.base.sysparam.model.form.SysParamListForm;
 import sm.domain.sys.base.sysparam.model.form.SysParamSaveForm;
 import sm.domain.sys.base.sysparam.model.vo.SysParamCreateNewDataVO;
@@ -33,35 +34,35 @@ public class SysParamController {
 
     @PostMapping("/sys/base/param/listPage")
     @Operation(summary = "系统参数列表")
-    @SaCheckPermission("sys:base:param:listPage")
+    @SaCheckPermission(SysParamPermission.LIST)
     public Result<PageData<SysParamVO>> listPage(@RequestBody SysParamListForm form) {
         return Result.success(service.listPage(form));
     }
 
     @PostMapping("/sys/base/param/detail")
     @Operation(summary = "系统参数详情")
-    @SaCheckPermission("sys:base:param:detail")
+    @SaCheckPermission(SysParamPermission.DETAIL)
     public Result<SysParamVO> detail(@RequestBody @Valid IdForm form) {
         return Result.success(service.detail(form.getId()));
     }
 
     @PostMapping("/sys/base/param/save")
     @Operation(summary = "保存系统参数")
-    @SaCheckPermission("sys:base:param:save")
+    @SaCheckPermission(SysParamPermission.SAVE)
     public Result<Long> save(@Valid @RequestBody SysParamSaveForm form) {
         return Result.success(service.save(form));
     }
 
     @GetMapping("/sys/base/param/createNewData")
     @Operation(summary = "获取新增默认值")
-    @SaCheckPermission("sys:base:param:save")
+    @SaCheckPermission(SysParamPermission.SAVE)
     public Result<SysParamCreateNewDataVO> createNewData() {
         return Result.success(service.createNewData());
     }
 
     @PostMapping("/sys/base/param/delete")
     @Operation(summary = "删除系统参数")
-    @SaCheckPermission("sys:base:param:delete")
+    @SaCheckPermission(SysParamPermission.DELETE)
     public Result<String> delete(@RequestBody @Valid IdForm form) {
         service.deleteById(form.getId());
         return Result.success();

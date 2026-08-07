@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import sm.domain.sys.monitor.sql.constant.SqlPermission;
 import sm.domain.sys.monitor.sql.model.form.SqlExecuteForm;
 import sm.domain.sys.monitor.sql.model.form.SqlLogListForm;
 import sm.domain.sys.monitor.sql.model.vo.SqlLogDetailVO;
@@ -30,21 +31,21 @@ public class SqlController {
 
     @PostMapping("/sys/monitor/sql/execute")
     @Operation(summary = "执行 SQL 语句")
-    @SaCheckPermission("sys:monitor:sql:execute")
+    @SaCheckPermission(SqlPermission.EXECUTE)
     public Result<SqlResultVO> execute(@Valid @RequestBody SqlExecuteForm form) {
         return Result.success(sqlService.execute(form));
     }
 
     @PostMapping("/sys/monitor/sql/log/listPage")
     @Operation(summary = "执行日志分页查询")
-    @SaCheckPermission("sys:monitor:sql:log:listPage")
+    @SaCheckPermission(SqlPermission.LOG_LIST)
     public Result<PageData<SqlLogListVO>> listPage(@Valid @RequestBody SqlLogListForm form) {
         return Result.success(sqlService.listPage(form));
     }
 
     @PostMapping("/sys/monitor/sql/log/detail")
     @Operation(summary = "执行日志详情")
-    @SaCheckPermission("sys:monitor:sql:log:detail")
+    @SaCheckPermission(SqlPermission.LOG_DETAIL)
     public Result<SqlLogDetailVO> detail(@Valid @RequestBody IdForm form) {
         return Result.success(sqlService.detail(form.getId()));
     }

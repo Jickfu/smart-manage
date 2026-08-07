@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import EditPage from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import type { EditField } from '@/domain/common/page/EditPage';
@@ -93,7 +94,7 @@ const UserEditPage = (props: PageComponentProps) => {
         avatar: (values.avatar as string) ?? undefined,
       });
       if (isAddNew) {
-        const nextKey = `bill:${props.componentKey}:${savedId}`;
+        const nextKey = createBillTabKey(props.componentKey, savedId);
         replaceContentTab(appNumber, tabKey, {
           key: nextKey,
           label: username,

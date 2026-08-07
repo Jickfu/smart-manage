@@ -19,6 +19,7 @@ import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.system.web.ClientIpResolver;
 import sm.system.util.StringUtil;
+import sm.domain.sys.monitor.common.util.LogQueryValidator;
 
 import java.util.List;
 import java.util.Set;
@@ -85,10 +86,7 @@ public class SqlService {
     }
 
     private void validateListForm(SqlLogListForm form) {
-        if (form.getStartTime() != null && form.getEndTime() != null
-                && form.getStartTime().isAfter(form.getEndTime())) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "开始时间不能晚于结束时间");
-        }
+        LogQueryValidator.validateTimeRange(form.getStartTime(), form.getEndTime());
         if (StringUtil.isNotBlank(form.getResultType()) && !RESULT_TYPES.contains(form.getResultType())) {
             throw new BizException(ResultEnum.PARAM_ERROR, "SQL 结果类型不合法");
         }

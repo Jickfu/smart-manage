@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { App, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -26,7 +27,7 @@ export default function ScriptListPage(props: PageComponentProps) {
       queryKey: scriptQueryKeys.lists(),
       queryFn: scriptApi.listPage,
     });
-  const deleteMutation = useMutation({
+  const deleteMutation = useCommandMutation({
     mutationFn: async () => {
       const selected = records.filter((record) => selectedKeys.includes(record.id));
       for (const script of selected) await scriptApi.delete(script.id, script.version);
@@ -34,9 +35,8 @@ export default function ScriptListPage(props: PageComponentProps) {
     onSuccess: async () => {
       setSelectedKeys([]);
       await queryClient.invalidateQueries({ queryKey: scriptQueryKeys.all });
-      message.success('删除成功');
     },
-    onError: (error: Error) => message.error(error.message),
+    successMessage: '删除成功',
   });
   const columns: ColumnsType<ScriptListItem> = [
     {

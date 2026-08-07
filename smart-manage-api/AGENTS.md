@@ -16,6 +16,7 @@
 
 - 所有接口返回 `Result<T>`；业务异常由 `GlobalExceptionHandler` 统一处理。
 - `@SaIgnore` 表示公开接口，`@SaCheckPermission` 表示权限接口，其余接口由全局过滤器执行登录校验。
+- Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包内的 `*Permission` 常量，禁止直接书写权限码字符串；权限常量统一供接口鉴权和权限审计使用。
 - 分页入参继承 `PageForm`，返回 `PageData<T>`。
 - 公开业务方法禁止用 `return null` 表示业务失败；可空辅助方法必须通过命名和注释明确语义。
 - JSON 反序列化、ID 转换和持久化结果禁止静默吞错。

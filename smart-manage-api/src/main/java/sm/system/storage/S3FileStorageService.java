@@ -1,6 +1,6 @@
 package sm.system.storage;
 
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -16,23 +16,35 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.HexFormat;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /** AWS S3 与 MinIO 共用的私有对象存储实现。 */
 @Component
-@RequiredArgsConstructor
 public class S3FileStorageService implements FileStorageService {
     private final FileStorageConfigProvider configProvider;
+    private final ConcurrentMap<String, S3Clients> clientsByConfiguration = new ConcurrentHashMap<>();
+
+    public S3FileStorageService(FileStorageConfigProvider configProvider) {
+        this.configProvider = configProvider;
+    }
 
     @Override
     public FileStoreResult store(String subDir, MultipartFile file) throws IOException {
         FileStorageConfig config = config();
         String objectKey = objectKey(subDir, file.getOriginalFilename());
-        try (S3Client client = client(config)) {
+        try {
+            S3Client client = clients(config).client();
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(config.s3Bucket())
                     .key(objectKey)
@@ -54,7 +66,8 @@ public class S3FileStorageService implements FileStorageService {
     public String move(String storedPath, String targetSubDir) throws IOException {
         FileStorageConfig config = config();
         String targetKey = targetSubDir + "/" + storedPath.substring(storedPath.lastIndexOf('/') + 1);
-        try (S3Client client = client(config)) {
+        try {
+            S3Client client = clients(config).client();
             client.copyObject(CopyObjectRequest.builder().sourceBucket(config.s3Bucket()).sourceKey(storedPath)
                     .destinationBucket(config.s3Bucket()).destinationKey(targetKey).build());
             client.deleteObject(DeleteObjectRequest.builder().bucket(config.s3Bucket()).key(storedPath).build());
@@ -67,7 +80,8 @@ public class S3FileStorageService implements FileStorageService {
     @Override
     public void delete(String storedPath) throws IOException {
         FileStorageConfig config = config();
-        try (S3Client client = client(config)) {
+        try {
+            S3Client client = clients(config).client();
             client.deleteObject(DeleteObjectRequest.builder().bucket(config.s3Bucket()).key(storedPath).build());
         } catch (RuntimeException exception) {
             throw new IOException("S3 对象删除失败", exception);
@@ -75,11 +89,11 @@ public class S3FileStorageService implements FileStorageService {
     }
 
     @Override
-    public byte[] getBytes(String storedPath) throws IOException {
+    public InputStream openStream(String storedPath) throws IOException {
         FileStorageConfig config = config();
-        try (S3Client client = client(config)) {
-            return client.getObjectAsBytes(GetObjectRequest.builder()
-                    .bucket(config.s3Bucket()).key(storedPath).build()).asByteArray();
+        try {
+            return clients(config).client().getObject(GetObjectRequest.builder()
+                    .bucket(config.s3Bucket()).key(storedPath).build());
         } catch (RuntimeException exception) {
             throw new IOException("S3 对象下载失败", exception);
         }
@@ -88,17 +102,16 @@ public class S3FileStorageService implements FileStorageService {
     @Override
     public String getAccessUrl(String storedPath) {
         FileStorageConfig config = config();
-        try (S3Presigner presigner = presigner(config)) {
-            GetObjectRequest objectRequest = GetObjectRequest.builder()
-                    .bucket(config.s3Bucket())
-                    .key(storedPath)
-                    .build();
-            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                    .signatureDuration(Duration.ofMinutes(5))
-                    .getObjectRequest(objectRequest)
-                    .build();
-            return presigner.presignGetObject(presignRequest).url().toString();
-        }
+        S3Presigner presigner = clients(config).presigner();
+        GetObjectRequest objectRequest = GetObjectRequest.builder()
+                .bucket(config.s3Bucket())
+                .key(storedPath)
+                .build();
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofMinutes(5))
+                .getObjectRequest(objectRequest)
+                .build();
+        return presigner.presignGetObject(presignRequest).url().toString();
     }
 
     @Override
@@ -108,6 +121,34 @@ public class S3FileStorageService implements FileStorageService {
 
     private FileStorageConfig config() {
         return configProvider.getFileStorageConfig();
+    }
+
+    private S3Clients clients(FileStorageConfig config) {
+        return clientsByConfiguration.computeIfAbsent(configurationFingerprint(config), ignored ->
+                new S3Clients(client(config), presigner(config)));
+    }
+
+    /** 配置变化时使用新客户端；摘要避免把存储凭据放入缓存键或诊断输出。 */
+    private String configurationFingerprint(FileStorageConfig config) {
+        String material = String.join("\u0000",
+                value(config.s3Endpoint()), value(config.s3Region()), value(config.s3Bucket()),
+                value(config.s3AccessKey()), value(config.s3SecretKey()), value(config.s3PathStyle()));
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(material.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("运行环境不支持 SHA-256", exception);
+        }
+    }
+
+    private String value(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    @PreDestroy
+    void closeClients() {
+        clientsByConfiguration.values().forEach(S3Clients::close);
+        clientsByConfiguration.clear();
     }
 
     private S3Client client(FileStorageConfig config) {
@@ -130,6 +171,13 @@ public class S3FileStorageService implements FileStorageService {
                         .pathStyleAccessEnabled(Boolean.TRUE.equals(config.s3PathStyle()))
                         .build())
                 .build();
+    }
+
+    private record S3Clients(S3Client client, S3Presigner presigner) {
+        private void close() {
+            client.close();
+            presigner.close();
+        }
     }
 
     String objectKey(String subDir, String originalName) {

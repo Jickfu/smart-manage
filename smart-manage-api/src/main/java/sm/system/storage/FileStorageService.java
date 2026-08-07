@@ -3,6 +3,7 @@ package sm.system.storage;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * 文件存储服务接口
@@ -28,8 +29,8 @@ public interface FileStorageService {
     /** 删除文件 */
     void delete(String storedPath) throws IOException;
 
-    /** 获取文件字节（下载用） */
-    byte[] getBytes(String storedPath) throws IOException;
+    /** 打开下载流；调用方必须关闭返回的流。 */
+    InputStream openStream(String storedPath) throws IOException;
 
     /** 获取文件公开访问 URL */
     String getAccessUrl(String storedPath);

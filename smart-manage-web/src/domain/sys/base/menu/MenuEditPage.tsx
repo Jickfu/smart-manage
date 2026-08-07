@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import EditPage from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import type { EditField } from '@/domain/common/page/EditPage';
@@ -175,9 +176,9 @@ const MenuEditPage = (props: PageComponentProps) => {
       sort: (values.sort as number) ?? undefined,
     });
 
-    if (isAddNew && tabKey !== `bill:${props.componentKey}:${savedId}`) {
+    if (isAddNew && tabKey !== createBillTabKey(props.componentKey, savedId)) {
       replaceContentTab(appNumber, tabKey, {
-        key: `bill:${props.componentKey}:${savedId}`,
+        key: createBillTabKey(props.componentKey, savedId),
         label: name,
         closable: true,
         componentKey: props.componentKey,
@@ -185,7 +186,7 @@ const MenuEditPage = (props: PageComponentProps) => {
         operationType: OperationType.EDIT,
         billId: String(savedId),
       });
-      activateContentTab(appNumber, `bill:${props.componentKey}:${savedId}`);
+      activateContentTab(appNumber, createBillTabKey(props.componentKey, savedId));
     }
     await queryClient.invalidateQueries({ queryKey: menuQueryKeys.all });
     message.success(isAddNew ? '新增成功' : '保存成功');

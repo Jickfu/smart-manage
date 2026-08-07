@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
@@ -193,7 +194,7 @@ const JobEditPage = (props: PageComponentProps) => {
     },
     onSuccess: async (savedId, values) => {
       if (isAddNew) {
-        const nextKey = `bill:${props.componentKey}:${savedId}`;
+        const nextKey = createBillTabKey(props.componentKey, savedId);
         useWorkbenchStore.getState().replaceContentTab(props.appNumber, props.tabKey, {
           key: nextKey,
           label: String(values.jobName),

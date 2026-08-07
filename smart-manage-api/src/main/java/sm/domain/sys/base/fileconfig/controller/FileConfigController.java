@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import sm.domain.sys.base.fileconfig.constant.FileConfigPermission;
 import sm.domain.sys.base.fileconfig.model.form.FileConfigSaveForm;
 import sm.domain.sys.base.fileconfig.model.form.FtpTestForm;
 import sm.domain.sys.base.fileconfig.model.vo.FileConfigDetailVO;
@@ -28,21 +29,21 @@ public class FileConfigController {
 
     @GetMapping("/sys/base/file-config/singleton")
     @Operation(summary = "获取文件配置")
-    @SaCheckPermission("sys:base:file-config:detail")
+    @SaCheckPermission(FileConfigPermission.DETAIL)
     public Result<FileConfigDetailVO> singleton() {
         return Result.success(service.singleton());
     }
 
     @PostMapping("/sys/base/file-config/save")
     @Operation(summary = "保存文件配置")
-    @SaCheckPermission("sys:base:file-config:save")
+    @SaCheckPermission(FileConfigPermission.SAVE)
     public Result<Long> save(@Valid @RequestBody FileConfigSaveForm form) {
         return Result.success(service.save(form));
     }
 
     @PostMapping("/sys/base/file-config/test-ftp")
     @Operation(summary = "测试FTP连接", description = "使用表单中的FTP参数测试连接是否正常")
-    @SaCheckPermission("sys:base:file-config:save")
+    @SaCheckPermission(FileConfigPermission.SAVE)
     public Result<String> testFtp(@Valid @RequestBody FtpTestForm form) {
         return Result.success(service.testFtp(form));
     }

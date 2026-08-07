@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -101,9 +102,9 @@ public class LocalFileStorageService implements FileStorageService {
     }
 
     @Override
-    public byte[] getBytes(String storedPath) throws IOException {
+    public InputStream openStream(String storedPath) throws IOException {
         Path path = Paths.get(storedPath);
-        return Files.readAllBytes(path);
+        return Files.newInputStream(path);
     }
 
     @Override

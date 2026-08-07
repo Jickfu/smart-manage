@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { App, Collapse, Form } from 'antd';
+import { Collapse, Form } from 'antd';
 import type { FormInstance } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { ReactNode } from 'react';
@@ -8,7 +8,7 @@ import { EditFormFields } from './EditFormFields';
 import type { AccessResource, PermissionAction } from './access';
 import { PermissionActions } from './PermissionActions';
 import { EditPageShell } from './EditPageShell';
-import { useWorkbenchStore } from '@/stores/workbench';
+import { useBeforeCloseGuard } from './useBeforeCloseGuard';
 import { BusinessAttachmentPanel } from '@/domain/common/attachment/BusinessAttachmentPanel';
 import type {
   BusinessAttachment,
@@ -156,7 +156,6 @@ const EditPage = ({
   closeGuard,
   onValuesChange,
 }: EditPageProps) => {
-  const { modal } = App.useApp();
   const [form] = Form.useForm();
   const revisionRef = useRef(0);
   const dirtyRef = useRef(false);
@@ -204,24 +203,7 @@ const EditPage = ({
     }
   }, [form, initialValues, loading]);
 
-  useEffect(() => {
-    if (!closeGuard) return;
-    const store = useWorkbenchStore.getState();
-    store.registerBeforeClose(closeGuard.appNumber, closeGuard.tabKey, async () => {
-      if (!dirtyRef.current) return true;
-      return new Promise<boolean>((resolve) => {
-        modal.confirm({
-          title: '存在未保存的修改',
-          content: '关闭页面将丢失当前修改，是否继续？',
-          okText: '继续关闭',
-          cancelText: '留在页面',
-          onOk: () => resolve(true),
-          onCancel: () => resolve(false),
-        });
-      });
-    });
-    return () => store.unregisterBeforeClose(closeGuard.appNumber, closeGuard.tabKey);
-  }, [closeGuard, modal]);
+  useBeforeCloseGuard(closeGuard?.appNumber, closeGuard?.tabKey, dirtyRef);
 
   const handleSave = async () => {
     if (!onSave) return;

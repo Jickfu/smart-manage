@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { App, Alert, Button, Empty, Space, Splitter, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlayCircleOutlined, ClearOutlined } from '@ant-design/icons';
-import { useMutation } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
@@ -31,10 +31,9 @@ export default function SqlConsolePage(_props: PageComponentProps) {
   const [result, setResult] = useState<SqlExecutionResult>();
   const editorRef = useRef<SqlEditorRef>(null);
   const { can } = usePermissionAccess(sqlAccess.prefix);
-  const executeMutation = useMutation({
+  const executeMutation = useCommandMutation({
     mutationFn: sqlApi.execute,
     onSuccess: (data) => setResult(data),
-    onError: (error: Error) => message.error(error.message),
   });
   const execute = (candidate = sqlText.trim()) => {
     if (!candidate) {

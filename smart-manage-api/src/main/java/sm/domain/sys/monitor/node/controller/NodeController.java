@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
+import sm.domain.sys.monitor.node.constant.NodePermission;
 import sm.domain.sys.monitor.node.model.vo.NodeInfoVO;
 import sm.domain.sys.monitor.node.service.NodeService;
 import sm.system.response.Result;
@@ -22,7 +23,7 @@ public class NodeController {
 
     @PostMapping("/sys/monitor/node/info")
     @Operation(summary = "节点信息", description = "获取当前节点 JVM/OS/CPU/内存/磁盘/线程/GC 聚合信息")
-    @SaCheckPermission("sys:monitor:node:listPage")
+    @SaCheckPermission(NodePermission.LIST)
     public Result<NodeInfoVO> info() {
         return Result.success(service.getNodeInfo());
     }

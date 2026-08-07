@@ -18,6 +18,7 @@ import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.system.web.ClientIpResolver;
 import sm.system.util.StringUtil;
+import sm.domain.sys.monitor.common.util.LogQueryValidator;
 
 import java.util.List;
 import java.util.Set;
@@ -209,10 +210,7 @@ public class ScriptService {
     }
 
     private void validateLogForm(ScriptLogListForm form) {
-        if (form.getStartTime() != null && form.getEndTime() != null
-                && form.getStartTime().isAfter(form.getEndTime())) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "开始时间不能晚于结束时间");
-        }
+        LogQueryValidator.validateTimeRange(form.getStartTime(), form.getEndTime());
         if (StringUtil.isNotBlank(form.getStatus()) && !STATUSES.contains(form.getStatus())) {
             throw new BizException(ResultEnum.PARAM_ERROR, "执行状态不合法");
         }

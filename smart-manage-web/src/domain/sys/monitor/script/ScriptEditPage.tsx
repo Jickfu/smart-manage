@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { OperationType } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
@@ -65,7 +66,7 @@ export default function ScriptEditPage(props: PageComponentProps) {
         content: String(values.content ?? ''),
       });
       if (isAddNew && props.tabKey !== savedId) {
-        const nextKey = `bill:${props.componentKey}:${savedId}`;
+        const nextKey = createBillTabKey(props.componentKey, savedId);
         replaceContentTab(props.appNumber, props.tabKey, {
           key: nextKey,
           label: name,

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
@@ -67,18 +68,24 @@ public class AttachmentController {
 
     @PostMapping("/sys/base/attachment/download")
     @Operation(summary = "下载附件", description = "按附件ID下载文件")
-    public ResponseEntity<byte[]> download(@RequestBody @Valid IdForm form,
+    public ResponseEntity<StreamingResponseBody> download(@RequestBody @Valid IdForm form,
                                            @RequestHeader(value = "X-Upload-Session", required = false) String uploadSessionId) throws IOException {
         AttachmentEntity entity = service.requireDownloadableAttachment(form.getId(), uploadSessionId);
         FileStorageService storage = storageFactory.getService(entity.getStorageType());
-        byte[] bytes = storage.getBytes(entity.getObjectKey());
+        StreamingResponseBody body = outputStream -> {
+            try (java.io.InputStream inputStream = storage.openStream(entity.getObjectKey())) {
+                inputStream.transferTo(outputStream);
+            }
+        };
         String encodedName = URLEncoder.encode(entity.getOriginalName(), StandardCharsets.UTF_8)
                 .replace("+", "%20");
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(
                         entity.getMimeType() != null ? entity.getMimeType() : "application/octet-stream"))
+                .contentLength(entity.getFileSize())
+                .header("X-Content-Type-Options", "nosniff")
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename*=UTF-8''" + encodedName)
-                .body(bytes);
+                .body(body);
     }
 }

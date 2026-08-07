@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +34,19 @@ class ClientIpResolverTests {
         HttpServletRequest request = request("10.0.0.5", null);
 
         assertEquals("10.0.0.5", resolver.resolve(request));
+    }
+
+    @Test
+    void forwardedHostNameIsRejectedWithoutNameResolution() {
+        ClientIpResolver resolver = resolver("10.0.0.0/8");
+        HttpServletRequest request = request("10.0.0.5", "attacker.example");
+
+        assertEquals("10.0.0.5", resolver.resolve(request));
+    }
+
+    @Test
+    void invalidTrustedProxyConfigurationFailsFast() {
+        assertThrows(IllegalArgumentException.class, () -> resolver("proxy.example/24"));
     }
 
     private ClientIpResolver resolver(String... cidrs) {

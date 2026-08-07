@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { App, Alert, Button, Empty, Select, Space, Splitter, Tag, Typography } from 'antd';
 import { ClearOutlined, PlayCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
@@ -36,10 +37,9 @@ export default function ScriptConsolePage(props: PageComponentProps) {
     queryKey: scriptQueryKeys.list({ pageNum: 1, pageSize: 100 }),
     queryFn: () => scriptApi.listPage({ pageNum: 1, pageSize: 100 }),
   });
-  const executeMutation = useMutation({
+  const executeMutation = useCommandMutation({
     mutationFn: scriptApi.execute,
     onSuccess: setResult,
-    onError: (error: Error) => message.error(error.message),
   });
   const savedOptions = useMemo(
     () =>
