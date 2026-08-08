@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { App, Avatar, Button, Dropdown, Popover, Tooltip } from 'antd';
+import { useQuery } from '@tanstack/react-query';
 import type { MenuProps } from 'antd';
 import { UserOutlined, LogoutOutlined, SkinOutlined } from '@ant-design/icons';
 import { useHeaderTabsStore } from '@/stores/headerTabs';
@@ -8,6 +9,8 @@ import { useUserStore } from '@/stores/user';
 import { openApp, closeAppAndRemove } from '@/services/navigationService';
 import { logoutCurrentUser, updateCurrentUserTheme } from '@/api/user';
 import { normalizeThemeColor, THEME_COLOR_OPTIONS } from '@/styles/themePalette';
+import { activeUiConfigQueryKey, getActiveUiConfig } from '@/api/uiConfig';
+import { resolveAssetUrl } from '@/utils/assetUrl';
 import './Header.css';
 
 const Header = () => {
@@ -19,6 +22,17 @@ const Header = () => {
   const userInfo = useUserStore((s) => s.userInfo);
   const clearUser = useUserStore((s) => s.clearUser);
   const setThemeColor = useUserStore((s) => s.setThemeColor);
+  const uiConfigQuery = useQuery({
+    queryKey: activeUiConfigQueryKey,
+    queryFn: getActiveUiConfig,
+  });
+  const pageTitle = uiConfigQuery.data?.pageTitle?.trim() || 'Smart Manage';
+  const systemName = uiConfigQuery.data?.systemName?.trim() || 'Smart Manage';
+  const headerLogo = resolveAssetUrl(uiConfigQuery.data?.headerLogo, '/logo.svg');
+
+  useEffect(() => {
+    document.title = pageTitle;
+  }, [pageTitle]);
 
   const handleTabClick = (key: string) => {
     openApp(key);
@@ -111,7 +125,7 @@ const Header = () => {
 
   return (
     <header className="sm-header">
-      <div className="sm-header-logo">Smart Manage</div>
+      <img className="sm-header-logo" src={headerLogo} alt={systemName} />
 
       {/* Header Tabs */}
       <nav className="sm-header-tabs" role="tablist" aria-label="应用切换">

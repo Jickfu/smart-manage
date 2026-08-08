@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
+import sm.domain.sys.base.attachment.model.entity.BizAttachmentEntity;
 import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
 import sm.system.exception.BizException;
 import sm.system.storage.FileStorageService;
@@ -67,11 +68,43 @@ class AttachmentTxServiceTests {
 		form.setBizType("purchase-requisition");
 		form.setBizId("100");
 		when(mapper.selectById(1L)).thenReturn(entity);
+		BizAttachmentEntity mapping = new BizAttachmentEntity();
+		mapping.setBizType("purchase-requisition");
+		when(bizMapper.selectOne(any())).thenReturn(mapping);
 		when(mapper.updateById(entity)).thenReturn(0);
 
 		assertThrows(BizException.class, () -> txService.promote(form));
 
 		verify(storage, never()).move(any(), any());
+	}
+
+	@Test
+	void promoteRejectsDeletedAttachment() {
+		AttachmentEntity entity = new AttachmentEntity();
+		entity.setId(1L);
+		entity.setStatus("DELETED");
+		AttachmentPromoteForm form = new AttachmentPromoteForm();
+		form.setAttachmentIds(List.of(1L));
+		form.setBizType("sys.base.ui-config");
+		form.setBizId("100");
+		when(mapper.selectById(1L)).thenReturn(entity);
+
+		assertThrows(BizException.class, () -> txService.promote(form));
+	}
+
+	@Test
+	void promoteRejectsAttachmentWithoutUploadMapping() {
+		AttachmentEntity entity = new AttachmentEntity();
+		entity.setId(1L);
+		entity.setStatus("TEMP");
+		AttachmentPromoteForm form = new AttachmentPromoteForm();
+		form.setAttachmentIds(List.of(1L));
+		form.setBizType("sys.base.ui-config");
+		form.setBizId("100");
+		when(mapper.selectById(1L)).thenReturn(entity);
+		when(bizMapper.selectOne(any())).thenReturn(null);
+
+		assertThrows(BizException.class, () -> txService.promote(form));
 	}
 
 	@Test

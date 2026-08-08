@@ -68,6 +68,49 @@ class AttachmentServiceAuthorizationTests {
         assertThrows(BizException.class, () -> service.requireDownloadableAttachment(1L, null));
     }
 
+    @Test
+    void aggregateAttachmentMustBeActiveAndBelongToRequestedResource() {
+        AttachmentEntity attachment = attachment(false, 10L);
+        BizAttachmentEntity mapping = new BizAttachmentEntity();
+        mapping.setBizType(RESOURCE_TYPE);
+        mapping.setBizId("100");
+        mapping.setAttachmentId(1L);
+        when(mapper.selectById(1L)).thenReturn(attachment);
+        when(bizMapper.selectOne(any())).thenReturn(mapping);
+
+        assertSame(attachment, service.requireAggregateAttachment(1L, RESOURCE_TYPE, "100"));
+    }
+
+    @Test
+    void temporaryAttachmentCannotBeExposedAsAggregateResource() {
+        when(mapper.selectById(1L)).thenReturn(attachment(true, 10L));
+
+        assertThrows(
+                BizException.class,
+                () -> service.requireAggregateAttachment(1L, RESOURCE_TYPE, "100"));
+    }
+
+    @Test
+    void mismatchedAggregateAttachmentIsDenied() {
+        when(mapper.selectById(1L)).thenReturn(attachment(false, 10L));
+        when(bizMapper.selectOne(any())).thenReturn(null);
+
+        assertThrows(
+                BizException.class,
+                () -> service.requireAggregateAttachment(1L, RESOURCE_TYPE, "100"));
+    }
+
+    @Test
+    void deletedAttachmentCannotBeExposedAsAggregateResource() {
+        AttachmentEntity attachment = attachment(false, 10L);
+        attachment.setStatus("DELETED");
+        when(mapper.selectById(1L)).thenReturn(attachment);
+
+        assertThrows(
+                BizException.class,
+                () -> service.requireAggregateAttachment(1L, RESOURCE_TYPE, "100"));
+    }
+
     private AttachmentEntity attachment(boolean temporary, Long creatorId) {
         AttachmentEntity attachment = new AttachmentEntity();
         attachment.setId(1L);

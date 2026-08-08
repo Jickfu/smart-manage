@@ -1,12 +1,15 @@
 package sm.domain.sys.base.uiconfig.service;
 
 import org.junit.jupiter.api.Test;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
 import sm.domain.sys.base.uiconfig.mapper.UiConfigMapper;
 import sm.domain.sys.base.uiconfig.model.entity.UiConfigEntity;
 import sm.domain.sys.base.uiconfig.model.form.UiConfigSaveForm;
 import sm.system.exception.BizException;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,5 +36,14 @@ class UiConfigTxServiceTests {
         when(mapper.selectCount(null)).thenReturn(1L);
 
         assertThrows(BizException.class, () -> txService.save(new UiConfigSaveForm(), 1L));
+    }
+
+    @Test
+    void nullableAttachmentIdsAlwaysParticipateInUpdates() throws NoSuchFieldException {
+        for (String fieldName : new String[]{
+                "loginBannerAttachmentId", "loginLogoAttachmentId", "headerLogoAttachmentId"}) {
+            TableField tableField = UiConfigEntity.class.getDeclaredField(fieldName).getAnnotation(TableField.class);
+            assertEquals(FieldStrategy.ALWAYS, tableField.updateStrategy());
+        }
     }
 }

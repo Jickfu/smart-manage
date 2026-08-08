@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { App, Collapse, Form, Input } from 'antd';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { activeUiConfigQueryKey } from '@/api/uiConfig';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
@@ -15,16 +16,17 @@ import './UiConfigPage.css';
 interface UiConfigFormValues {
   pageTitle: string;
   systemName: string;
-  loginBannerAttachmentId?: string;
-  loginBanner?: string;
-  loginLogoAttachmentId?: string;
-  loginLogo?: string;
-  headerLogoAttachmentId?: string;
-  headerLogo?: string;
+  loginBannerAttachmentId: string | null;
+  loginBanner: string | null;
+  loginLogoAttachmentId: string | null;
+  loginLogo: string | null;
+  headerLogoAttachmentId: string | null;
+  headerLogo: string | null;
 }
 
 const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const [form] = Form.useForm<UiConfigFormValues>();
   const [dirty, setDirty] = useState(false);
   const sessionUploadedIds = useRef(new Set<string>());
@@ -42,15 +44,17 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
   const headerLogo = Form.useWatch('headerLogo', form);
   useEffect(() => {
     if (!query.data) return;
+    // setFieldsValue 对 undefined 字段不会可靠清除旧值，先重置以避免已删除图片再次回显。
+    form.resetFields();
     form.setFieldsValue({
       pageTitle: query.data.pageTitle ?? '',
       systemName: query.data.systemName ?? '',
-      loginBannerAttachmentId: query.data.loginBannerAttachmentId,
-      loginBanner: query.data.loginBanner,
-      loginLogoAttachmentId: query.data.loginLogoAttachmentId,
-      loginLogo: query.data.loginLogo,
-      headerLogoAttachmentId: query.data.headerLogoAttachmentId,
-      headerLogo: query.data.headerLogo,
+      loginBannerAttachmentId: query.data.loginBannerAttachmentId ?? null,
+      loginBanner: query.data.loginBanner ?? null,
+      loginLogoAttachmentId: query.data.loginLogoAttachmentId ?? null,
+      loginLogo: query.data.loginLogo ?? null,
+      headerLogoAttachmentId: query.data.headerLogoAttachmentId ?? null,
+      headerLogo: query.data.headerLogo ?? null,
     });
   }, [form, query.data]);
   const saveMutation = useCommandMutation({
@@ -69,8 +73,9 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       sessionUploadedIds.current.clear();
       uploadSessions.current = {};
       await query.refetch();
+      await queryClient.invalidateQueries({ queryKey: activeUiConfigQueryKey });
       setDirty(false);
-      message.success('界面配置保存成功，刷新登录页后可查看最新效果');
+      message.success('界面配置保存成功');
     },
   });
   const handleSave = async () => {
@@ -89,8 +94,8 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     urlName: keyof UiConfigFormValues,
     label: string,
     extra: string,
-    attachmentId?: string,
-    imageUrl?: string,
+    attachmentId?: string | null,
+    imageUrl?: string | null,
   ) => (
     <Form.Item className="sm-edit-field" label={label} extra={extra}>
       <ImageAttachmentField
@@ -107,8 +112,9 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
             sessionUploadedIds.current.add(nextAttachmentId);
             if (uploadSessionId) uploadSessions.current[nextAttachmentId] = uploadSessionId;
           }
-          form.setFieldValue(idName, nextAttachmentId);
-          form.setFieldValue(urlName, nextImageUrl);
+          // 删除必须写入显式 null；undefined 会被 JSON 省略，并导致受控 Upload 保留旧预览。
+          form.setFieldValue(idName, nextAttachmentId ?? null);
+          form.setFieldValue(urlName, nextImageUrl ?? null);
           setDirty(true);
         }}
       />

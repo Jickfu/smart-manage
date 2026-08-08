@@ -9,6 +9,7 @@ import sm.domain.sys.base.uiconfig.model.form.UiConfigSaveForm;
 import sm.domain.sys.base.uiconfig.model.vo.UiConfigDetailVO;
 import sm.domain.sys.base.uiconfig.mapper.UiConfigMapper;
 import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.system.exception.BizException;
@@ -31,6 +32,10 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class UiConfigService {
+    private static final String LOGIN_BANNER_IMAGE = "login-banner";
+    private static final String LOGIN_LOGO_IMAGE = "login-logo";
+    private static final String HEADER_LOGO_IMAGE = "header-logo";
+    private static final String PUBLIC_IMAGE_PATH = "/sys/base/ui-config/image/";
     private final UiConfigMapper mapper;
     private final UiConfigTxService txService;
     private final UiConfigConverter converter;
@@ -49,6 +54,26 @@ public class UiConfigService {
     public UiConfigDetailVO getActiveConfig() {
         List<UiConfigEntity> entityList = mapper.selectList(null);
         return entityList.isEmpty() ? new UiConfigDetailVO() : assembleDetailVO(entityList.get(0));
+    }
+
+    /** 公开读取当前生效的品牌图片；只允许按固定图片类型访问当前配置绑定的正式附件。 */
+    public AttachmentEntity requireActiveImage(String imageType) {
+        List<UiConfigEntity> entityList = mapper.selectList(null);
+        if (entityList.isEmpty()) {
+            throw new BizException(ResultEnum.NOT_FOUND, "界面配置不存在");
+        }
+        UiConfigEntity config = entityList.get(0);
+        Long attachmentId = switch (imageType) {
+            case LOGIN_BANNER_IMAGE -> config.getLoginBannerAttachmentId();
+            case LOGIN_LOGO_IMAGE -> config.getLoginLogoAttachmentId();
+            case HEADER_LOGO_IMAGE -> config.getHeaderLogoAttachmentId();
+            default -> throw new BizException(ResultEnum.PARAM_ERROR, "不支持的界面图片类型");
+        };
+        if (attachmentId == null) {
+            throw new BizException(ResultEnum.NOT_FOUND, "界面图片未配置");
+        }
+        return attachmentService.requireAggregateAttachment(
+                attachmentId, UiConfigResourceRegistration.RESOURCE_TYPE, String.valueOf(config.getId()));
     }
 
     @BizLog("保存界面配置")
@@ -133,20 +158,23 @@ public class UiConfigService {
         Map<Long, AttachmentVO> attachmentMap = attachmentService.listByIds(attachmentIds).stream()
                 .collect(Collectors.toMap(AttachmentVO::getId, Function.identity()));
         if (entity.getLoginBannerAttachmentId() != null) {
-            detail.setLoginBanner(resolveUrl(attachmentMap, entity.getLoginBannerAttachmentId()));
+            Long attachmentId = entity.getLoginBannerAttachmentId();
+            detail.setLoginBanner(resolveUrl(attachmentMap, attachmentId, LOGIN_BANNER_IMAGE));
         }
         if (entity.getLoginLogoAttachmentId() != null) {
-            detail.setLoginLogo(resolveUrl(attachmentMap, entity.getLoginLogoAttachmentId()));
+            Long attachmentId = entity.getLoginLogoAttachmentId();
+            detail.setLoginLogo(resolveUrl(attachmentMap, attachmentId, LOGIN_LOGO_IMAGE));
         }
         if (entity.getHeaderLogoAttachmentId() != null) {
-            detail.setHeaderLogo(resolveUrl(attachmentMap, entity.getHeaderLogoAttachmentId()));
+            Long attachmentId = entity.getHeaderLogoAttachmentId();
+            detail.setHeaderLogo(resolveUrl(attachmentMap, attachmentId, HEADER_LOGO_IMAGE));
         }
         return detail;
     }
 
-    private String resolveUrl(Map<Long, AttachmentVO> attachmentMap, Long attachmentId) {
+    private String resolveUrl(Map<Long, AttachmentVO> attachmentMap, Long attachmentId, String imageType) {
         AttachmentVO attachment = attachmentMap.get(attachmentId);
-        return attachment == null ? null : attachment.getUrl();
+        return attachment == null ? null : PUBLIC_IMAGE_PATH + imageType + "?v=" + attachmentId;
     }
 
     /** 配置已成功切换后清理被替换的旧附件；清理失败保留告警，不回滚已生效配置。 */

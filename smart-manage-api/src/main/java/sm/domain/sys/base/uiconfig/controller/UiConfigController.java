@@ -11,6 +11,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
+import sm.system.storage.FileStorageService;
+import sm.system.storage.FileStorageServiceFactory;
 import sm.domain.sys.base.uiconfig.constant.UiConfigPermission;
 import sm.domain.sys.base.uiconfig.model.form.UiConfigSaveForm;
 import sm.domain.sys.base.uiconfig.model.vo.UiConfigDetailVO;
@@ -28,6 +36,7 @@ import sm.system.response.Result;
 @Slf4j
 public class UiConfigController {
     private final UiConfigService service;
+    private final FileStorageServiceFactory storageFactory;
 
     @GetMapping("/sys/base/ui-config/singleton")
     @Operation(summary = "获取界面配置")
@@ -48,6 +57,26 @@ public class UiConfigController {
     @SaIgnore
     public Result<UiConfigDetailVO> active() {
         return Result.success(service.getActiveConfig());
+    }
+
+    @GetMapping("/sys/base/ui-config/image/{imageType}")
+    @Operation(summary = "读取生效界面图片", description = "公开读取当前界面配置绑定的品牌图片")
+    @SaIgnore
+    public ResponseEntity<StreamingResponseBody> image(@PathVariable String imageType) {
+        AttachmentEntity attachment = service.requireActiveImage(imageType);
+        FileStorageService storage = storageFactory.getService(attachment.getStorageType());
+        StreamingResponseBody body = outputStream -> {
+            try (java.io.InputStream inputStream = storage.openStream(attachment.getObjectKey())) {
+                inputStream.transferTo(outputStream);
+            }
+        };
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        attachment.getMimeType() != null ? attachment.getMimeType() : "application/octet-stream"))
+                .contentLength(attachment.getFileSize())
+                .header("X-Content-Type-Options", "nosniff")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .body(body);
     }
 
 }

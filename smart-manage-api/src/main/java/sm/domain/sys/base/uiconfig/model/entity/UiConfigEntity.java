@@ -1,7 +1,9 @@
 package sm.domain.sys.base.uiconfig.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
@@ -37,12 +39,15 @@ public class UiConfigEntity extends BaseEntity {
     private String headerLogo;
 
     /** 登录页 Banner 附件 ID */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Long loginBannerAttachmentId;
 
     /** 登录页 Logo 附件 ID */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Long loginLogoAttachmentId;
 
     /** 顶部 Logo 附件 ID */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Long headerLogoAttachmentId;
 
     @Version

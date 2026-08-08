@@ -3,12 +3,12 @@ export interface UiConfigDetail {
   version?: number;
   pageTitle?: string;
   systemName?: string;
-  loginBanner?: string;
-  loginLogo?: string;
-  headerLogo?: string;
-  loginBannerAttachmentId?: string;
-  loginLogoAttachmentId?: string;
-  headerLogoAttachmentId?: string;
+  loginBanner?: string | null;
+  loginLogo?: string | null;
+  headerLogo?: string | null;
+  loginBannerAttachmentId?: string | null;
+  loginLogoAttachmentId?: string | null;
+  headerLogoAttachmentId?: string | null;
   attachmentUploadSessions?: Record<string, string>;
 }
 

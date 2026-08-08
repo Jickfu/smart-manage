@@ -1,14 +1,19 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { App, Button, Upload } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
+import { resolveAssetUrl } from '@/utils/assetUrl';
 import { uiConfigApi } from './api';
 
 interface ImageAttachmentFieldProps {
-  attachmentId?: string;
-  imageUrl?: string;
+  attachmentId?: string | null;
+  imageUrl?: string | null;
   disabled?: boolean;
-  onChange: (attachmentId?: string, imageUrl?: string, uploadSessionId?: string) => void;
+  onChange: (
+    attachmentId: string | null,
+    imageUrl: string | null,
+    uploadSessionId?: string,
+  ) => void;
 }
 
 export function ImageAttachmentField({
@@ -18,6 +23,13 @@ export function ImageAttachmentField({
   onChange,
 }: ImageAttachmentFieldProps) {
   const { message } = App.useApp();
+  const resolvedImageUrl = resolveAssetUrl(imageUrl);
+  useEffect(
+    () => () => {
+      if (imageUrl?.startsWith('blob:')) URL.revokeObjectURL(imageUrl);
+    },
+    [imageUrl],
+  );
   const fileList = useMemo<UploadFile[]>(
     () =>
       attachmentId || imageUrl
@@ -26,16 +38,18 @@ export function ImageAttachmentField({
               uid: attachmentId ?? imageUrl!,
               name: '当前图片',
               status: 'done',
-              url: imageUrl,
+              url: resolvedImageUrl,
+              thumbUrl: resolvedImageUrl,
             },
           ]
         : [],
-    [attachmentId, imageUrl],
+    [attachmentId, imageUrl, resolvedImageUrl],
   );
   const customRequest: UploadProps['customRequest'] = async ({ file, onSuccess, onError }) => {
     try {
       const attachment = await uiConfigApi.uploadImage(file as File);
-      onChange(attachment.id, attachment.url, attachment.uploadSessionId);
+      const previewUrl = URL.createObjectURL(file as File);
+      onChange(attachment.id, previewUrl, attachment.uploadSessionId);
       onSuccess?.(attachment);
     } catch (error) {
       message.error(error instanceof Error ? error.message : '图片上传失败');
@@ -66,7 +80,7 @@ export function ImageAttachmentField({
         if (file.url) window.open(file.url, '_blank', 'noopener,noreferrer');
       }}
       onRemove={async () => {
-        onChange(undefined, undefined);
+        onChange(null, null);
         return true;
       }}
     >

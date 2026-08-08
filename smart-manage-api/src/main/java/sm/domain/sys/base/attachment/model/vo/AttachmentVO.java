@@ -17,7 +17,7 @@ public class AttachmentVO {
     private String fileExt;
     private Boolean isTemp;
     private String uploadSessionId;
-    /** 公开访问 URL */
+    /** 存储实现返回的访问地址；浏览器是否可直接访问由具体业务入口决定。 */
     private String url;
     private String createTime;
 }

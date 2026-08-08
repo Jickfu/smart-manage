@@ -89,12 +89,15 @@ public class AttachmentService {
         return entities.stream().map(this::assembleAttachmentVO).collect(Collectors.toList());
     }
 
-    /** 列出现有附件,无论是临时还是正式都有 */
+    /** 列出可用附件；删除中和已删除记录不再属于可引用资源。 */
     public List<AttachmentVO> listByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
-        return mapper.selectByIds(ids).stream().map(this::assembleAttachmentVO).collect(Collectors.toList());
+        return mapper.selectByIds(ids).stream()
+                .filter(entity -> "TEMP".equals(entity.getStatus()) || "ACTIVE".equals(entity.getStatus()))
+                .map(this::assembleAttachmentVO)
+                .collect(Collectors.toList());
     }
 
     public AttachmentEntity requireDownloadableAttachment(Long id, String uploadSessionId) {
@@ -103,6 +106,23 @@ public class AttachmentService {
             throw new BizException(ResultEnum.NOT_FOUND, "附件不存在");
         }
         requireAttachmentAccess(entity, BusinessResourceAction.READ, uploadSessionId);
+        return entity;
+    }
+
+    /** 供业务聚合读取自身正式附件，必须同时匹配业务类型和业务 ID。 */
+    public AttachmentEntity requireAggregateAttachment(Long id, String bizType, String bizId) {
+        AttachmentEntity entity = mapper.selectById(id);
+        if (entity == null || !"ACTIVE".equals(entity.getStatus())) {
+            throw new BizException(ResultEnum.NOT_FOUND, "附件不存在");
+        }
+        BizAttachmentEntity mapping = bizMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BizAttachmentEntity>()
+                        .eq(BizAttachmentEntity::getAttachmentId, id)
+                        .eq(BizAttachmentEntity::getBizType, bizType)
+                        .eq(BizAttachmentEntity::getBizId, bizId));
+        if (mapping == null) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "附件不属于指定业务资源");
+        }
         return entity;
     }
 
@@ -115,6 +135,9 @@ public class AttachmentService {
             throw new BizException(ResultEnum.NOT_FOUND, "附件不存在");
         }
         for (AttachmentEntity entity : entities) {
+            if (!"TEMP".equals(entity.getStatus()) && !"ACTIVE".equals(entity.getStatus())) {
+                throw new BizException(ResultEnum.NOT_FOUND, "附件不存在");
+            }
             if ("TEMP".equals(entity.getStatus())) {
                 requireTemporaryAccess(entity, uploadSessions == null ? null : uploadSessions.get(entity.getId()));
             }

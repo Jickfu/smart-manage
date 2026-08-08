@@ -94,7 +94,24 @@ class AttachmentTxService {
                 if (entity == null) {
                     throw new BizException(ResultEnum.NOT_FOUND, "附件不存在: " + attachmentId);
                 }
-                if ("TEMP".equals(entity.getStatus())) {
+                if (!"TEMP".equals(entity.getStatus()) && !"ACTIVE".equals(entity.getStatus())) {
+                    throw new BizException(ResultEnum.NOT_FOUND, "附件不可用: " + attachmentId);
+                }
+                boolean temporary = "TEMP".equals(entity.getStatus());
+                BizAttachmentEntity bizEntity = selectBizByAttachmentId(attachmentId);
+                if (bizEntity == null) {
+                    throw new BizException(ResultEnum.PERMISSION_ERROR, "附件缺少业务资源归属");
+                }
+                if (!form.getBizType().equals(bizEntity.getBizType())) {
+                    throw new BizException(ResultEnum.PERMISSION_ERROR, "附件业务资源类型不匹配");
+                }
+                if (temporary && bizEntity.getBizId() != null) {
+                    throw new BizException(ResultEnum.PERMISSION_ERROR, "临时附件已绑定业务单据");
+                }
+                if (!temporary && !form.getBizId().equals(bizEntity.getBizId())) {
+                    throw new BizException(ResultEnum.PERMISSION_ERROR, "已确认附件不能绑定到其他业务单据");
+                }
+                if (temporary) {
                     entity.setStatus("ACTIVE");
                     entity.setExpiresAt(null);
                     entity.setUploadSessionId(null);
@@ -102,26 +119,9 @@ class AttachmentTxService {
                         throw new BizException(ResultEnum.DATA_CONFLICT, "数据已被其他用户修改");
                     }
                 }
-                BizAttachmentEntity bizEntity = selectBizByAttachmentId(attachmentId);
-                if (bizEntity != null) {
-                    if (!form.getBizType().equals(bizEntity.getBizType())) {
-                        throw new BizException(ResultEnum.PERMISSION_ERROR, "附件业务资源类型不匹配");
-                    }
-                    if (!"TEMP".equals(entity.getStatus()) && bizEntity.getBizId() != null
-                            && !form.getBizId().equals(bizEntity.getBizId())) {
-                        throw new BizException(ResultEnum.PERMISSION_ERROR, "已确认附件不能绑定到其他业务单据");
-                    }
+                if (temporary) {
                     bizEntity.setBizId(form.getBizId());
                     if (bizMapper.updateById(bizEntity) != 1) {
-                        throw new BizException(ResultEnum.PERSISTENCE_ERROR, "聚合明细写入失败");
-                    }
-                } else {
-                    BizAttachmentEntity newBiz = new BizAttachmentEntity();
-                    newBiz.setBizType(form.getBizType());
-                    newBiz.setBizId(form.getBizId());
-                    newBiz.setAttachmentId(attachmentId);
-                    newBiz.setSort(0);
-                    if (bizMapper.insert(newBiz) != 1) {
                         throw new BizException(ResultEnum.PERSISTENCE_ERROR, "聚合明细写入失败");
                     }
                 }
