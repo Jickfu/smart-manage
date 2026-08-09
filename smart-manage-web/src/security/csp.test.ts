@@ -10,7 +10,9 @@ describe('login CSP', () => {
     const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 
     expect(inlineScript).toBeDefined();
-    const scriptHash = createHash('sha256').update(inlineScript!).digest('base64');
+    // HTML 解析会将 CRLF 规范化为 LF，哈希计算必须与浏览器和 Linux 构建环境保持一致。
+    const normalizedInlineScript = inlineScript!.replace(/\r\n?/g, '\n');
+    const scriptHash = createHash('sha256').update(normalizedInlineScript).digest('base64');
     expect(html).toContain(`script-src 'self' 'sha256-${scriptHash}'`);
     expect(html).not.toContain("script-src 'self' 'unsafe-inline'");
   });
