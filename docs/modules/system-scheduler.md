@@ -22,6 +22,8 @@
 
 执行实例状态为 `RUNNING`、`SUCCESS`、`FAILED`、`SKIPPED`、`UNKNOWN`，由 Quartz 全局监听器写入，业务接口只读。`SKIPPED` 表示共享资源互斥键已被其他任务占用，本次触发未执行业务代码；`UNKNOWN` 表示任务可能已经产生副作用，但最终结果未能可靠落库，需要自动或人工对账。
 
+执行实例按[日志数据生命周期](../architecture/log-lifecycle.md)转入历史和淘汰。包含 `RUNNING` 或 `UNKNOWN` 的整月分区必须保留在在线父表，完成执行或对账后才能转储。
+
 不同任务可配置相同的 `mutexKey` 来声明对同一共享资源的互斥访问。互斥键为空时不限制并发；互斥范围不是任务类或 Quartz JobKey，因此同一执行类的不同参数任务仍可独立调度。`mutexKey` 必须使用 Redis 分布式锁或数据库锁跨实例生效，不得使用 JVM 锁冒充集群互斥。
 
 ## 安全边界

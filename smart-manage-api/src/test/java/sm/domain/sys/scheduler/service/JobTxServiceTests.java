@@ -69,6 +69,30 @@ class JobTxServiceTests {
         verify(mapper).delete(any());
     }
 
+    @Test
+    void systemTaskRejectsIdentityChange() {
+        JobEntity entity = task("PAUSED", 2);
+        entity.setIsSystem(true);
+        entity.setNumber("SYSTEM_LOG_ARCHIVE");
+        entity.setJobName("系统日志分区转储");
+        entity.setJobGroup("SYSTEM");
+        entity.setJobClassName("example.Job");
+        entity.setMutexKey("system-log-lifecycle");
+        when(mapper.selectById(1L)).thenReturn(entity);
+        JobSaveForm form = saveForm();
+        form.setId(1L);
+        form.setVersion(2);
+        form.setNumber("CHANGED");
+        form.setJobName(entity.getJobName());
+        form.setJobGroup(entity.getJobGroup());
+        form.setMutexKey(entity.getMutexKey());
+
+        BizException exception = assertThrows(BizException.class, () -> txService.save(form));
+
+        assertEquals(ResultEnum.BILL_STATUS_ERROR.getCode(), exception.getCode());
+        verify(mapper, never()).updateById(any(JobEntity.class));
+    }
+
     private static JobEntity task(String status, Integer version) {
         JobEntity entity = new JobEntity();
         entity.setId(1L);

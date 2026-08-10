@@ -32,6 +32,10 @@ public class JobLogService {
 
     public PageData<JobLogListVO> listPage(JobLogListForm form) {
         LambdaQueryWrapper<JobLogEntity> qw = new LambdaQueryWrapper<JobLogEntity>();
+        qw.select(JobLogEntity::getId, JobLogEntity::getJobId, JobLogEntity::getJobName,
+                JobLogEntity::getJobGroup, JobLogEntity::getStartTime, JobLogEntity::getEndTime,
+                JobLogEntity::getDurationMs, JobLogEntity::getStatus, JobLogEntity::getErrorMessage,
+                JobLogEntity::getTraceId, JobLogEntity::getCreateTime);
         if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
             // MyBatis-Plus 的 like 会添加两侧通配符；用户输入按模糊搜索语义处理。
             qw.like(JobLogEntity::getJobName, form.getKeyword().trim());

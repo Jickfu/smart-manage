@@ -86,12 +86,14 @@ const JobEditPage = (props: PageComponentProps) => {
         label: '任务编码',
         dataIndex: 'number',
         type: 'text',
+        disabled: detail?.isSystem,
         rules: [{ required: true, message: '任务编码不能为空' }],
       },
       {
         label: '任务名称',
         dataIndex: 'jobName',
         type: 'text',
+        disabled: detail?.isSystem,
         rules: [{ required: true, message: '任务名称不能为空' }],
       },
       {
@@ -125,6 +127,7 @@ const JobEditPage = (props: PageComponentProps) => {
         dataIndex: 'mutexKey',
         type: 'text',
         columnSpan: 2,
+        disabled: detail?.isSystem,
         placeholder: '相同互斥键的任务不会同时执行；留空表示不互斥',
       },
       {

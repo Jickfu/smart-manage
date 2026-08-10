@@ -67,4 +67,5 @@ CorsFilter（跨域处理）
 - [前端架构](./frontend.md)
 - [安全架构](./security.md)
 - [质量验证](../development/verification.md)
+- [日志数据生命周期](./log-lifecycle.md)
 - [新增业务聚合检查清单](../development/business-aggregate-checklist.md)

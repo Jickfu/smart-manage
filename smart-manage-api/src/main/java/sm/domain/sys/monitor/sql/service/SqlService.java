@@ -56,7 +56,10 @@ public class SqlService {
         currentUserContext.checkAdministrator();
         validateListForm(form);
         LambdaQueryWrapper<SqlLogEntity> query = new LambdaQueryWrapper<>();
-        query.like(StringUtil.isNotBlank(form.getKeyword()), SqlLogEntity::getSqlText, form.getKeyword())
+        query.select(SqlLogEntity::getId, SqlLogEntity::getSqlText, SqlLogEntity::getExecuteDuration,
+                        SqlLogEntity::getResultType, SqlLogEntity::getRowCount, SqlLogEntity::getCreateName,
+                        SqlLogEntity::getCreateIp, SqlLogEntity::getCreateTime)
+                .like(StringUtil.isNotBlank(form.getKeyword()), SqlLogEntity::getSqlText, form.getKeyword())
                 .eq(StringUtil.isNotBlank(form.getResultType()), SqlLogEntity::getResultType, form.getResultType())
                 .ge(form.getStartTime() != null, SqlLogEntity::getCreateTime, form.getStartTime())
                 .le(form.getEndTime() != null, SqlLogEntity::getCreateTime, form.getEndTime())

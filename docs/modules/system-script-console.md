@@ -57,6 +57,7 @@ return result;
 - 执行日志保存实际执行源码快照、关联脚本、事务模式、状态、耗时、事务结果、截断后的输出、错误、执行人、IP 和时间；
 - 删除已保存脚本不会删除历史快照，日志表不设置脚本外键；
 - 状态包括 `SUCCESS`、`ERROR`、`TIMEOUT`，事务结果包括 `COMMITTED`、`ROLLED_BACK`、`NOT_APPLICABLE`。
+- 执行日志按[日志数据生命周期](../architecture/log-lifecycle.md)转入历史和淘汰。
 
 ## 系统参数
 

@@ -24,6 +24,12 @@ public class OperateLogService {
 	public PageData<OperateLogListVO> listPage(OperateLogListForm form) {
 		LogQueryValidator.validateTimeRange(form.getBeginTime(), form.getEndTime());
 		LambdaQueryWrapper<OperateLogEntity> qw = new LambdaQueryWrapper<OperateLogEntity>();
+		// 请求参数、响应正文和 User-Agent 只在详情读取。
+		qw.select(OperateLogEntity::getId, OperateLogEntity::getBizName, OperateLogEntity::getSuccess,
+				OperateLogEntity::getErrorMsg, OperateLogEntity::getRequestMethod,
+				OperateLogEntity::getRequestUri, OperateLogEntity::getIp, OperateLogEntity::getClassName,
+				OperateLogEntity::getMethodName, OperateLogEntity::getDurationMs,
+				OperateLogEntity::getUsername, OperateLogEntity::getTraceId, OperateLogEntity::getCreateTime);
 		if (StringUtils.hasText(form.getKeyword())) {
 			String keyword = form.getKeyword().trim();
 			qw.and(condition -> condition

@@ -24,6 +24,11 @@ public class LoginLogService {
 	public PageData<LoginLogListVO> listPage(LoginLogListForm form) {
 		LogQueryValidator.validateTimeRange(form.getBeginTime(), form.getEndTime());
 		LambdaQueryWrapper<LoginLogEntity> qw = new LambdaQueryWrapper<LoginLogEntity>();
+		// 列表不读取 User-Agent 等详情字段，避免大字段放大分页 IO。
+		qw.select(LoginLogEntity::getId, LoginLogEntity::getUserId, LoginLogEntity::getUsername,
+				LoginLogEntity::getNickname, LoginLogEntity::getEventType, LoginLogEntity::getSuccess,
+				LoginLogEntity::getFailReason, LoginLogEntity::getIp, LoginLogEntity::getTraceId,
+				LoginLogEntity::getCreateTime);
 		if (StringUtils.hasText(form.getKeyword())) {
 			String keyword = form.getKeyword().trim();
 			qw.and(condition -> condition

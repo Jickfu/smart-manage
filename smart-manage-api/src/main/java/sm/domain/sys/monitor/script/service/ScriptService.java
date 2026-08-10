@@ -112,7 +112,12 @@ public class ScriptService {
         currentUserContext.checkAdministrator();
         validateLogForm(form);
         LambdaQueryWrapper<ScriptLogEntity> query = new LambdaQueryWrapper<>();
-        query.and(StringUtil.isNotBlank(form.getKeyword()), wrapper -> wrapper
+        // 源码、输出和错误正文仅在详情加载。
+        query.select(ScriptLogEntity::getId, ScriptLogEntity::getScriptId, ScriptLogEntity::getScriptName,
+                        ScriptLogEntity::getTransactionMode, ScriptLogEntity::getExecuteStatus,
+                        ScriptLogEntity::getExecuteDuration, ScriptLogEntity::getTransactionResult,
+                        ScriptLogEntity::getCreateName, ScriptLogEntity::getCreateIp, ScriptLogEntity::getCreateTime)
+                .and(StringUtil.isNotBlank(form.getKeyword()), wrapper -> wrapper
                         .like(ScriptLogEntity::getScriptName, form.getKeyword())
                         .or().like(ScriptLogEntity::getScriptContent, form.getKeyword()))
                 .eq(StringUtil.isNotBlank(form.getStatus()), ScriptLogEntity::getExecuteStatus, form.getStatus())

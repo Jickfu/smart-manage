@@ -13,6 +13,8 @@ import sm.domain.sys.scheduler.constant.JobStatus;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
+import java.util.Objects;
+
 /** 定时任务数据库事务服务；Quartz 同步由公开 Service 在事务提交后执行。 */
 @Service
 @RequiredArgsConstructor
@@ -22,10 +24,17 @@ class JobTxService {
     private final JobMapper mapper;
 
     public Long save(JobSaveForm form) {
+        String number = form.getNumber().trim();
+        String jobName = form.getJobName().trim();
+        String jobGroup = form.getJobGroup() == null || form.getJobGroup().isBlank()
+                ? "DEFAULT" : form.getJobGroup().trim();
+        String jobClassName = form.getJobClassName().trim();
+        String mutexKey = form.getMutexKey() == null || form.getMutexKey().isBlank()
+                ? null : form.getMutexKey().trim();
         JobEntity entity;
         if (form.getId() == null) {
             entity = new JobEntity();
-            entity.setNumber(form.getNumber());
+            entity.setNumber(number);
         } else {
             entity = mapper.selectById(form.getId());
             if (entity == null) {
@@ -33,26 +42,18 @@ class JobTxService {
             }
             requireVersion(entity, form.getVersion());
             if (Boolean.TRUE.equals(entity.getIsSystem())) {
-                if (!entity.getJobClassName().equals(form.getJobClassName())) {
-                    throw new BizException(ResultEnum.BILL_STATUS_ERROR, "系统内置任务不可修改执行类");
-                }
-                if (!entity.getJobGroup().equals(form.getJobGroup())) {
-                    throw new BizException(ResultEnum.BILL_STATUS_ERROR, "系统内置任务不可修改任务分组");
-                }
+                requireSystemIdentity(entity, number, jobName, jobGroup, jobClassName, mutexKey);
             }
         }
 
-        String jobGroup = form.getJobGroup() == null || form.getJobGroup().isBlank()
-                ? "DEFAULT" : form.getJobGroup().trim();
-        requireUnique(form.getId(), form.getNumber().trim(), form.getJobName().trim(), jobGroup);
-        entity.setNumber(form.getNumber().trim());
-        entity.setJobName(form.getJobName().trim());
+        requireUnique(form.getId(), number, jobName, jobGroup);
+        entity.setNumber(number);
+        entity.setJobName(jobName);
         entity.setJobGroup(jobGroup);
-        entity.setJobClassName(form.getJobClassName().trim());
+        entity.setJobClassName(jobClassName);
         entity.setCronExpression(form.getCronExpression().trim());
         entity.setJobData(form.getJobData());
-        entity.setMutexKey(form.getMutexKey() == null || form.getMutexKey().isBlank()
-                ? null : form.getMutexKey().trim());
+        entity.setMutexKey(mutexKey);
         // 状态只允许通过暂停/恢复命令改变；新增任务必须先以暂停状态完成配置。
         if (form.getId() == null) {
             entity.setStatus(JobStatus.PAUSED.name());
@@ -133,6 +134,18 @@ class JobTxService {
                 .ne(id != null, JobEntity::getId, id));
         if (keyCount > 0) {
             throw new BizException(ResultEnum.UNIQUE_CONFLICT, "同一分组下任务名称已存在");
+        }
+    }
+
+    private void requireSystemIdentity(JobEntity entity, String number, String jobName, String jobGroup,
+                                       String jobClassName, String mutexKey) {
+        if (!Objects.equals(entity.getNumber(), number)
+                || !Objects.equals(entity.getJobName(), jobName)
+                || !Objects.equals(entity.getJobGroup(), jobGroup)
+                || !Objects.equals(entity.getJobClassName(), jobClassName)
+                || !Objects.equals(entity.getMutexKey(), mutexKey)) {
+            throw new BizException(ResultEnum.BILL_STATUS_ERROR,
+                    "系统内置任务不可修改编码、名称、分组、执行类或互斥键");
         }
     }
 
