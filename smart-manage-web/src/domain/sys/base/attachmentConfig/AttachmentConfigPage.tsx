@@ -182,7 +182,7 @@ const AttachmentConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
                     <InputNumber
                       className="sm-edit-control-full"
                       min={1}
-                      max={1024}
+                      max={100}
                       precision={0}
                       variant="underlined"
                     />

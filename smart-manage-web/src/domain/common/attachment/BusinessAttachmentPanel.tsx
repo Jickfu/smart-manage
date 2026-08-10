@@ -11,7 +11,7 @@ interface BusinessAttachmentPanelProps {
   resourceType: string;
   attachments: BusinessAttachment[];
   editable: boolean;
-  onChange: (attachments: BusinessAttachment[]) => void;
+  onChange: (attachments: BusinessAttachment[], changeType: 'upload' | 'delete') => void;
 }
 
 function formatFileSize(bytes?: number) {
@@ -27,7 +27,7 @@ export function BusinessAttachmentPanel({
   editable,
   onChange,
 }: BusinessAttachmentPanelProps) {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const columns = useMemo<ColumnsType<BusinessAttachment>>(
     () => [
       {
@@ -37,8 +37,29 @@ export function BusinessAttachmentPanel({
           <Button
             type="link"
             icon={<DownloadOutlined />}
-            onClick={() => {
-              if (attachment.url) window.open(attachment.url, '_blank', 'noopener,noreferrer');
+            onClick={async () => {
+              try {
+                const access = await businessAttachmentApi.downloadAccess(
+                  attachment.id,
+                  attachment.uploadSessionId,
+                );
+                if (access.directUrl) {
+                  window.open(access.directUrl, '_blank', 'noopener,noreferrer');
+                  return;
+                }
+                const blob = await businessAttachmentApi.download(
+                  attachment.id,
+                  attachment.uploadSessionId,
+                );
+                const objectUrl = URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+                anchor.href = objectUrl;
+                anchor.download = attachment.originalName;
+                anchor.click();
+                URL.revokeObjectURL(objectUrl);
+              } catch (error) {
+                message.error(error instanceof Error ? error.message : '附件下载失败');
+              }
             }}
           >
             {name}
@@ -68,13 +89,29 @@ export function BusinessAttachmentPanel({
                 <Button
                   type="link"
                   danger
-                  onClick={async () => {
-                    try {
-                      await businessAttachmentApi.delete(attachment.id, attachment.uploadSessionId);
-                      onChange(attachments.filter((item) => item.id !== attachment.id));
-                    } catch (error) {
-                      message.error(error instanceof Error ? error.message : '附件删除失败');
-                    }
+                  onClick={() => {
+                    modal.confirm({
+                      title: '确认删除附件？',
+                      content: '删除会立即生效，取消或关闭当前表单也无法恢复。',
+                      okText: '删除',
+                      okType: 'danger',
+                      cancelText: '取消',
+                      onOk: async () => {
+                        try {
+                          await businessAttachmentApi.delete(
+                            attachment.id,
+                            attachment.uploadSessionId,
+                          );
+                          onChange(
+                            attachments.filter((item) => item.id !== attachment.id),
+                            'delete',
+                          );
+                        } catch (error) {
+                          message.error(error instanceof Error ? error.message : '附件删除失败');
+                          throw error;
+                        }
+                      },
+                    });
                   }}
                 >
                   删除
@@ -84,12 +121,12 @@ export function BusinessAttachmentPanel({
           ]
         : []),
     ],
-    [attachments, editable, message, onChange],
+    [attachments, editable, message, modal, onChange],
   );
   const customRequest: UploadProps['customRequest'] = async ({ file, onSuccess, onError }) => {
     try {
       const attachment = await businessAttachmentApi.upload(resourceType, file as File);
-      onChange([...attachments, attachment]);
+      onChange([...attachments, attachment], 'upload');
       onSuccess?.(attachment);
     } catch (error) {
       message.error(error instanceof Error ? error.message : '附件上传失败');

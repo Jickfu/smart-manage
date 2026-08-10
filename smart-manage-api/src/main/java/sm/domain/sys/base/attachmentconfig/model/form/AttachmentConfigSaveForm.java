@@ -14,7 +14,7 @@ public class AttachmentConfigSaveForm {
     private Integer version;
     @NotNull
     @Min(1)
-    @Max(1073741824)
+    @Max(value = 104857600, message = "单文件最大大小不能超过服务端 100MB 上限")
     private Long maxUploadBytes;
     @NotEmpty
     private List<String> allowedExtensions;

@@ -3,6 +3,7 @@ import { Alert, Button, Card, Descriptions, Statistic, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
 import SmChart from '@/domain/common/chart/SmChart';
+import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { cacheApi } from './api';
 import { cacheQueryKeys } from './queryKeys';
@@ -85,12 +86,13 @@ export default function CachePage(_: PageComponentProps) {
   ];
   const error = cacheQuery.error ?? runtimeQuery.error;
   return (
-    <div className="sm-cache-page">
-      {error && <Alert type="error" showIcon title={error.message} />}
-      <div className="sm-cache-status-toolbar">
-        <h2>缓存状态</h2>
+    <EditPageShell
+      title="缓存状态"
+      loading={false}
+      actions={
         <Button
           type="primary"
+          loading={cacheQuery.isFetching || runtimeQuery.isFetching}
           onClick={() => {
             void cacheQuery.refetch();
             void runtimeQuery.refetch();
@@ -98,80 +100,84 @@ export default function CachePage(_: PageComponentProps) {
         >
           刷新
         </Button>
-      </div>
-      <div className="sm-cache-status-grid">
-        <Card title="Redis 实时状态" loading={runtimeQuery.isLoading}>
-          <Descriptions
-            column={2}
-            items={[
-              { key: 'version', label: '版本', children: runtimeQuery.data?.version ?? '-' },
-              { key: 'database', label: '数据库', children: runtimeQuery.data?.database ?? '-' },
-              {
-                key: 'clients',
-                label: '客户端',
-                children: runtimeQuery.data?.connectedClients ?? '-',
-              },
-              { key: 'keys', label: 'Key 数', children: runtimeQuery.data?.dbSize ?? '-' },
-              { key: 'hits', label: '命中', children: runtimeQuery.data?.keyspaceHits ?? '-' },
-              {
-                key: 'misses',
-                label: '未命中',
-                children: runtimeQuery.data?.keyspaceMisses ?? '-',
-              },
-            ]}
+      }
+    >
+      <div className="sm-cache-page">
+        {error && <Alert type="error" showIcon title={error.message} />}
+        <div className="sm-cache-status-grid">
+          <Card title="Redis 实时状态" loading={runtimeQuery.isLoading}>
+            <Descriptions
+              column={2}
+              items={[
+                { key: 'version', label: '版本', children: runtimeQuery.data?.version ?? '-' },
+                { key: 'database', label: '数据库', children: runtimeQuery.data?.database ?? '-' },
+                {
+                  key: 'clients',
+                  label: '客户端',
+                  children: runtimeQuery.data?.connectedClients ?? '-',
+                },
+                { key: 'keys', label: 'Key 数', children: runtimeQuery.data?.dbSize ?? '-' },
+                { key: 'hits', label: '命中', children: runtimeQuery.data?.keyspaceHits ?? '-' },
+                {
+                  key: 'misses',
+                  label: '未命中',
+                  children: runtimeQuery.data?.keyspaceMisses ?? '-',
+                },
+              ]}
+            />
+          </Card>
+          <Card title="Redis 内存快照" loading={runtimeQuery.isLoading}>
+            <div className="sm-cache-memory-snapshot">
+              {runtimeQuery.data?.maxMemoryBytes ? (
+                <SmChart option={memoryOption} ariaLabel="Redis 当前内存使用率" />
+              ) : (
+                <div className="sm-cache-memory-unlimited">
+                  <span>当前已使用</span>
+                  <strong>{runtimeQuery.data?.usedMemoryDisplay ?? '-'}</strong>
+                  <small>Redis 未设置 maxmemory 上限，无法计算使用率</small>
+                </div>
+              )}
+              <div className="sm-cache-memory-metrics">
+                <Statistic title="已使用内存" value={runtimeQuery.data?.usedMemoryDisplay ?? '-'} />
+                <Statistic
+                  title="内存上限"
+                  value={
+                    runtimeQuery.data?.maxMemoryBytes
+                      ? formatBytes(runtimeQuery.data.maxMemoryBytes)
+                      : '未设置'
+                  }
+                />
+                <Statistic
+                  title="剩余可用"
+                  value={
+                    runtimeQuery.data?.maxMemoryBytes
+                      ? formatBytes(
+                          Math.max(
+                            runtimeQuery.data.maxMemoryBytes - runtimeQuery.data.usedMemoryBytes,
+                            0,
+                          ),
+                        )
+                      : '-'
+                  }
+                />
+              </div>
+            </div>
+          </Card>
+        </div>
+        <Card title="JetCache 实时统计" loading={cacheQuery.isLoading}>
+          <Alert
+            type="info"
+            showIcon
+            title="统计值来自 JetCache 当前采样周期；应用重启或定时统计输出后会重新开始累计。"
+          />
+          <Table
+            rowKey="name"
+            columns={columns}
+            dataSource={cacheQuery.data?.caches ?? []}
+            pagination={false}
           />
         </Card>
-        <Card title="Redis 内存快照" loading={runtimeQuery.isLoading}>
-          <div className="sm-cache-memory-snapshot">
-            {runtimeQuery.data?.maxMemoryBytes ? (
-              <SmChart option={memoryOption} ariaLabel="Redis 当前内存使用率" />
-            ) : (
-              <div className="sm-cache-memory-unlimited">
-                <span>当前已使用</span>
-                <strong>{runtimeQuery.data?.usedMemoryDisplay ?? '-'}</strong>
-                <small>Redis 未设置 maxmemory 上限，无法计算使用率</small>
-              </div>
-            )}
-            <div className="sm-cache-memory-metrics">
-              <Statistic title="已使用内存" value={runtimeQuery.data?.usedMemoryDisplay ?? '-'} />
-              <Statistic
-                title="内存上限"
-                value={
-                  runtimeQuery.data?.maxMemoryBytes
-                    ? formatBytes(runtimeQuery.data.maxMemoryBytes)
-                    : '未设置'
-                }
-              />
-              <Statistic
-                title="剩余可用"
-                value={
-                  runtimeQuery.data?.maxMemoryBytes
-                    ? formatBytes(
-                        Math.max(
-                          runtimeQuery.data.maxMemoryBytes - runtimeQuery.data.usedMemoryBytes,
-                          0,
-                        ),
-                      )
-                    : '-'
-                }
-              />
-            </div>
-          </div>
-        </Card>
       </div>
-      <Card title="JetCache 实时统计" loading={cacheQuery.isLoading}>
-        <Alert
-          type="info"
-          showIcon
-          title="统计值来自 JetCache 当前采样周期；应用重启或定时统计输出后会重新开始累计。"
-        />
-        <Table
-          rowKey="name"
-          columns={columns}
-          dataSource={cacheQuery.data?.caches ?? []}
-          pagination={false}
-        />
-      </Card>
-    </div>
+    </EditPageShell>
   );
 }

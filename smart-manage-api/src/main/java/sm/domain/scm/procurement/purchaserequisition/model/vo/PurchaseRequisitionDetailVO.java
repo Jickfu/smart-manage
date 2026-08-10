@@ -14,7 +14,7 @@ public class PurchaseRequisitionDetailVO {
     private Integer version;
     private String number;
     private String subject;
-    private Long applyOrgId;
+    private Long orgId;
     private Long applicantId;
     private LocalDate bizDate;
     private LocalDate requiredDate;

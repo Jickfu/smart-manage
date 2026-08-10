@@ -21,6 +21,8 @@
 
 .sm-edit-header-actions {
   display: flex;
+  flex: 1;
+  min-width: 0;
   align-items: center;
   gap: 6px;
 }
@@ -47,8 +49,12 @@
 
 .sm-edit-collapse > .ant-collapse-item {
   border: 0;
-  border-bottom: 10px solid var(--sm-color-layout);
+  margin-bottom: 10px;
   background-color: #fff;
+}
+
+.sm-edit-collapse > .ant-collapse-item:last-child {
+  margin-bottom: 0;
 }
 
 .sm-edit-collapse > .ant-collapse-item > .ant-collapse-header {

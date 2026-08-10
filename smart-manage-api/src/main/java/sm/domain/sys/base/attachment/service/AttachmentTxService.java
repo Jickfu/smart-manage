@@ -168,7 +168,6 @@ class AttachmentTxService {
                 .eq(BizAttachmentEntity::getAttachmentId, attachmentId));
     }
 
-    /** 上传结果需要拼装存储访问地址，因此不交给 MapStruct。 */
     private AttachmentVO assembleAttachmentVO(AttachmentEntity entity) {
         AttachmentVO vo = new AttachmentVO();
         vo.setId(entity.getId());
@@ -178,7 +177,6 @@ class AttachmentTxService {
         vo.setFileExt(entity.getFileExt());
         vo.setIsTemp("TEMP".equals(entity.getStatus()));
         vo.setUploadSessionId(entity.getUploadSessionId());
-        vo.setUrl(storageFactory.getService(entity.getStorageType()).getAccessUrl(entity.getObjectKey()));
         if (entity.getCreateTime() != null) {
             vo.setCreateTime(entity.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
@@ -196,7 +194,14 @@ class AttachmentTxService {
     private String sha256(MultipartFile file) throws IOException {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(file.getBytes()));
+            try (java.io.InputStream inputStream = file.getInputStream()) {
+                byte[] buffer = new byte[8192];
+                int readLength;
+                while ((readLength = inputStream.read(buffer)) != -1) {
+                    digest.update(buffer, 0, readLength);
+                }
+            }
+            return HexFormat.of().formatHex(digest.digest());
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("运行环境不支持 SHA-256", exception);
         }

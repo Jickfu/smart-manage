@@ -18,6 +18,7 @@
 - [质量验证](./development/verification.md)
 - [数据库开发](./development/database.md)
 - [新增业务聚合检查清单](./development/business-aggregate-checklist.md)
+- [数据权限设计](./architecture/data-permission.md)
 
 ## 模块
 
@@ -26,6 +27,11 @@
 - [缓存监控](./modules/system-cache-and-redis.md)
 - [系统监控日志](./modules/system-monitor-logs.md)
 - [任务调度](./modules/system-scheduler.md)
+- [附件与对象存储](./modules/system-attachment.md)
+- [SQL 控制台](./modules/system-sql-console.md)
+- [脚本控制台](./modules/system-script-console.md)
+- [运行监控](./modules/system-runtime-monitoring.md)
+- [线程诊断](./modules/system-thread-diagnostics.md)
 
 每个可选业务模块都应记录边界、依赖、数据库迁移和移除方式。
 

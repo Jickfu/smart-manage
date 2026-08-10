@@ -36,7 +36,7 @@ class PurchaseRequisitionTxService {
         PurchaseRequisitionEntity entity;
         if (form.getId() == null) {
             entity = new PurchaseRequisitionEntity();
-            entity.setApplyOrgId(currentUserContext.getOrgId());
+            entity.setOrgId(currentUserContext.getOrgId());
             entity.setApplicantId(currentUserContext.getUserId());
             entity.setBillStatus(BillStatusEnum.SAVED.getValue());
         } else {
@@ -103,6 +103,12 @@ class PurchaseRequisitionTxService {
         PurchaseRequisitionEntity entity = requireEntity(id);
         BillStatusUtil.requireCanSave(entity.getBillStatus());
         requireVersion(entity, version);
+        try {
+            attachmentService.deleteForAggregate(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE,
+                    String.valueOf(id));
+        } catch (java.io.IOException exception) {
+            throw new BizException(ResultEnum.PERSISTENCE_ERROR, "采购申请附件删除失败: " + exception.getMessage());
+        }
         entryMapper.delete(new LambdaQueryWrapper<PurchaseRequisitionEntryEntity>()
                 .eq(PurchaseRequisitionEntryEntity::getParentId, id));
         int deleted = mapper.delete(new LambdaQueryWrapper<PurchaseRequisitionEntity>()

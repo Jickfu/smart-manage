@@ -103,6 +103,41 @@ describe('workbench store', () => {
     expect(state.beforeCloseCallbacks[`${APP_NUMBER}:${tabKey}`]).toBeUndefined();
   });
 
+  it('全局关闭检查尊重页面拒绝结果且不继续检查后续页面', async () => {
+    const store = useWorkbenchStore.getState();
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, '110', OperationType.EDIT);
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, '111', OperationType.EDIT);
+    const firstGuard = vi.fn().mockResolvedValue(false);
+    const secondGuard = vi.fn().mockResolvedValue(true);
+    store.registerBeforeClose(APP_NUMBER, createBillTabKey(COMPONENT_KEY, '110'), firstGuard);
+    store.registerBeforeClose(APP_NUMBER, createBillTabKey(COMPONENT_KEY, '111'), secondGuard);
+
+    expect(await store.checkAllDirty()).toBe(false);
+    expect(firstGuard).toHaveBeenCalledOnce();
+    expect(secondGuard).not.toHaveBeenCalled();
+  });
+
+  it('关闭工作区时会检查守卫等待期间新增的页签', async () => {
+    const store = useWorkbenchStore.getState();
+    const firstTabKey = createBillTabKey(COMPONENT_KEY, '120');
+    const addedTabKey = createBillTabKey(COMPONENT_KEY, '121');
+    const addedGuard = vi.fn().mockResolvedValue(true);
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, '120', OperationType.EDIT);
+    store.registerBeforeClose(
+      APP_NUMBER,
+      firstTabKey,
+      vi.fn().mockImplementation(async () => {
+        store.openBillTab(APP_NUMBER, COMPONENT_KEY, '121', OperationType.EDIT);
+        store.registerBeforeClose(APP_NUMBER, addedTabKey, addedGuard);
+        return true;
+      }),
+    );
+
+    expect(await store.closeWorkspace(APP_NUMBER)).toBe(true);
+    expect(addedGuard).toHaveBeenCalledOnce();
+    expect(useWorkbenchStore.getState().workspaces[APP_NUMBER]).toBeUndefined();
+  });
+
   it('销毁工作区时释放该应用的全部关闭回调', () => {
     const store = useWorkbenchStore.getState();
     store.openBillTab(APP_NUMBER, COMPONENT_KEY, '102', OperationType.EDIT);

@@ -10,7 +10,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 /**
@@ -35,12 +34,10 @@ public class LocalFileStorageService implements FileStorageService {
 
     private final FileStorageConfigProvider configProvider;
 
-    private static final String TEMP_DIR = "temp";
-
     private String getBaseDir() {
         String dir = configProvider.getFileStorageConfig().localDir();
         if (dir == null || dir.isBlank()) {
-            dir = "E:/upload/";
+            dir = "./upload/";
         }
         if (!dir.endsWith("/") && !dir.endsWith("\\")) {
             dir = dir + "/";
@@ -51,11 +48,6 @@ public class LocalFileStorageService implements FileStorageService {
     @Override
     public FileStoreResult store(String subDir, MultipartFile file) throws IOException {
         return doStore(file, getBaseDir() + subDir + "/");
-    }
-
-    @Override
-    public FileStoreResult storeTemp(MultipartFile file) throws IOException {
-        return doStore(file, getBaseDir() + TEMP_DIR + "/");
     }
 
     private FileStoreResult doStore(MultipartFile file, String dir) throws IOException {
@@ -76,22 +68,6 @@ public class LocalFileStorageService implements FileStorageService {
     }
 
     @Override
-    public String move(String storedPath, String targetSubDir) throws IOException {
-        Path source = Paths.get(storedPath);
-        if (!Files.exists(source)) {
-            throw new IOException("待移动文件不存在: " + storedPath);
-        }
-        Path targetDir = Paths.get(getBaseDir(), targetSubDir);
-        if (!Files.exists(targetDir)) {
-            Files.createDirectories(targetDir);
-        }
-        Path target = targetDir.resolve(source.getFileName().toString());
-        Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
-        log.info("本地文件移动: {} -> {}", storedPath, target);
-        return target.toString();
-    }
-
-    @Override
     public void delete(String storedPath) throws IOException {
         if (storedPath == null) return;
         Path path = Paths.get(storedPath);
@@ -105,20 +81,6 @@ public class LocalFileStorageService implements FileStorageService {
     public InputStream openStream(String storedPath) throws IOException {
         Path path = Paths.get(storedPath);
         return Files.newInputStream(path);
-    }
-
-    @Override
-    public String getAccessUrl(String storedPath) {
-        if (storedPath == null) return null;
-        // 将文件系统路径转换为 /upload/xxx/... 的公开 URL
-        String baseDir = getBaseDir();
-        String normalizedBase = baseDir.replace("\\", "/");
-        if (!normalizedBase.endsWith("/")) normalizedBase = normalizedBase + "/";
-        String normalizedPath = storedPath.replace("\\", "/");
-        if (normalizedPath.startsWith(normalizedBase)) {
-            return "/upload/" + normalizedPath.substring(normalizedBase.length());
-        }
-        return "/upload/" + normalizedPath;
     }
 
     @Override

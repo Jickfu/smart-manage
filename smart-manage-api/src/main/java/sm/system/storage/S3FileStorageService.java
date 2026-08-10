@@ -8,7 +8,6 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -26,14 +25,12 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.HexFormat;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /** AWS S3 与 MinIO 共用的私有对象存储实现。 */
 @Component
 public class S3FileStorageService implements FileStorageService {
     private final FileStorageConfigProvider configProvider;
-    private final ConcurrentMap<String, S3Clients> clientsByConfiguration = new ConcurrentHashMap<>();
+    private volatile CachedClients cachedClients;
 
     public S3FileStorageService(FileStorageConfigProvider configProvider) {
         this.configProvider = configProvider;
@@ -54,26 +51,6 @@ public class S3FileStorageService implements FileStorageService {
             return FileStoreResult.of(objectKey.substring(objectKey.lastIndexOf('/') + 1), objectKey, file.getSize());
         } catch (RuntimeException exception) {
             throw new IOException("S3 对象上传失败", exception);
-        }
-    }
-
-    @Override
-    public FileStoreResult storeTemp(MultipartFile file) throws IOException {
-        return store("temp", file);
-    }
-
-    @Override
-    public String move(String storedPath, String targetSubDir) throws IOException {
-        FileStorageConfig config = config();
-        String targetKey = targetSubDir + "/" + storedPath.substring(storedPath.lastIndexOf('/') + 1);
-        try {
-            S3Client client = clients(config).client();
-            client.copyObject(CopyObjectRequest.builder().sourceBucket(config.s3Bucket()).sourceKey(storedPath)
-                    .destinationBucket(config.s3Bucket()).destinationKey(targetKey).build());
-            client.deleteObject(DeleteObjectRequest.builder().bucket(config.s3Bucket()).key(storedPath).build());
-            return targetKey;
-        } catch (RuntimeException exception) {
-            throw new IOException("S3 对象移动失败", exception);
         }
     }
 
@@ -100,7 +77,7 @@ public class S3FileStorageService implements FileStorageService {
     }
 
     @Override
-    public String getAccessUrl(String storedPath) {
+    public String createAuthorizedDownloadUrl(String storedPath) {
         FileStorageConfig config = config();
         S3Presigner presigner = clients(config).presigner();
         GetObjectRequest objectRequest = GetObjectRequest.builder()
@@ -108,7 +85,7 @@ public class S3FileStorageService implements FileStorageService {
                 .key(storedPath)
                 .build();
         GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofMinutes(5))
+                .signatureDuration(Duration.ofMinutes(1))
                 .getObjectRequest(objectRequest)
                 .build();
         return presigner.presignGetObject(presignRequest).url().toString();
@@ -123,9 +100,18 @@ public class S3FileStorageService implements FileStorageService {
         return configProvider.getFileStorageConfig();
     }
 
-    private S3Clients clients(FileStorageConfig config) {
-        return clientsByConfiguration.computeIfAbsent(configurationFingerprint(config), ignored ->
-                new S3Clients(client(config), presigner(config)));
+    private synchronized S3Clients clients(FileStorageConfig config) {
+        String fingerprint = configurationFingerprint(config);
+        if (cachedClients != null && cachedClients.fingerprint().equals(fingerprint)) {
+            return cachedClients.clients();
+        }
+        S3Clients nextClients = new S3Clients(client(config), presigner(config));
+        CachedClients previousClients = cachedClients;
+        cachedClients = new CachedClients(fingerprint, nextClients);
+        if (previousClients != null) {
+            previousClients.clients().close();
+        }
+        return nextClients;
     }
 
     /** 配置变化时使用新客户端；摘要避免把存储凭据放入缓存键或诊断输出。 */
@@ -146,9 +132,11 @@ public class S3FileStorageService implements FileStorageService {
     }
 
     @PreDestroy
-    void closeClients() {
-        clientsByConfiguration.values().forEach(S3Clients::close);
-        clientsByConfiguration.clear();
+    synchronized void closeClients() {
+        if (cachedClients != null) {
+            cachedClients.clients().close();
+            cachedClients = null;
+        }
     }
 
     private S3Client client(FileStorageConfig config) {
@@ -178,6 +166,9 @@ public class S3FileStorageService implements FileStorageService {
             client.close();
             presigner.close();
         }
+    }
+
+    private record CachedClients(String fingerprint, S3Clients clients) {
     }
 
     String objectKey(String subDir, String originalName) {

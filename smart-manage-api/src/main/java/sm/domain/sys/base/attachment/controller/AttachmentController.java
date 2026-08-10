@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
 import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.model.vo.AttachmentDownloadAccessVO;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.system.form.IdForm;
 import sm.system.response.Result;
@@ -87,5 +88,13 @@ public class AttachmentController {
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename*=UTF-8''" + encodedName)
                 .body(body);
+    }
+
+    @PostMapping("/sys/base/attachment/downloadAccess")
+    @Operation(summary = "获取附件下载方式", description = "完成对象权限校验后，为 S3 签发短时地址；其他存储由下载接口代理")
+    public Result<AttachmentDownloadAccessVO> downloadAccess(
+            @RequestBody @Valid IdForm form,
+            @RequestHeader(value = "X-Upload-Session", required = false) String uploadSessionId) {
+        return Result.success(service.createDownloadAccess(form.getId(), uploadSessionId));
     }
 }

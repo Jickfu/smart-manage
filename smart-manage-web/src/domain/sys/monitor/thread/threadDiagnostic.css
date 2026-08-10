@@ -1,0 +1,65 @@
+.sm-thread-diagnostic {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sm-thread-diagnostic-toolbar {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.sm-thread-diagnostic-instance {
+  min-width: 260px;
+}
+
+.sm-thread-diagnostic-name-filter {
+  width: 220px;
+}
+
+.sm-thread-diagnostic-state-filter {
+  width: 180px;
+}
+
+.sm-thread-diagnostic-grid {
+  display: grid;
+  grid-template-columns: minmax(520px, 3fr) minmax(360px, 2fr);
+  gap: 10px;
+}
+
+.sm-thread-diagnostic-card {
+  min-width: 0;
+}
+
+.sm-thread-stack {
+  min-height: 420px;
+  max-height: 680px;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-fill-quaternary);
+  color: var(--ant-color-text);
+  font-family: Consolas, 'SFMono-Regular', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sm-thread-stack-empty {
+  display: flex;
+  min-height: 420px;
+  align-items: center;
+  justify-content: center;
+  color: var(--ant-color-text-secondary);
+}
+
+@media (max-width: 1080px) {
+  .sm-thread-diagnostic-grid {
+    grid-template-columns: 1fr;
+  }
+}

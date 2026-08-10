@@ -193,9 +193,11 @@ const EditPage = ({
     };
   };
 
-  const updateAttachments = (values: BusinessAttachment[]) => {
-    revisionRef.current += 1;
-    dirtyRef.current = true;
+  const updateAttachments = (values: BusinessAttachment[], changeType: 'upload' | 'delete') => {
+    if (changeType === 'upload') {
+      revisionRef.current += 1;
+      dirtyRef.current = true;
+    }
     setAttachmentState({ source: attachmentResource?.initialAttachments, values });
   };
 

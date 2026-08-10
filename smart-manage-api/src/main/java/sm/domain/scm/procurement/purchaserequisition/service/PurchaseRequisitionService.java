@@ -69,7 +69,7 @@ public class PurchaseRequisitionService {
 
     public PurchaseRequisitionCreateNewDataVO createNewData() {
         PurchaseRequisitionCreateNewDataVO createNewDataVO = new PurchaseRequisitionCreateNewDataVO();
-        createNewDataVO.setApplyOrgId(currentUserContext.getOrgId());
+        createNewDataVO.setOrgId(currentUserContext.getOrgId());
         createNewDataVO.setApplicantId(currentUserContext.getUserId());
         createNewDataVO.setBizDate(LocalDate.now());
         createNewDataVO.setBillStatus(BillStatusEnum.SAVED.getValue());

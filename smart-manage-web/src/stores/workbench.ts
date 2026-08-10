@@ -89,6 +89,25 @@ interface WorkbenchState {
   activateContentTab: (appNumber: string, tabKey: string) => void;
 }
 
+/** 顺序执行最新的页面关闭守卫；任一页面拒绝或检查异常都终止整个关闭事务。 */
+async function runBeforeCloseGuards(
+  getState: () => WorkbenchState,
+  appNumber: string,
+  tabKeys: string[],
+): Promise<boolean> {
+  for (const tabKey of tabKeys) {
+    if (tabKey === '__home__') continue;
+    const beforeClose = getState().beforeCloseCallbacks[callbackKey(appNumber, tabKey)];
+    if (!beforeClose) continue;
+    try {
+      if (!(await beforeClose())) return false;
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
 function defaultWorkspace(appInfo: AppVO): WorkspaceState {
   return {
     appInfo,
@@ -125,49 +144,18 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     const ws = get().workspaces[appNumber];
     if (!ws) return true;
 
-    // 迭代检查：异步检查期间可能新增页签，需要循环检查直到没有未检查的页签
+    // 关闭守卫等待期间可能新增页签，持续收敛到一个稳定快照后再原子销毁工作区。
     const checkedKeys = new Set<string>();
-    const MAX_ROUNDS = 5;
-
-    for (let round = 0; round < MAX_ROUNDS; round++) {
+    while (true) {
       const currentWs = get().workspaces[appNumber];
       if (!currentWs) return true;
-
-      // 找出本轮的未检查页签（排除首页）
       const unchecked = currentWs.contentTabs.filter(
         (t) => t.key !== '__home__' && !checkedKeys.has(t.key),
       );
-
-      if (unchecked.length === 0) break; // 已全部检查完毕
-
-      for (const tab of unchecked) {
-        const key = callbackKey(appNumber, tab.key);
-        // 每个页签检查前重新获取最新回调映射，避免同一轮内前一个异步检查期间注册的回调被遗漏
-        const beforeClose = get().beforeCloseCallbacks[key];
-        if (beforeClose) {
-          try {
-            const canClose = await beforeClose();
-            if (!canClose) return false;
-          } catch {
-            return false;
-          }
-        }
-        checkedKeys.add(tab.key);
-      }
-    }
-
-    // 检查轮次超限：页签持续新增，放弃关闭
-    const finalWs = get().workspaces[appNumber];
-    if (finalWs) {
-      const stillUnchecked = finalWs.contentTabs.filter(
-        (t) => t.key !== '__home__' && !checkedKeys.has(t.key),
-      );
-      if (stillUnchecked.length > 0) {
-        console.warn(
-          `[workbench] closeWorkspace "${appNumber}" 检查轮次超限，仍有 ${stillUnchecked.length} 个未检查页签`,
-        );
-        return false;
-      }
+      if (unchecked.length === 0) break;
+      const uncheckedKeys = unchecked.map((tab) => tab.key);
+      if (!(await runBeforeCloseGuards(get, appNumber, uncheckedKeys))) return false;
+      uncheckedKeys.forEach((tabKey) => checkedKeys.add(tabKey));
     }
 
     // 所有页签检查通过，基于最新状态原子移除 Workspace
@@ -191,21 +179,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
 
   /** 批量关闭内容页签 — 顺序检查，全部通过后基于最新状态原子移除 */
   closeContentTabs: async (appNumber, tabKeys) => {
-    // 第一阶段：顺序检查所有 beforeClose 回调（回调映射独立于 tab 列表，此处可安全快照）
-    const { beforeCloseCallbacks } = get();
-    for (const tabKey of tabKeys) {
-      if (tabKey === '__home__') continue;
-      const key = callbackKey(appNumber, tabKey);
-      const beforeClose = beforeCloseCallbacks[key];
-      if (beforeClose) {
-        try {
-          const canClose = await beforeClose();
-          if (!canClose) return false;
-        } catch {
-          return false;
-        }
-      }
-    }
+    if (!(await runBeforeCloseGuards(get, appNumber, tabKeys))) return false;
 
     // 第二阶段：基于最新状态原子移除，避免覆盖检查期间的并发变更
     const tabKeySet = new Set(tabKeys);
@@ -248,21 +222,10 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
 
   /** 检查所有 Workspace 中是否有未保存数据（退出登录等全局操作前调用） */
   checkAllDirty: async () => {
-    const { workspaces, beforeCloseCallbacks } = get();
+    const { workspaces } = get();
     for (const [appNumber, ws] of Object.entries(workspaces)) {
-      for (const tab of ws.contentTabs) {
-        if (tab.key === '__home__') continue;
-        const key = callbackKey(appNumber, tab.key);
-        const beforeClose = beforeCloseCallbacks[key];
-        if (beforeClose) {
-          try {
-            const canClose = await beforeClose();
-            if (!canClose) return false;
-          } catch {
-            return false;
-          }
-        }
-      }
+      const tabKeys = ws.contentTabs.map((tab) => tab.key);
+      if (!(await runBeforeCloseGuards(get, appNumber, tabKeys))) return false;
     }
     return true;
   },

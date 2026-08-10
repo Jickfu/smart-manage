@@ -6,8 +6,11 @@ export interface BusinessAttachment {
   fileExt?: string;
   isTemp?: boolean;
   uploadSessionId?: string;
-  url?: string;
   createTime?: string;
+}
+
+export interface AttachmentDownloadAccess {
+  directUrl?: string;
 }
 
 export interface BusinessAttachmentFormValues {

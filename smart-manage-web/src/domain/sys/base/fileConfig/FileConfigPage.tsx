@@ -180,7 +180,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
                         label="本地存储目录"
                         rules={[{ required: true, message: '本地存储目录不能为空' }]}
                       >
-                        <Input variant="underlined" placeholder="例如 E:/upload/" />
+                        <Input variant="underlined" placeholder="例如 /data/smart-manage/upload/" />
                       </Form.Item>
                     ) : storageType === 'FTP' ? (
                       <>

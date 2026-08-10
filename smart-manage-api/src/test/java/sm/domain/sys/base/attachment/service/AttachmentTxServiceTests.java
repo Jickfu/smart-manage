@@ -16,9 +16,11 @@ import sm.system.storage.FileStorageServiceFactory;
 import sm.system.storage.FileStoreResult;
 
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -45,7 +47,8 @@ class AttachmentTxServiceTests {
 	void uploadDeletesStoredFileWhenMetadataInsertFails() throws IOException {
 		MultipartFile file = mock(MultipartFile.class);
 		when(file.getOriginalFilename()).thenReturn("test.txt");
-		when(file.getBytes()).thenReturn("test".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		when(file.getInputStream()).thenAnswer(ignored -> new ByteArrayInputStream(
+				"test".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
 		when(storageFactory.getService()).thenReturn(storage);
 		when(storage.store("asset/sys/base/ui-config", file)).thenReturn(
 				FileStoreResult.of("stored.txt", "asset/sys/stored.txt", 10));
@@ -57,7 +60,7 @@ class AttachmentTxServiceTests {
 	}
 
 	@Test
-	void promoteDoesNotMoveObjectWhenDatabaseUpdateFails() throws IOException {
+	void promoteKeepsStableObjectKeyWhenDatabaseUpdateFails() {
 		AttachmentEntity entity = new AttachmentEntity();
 		entity.setId(1L);
 		entity.setObjectKey("temp/stored.txt");
@@ -75,7 +78,7 @@ class AttachmentTxServiceTests {
 
 		assertThrows(BizException.class, () -> txService.promote(form));
 
-		verify(storage, never()).move(any(), any());
+		assertEquals("temp/stored.txt", entity.getObjectKey());
 	}
 
 	@Test

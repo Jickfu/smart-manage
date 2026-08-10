@@ -14,7 +14,7 @@ import { resolveAssetUrl } from '@/utils/assetUrl';
 import './Header.css';
 
 const Header = () => {
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [themeOpen, setThemeOpen] = useState(false);
   const [themeSaving, setThemeSaving] = useState(false);
   const tabs = useHeaderTabsStore((s) => s.tabs);
@@ -46,14 +46,7 @@ const Header = () => {
   const handleLogout = async () => {
     const allowed = await useWorkbenchStore.getState().checkAllDirty();
     if (!allowed) {
-      modal.confirm({
-        title: '有未保存的数据',
-        content: '部分页面存在未保存的修改，退出登录将丢失这些数据。确定退出吗？',
-        okText: '确定退出',
-        cancelText: '取消',
-        okButtonProps: { danger: true },
-        onOk: performLogout,
-      });
+      // 页面关闭守卫已经完成用户确认；拒绝关闭时必须尊重该决定，不能再次弹窗绕过。
       return;
     }
     await performLogout();

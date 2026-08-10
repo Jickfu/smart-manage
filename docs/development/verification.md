@@ -42,7 +42,7 @@ Windows 环境可以运行：
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 ```
 
-脚本创建临时数据库，按顺序执行全部迁移并在验证后清理。数据库结构、初始化数据、迁移顺序或脚本发生变化时必须执行此项验证。
+脚本创建临时数据库，通过项目锁定版本的 Flyway 执行全部迁移，校验版本、命名、checksum 和 `flyway_schema_history`，并在验证后清理。数据库结构、初始化数据、迁移顺序或脚本发生变化时必须执行此项验证。
 
 ## CI 门禁
 
@@ -55,7 +55,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 5. `pnpm test`；
 6. `pnpm build`；
 7. 组件注册表无差异检查；
-8. PostgreSQL 16 空库迁移。
+8. PostgreSQL 16 上的 Flyway 空库迁移；
+9. 使用迁移完成后的真实权限目录执行代码权限一致性校验。
 
 主分支保护属于 GitHub 仓库外部设置，需要由仓库管理员启用并要求质量门禁通过。
 
@@ -64,7 +65,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 - 架构边界：架构测试或静态检查。
 - 认证、权限和安全：单元/集成测试及必要浏览器验证。
 - 状态、事务和乐观锁：覆盖成功、非法状态、过期版本和回滚。
-- 文件存储：覆盖上传、移动、删除失败后的补偿。
+- 文件存储：覆盖上传、授权下载、删除失败后的补偿。
 - 前端生命周期：覆盖缓存失效、临时页签替换、只读状态和脏数据关闭。
 - 生产部署：验证 CSP、反向代理、敏感配置和被关闭的高风险入口。
 

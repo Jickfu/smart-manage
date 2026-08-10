@@ -32,7 +32,6 @@ class UiConfigServiceTests {
         UiConfigDetailVO detail = new UiConfigDetailVO();
         AttachmentVO attachment = new AttachmentVO();
         attachment.setId(11L);
-        attachment.setUrl("/upload/internal/banner.jpg");
         when(mapper.selectList(null)).thenReturn(List.of(config));
         when(converter.toDetailVO(config)).thenReturn(detail);
         when(attachmentService.listByIds(List.of(11L))).thenReturn(List.of(attachment));

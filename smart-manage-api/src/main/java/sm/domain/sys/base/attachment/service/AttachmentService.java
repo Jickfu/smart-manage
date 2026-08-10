@@ -11,6 +11,7 @@ import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.entity.BizAttachmentEntity;
 import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
 import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.model.vo.AttachmentDownloadAccessVO;
 import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.system.storage.FileStorageServiceFactory;
@@ -82,6 +83,13 @@ public class AttachmentService {
         txService.delete(id);
     }
 
+    /** 已完成主聚合删除权限校验后，清理其全部正式附件。 */
+    public void deleteForAggregate(String bizType, String bizId) throws IOException {
+        for (AttachmentEntity entity : mapper.selectByBiz(bizType, bizId)) {
+            txService.delete(entity.getId());
+        }
+    }
+
     /** 按业务单据查询附件列表 */
     public List<AttachmentVO> listByBiz(String bizType, String bizId) {
         resourceRegistry.requireAllowed(bizType, bizId, BusinessResourceAction.READ);
@@ -107,6 +115,14 @@ public class AttachmentService {
         }
         requireAttachmentAccess(entity, BusinessResourceAction.READ, uploadSessionId);
         return entity;
+    }
+
+    /** 权限校验必须先于短时直连地址签发，Local/FTP 返回空地址并由后端代理下载。 */
+    public AttachmentDownloadAccessVO createDownloadAccess(Long id, String uploadSessionId) {
+        AttachmentEntity entity = requireDownloadableAttachment(id, uploadSessionId);
+        String directUrl = storageFactory.getService(entity.getStorageType())
+                .createAuthorizedDownloadUrl(entity.getObjectKey());
+        return new AttachmentDownloadAccessVO(directUrl);
     }
 
     /** 供业务聚合读取自身正式附件，必须同时匹配业务类型和业务 ID。 */
@@ -182,7 +198,6 @@ public class AttachmentService {
         }
     }
 
-    /** 访问地址依赖当前存储实现，因此属于业务组装而非纯字段映射。 */
     private AttachmentVO assembleAttachmentVO(AttachmentEntity entity) {
         AttachmentVO vo = new AttachmentVO();
         vo.setId(entity.getId());
@@ -192,7 +207,6 @@ public class AttachmentService {
         vo.setFileExt(entity.getFileExt());
         vo.setIsTemp("TEMP".equals(entity.getStatus()));
         vo.setUploadSessionId(entity.getUploadSessionId());
-        vo.setUrl(storageFactory.getService(entity.getStorageType()).getAccessUrl(entity.getObjectKey()));
         if (entity.getCreateTime() != null) {
             vo.setCreateTime(entity.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }

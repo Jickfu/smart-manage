@@ -26,8 +26,6 @@ public class FtpFileStorageService implements FileStorageService {
         this.configProvider = configProvider;
     }
 
-    private static final String TEMP_DIR = "temp";
-
     private FileStorageConfig config() {
         return configProvider.getFileStorageConfig();
     }
@@ -109,11 +107,6 @@ public class FtpFileStorageService implements FileStorageService {
         return doStore(file, subDir);
     }
 
-    @Override
-    public FileStoreResult storeTemp(MultipartFile file) throws IOException {
-        return doStore(file, TEMP_DIR);
-    }
-
     private FileStoreResult doStore(MultipartFile file, String subDir) throws IOException {
         String originalName = file.getOriginalFilename();
         String ext = "";
@@ -138,23 +131,6 @@ public class FtpFileStorageService implements FileStorageService {
             }
             log.info("FTP 文件存储: {}", remotePath);
             return FileStoreResult.of(storedName, remotePath, file.getSize());
-        } finally {
-            disconnect(ftp);
-        }
-    }
-
-    @Override
-    public String move(String storedPath, String targetSubDir) throws IOException {
-        String filename = storedPath.contains("/") ? storedPath.substring(storedPath.lastIndexOf("/") + 1) : storedPath;
-        FTPClient ftp = connect();
-        try {
-            ensureDirectories(ftp, targetSubDir);
-            String targetFull = targetSubDir + "/" + filename;
-            if (!ftp.rename(storedPath, targetFull)) {
-                throw new IOException("FTP 文件移动失败: " + ftp.getReplyString());
-            }
-            log.info("FTP 文件移动: {} -> {}", storedPath, targetFull);
-            return targetFull;
         } finally {
             disconnect(ftp);
         }
@@ -201,11 +177,6 @@ public class FtpFileStorageService implements FileStorageService {
                 }
             }
         };
-    }
-
-    @Override
-    public String getAccessUrl(String storedPath) {
-        return null;
     }
 
     @Override

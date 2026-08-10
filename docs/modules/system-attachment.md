@@ -2,7 +2,7 @@
 
 ## 模块定位
 
-附件模块负责文件上传生命周期、对象存储元数据、业务归属和统一访问入口，不复制业务模块的数据权限模型。生产环境使用 S3 兼容对象存储，默认面向 MinIO；Local 仅用于开发和测试，FTP 作为兼容实现。
+附件模块负责文件上传生命周期、对象存储元数据、业务归属和统一访问入口，不复制业务模块的数据权限模型。单实例生产部署可以使用具备持久化与备份能力的 Local；多实例必须使用 S3 或 FTP 共享存储，并优先选择 S3/MinIO。
 
 ## 文件名和对象键
 
@@ -39,17 +39,11 @@ sys.report.report-template
 
 系统只建设轻量的 `BusinessResourceRegistry`，不建设动态字段、动态表单或动态数据表等动态模型平台。业务资源注册表为附件、评论和审计等通用能力提供稳定资源身份和统一授权入口；具体业务模型、状态和权限仍由所属业务模块显式编码。
 
-每个注册项至少定义：
-
-- `bizType`；
-- 稳定的 `cloudNumber`、`appNumber`、`resourceNumber`；
-- 资源类别：`BUSINESS_ATTACHMENT` 或 `SYSTEM_ASSET`；
-- 支持的通用能力；
-- 对应的 `BusinessResourceAccessPolicy`。
+每个注册项至少定义稳定 `resourceType` 和对应的 `BusinessResourceAccessPolicy`，并可以覆盖对象键前缀及上传入口权限。当前协议不维护 cloud、app 或通用能力枚举，避免为尚无第二使用方的元数据提前扩张注册模型。
 
 业务资源注册只定义稳定身份、上传入口权限和对象级授权，**不定义大小上限、扩展名、MIME 或临时有效期**。这些限制由系统管理中的“附件配置”单例统一维护，所有单据和系统资源立即共享同一套限制，禁止单据页面或注册类私自复制全局阈值。
 
-前端业务单据通过通用编辑页的独立“附件”折叠面板接入附件能力，上传、展示、删除和提交字段组装由公共组件负责；具体单据只声明资源类型并提供详情中的附件数据，不重复实现附件控件和请求。附件配置中的扩展名与 MIME 白名单使用可自由增删行的表格维护，不提供写死的类型候选项。
+前端业务单据通过通用编辑页的独立“附件”折叠面板接入附件能力，上传、展示、删除和提交字段组装由公共组件负责；具体单据只声明资源类型并提供详情中的附件数据，不重复实现附件控件和请求。已绑定附件删除是独立且立即生效的操作，必须明确提示不能通过取消表单恢复，并且不得把该删除误标为主表单未保存。附件配置中的扩展名与 MIME 白名单使用可自由增删行的表格维护，不提供写死的类型候选项。
 
 ### 注册位置和方式
 
@@ -59,8 +53,11 @@ sys.report.report-template
 
 ```java
 public interface BusinessResourceRegistration {
-    BusinessResourceDefinition definition();
+    String resourceType();
     BusinessResourceAccessPolicy accessPolicy();
+
+    default String objectPrefix() { ... }
+    default void requireUploadAllowed() { ... }
 }
 ```
 
@@ -75,13 +72,8 @@ final class PurchaseRequisitionResourceRegistration
     private final PurchaseRequisitionResourceAccessPolicy accessPolicy;
 
     @Override
-    public BusinessResourceDefinition definition() {
-        return new BusinessResourceDefinition(
-                "scm.procurement.purchase-requisition",
-                "scm",
-                "procurement",
-                "purchase-requisition",
-                Set.of(BusinessResourceCapability.ATTACHMENT));
+    public String resourceType() {
+        return "scm.procurement.purchase-requisition";
     }
 
     @Override
@@ -93,9 +85,9 @@ final class PurchaseRequisitionResourceRegistration
 
 只有聚合实际使用附件时才需要注册；不使用附件的新单据不增加空注册。新增附件业务聚合的检查清单必须包含业务资源注册、授权策略、上传与越权测试；大小、扩展名、MIME 和临时有效期仅由全局附件配置维护。
 
-应用启动时注册中心执行 fail-fast 校验：bizType、对象前缀或授权器重复，编码格式非法，缺少访问策略或存储限制时拒绝启动。运行时遇到未注册 bizType 默认拒绝，不能回退为登录即可访问。
+应用启动时注册中心执行 fail-fast 校验：resourceType 或对象前缀重复、编码格式非法、缺少访问策略时拒绝启动。运行时遇到未注册 resourceType 默认拒绝，不能回退为登录即可访问。
 
-`t_sys_attachment_config` 是全局单例，保存单文件最大大小、允许扩展名、允许 MIME 和临时附件有效期。修改配置必须经过管理员身份复核和乐观锁校验；上传时服务端读取该配置，同时校验扩展名、声明 MIME 与通用内容探测结果。内容类型识别不得通过业务代码硬编码有限的扩展名分支。`bizType` 身份和对象级授权器仍必须由代码注册，不能通过数据库配置任意创建一个没有业务鉴权实现的类型。
+`t_sys_attachment_config` 是全局单例，保存单文件最大大小、允许扩展名、允许 MIME 和临时附件有效期。业务配置的单文件大小不得超过当前 HTTP 基础设施 100MB 硬上限；提高上限必须同步调整服务端、反向代理和容量评估。修改配置必须经过管理员身份复核和乐观锁校验；上传时服务端读取该配置，同时校验扩展名、声明 MIME 与通用内容探测结果。内容类型识别不得通过业务代码硬编码有限的扩展名分支。`bizType` 身份和对象级授权器仍必须由代码注册，不能通过数据库配置任意创建一个没有业务鉴权实现的类型。
 
 上传接口只接收已注册 `bizType`，但 `bizType` 不能单独构成可信归属。正式单据附件必须由所属业务 Service 创建上传会话，或在服务端已经确认的 `bizType + bizId` 上下文中上传；绑定时再次校验资源存在、操作权限和上传会话。对象键前缀、存储策略和授权器全部由服务端注册项派生，禁止前端提交 cloud、app、目录、访问范围或对象键。
 
@@ -164,9 +156,9 @@ interface BusinessResourceAccessPolicy {
 
 - 上传同时校验声明扩展名、服务端内容探测 MIME 和大小；客户端 Content-Type 必须与探测结果一致，不能作为唯一判断依据。
 - 原始文件名必须去除路径、控制字符和响应头危险字符，且只用于展示和 Content-Disposition。
-- 对象存储 Bucket 默认私有。下载通过后端鉴权流或短时、单对象、不可复用的预签名 URL；生成预签名 URL 前必须完成对象级授权。
+- 对象存储 Bucket 默认私有。Local/FTP 下载由后端鉴权后代理文件流；S3 在对象级授权通过后签发一分钟短时预签名 URL。附件列表不得返回 Local 静态路径或未经本次授权签发的存储地址。
 - 响应设置安全的 Content-Disposition、Content-Type、`X-Content-Type-Options: nosniff` 和必要的缓存策略。
-- 对象存储凭据在数据库中使用 SM4 密文保存，主密钥只通过部署密钥注入；凭据不进入接口响应、缓存、预览 URL 或日志。生产也可以由后续凭据提供器改为工作负载身份，但不得降级为明文配置。
+- 对象存储凭据在数据库中使用带版本标识的 SM4/GCM 认证密文保存，主密钥只通过部署密钥注入；凭据不进入接口响应、缓存、预览 URL 或日志。生产也可以由后续凭据提供器改为工作负载身份，但不得降级为明文配置。
 
 ## 事务和补偿
 

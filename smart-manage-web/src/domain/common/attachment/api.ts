@@ -1,6 +1,9 @@
 import request from '@/api/request';
 import type { Result } from '@/types/api';
-import type { BusinessAttachment } from './types';
+import type { AttachmentDownloadAccess, BusinessAttachment } from './types';
+
+const uploadSessionHeaders = (uploadSessionId?: string) =>
+  uploadSessionId ? { 'X-Upload-Session': uploadSessionId } : undefined;
 
 export const businessAttachmentApi = {
   upload: (resourceType: string, file: File) => {
@@ -15,6 +18,23 @@ export const businessAttachmentApi = {
     request
       .post<
         Result<string>
-      >('/sys/base/attachment/delete', { id }, { headers: uploadSessionId ? { 'X-Upload-Session': uploadSessionId } : undefined })
+      >('/sys/base/attachment/delete', { id }, { headers: uploadSessionHeaders(uploadSessionId) })
       .then((response) => response.data.data),
+  downloadAccess: (id: string, uploadSessionId?: string) =>
+    request
+      .post<
+        Result<AttachmentDownloadAccess>
+      >('/sys/base/attachment/downloadAccess', { id }, { headers: uploadSessionHeaders(uploadSessionId) })
+      .then((response) => response.data.data),
+  download: (id: string, uploadSessionId?: string) =>
+    request
+      .post<Blob>(
+        '/sys/base/attachment/download',
+        { id },
+        {
+          headers: uploadSessionHeaders(uploadSessionId),
+          responseType: 'blob',
+        },
+      )
+      .then((response) => response.data),
 };

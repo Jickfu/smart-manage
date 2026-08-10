@@ -3,13 +3,11 @@ package sm.system.storage;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.junit.jupiter.api.Test;
-import org.mockito.InOrder;
 
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,26 +28,6 @@ class FtpFileStorageServiceTests {
 
 		assertEquals("FTP 登录失败: null", exception.getMessage());
 		verify(ftpClient).disconnect();
-	}
-
-	@Test
-	void moveRestoresBaseDirectoryBeforeRenamingSourcePath() throws IOException {
-		prepareConnectedClient();
-		when(ftpClient.printWorkingDirectory()).thenReturn("/");
-		when(ftpClient.changeWorkingDirectory("biz")).thenReturn(false, true);
-		when(ftpClient.makeDirectory("biz")).thenReturn(true);
-		when(ftpClient.changeWorkingDirectory("/")).thenReturn(true);
-		when(ftpClient.rename("temp/file.txt", "biz/file.txt")).thenReturn(true);
-
-		String result = storage.move("temp/file.txt", "biz");
-
-		assertEquals("biz/file.txt", result);
-		InOrder order = inOrder(ftpClient);
-		order.verify(ftpClient).changeWorkingDirectory("biz");
-		order.verify(ftpClient).makeDirectory("biz");
-		order.verify(ftpClient).changeWorkingDirectory("biz");
-		order.verify(ftpClient).changeWorkingDirectory("/");
-		order.verify(ftpClient).rename("temp/file.txt", "biz/file.txt");
 	}
 
 	@Test

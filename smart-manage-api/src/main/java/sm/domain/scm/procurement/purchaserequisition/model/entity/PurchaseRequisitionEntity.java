@@ -19,7 +19,6 @@ public class PurchaseRequisitionEntity extends BaseBillEntity {
     private Long id;
     private String number;
     private String subject;
-    private Long applyOrgId;
     private Long applicantId;
     private LocalDate requiredDate;
     private String reason;

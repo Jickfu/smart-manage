@@ -43,17 +43,26 @@ import {
   BellOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
+  CodeOutlined,
+  ConsoleSqlOutlined,
   EnvironmentOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
   GlobalOutlined,
+  HistoryOutlined,
+  IdcardOutlined,
   LinkOutlined,
   MenuOutlined,
+  PaperClipOutlined,
+  ShoppingCartOutlined,
+  ShoppingOutlined,
+  SyncOutlined,
   ApartmentOutlined,
   BranchesOutlined,
   NodeIndexOutlined,
   DeploymentUnitOutlined,
 } from '@ant-design/icons';
 import type { ComponentType, ReactNode } from 'react';
-import AsyncIcon from '@/domain/common/component/AsyncIcon';
 
 /** 常用图标白名单 — 覆盖菜单和页面常用场景，按需扩展 */
 const iconMap: Record<string, ComponentType> = {
@@ -101,10 +110,20 @@ const iconMap: Record<string, ComponentType> = {
   BellOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
+  CodeOutlined,
+  ConsoleSqlOutlined,
   EnvironmentOutlined,
+  FileAddOutlined,
+  FileTextOutlined,
   GlobalOutlined,
+  HistoryOutlined,
+  IdcardOutlined,
   LinkOutlined,
   MenuOutlined,
+  PaperClipOutlined,
+  ShoppingCartOutlined,
+  ShoppingOutlined,
+  SyncOutlined,
   ApartmentOutlined,
   BranchesOutlined,
   NodeIndexOutlined,
@@ -116,31 +135,14 @@ export function isSelectableIconName(name: string): boolean {
   return /(?:Outlined|Filled|TwoTone)$/.test(name);
 }
 
-/** 根据图标名称解析组件；常用图标同步返回，其余图标按需补载。 */
+/** 根据白名单解析图标；未知名称使用调用方提供的降级内容。 */
 export function resolveIcon(name: string | undefined, fallback?: ReactNode): ReactNode | undefined {
   if (!name) return fallback;
   const IconComponent = iconMap[name];
-  return IconComponent ? (
-    <IconComponent />
-  ) : (
-    <AsyncIcon name={name} loadIcons={loadAllIcons} fallback={fallback} />
-  );
+  return IconComponent ? <IconComponent /> : fallback;
 }
 
-/** 全量图标映射（懒加载）— 供图标选择器使用，主 bundle 不包含 */
-let allIconsPromise: Promise<Record<string, ComponentType>> | undefined;
-
+/** 为图标选择器提供受控候选集，避免动态导入整个图标包。 */
 export async function loadAllIcons(): Promise<Record<string, ComponentType>> {
-  allIconsPromise ??= import('@ant-design/icons')
-    .then(
-      (icons) =>
-        Object.fromEntries(
-          Object.entries(icons).filter(([name]) => isSelectableIconName(name)),
-        ) as Record<string, ComponentType>,
-    )
-    .catch((error: unknown) => {
-      allIconsPromise = undefined;
-      throw error;
-    });
-  return allIconsPromise;
+  return iconMap;
 }

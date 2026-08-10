@@ -38,7 +38,7 @@ export interface PurchaseRequisitionDetailVO {
   version: number;
   number: string;
   subject: string;
-  applyOrgId: string;
+  orgId: string;
   applicantId: string;
   bizDate: string;
   requiredDate?: string;
@@ -51,7 +51,7 @@ export interface PurchaseRequisitionDetailVO {
 }
 
 export interface PurchaseRequisitionCreateNewDataVO {
-  applyOrgId: string;
+  orgId: string;
   applicantId: string;
   bizDate: string;
   billStatus: string;

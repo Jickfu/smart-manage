@@ -43,9 +43,11 @@ export function EditPageShell({
 
   return (
     <section className="sm-common-page sm-edit-page">
-      <div className="sm-edit-header">
-        <div className="sm-edit-header-actions">{actions}</div>
-      </div>
+      {actions && (
+        <div className="sm-edit-header">
+          <div className="sm-edit-header-actions">{actions}</div>
+        </div>
+      )}
       <div className="sm-edit-body">
         <Spin spinning={loading}>{children}</Spin>
       </div>

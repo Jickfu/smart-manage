@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isSelectableIconName, resolveIcon } from './iconResolver';
+import { isSelectableIconName, loadAllIcons, resolveIcon } from './iconResolver';
 
 describe('isSelectableIconName', () => {
   it('只接受 Ant Design 图标组件命名', () => {
@@ -16,5 +16,41 @@ describe('resolveIcon', () => {
     const fallback = 'fallback';
 
     expect(resolveIcon(undefined, fallback)).toBe(fallback);
+  });
+
+  it('未知图标名称不会触发全量动态图标加载', () => {
+    const fallback = 'fallback';
+
+    expect(resolveIcon('UnknownOutlined', fallback)).toBe(fallback);
+  });
+
+  it('候选白名单覆盖数据库当前使用的图标', async () => {
+    const icons = await loadAllIcons();
+    const persistedIconNames = [
+      'ApartmentOutlined',
+      'AppstoreOutlined',
+      'ClockCircleOutlined',
+      'CodeOutlined',
+      'ConsoleSqlOutlined',
+      'DashboardOutlined',
+      'DatabaseOutlined',
+      'FileAddOutlined',
+      'FileOutlined',
+      'FileTextOutlined',
+      'HistoryOutlined',
+      'IdcardOutlined',
+      'LinkOutlined',
+      'MenuOutlined',
+      'PaperClipOutlined',
+      'SearchOutlined',
+      'SettingOutlined',
+      'ShoppingCartOutlined',
+      'ShoppingOutlined',
+      'SyncOutlined',
+      'ToolOutlined',
+      'UserOutlined',
+    ];
+
+    expect(persistedIconNames.every((name) => icons[name])).toBe(true);
   });
 });

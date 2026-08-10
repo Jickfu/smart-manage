@@ -2,8 +2,6 @@ server:
   port: 8080
 
 spring:
-  arthas:
-    enabled: false
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     url: ${SMART_MANAGE_DB_URL:jdbc:postgresql://localhost:5432/smart_manage}
@@ -93,12 +91,6 @@ management:
       show-details: always
       show-components: always
 
-arthas:
-  http-port: 8563
-  telnet-port: 3658
-  ip: 127.0.0.1
-  session-timeout: 1800
-
 smart-manage:
   framework:
     cors:
@@ -111,7 +103,15 @@ smart-manage:
         - ::1/128
   system:
     upload:
-      dir: ${SMART_MANAGE_UPLOAD_DIR:E:/upload/}
+      dir: ${SMART_MANAGE_UPLOAD_DIR:./upload/}
+  monitor:
+    cluster:
+      internal-base-url: ${SMART_MANAGE_INTERNAL_BASE_URL:http://127.0.0.1:8080/smart-manage-api}
+      require-https: false
+      heartbeat-interval-ms: 10000
+      instance-ttl-ms: 30000
+      connect-timeout-ms: 2000
+      request-timeout-ms: 10000
   security:
     sm4:
       # 公开开发密钥，仅用于本地开发和演示；生产环境禁止复用。

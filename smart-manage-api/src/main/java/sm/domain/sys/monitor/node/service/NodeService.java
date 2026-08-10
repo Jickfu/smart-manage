@@ -1,228 +1,205 @@
 package sm.domain.sys.monitor.node.service;
 
+import com.alibaba.druid.pool.DruidDataSource;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.health.actuate.endpoint.CompositeHealthDescriptor;
 import org.springframework.boot.health.actuate.endpoint.HealthDescriptor;
 import org.springframework.boot.health.actuate.endpoint.HealthEndpoint;
-import org.springframework.boot.health.actuate.endpoint.IndicatedHealthDescriptor;
 import org.springframework.stereotype.Service;
 import oshi.SystemInfo;
-import oshi.hardware.CentralProcessor;
-import oshi.hardware.GlobalMemory;
-import oshi.hardware.HardwareAbstractionLayer;
-import oshi.software.os.FileSystem;
 import oshi.software.os.OSFileStore;
-import oshi.software.os.OperatingSystem;
-import oshi.util.FormatUtil;
 import sm.domain.sys.monitor.node.model.vo.NodeInfoVO;
-import sm.domain.sys.monitor.node.model.vo.NodeInfoVO.*;
+import sm.domain.sys.monitor.common.model.vo.MonitorInstanceVO;
+import sm.domain.sys.monitor.common.service.MonitorInstanceRegistry;
+import sm.domain.sys.monitor.common.service.MonitorRoutingGateway;
 
-import java.lang.management.*;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.RuntimeMXBean;
+import java.lang.management.ThreadMXBean;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
-/**
- * 节点监控服务：聚合 OSHI（硬件）+ Actuator（健康检查）+ ManagementFactory（JVM）
- */
+/** 当前应用实例运行监控的唯一公开业务入口。 */
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class NodeService {
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final HealthEndpoint healthEndpoint;
+    private final DruidDataSource dataSource;
+    private final MonitorInstanceRegistry instanceRegistry;
+    private final MonitorRoutingGateway routingGateway;
+    private final SystemInfo systemInfo = new SystemInfo();
 
-    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    @Value("${smart-manage.instance-id}")
+    private String instanceId;
 
-    public NodeInfoVO getNodeInfo() {
-        NodeInfoVO vo = new NodeInfoVO();
-        vo.setJvm(buildJvmInfo());
-        vo.setMemory(buildMemoryInfo());
-        vo.setCpu(buildCpuInfo());
-        vo.setOs(buildOsInfo());
-        vo.setDisk(buildDiskInfo());
-        vo.setThreads(buildThreadsInfo());
-        vo.setGc(buildGcInfo());
-        vo.setClassLoading(buildClassLoadingInfo());
-        vo.setHealth(buildHealthInfo());
-        return vo;
+    public List<MonitorInstanceVO> instances() {
+        return instanceRegistry.listOnline();
     }
 
-    // ── JVM 运行时 ──
-    private JvmInfo buildJvmInfo() {
+    public NodeInfoVO snapshot(String targetInstanceId) {
+        MonitorInstanceRegistry.RegisteredInstance instance = instanceRegistry.require(targetInstanceId);
+        if (instanceRegistry.isCurrent(instance.getInstanceId())) {
+            return localSnapshot();
+        }
+        return routingGateway.get(instance, "/sys/monitor/internal/node/snapshot", NodeInfoVO.class);
+    }
+
+    /** 仅供目标节点内部接口采集本机快照，禁止再次执行实例路由。 */
+    public NodeInfoVO localSnapshot() {
+        NodeInfoVO result = new NodeInfoVO();
+        result.setInstanceId(instanceId);
+        result.setSampleTime(TIME_FORMATTER.format(java.time.LocalDateTime.now()));
+        result.setRuntime(buildRuntimeInfo());
+        result.setOs(buildOsInfo());
+        result.setCpu(buildCpuInfo());
+        result.setMemory(buildMemoryInfo());
+        result.setDisk(buildDiskInfo());
+        result.setThreads(buildThreadInfo());
+        result.setGc(buildGcInfo());
+        result.setDataSource(buildDataSourceInfo());
+        result.setHealth(buildHealthInfo());
+        return result;
+    }
+
+    private NodeInfoVO.RuntimeInfo buildRuntimeInfo() {
         RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
-        JvmInfo info = new JvmInfo();
-        info.setVersion(System.getProperty("java.version"));
-        info.setVendor(System.getProperty("java.vendor"));
-        info.setHome(System.getProperty("java.home"));
-        info.setRuntimeName(runtime.getVmName());
-        info.setUptime(runtime.getUptime());
-        info.setStartTime(LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(runtime.getStartTime()), ZoneId.systemDefault()).format(ISO_FORMATTER));
-        info.setInputArgs(runtime.getInputArguments());
-        return info;
+        NodeInfoVO.RuntimeInfo result = new NodeInfoVO.RuntimeInfo();
+        result.setJavaVersion(System.getProperty("java.version"));
+        result.setJavaVendor(System.getProperty("java.vendor"));
+        result.setVmName(runtime.getVmName());
+        result.setStartTime(TIME_FORMATTER.format(Instant.ofEpochMilli(runtime.getStartTime())
+                .atZone(ZoneId.systemDefault()).toLocalDateTime()));
+        result.setUptimeMs(runtime.getUptime());
+        result.setProcessors(Runtime.getRuntime().availableProcessors());
+        return result;
     }
 
-    // ── 内存 ──
-    private MemoryInfo buildMemoryInfo() {
-        MemoryMXBean mem = ManagementFactory.getMemoryMXBean();
-        MemoryInfo info = new MemoryInfo();
+    private NodeInfoVO.OsInfo buildOsInfo() {
+        var operatingSystem = systemInfo.getOperatingSystem();
+        NodeInfoVO.OsInfo result = new NodeInfoVO.OsInfo();
+        result.setName(operatingSystem.getFamily());
+        result.setVersion(operatingSystem.getVersionInfo().getVersion());
+        result.setArch(System.getProperty("os.arch"));
+        return result;
+    }
 
-        MemorySegment heap = new MemorySegment();
-        heap.setUsed(mem.getHeapMemoryUsage().getUsed());
-        heap.setMax(mem.getHeapMemoryUsage().getMax());
-        heap.setCommitted(mem.getHeapMemoryUsage().getCommitted());
-        heap.setInit(mem.getHeapMemoryUsage().getInit());
-        info.setHeap(heap);
-
-        MemorySegment nonHeap = new MemorySegment();
-        nonHeap.setUsed(mem.getNonHeapMemoryUsage().getUsed());
-        nonHeap.setCommitted(mem.getNonHeapMemoryUsage().getCommitted());
-        info.setNonHeap(nonHeap);
-
-        List<MemoryPoolInfo> pools = new ArrayList<>();
-        for (MemoryPoolMXBean pool : ManagementFactory.getMemoryPoolMXBeans()) {
-            MemoryPoolInfo poolInfo = new MemoryPoolInfo();
-            poolInfo.setName(pool.getName());
-            poolInfo.setType(pool.getType().name());
-            poolInfo.setUsed(pool.getUsage().getUsed());
-            poolInfo.setMax(pool.getUsage().getMax());
-            poolInfo.setCommitted(pool.getUsage().getCommitted());
-            pools.add(poolInfo);
+    private NodeInfoVO.CpuInfo buildCpuInfo() {
+        NodeInfoVO.CpuInfo result = new NodeInfoVO.CpuInfo();
+        java.lang.management.OperatingSystemMXBean bean = ManagementFactory.getOperatingSystemMXBean();
+        result.setLoadAverage(normalizeMetric(bean.getSystemLoadAverage()));
+        if (bean instanceof com.sun.management.OperatingSystemMXBean extendedBean) {
+            result.setSystemUsage(normalizeMetric(extendedBean.getCpuLoad()));
+            result.setProcessUsage(normalizeMetric(extendedBean.getProcessCpuLoad()));
         }
-        info.setPools(pools);
-        return info;
+        return result;
     }
 
-    // ── CPU ──
-    private CpuInfo buildCpuInfo() {
-        SystemInfo si = new SystemInfo();
-        HardwareAbstractionLayer hal = si.getHardware();
-        CentralProcessor processor = hal.getProcessor();
-
-        CpuInfo info = new CpuInfo();
-        info.setModel(processor.getProcessorIdentifier().getName());
-        info.setPhysicalCores(processor.getPhysicalProcessorCount());
-        info.setLogicalCores(processor.getLogicalProcessorCount());
-        // OSHI 测量 CPU 负载：阻塞 500ms 采样
-        info.setSystemLoad(processor.getSystemCpuLoad(500));
-
-        // 进程 CPU 负载：通过 com.sun.management 扩展接口
-        OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
-        if (osBean instanceof com.sun.management.OperatingSystemMXBean sunBean) {
-            info.setProcessCpuLoad(sunBean.getProcessCpuLoad());
+    private NodeInfoVO.MemoryInfo buildMemoryInfo() {
+        MemoryMXBean memory = ManagementFactory.getMemoryMXBean();
+        NodeInfoVO.MemoryInfo result = new NodeInfoVO.MemoryInfo();
+        result.setHeapUsed(memory.getHeapMemoryUsage().getUsed());
+        result.setHeapCommitted(memory.getHeapMemoryUsage().getCommitted());
+        result.setHeapMax(memory.getHeapMemoryUsage().getMax());
+        result.setNonHeapUsed(memory.getNonHeapMemoryUsage().getUsed());
+        result.setNonHeapCommitted(memory.getNonHeapMemoryUsage().getCommitted());
+        java.lang.management.OperatingSystemMXBean bean = ManagementFactory.getOperatingSystemMXBean();
+        if (bean instanceof com.sun.management.OperatingSystemMXBean extendedBean) {
+            result.setPhysicalTotal(extendedBean.getTotalMemorySize());
+            result.setPhysicalAvailable(extendedBean.getFreeMemorySize());
         }
-        return info;
+        return result;
     }
 
-    // ── OS ──
-    private OsInfo buildOsInfo() {
-        SystemInfo si = new SystemInfo();
-        OperatingSystem os = si.getOperatingSystem();
-        OsInfo info = new OsInfo();
-        info.setName(os.getFamily());
-        info.setVersion(os.getVersionInfo().getVersion());
-        info.setArch(System.getProperty("os.arch"));
-        return info;
-    }
-
-    // ── 磁盘（仅应用所在磁盘）──
-    private DiskInfo buildDiskInfo() {
-        String appDir = System.getProperty("user.dir");
-        SystemInfo si = new SystemInfo();
-        FileSystem fs = si.getOperatingSystem().getFileSystem();
-        List<OSFileStore> stores = fs.getFileStores();
-
-        // 按挂载点路径长度降序排列，找到最匹配当前目录的文件存储
-        OSFileStore matched = stores.stream()
-                .filter(s -> appDir.toLowerCase().startsWith(s.getMount().toLowerCase()))
-                .max(Comparator.comparingInt(s -> s.getMount().length()))
+    private NodeInfoVO.DiskInfo buildDiskInfo() {
+        String applicationDirectory = System.getProperty("user.dir").toLowerCase();
+        OSFileStore matched = systemInfo.getOperatingSystem().getFileSystem().getFileStores().stream()
+                .filter(store -> applicationDirectory.startsWith(store.getMount().toLowerCase()))
+                .max(Comparator.comparingInt(store -> store.getMount().length()))
                 .orElse(null);
-
-        DiskInfo info = new DiskInfo();
+        NodeInfoVO.DiskInfo result = new NodeInfoVO.DiskInfo();
         if (matched != null) {
-            info.setName(matched.getMount());
-            info.setTotal(matched.getTotalSpace());
-            info.setFree(matched.getUsableSpace());
-            info.setUsed(matched.getTotalSpace() - matched.getUsableSpace());
-            long total = matched.getTotalSpace();
-            if (total > 0) {
-                info.setUsagePercent((double) (total - matched.getUsableSpace()) / total);
+            result.setMount(matched.getMount());
+            result.setTotal(matched.getTotalSpace());
+            result.setAvailable(matched.getUsableSpace());
+            result.setUsed(Math.max(0, matched.getTotalSpace() - matched.getUsableSpace()));
+        }
+        return result;
+    }
+
+    private NodeInfoVO.ThreadInfo buildThreadInfo() {
+        ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+        EnumMap<Thread.State, Integer> stateCounts = new EnumMap<>(Thread.State.class);
+        java.lang.management.ThreadInfo[] threadInfos = threadBean.getThreadInfo(threadBean.getAllThreadIds(), 0);
+        for (java.lang.management.ThreadInfo threadInfo : threadInfos) {
+            if (threadInfo != null) {
+                stateCounts.merge(threadInfo.getThreadState(), 1, Integer::sum);
             }
         }
-        return info;
-    }
-
-    // ── 线程列表 ──
-    private ThreadsInfo buildThreadsInfo() {
-        ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
-        ThreadsInfo info = new ThreadsInfo();
-        info.setTotal(threadBean.getThreadCount());
-        info.setDaemon(threadBean.getDaemonThreadCount());
-        info.setPeak(threadBean.getPeakThreadCount());
-
-        // 轻量模式：不获取锁信息
-        List<ThreadItem> items = new ArrayList<>();
-        for (ThreadInfo ti : threadBean.dumpAllThreads(false, false)) {
-            ThreadItem item = new ThreadItem();
-            item.setId(ti.getThreadId());
-            item.setName(ti.getThreadName());
-            item.setState(ti.getThreadState().name());
-            item.setCpuTimeMs(threadBean.getThreadCpuTime(ti.getThreadId()) / 1_000_000L);
-            item.setBlockedTimeMs(threadBean.getThreadInfo(ti.getThreadId()).getBlockedTime());
-            items.add(item);
+        Map<String, Integer> serializedCounts = new LinkedHashMap<>();
+        for (Thread.State state : Thread.State.values()) {
+            serializedCounts.put(state.name(), stateCounts.getOrDefault(state, 0));
         }
-        info.setList(items);
-        return info;
+        NodeInfoVO.ThreadInfo result = new NodeInfoVO.ThreadInfo();
+        result.setLive(threadBean.getThreadCount());
+        result.setDaemon(threadBean.getDaemonThreadCount());
+        result.setPeak(threadBean.getPeakThreadCount());
+        result.setStateCounts(serializedCounts);
+        return result;
     }
 
-    // ── GC ──
-    private List<GcInfo> buildGcInfo() {
-        List<GcInfo> list = new ArrayList<>();
-        for (GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans()) {
-            GcInfo info = new GcInfo();
-            info.setName(gc.getName());
-            info.setCollectionCount(gc.getCollectionCount());
-            info.setCollectionTimeMs(gc.getCollectionTime());
-            list.add(info);
+    private List<NodeInfoVO.GcInfo> buildGcInfo() {
+        List<NodeInfoVO.GcInfo> result = new ArrayList<>();
+        for (GarbageCollectorMXBean collector : ManagementFactory.getGarbageCollectorMXBeans()) {
+            NodeInfoVO.GcInfo item = new NodeInfoVO.GcInfo();
+            item.setName(collector.getName());
+            item.setCollectionCount(collector.getCollectionCount());
+            item.setCollectionTimeMs(collector.getCollectionTime());
+            result.add(item);
         }
-        return list;
+        return result;
     }
 
-    // ── 类加载 ──
-    private ClassLoadingInfo buildClassLoadingInfo() {
-        ClassLoadingMXBean cl = ManagementFactory.getClassLoadingMXBean();
-        ClassLoadingInfo info = new ClassLoadingInfo();
-        info.setLoaded(cl.getLoadedClassCount());
-        info.setTotalLoaded(cl.getTotalLoadedClassCount());
-        info.setUnloaded(cl.getUnloadedClassCount());
-        return info;
+    private NodeInfoVO.DataSourceInfo buildDataSourceInfo() {
+        NodeInfoVO.DataSourceInfo result = new NodeInfoVO.DataSourceInfo();
+        result.setActive(dataSource.getActiveCount());
+        result.setIdle(dataSource.getPoolingCount());
+        result.setMaxActive(dataSource.getMaxActive());
+        result.setWaiting(dataSource.getWaitThreadCount());
+        result.setConnectCount(dataSource.getConnectCount());
+        result.setErrorCount(dataSource.getErrorCount());
+        return result;
     }
 
-    // ── Actuator 健康检查（Spring Boot 4 新 API）──
-    private HealthInfo buildHealthInfo() {
-        HealthDescriptor actHealth = healthEndpoint.health();
-        HealthInfo info = new HealthInfo();
-        info.setStatus(actHealth.getStatus().getCode());
-
-        java.util.List<NodeInfoVO.HealthComponent> comps = new java.util.ArrayList<>();
-        if (actHealth instanceof CompositeHealthDescriptor composite) {
+    private NodeInfoVO.HealthInfo buildHealthInfo() {
+        HealthDescriptor health = healthEndpoint.health();
+        NodeInfoVO.HealthInfo result = new NodeInfoVO.HealthInfo();
+        result.setStatus(health.getStatus().getCode());
+        List<NodeInfoVO.HealthComponent> components = new ArrayList<>();
+        if (health instanceof CompositeHealthDescriptor composite) {
             composite.getComponents().forEach((name, descriptor) -> {
-                NodeInfoVO.HealthComponent hc = new NodeInfoVO.HealthComponent();
-                hc.setName(name);
-                hc.setStatus(descriptor.getStatus().getCode());
-                if (descriptor instanceof IndicatedHealthDescriptor indicated) {
-                    hc.setDetails(indicated.getDetails());
-                }
-                comps.add(hc);
+                NodeInfoVO.HealthComponent component = new NodeInfoVO.HealthComponent();
+                component.setName(name);
+                component.setStatus(descriptor.getStatus().getCode());
+                components.add(component);
             });
         }
-        info.setComponents(comps);
-        return info;
+        result.setComponents(components);
+        return result;
     }
 
+    private Double normalizeMetric(double value) {
+        return Double.isFinite(value) && value >= 0 ? value : null;
+    }
 }

@@ -9,7 +9,7 @@ import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
 
 @Data
 public class PurchaseRequisitionCreateNewDataVO {
-    private Long applyOrgId;
+    private Long orgId;
     private Long applicantId;
     private LocalDate bizDate;
     private String billStatus;

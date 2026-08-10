@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import sm.domain.sys.base.fileconfig.model.entity.FileConfigEntity;
 import sm.domain.sys.base.fileconfig.model.form.FileConfigSaveForm;
 import sm.domain.sys.base.fileconfig.model.form.FtpTestForm;
@@ -19,6 +20,7 @@ import sm.domain.sys.base.common.helper.CurrentUserContext;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 文件配置服务
@@ -34,6 +36,9 @@ public class FileConfigService implements FileStorageConfigProvider {
     private final FileConfigTxService txService;
     private final SM4Helper sm4Helper;
     private final FileConfigConverter converter;
+    private final AtomicBoolean defaultStorageWarningLogged = new AtomicBoolean();
+    @Value("${smart-manage.system.upload.dir:./upload/}")
+    private String defaultLocalDir = "./upload/";
 
     /** 单例管理页读取；尚未配置时返回本地存储默认值。 */
     public FileConfigDetailVO singleton() {
@@ -41,7 +46,7 @@ public class FileConfigService implements FileStorageConfigProvider {
         if (entityList.isEmpty()) {
             FileConfigDetailVO detail = new FileConfigDetailVO();
             detail.setStorageType("LOCAL");
-            detail.setLocalDir("E:/upload/");
+            detail.setLocalDir(defaultLocalDir);
             detail.setFtpPort(21);
             detail.setFtpPassiveMode(true);
             detail.setFtpPasswordConfigured(false);
@@ -55,7 +60,10 @@ public class FileConfigService implements FileStorageConfigProvider {
     public FileStorageConfig getFileStorageConfig() {
         List<FileConfigEntity> entityList = mapper.selectList(null);
         if (entityList.isEmpty()) {
-            return new FileStorageConfig("LOCAL", "E:/upload/", null, null, null, null, null, null,
+            if (defaultStorageWarningLogged.compareAndSet(false, true)) {
+                log.warn("文件存储尚未持久化配置，当前使用显式部署目录的 Local 默认配置；多实例部署前必须改为 S3 或 FTP");
+            }
+            return new FileStorageConfig("LOCAL", defaultLocalDir, null, null, null, null, null, null,
                     null, null, null, null, null, null);
         }
         FileConfigEntity entity = entityList.get(0);

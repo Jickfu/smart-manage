@@ -82,6 +82,28 @@ class PurchaseRequisitionTxServiceTests {
     }
 
     @Test
+    void deleteCleansAggregateAttachmentsInSameCommand() throws IOException {
+        PurchaseRequisitionMapper mapper = mock(PurchaseRequisitionMapper.class);
+        PurchaseRequisitionEntryMapper entryMapper = mock(PurchaseRequisitionEntryMapper.class);
+        AttachmentService attachmentService = mock(AttachmentService.class);
+        PurchaseRequisitionEntity entity = new PurchaseRequisitionEntity();
+        entity.setId(1L);
+        entity.setVersion(2);
+        entity.setBillStatus(BillStatusEnum.SAVED.getValue());
+        when(mapper.selectById(1L)).thenReturn(entity);
+        when(mapper.delete(any())).thenReturn(1);
+        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
+                mock(CurrentUserContext.class), mapper, entryMapper, attachmentService);
+
+        service.deleteById(1L, 2);
+
+        verify(attachmentService).deleteForAggregate(
+                PurchaseRequisitionResourceRegistration.RESOURCE_TYPE, "1");
+        verify(entryMapper).delete(any());
+        verify(mapper).delete(any());
+    }
+
+    @Test
     void deleteReportsConflictWhenAtomicConditionNoLongerMatches() {
         PurchaseRequisitionMapper mapper = mock(PurchaseRequisitionMapper.class);
         PurchaseRequisitionEntity entity = new PurchaseRequisitionEntity();

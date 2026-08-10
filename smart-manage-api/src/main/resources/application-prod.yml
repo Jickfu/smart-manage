@@ -2,8 +2,6 @@ server:
   port: ${SMART_MANAGE_SERVER_PORT:8080}
 
 spring:
-  arthas:
-    enabled: false
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     url: ${SMART_MANAGE_DB_URL}
@@ -73,6 +71,7 @@ logging:
     sm: INFO
 
 smart-manage:
+  instance-id: ${SMART_MANAGE_INSTANCE_ID}
   framework:
     cors:
       allowed-origins:
@@ -86,7 +85,17 @@ smart-manage:
       key-base64: ${SMART_MANAGE_SM4_KEY}
   system:
     upload:
-      dir: ${SMART_MANAGE_UPLOAD_DIR}
+      # 单实例使用 Local 时必须指向持久化并纳入备份的目录；S3/FTP 模式不会读取该目录。
+      dir: ${SMART_MANAGE_UPLOAD_DIR:./upload/}
+  monitor:
+    cluster:
+      # 每个实例必须配置其他应用实例可直接访问的内部地址，禁止填写公网入口或负载均衡地址。
+      internal-base-url: ${SMART_MANAGE_INTERNAL_BASE_URL}
+      require-https: true
+      heartbeat-interval-ms: 10000
+      instance-ttl-ms: 30000
+      connect-timeout-ms: 2000
+      request-timeout-ms: 10000
   sm2:
     js:
       private-key: ${SMART_MANAGE_SM2_PRIVATE_KEY}

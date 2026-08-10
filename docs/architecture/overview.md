@@ -27,11 +27,11 @@ smart-manage/
 | 数据库 | 根目录 Flyway 迁移是结构和必要初始化数据的唯一权威来源 |
 | 并发控制 | 可修改聚合使用 `version` 和 MyBatis-Plus 乐观锁 |
 | 接口基础设施 | 统一响应、全局异常、权限注解、操作日志和 Trace ID |
-| 权限 | 普通能力使用权限码，高风险能力额外校验 `administrator` |
+| 权限 | 功能权限使用权限码，高风险能力额外校验 `administrator`；数据权限按独立规范演进 |
 | 对象映射 | 纯字段映射使用模块内 MapStruct Converter，业务组装留在 Service |
 | 前端状态 | TanStack Query 管理服务端状态，Zustand 管理跨页面客户端状态，Form 管理编辑状态 |
 | 页面架构 | 组件注册白名单、ERP 双页签和通用列表/编辑/自定义页面 |
-| 部署架构 | 目标支持 Nginx 负载均衡后的多个无状态应用实例；共享 PostgreSQL、Redis、S3/MinIO 对象存储和 Quartz JDBC 集群状态 |
+| 部署架构 | 单实例可使用持久化 Local 存储；多实例共享 PostgreSQL、Redis、S3/FTP 文件存储和 Quartz JDBC 集群状态 |
 | 纵向样板 | 采购申请验证标准主从单据、状态、乐观锁和页签生命周期 |
 
 ## 请求与页面主链路
@@ -40,7 +40,6 @@ smart-manage/
 
 ```text
 CorsFilter（跨域处理）
-→ EncryptApiFilter（按接口声明执行 SM4 请求解密和响应加密）
 → SaServletFilter（登录校验和权限校验）
 → TraceIdInterceptor（建立并回传请求 Trace ID）
 → Controller

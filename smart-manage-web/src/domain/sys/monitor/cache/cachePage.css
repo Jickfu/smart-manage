@@ -1,31 +1,22 @@
 .sm-cache-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   height: 100%;
   min-height: 0;
   box-sizing: border-box;
   overflow: auto;
-  padding: 16px;
-}
-.sm-cache-status-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-  padding: 8px 12px;
-  background-color: #fff;
-}
-.sm-cache-status-toolbar h2 {
-  margin: 0;
 }
 .sm-cache-status-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 10px;
 }
 .sm-cache-page .ant-alert {
   margin-bottom: 16px;
+}
+.sm-cache-page > .ant-alert {
+  margin-bottom: 0;
 }
 @media (max-width: 900px) {
   .sm-cache-status-grid {

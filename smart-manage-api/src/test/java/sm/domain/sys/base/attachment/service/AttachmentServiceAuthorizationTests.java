@@ -12,11 +12,13 @@ import sm.system.resource.BusinessResourceAction;
 import sm.system.resource.BusinessResourceRegistration;
 import sm.system.resource.BusinessResourceRegistry;
 import sm.system.storage.FileStorageServiceFactory;
+import sm.system.storage.FileStorageService;
 import sm.domain.sys.base.attachmentconfig.service.AttachmentConfigService;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -57,6 +59,24 @@ class AttachmentServiceAuthorizationTests {
         when(bizMapper.selectOne(any())).thenReturn(mapping);
 
         assertSame(attachment, service.requireDownloadableAttachment(1L, null));
+        verify(policy).requireAllowed("100", BusinessResourceAction.READ);
+    }
+
+    @Test
+    void directDownloadUrlIsCreatedOnlyAfterObjectAuthorization() {
+        AttachmentEntity attachment = attachment(false, 10L);
+        attachment.setStorageType("S3");
+        attachment.setObjectKey("biz/private.pdf");
+        BizAttachmentEntity mapping = new BizAttachmentEntity();
+        mapping.setBizType(RESOURCE_TYPE);
+        mapping.setBizId("100");
+        when(mapper.selectById(1L)).thenReturn(attachment);
+        when(bizMapper.selectOne(any())).thenReturn(mapping);
+        FileStorageService storage = mock(FileStorageService.class);
+        when(storageFactory.getService("S3")).thenReturn(storage);
+        when(storage.createAuthorizedDownloadUrl("biz/private.pdf")).thenReturn("https://signed.example/file");
+
+        assertEquals("https://signed.example/file", service.createDownloadAccess(1L, null).getDirectUrl());
         verify(policy).requireAllowed("100", BusinessResourceAction.READ);
     }
 
