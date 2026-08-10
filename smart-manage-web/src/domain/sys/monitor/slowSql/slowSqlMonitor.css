@@ -1,0 +1,82 @@
+.sm-edit-body > .ant-spin:has(.sm-slow-sql-monitor),
+.sm-edit-body > .ant-spin:has(.sm-slow-sql-monitor) > .ant-spin-container {
+  height: 100%;
+  min-height: 0;
+}
+
+.sm-slow-sql-monitor {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sm-slow-sql-instance {
+  min-width: 180px;
+}
+
+.sm-slow-sql-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-slow-sql-card > .ant-card-head {
+  flex-shrink: 0;
+}
+
+.sm-slow-sql-card .ant-card-head-title {
+  min-width: 0;
+}
+
+.sm-slow-sql-card > .ant-card-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sm-slow-sql-search {
+  width: 280px;
+}
+
+.sm-slow-sql-table,
+.sm-slow-sql-table > .ant-spin,
+.sm-slow-sql-table > .ant-spin > .ant-spin-container,
+.sm-slow-sql-table .ant-table,
+.sm-slow-sql-table .ant-table-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-slow-sql-table .ant-table-header {
+  flex-shrink: 0;
+}
+
+/* Overlay 滚动条宽度为 0 时，Ant Design 仍会渲染表头占位单元格，
+ * 固定表格布局会把剩余宽度全部分配给它，视觉上像最后一列异常变宽。 */
+.sm-slow-sql-table .ant-table-cell-scrollbar {
+  display: none;
+}
+
+.sm-slow-sql-table .ant-table-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none !important;
+  overflow: auto !important;
+}
+
+.sm-slow-sql-table .ant-table-sticky-scroll {
+  bottom: 0;
+}
+
+.sm-slow-sql-full-text {
+  margin-bottom: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

@@ -16,6 +16,13 @@ spring:
       test-while-idle: true
       validation-query: SELECT 1
       validation-query-timeout: 3000
+      filters: stat
+      filter:
+        stat:
+          enabled: true
+          merge-sql: true
+          log-slow-sql: false
+          slow-sql-millis: ${SMART_MANAGE_SLOW_SQL_MILLIS:2000}
       stat-view-servlet:
         enabled: false
       web-stat-filter:

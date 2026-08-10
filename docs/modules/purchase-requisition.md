@@ -11,7 +11,7 @@
 - 后端：`sm.domain.scm.procurement.purchaserequisition`
 - 前端：`src/domain/scm/procurement/purchaseRequisition`
 - 数据库：`t_scm_purchase_requisition`、`t_scm_purchase_requisition_entry`
-- Flyway：`V7__add_scm_purchase_requisition.sql`、`V8__add_procurement_menu_category.sql`、`V12__standardize_bill_biz_date.sql`
+- Flyway：结构与标准数据已收敛至当前 `V1`/`V2` 基线；后续变更只新增迁移。
 - 云：`scm`
 - 应用：`procurement`
 - 组件键：`scm/procurement/purchase-requisition`

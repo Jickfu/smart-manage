@@ -34,12 +34,22 @@
   min-width: 0;
 }
 
+.sm-thread-diagnostic-card .ant-card-body,
+.sm-thread-stack-content {
+  width: 100%;
+  min-width: 0;
+}
+
 .sm-thread-stack {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
   min-height: 420px;
   max-height: 680px;
   margin: 0;
   padding: 10px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border-radius: var(--ant-border-radius);
   background: var(--ant-color-fill-quaternary);
   color: var(--ant-color-text);
@@ -48,6 +58,7 @@
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 .sm-thread-stack-empty {

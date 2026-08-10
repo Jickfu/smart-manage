@@ -28,7 +28,9 @@ spring:
       filter:
         stat:
           enabled: true
-          log-slow-sql: true
+          merge-sql: true
+          # 页面直接读取内存统计，禁止把可能包含参数的慢 SQL 重复输出到日志。
+          log-slow-sql: false
           slow-sql-millis: 2000
       web-stat-filter:
         enabled: true

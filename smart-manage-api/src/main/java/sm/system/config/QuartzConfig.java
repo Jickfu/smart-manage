@@ -34,7 +34,7 @@ public class QuartzConfig {
     /**
      * Quartz 专用 DataSource，@QuartzDataSource 让 Spring Boot 自动注入到 SchedulerFactoryBean
      */
-    @Bean
+    @Bean(defaultCandidate = false)
     @QuartzDataSource
     DataSource quartzDataSource() {
         DruidDataSource ds = new DruidDataSource();

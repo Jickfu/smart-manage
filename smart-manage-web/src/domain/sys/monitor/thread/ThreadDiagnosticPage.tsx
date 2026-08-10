@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   Alert,
+  App,
   Button,
   Card,
   Input,
@@ -32,6 +33,7 @@ const stateColors: Record<string, string> = {
 };
 
 export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
+  const { message } = App.useApp();
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>();
   const [selectedThreadId, setSelectedThreadId] = useState<number>();
   const [nameFilter, setNameFilter] = useState('');
@@ -85,6 +87,19 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
   const selectedThread =
     detailQuery.data?.threads[0] ??
     displayedResult?.threads.find((thread) => thread.id === selectedThreadId);
+  const selectedStackText = selectedThread
+    ? selectedThread.stackTrace.length
+      ? selectedThread.stackTrace.map((frame) => `at ${frame}`).join('\n')
+      : '当前快照没有可用堆栈，请选择线程或重新采集。'
+    : '';
+  const copyStack = async () => {
+    try {
+      await navigator.clipboard.writeText(selectedStackText);
+      message.success('线程栈已复制');
+    } catch {
+      message.error('复制失败，请检查浏览器剪贴板权限');
+    }
+  };
   const pageSize = 20;
   const effectivePageNum = Math.min(
     pageNum,
@@ -239,9 +254,17 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
             />
           </Card>
 
-          <Card className="sm-thread-diagnostic-card" title="线程栈详情">
+          <Card
+            className="sm-thread-diagnostic-card"
+            title="线程栈详情"
+            extra={
+              <Button disabled={!selectedThread} onClick={() => void copyStack()}>
+                复制
+              </Button>
+            }
+          >
             {selectedThread ? (
-              <Space orientation="vertical" size={10}>
+              <Space className="sm-thread-stack-content" orientation="vertical" size={10}>
                 <Space wrap size={10}>
                   <Tag>{selectedThread.id}</Tag>
                   <Tag color={stateColors[selectedThread.state]}>{selectedThread.state}</Tag>
@@ -254,11 +277,7 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
                     title={`等待锁：${selectedThread.lockName ?? '-'}；持有线程：${selectedThread.lockOwnerName ?? '-'}`}
                   />
                 )}
-                <pre className="sm-thread-stack">
-                  {selectedThread.stackTrace.length
-                    ? selectedThread.stackTrace.map((frame) => `at ${frame}`).join('\n')
-                    : '当前快照没有可用堆栈，请选择线程或重新采集。'}
-                </pre>
+                <pre className="sm-thread-stack">{selectedStackText}</pre>
               </Space>
             ) : (
               <div className="sm-thread-stack-empty">选择线程后查看当前调用栈。</div>
