@@ -1,46 +1,10 @@
-/* === 通用 Modal 编辑模板 === */
+/* === Modal 编辑模板业务布局 === */
 
-/* 弹框容器 — 去掉 antd 默认 padding */
-.sm-modal .ant-modal-container {
-  padding: 0;
-}
-
-/* 头部 */
-.sm-modal .ant-modal-header {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 8px 16px;
-  margin-bottom: 0;
-}
-
-/* 标题区域撑满头部 */
-.sm-modal .ant-modal-title {
-  flex: 1;
-  overflow: visible;
-}
-
-/* 标题栏 */
-.sm-modal-title-bar {
-  display: flex;
-  align-items: center;
-}
-
-.sm-modal-title-text {
-  flex: 1;
-  font-weight: 400;
-}
-
-/* 主体 — 可滚动（仅 Modal 编辑页居中，RefSelector 等不生效） */
 .sm-modal-edit .ant-modal-body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-height: 60vh;
   padding: 18px 24px;
-  overflow-y: auto;
-  border-top: 1px solid var(--ant-color-border-secondary);
-  border-bottom: 1px solid var(--ant-color-border-secondary);
 }
 
 /* 两列表单整体居中；奇数项保持在左列，避免末项单独居中。 */
@@ -52,19 +16,4 @@
 
 .sm-modal-edit .sm-edit-field--full {
   grid-column: 1 / -1;
-}
-
-/* 底部 */
-.sm-modal .ant-modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 0;
-  min-height: 48px;
-}
-
-.sm-modal-footer-inner {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
 }

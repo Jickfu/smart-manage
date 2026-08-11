@@ -1,0 +1,73 @@
+.sm-app-modal .ant-modal-container {
+  padding: 0;
+  overflow: hidden;
+}
+
+.sm-app-modal .ant-modal-header {
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 56px 8px 16px;
+}
+
+.sm-app-modal .ant-modal-title {
+  overflow: visible;
+  font-weight: 400;
+}
+
+.sm-app-modal-header-content {
+  display: flex;
+  min-width: 0;
+  min-height: 28px;
+  align-items: center;
+  gap: 12px;
+}
+
+.sm-app-modal-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-app-modal-header-extra {
+  display: flex;
+  min-width: 0;
+  flex-shrink: 1;
+  align-items: center;
+}
+
+/* 原生关闭按钮采用绝对定位，Header 右侧预留空间，避免与扩展操作区重叠。 */
+.sm-app-modal .ant-modal-close {
+  top: 6px;
+  inset-inline-end: 8px;
+}
+
+.sm-app-modal .ant-modal-body {
+  border-top: 1px solid var(--ant-color-border-secondary);
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.sm-app-modal--body-scroll .ant-modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.sm-app-modal--body-fixed .ant-modal-body {
+  overflow: hidden;
+}
+
+.sm-app-modal .ant-modal-footer {
+  min-height: 48px;
+  margin: 0;
+  padding: 0;
+}
+
+.sm-app-modal-footer-content {
+  display: flex;
+  min-height: 48px;
+  padding: 8px 16px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}

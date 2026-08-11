@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { ComponentType, KeyboardEvent } from 'react';
-import { Button, Empty, Input, Modal, Pagination, Segmented, Spin } from 'antd';
+import { Button, Empty, Input, Pagination, Segmented, Spin } from 'antd';
 import { CloseOutlined, SearchOutlined } from '@ant-design/icons';
 import { loadAllIcons, resolveIcon } from '@/domain/common/page/iconResolver';
+import AppModal from './AppModal';
 import './IconSelector.css';
 
 interface IconSelectorProps {
@@ -96,36 +97,27 @@ function IconSelector({
     setOpen(false);
   };
 
-  const modalTitle = (
-    <div className="sm-icon-selector-header">
-      <span className="sm-icon-selector-header-title">选择图标</span>
-      <Input.Search
-        variant="underlined"
-        className="sm-icon-selector-header-search"
-        value={keyword}
-        allowClear
-        placeholder="快速搜索"
-        onChange={(event) => {
-          setKeyword(event.target.value);
-          setPageNum(1);
-        }}
-      />
-      <Button
-        type="link"
-        icon={<CloseOutlined />}
-        aria-label="关闭图标选择"
-        onClick={handleCancel}
-      />
-    </div>
+  const modalHeaderExtra = (
+    <Input.Search
+      variant="underlined"
+      className="sm-icon-selector-header-search"
+      value={keyword}
+      allowClear
+      placeholder="快速搜索"
+      onChange={(event) => {
+        setKeyword(event.target.value);
+        setPageNum(1);
+      }}
+    />
   );
 
   const modalFooter = (
-    <div className="sm-icon-selector-footer">
+    <>
       <Button onClick={handleCancel}>取消</Button>
       <Button type="primary" disabled={!pendingValue} onClick={handleConfirm}>
         确定
       </Button>
-    </div>
+    </>
   );
 
   return (
@@ -156,17 +148,15 @@ function IconSelector({
         <SearchOutlined className="sm-icon-selector-search-icon" />
       </div>
 
-      <Modal
-        title={modalTitle}
-        closeIcon={null}
+      <AppModal
+        title="选择图标"
+        headerExtra={modalHeaderExtra}
         open={open}
-        centered
         width={760}
-        destroyOnHidden
-        mask={{ closable: false }}
+        bodyMode="fixed"
         footer={modalFooter}
         onCancel={handleCancel}
-        className="sm-modal sm-icon-selector-modal"
+        className="sm-icon-selector-modal"
       >
         <div className="sm-icon-selector-body">
           <div className="sm-icon-selector-meta">
@@ -233,7 +223,7 @@ function IconSelector({
             </Spin>
           </div>
         </div>
-      </Modal>
+      </AppModal>
     </>
   );
 }

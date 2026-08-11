@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { Spin, Button, Modal, Result, Form } from 'antd';
-import { CloseOutlined } from '@ant-design/icons';
+import { Spin, Button, Result, Form } from 'antd';
+import AppModal from '@/domain/common/component/AppModal';
 import type { EditField } from './EditPage';
 import { EditFormFields } from './EditFormFields';
 import type { AccessResource } from './access';
@@ -66,14 +66,8 @@ const ModalEditPage = ({
   };
 
   return (
-    <Modal
-      title={
-        <div className="sm-modal-title-bar">
-          <span className="sm-modal-title-text">{title}</span>
-          <Button type="link" icon={<CloseOutlined />} onClick={handleClose} />
-        </div>
-      }
-      closeIcon={null}
+    <AppModal
+      title={title}
       open={open}
       onCancel={handleClose}
       afterOpenChange={(visible) => {
@@ -81,28 +75,24 @@ const ModalEditPage = ({
           form.resetFields();
         }
       }}
-      centered
-      mask={{ closable: false }}
-      className="sm-modal sm-modal-edit"
-      destroyOnHidden
+      className="sm-modal-edit"
+      closeDisabled={saving}
       width={width}
       footer={
-        <div className="sm-modal-footer-inner">
-          <PermissionActions
-            prefix={access?.prefix}
-            actions={[
-              { key: 'cancel', label: '取消', disabled: saving, onClick: onClose },
-              {
-                key: 'save',
-                label: '保存',
-                permission: access?.permissions.save,
-                type: 'primary',
-                loading: saving,
-                onClick: handleSave,
-              },
-            ]}
-          />
-        </div>
+        <PermissionActions
+          prefix={access?.prefix}
+          actions={[
+            { key: 'cancel', label: '取消', disabled: saving, onClick: onClose },
+            {
+              key: 'save',
+              label: '保存',
+              permission: access?.permissions.save,
+              type: 'primary',
+              loading: saving,
+              onClick: handleSave,
+            },
+          ]}
+        />
       }
     >
       {error ? (
@@ -125,7 +115,7 @@ const ModalEditPage = ({
           </Form>
         </Spin>
       )}
-    </Modal>
+    </AppModal>
   );
 };
 

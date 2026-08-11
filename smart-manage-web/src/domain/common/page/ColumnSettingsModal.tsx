@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { App, Button, Checkbox, InputNumber, Modal, Select, Space, Table } from 'antd';
-import { CloseOutlined } from '@ant-design/icons';
+import { App, Button, Checkbox, InputNumber, Select, Space, Table } from 'antd';
+import AppModal from '@/domain/common/component/AppModal';
 import type { ColumnsType } from 'antd/es/table/interface';
 import type { ColumnSetting } from './columnSettings';
 import {
@@ -160,28 +160,20 @@ const ColumnSettingsModal = ({
   };
 
   return (
-    <Modal
-      title={
-        <div className="sm-modal-title-bar">
-          <span className="sm-modal-title-text">列设置</span>
-          <Button type="link" icon={<CloseOutlined />} aria-label="关闭列设置" onClick={onCancel} />
-        </div>
-      }
-      closeIcon={null}
+    <AppModal
+      title="列设置"
       open={open}
-      centered
       width={900}
-      destroyOnHidden
-      mask={{ closable: false }}
-      className="sm-modal sm-column-settings-modal"
+      bodyMode="fixed"
+      className="sm-column-settings-modal"
       onCancel={onCancel}
       footer={
-        <div className="sm-modal-footer-inner">
+        <>
           <Button onClick={onCancel}>取消</Button>
           <Button type="primary" onClick={handleConfirm}>
             确定
           </Button>
-        </div>
+        </>
       }
     >
       <div className="sm-column-settings-body">
@@ -251,7 +243,7 @@ const ColumnSettingsModal = ({
           />
         </div>
       </div>
-    </Modal>
+    </AppModal>
   );
 };
 

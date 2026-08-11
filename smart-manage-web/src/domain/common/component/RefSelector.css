@@ -63,53 +63,17 @@
    RefSelector — Modal 整体
    ============================================ */
 
-.sm-ref-selector-modal .ant-modal-container {
-  padding: 0;
-}
-
-/* ---- Header（Modal title 区域） ---- */
-
-.sm-ref-selector-modal .ant-modal-header {
-  margin: 0;
-  padding: 16px 24px 12px;
-}
-
-.sm-ref-selector-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.sm-ref-selector-header-title {
-  flex-shrink: 0;
-  font-weight: 500;
-  color: var(--ant-color-text);
-  white-space: nowrap;
-}
-
 .sm-ref-selector-header-search {
   width: 240px;
-  margin-left: auto;
 }
 
 /* ---- Body 内容区 ---- */
-
-/* 内容区分隔线属于整个 Modal body，树表模式下需同时包住左树和右表。 */
-.sm-ref-selector-modal .ant-modal-body {
-  border-top: 1px solid var(--ant-color-border-secondary);
-  border-bottom: 1px solid var(--ant-color-border-secondary);
-}
 
 .sm-ref-selector-body {
   display: flex;
   flex-direction: column;
   min-height: 360px;
   max-height: 56vh;
-}
-
-.sm-ref-selector-modal .ant-modal-footer {
-  margin: 0;
-  padding: 0;
 }
 
 /* 元信息栏（总条数 + 分页） */
@@ -332,13 +296,4 @@
 
 .sm-ref-selector-empty {
   margin-top: 40px;
-}
-
-/* ---- Footer 底部按钮 ---- */
-
-.sm-ref-selector-footer {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  padding: 12px 24px 16px;
 }

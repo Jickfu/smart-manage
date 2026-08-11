@@ -62,31 +62,8 @@
   color: var(--ant-color-text-tertiary);
 }
 
-.sm-icon-selector-modal .ant-modal-container {
-  padding: 0;
-}
-
-.sm-icon-selector-modal .ant-modal-header {
-  margin: 0;
-  padding: 16px 24px 12px;
-}
-
-.sm-icon-selector-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.sm-icon-selector-header-title {
-  flex-shrink: 0;
-  font-weight: 500;
-  color: var(--ant-color-text);
-  white-space: nowrap;
-}
-
 .sm-icon-selector-header-search {
   width: 240px;
-  margin-left: auto;
 }
 
 .sm-icon-selector-body {
@@ -178,16 +155,4 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11px;
-}
-
-.sm-icon-selector-modal .ant-modal-footer {
-  margin: 0;
-  padding: 0;
-}
-
-.sm-icon-selector-footer {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  padding: 12px 24px 16px;
 }

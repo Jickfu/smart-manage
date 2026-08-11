@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Modal, Button, Input, Table, Tree, Pagination, Spin, Empty, Splitter } from 'antd';
+import { Button, Input, Table, Tree, Pagination, Spin, Empty, Splitter } from 'antd';
 import { SearchOutlined, CloseOutlined } from '@ant-design/icons';
+import AppModal from './AppModal';
 import type { ColumnsType, TableRowSelection } from 'antd/es/table/interface';
 import { useRefSelectorQuery } from './useRefSelectorQuery';
 import type { RefSelectorFetchFn } from './useRefSelectorQuery';
@@ -209,30 +210,26 @@ function RefSelector<T extends Record<string, unknown>>({
     return displayRender(value);
   }
 
-  // ---- 渲染：Modal 标题栏 ----
+  // ---- 渲染：Modal 标题扩展区 ----
 
-  const modalTitleNode = (
-    <div className="sm-ref-selector-header">
-      <span className="sm-ref-selector-header-title">{modalTitle}</span>
-      <Input.Search
-        variant="underlined"
-        className="sm-ref-selector-header-search"
-        placeholder="快速搜索"
-        onSearch={query.onSearch}
-      />
-      <Button type="link" icon={<CloseOutlined />} onClick={handleCancel} />
-    </div>
+  const modalHeaderExtra = (
+    <Input.Search
+      variant="underlined"
+      className="sm-ref-selector-header-search"
+      placeholder="快速搜索"
+      onSearch={query.onSearch}
+    />
   );
 
   // ---- 渲染：Modal 底部按钮 ----
 
   const modalFooter = (
-    <div className="sm-ref-selector-footer">
+    <>
       <Button onClick={handleCancel}>取消</Button>
       <Button type="primary" onClick={handleConfirm}>
         确定
       </Button>
-    </div>
+    </>
   );
 
   // ---- 渲染：表格 ----
@@ -513,20 +510,18 @@ function RefSelector<T extends Record<string, unknown>>({
       </div>
 
       {/* 选择 Modal */}
-      <Modal
-        title={modalTitleNode}
-        closeIcon={null}
+      <AppModal
+        title={modalTitle}
+        headerExtra={modalHeaderExtra}
         open={modalOpen}
         onCancel={handleCancel}
-        centered
-        mask={{ closable: false }}
-        className="sm-modal sm-ref-selector-modal"
-        destroyOnHidden
+        bodyMode="fixed"
+        className="sm-ref-selector-modal"
         width={mode === 'tree-table' ? 960 : 800}
         footer={modalFooter}
       >
         <Spin spinning={query.loading && query.records.length === 0}>{renderModalBody()}</Spin>
-      </Modal>
+      </AppModal>
     </>
   );
 }
