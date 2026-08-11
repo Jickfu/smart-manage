@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { App, Button, Checkbox, InputNumber, Select, Space, Table } from 'antd';
+import { App, Button, Checkbox, ConfigProvider, InputNumber, Select, Space, Table } from 'antd';
 import AppModal from '@/domain/common/component/AppModal';
+import type { ThemeConfig } from 'antd';
 import type { ColumnsType } from 'antd/es/table/interface';
 import type { ColumnSetting } from './columnSettings';
 import {
@@ -21,6 +22,16 @@ interface ColumnSettingsModalProps {
 }
 
 const DEFAULT_FIXED_WIDTH = 120;
+
+const COLUMN_SETTINGS_TABLE_THEME: ThemeConfig = {
+  components: {
+    Select: {
+      // Ant Design 6.6.0 的 small Select 只缩小高度、间距和圆角，不会使用 fontSizeSM；
+      // 因此仅在列设置这一高密度表格边界内覆盖字号，避免影响普通表单的 14px Select。
+      fontSize: 12,
+    },
+  },
+};
 
 const ColumnSettingsModal = ({
   open,
@@ -225,22 +236,24 @@ const ColumnSettingsModal = ({
           </Space>
         </div>
         <div className="sm-column-settings-table">
-          <Table<ColumnSetting>
-            size="small"
-            rowKey="key"
-            pagination={false}
-            sticky
-            scroll={{ y: 400 }}
-            columns={columns}
-            dataSource={draft}
-            rowSelection={{
-              type: 'radio',
-              columnWidth: 36,
-              selectedRowKeys: selectedKey ? [selectedKey] : [],
-              onChange: (keys) => setSelectedKey(keys[0] ? String(keys[0]) : undefined),
-            }}
-            onRow={(record) => ({ onClick: () => setSelectedKey(record.key) })}
-          />
+          <ConfigProvider theme={COLUMN_SETTINGS_TABLE_THEME}>
+            <Table<ColumnSetting>
+              size="small"
+              rowKey="key"
+              pagination={false}
+              sticky
+              scroll={{ y: 400 }}
+              columns={columns}
+              dataSource={draft}
+              rowSelection={{
+                type: 'radio',
+                columnWidth: 36,
+                selectedRowKeys: selectedKey ? [selectedKey] : [],
+                onChange: (keys) => setSelectedKey(keys[0] ? String(keys[0]) : undefined),
+              }}
+              onRow={(record) => ({ onClick: () => setSelectedKey(record.key) })}
+            />
+          </ConfigProvider>
         </div>
       </div>
     </AppModal>
