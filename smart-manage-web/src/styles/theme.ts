@@ -84,6 +84,9 @@ export function createThemeConfig(themeColor?: string | null): ThemeConfig {
         paddingInline: 8,
         paddingInlineSM: 6,
       },
+      InputNumber: {
+        inputFontSizeSM: 12,
+      },
       Select: {
         optionFontSize: 12,
         optionHeight: 28,
