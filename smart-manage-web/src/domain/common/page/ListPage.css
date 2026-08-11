@@ -207,9 +207,31 @@
 .sm-list-table-body {
   flex: 1;
   min-height: 0;
+  position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+/* 表头附加操作覆盖在表格视口右上角，不进入横向滚动内容。 */
+.sm-list-table-header-extra {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 30;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+  border-left: 1px solid var(--sm-color-divider);
+}
+
+.sm-list-table-header-extra .ant-btn {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
 }
 
 /* Table 的表头固定，数据区独立滚动并占满剩余高度。 */

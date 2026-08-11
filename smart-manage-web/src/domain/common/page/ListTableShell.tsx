@@ -11,6 +11,8 @@ interface ListTableShellProps {
   showPagination?: boolean;
   /** 左侧树面板（左树右表布局） */
   treePanel?: ReactNode;
+  /** 固定在表头可视区域右侧、不随表头横向滚动的操作。 */
+  tableHeaderExtra?: ReactNode;
 }
 
 /**
@@ -27,6 +29,7 @@ const ListTableShell = ({
   onPageChange,
   showPagination = true,
   treePanel,
+  tableHeaderExtra,
 }: ListTableShellProps) => {
   const rightContent = (
     <div className="sm-list-table-content">
@@ -50,7 +53,10 @@ const ListTableShell = ({
         )}
       </div>
       {/* 表格主体 */}
-      <div className="sm-list-table-body">{table ?? <Empty description="暂无列表配置" />}</div>
+      <div className="sm-list-table-body">
+        {table ?? <Empty description="暂无列表配置" />}
+        {tableHeaderExtra && <div className="sm-list-table-header-extra">{tableHeaderExtra}</div>}
+      </div>
     </div>
   );
 

@@ -27,6 +27,8 @@ interface ListPageProps<T> {
   toolbarActions?: PermissionAction[];
   /** 业务自定义工具区内容。 */
   toolbarExtra?: ReactNode;
+  /** 固定在表头可视区域右侧、不随表头横向滚动的操作。 */
+  tableHeaderExtra?: ReactNode;
   /** 当前领域的标准列表权限声明 */
   access?: AccessResource<StandardListPermissions>;
   /** 左侧树面板（左树右表布局） */
@@ -87,6 +89,7 @@ function ListPage<T>({
   filterSummary,
   toolbarActions,
   toolbarExtra,
+  tableHeaderExtra,
   access,
   treePanel,
   loading = false,
@@ -303,6 +306,7 @@ function ListPage<T>({
             onPageChange={onPageChange}
             showPagination={showPagination}
             treePanel={treePanel}
+            tableHeaderExtra={tableHeaderExtra}
           />
         </Spin>
       </div>

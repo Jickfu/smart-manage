@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { App, Button, Checkbox, Input, Modal, Popover, Space, Tag, Tree, Typography } from 'antd';
-import { CheckOutlined } from '@ant-design/icons';
+import { CheckOutlined, SettingOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
@@ -345,7 +345,7 @@ const UserListPage = (props: PageComponentProps) => {
             },
           },
         ]}
-        toolbarExtra={
+        tableHeaderExtra={
           <Popover
             trigger="click"
             title="列设置"
@@ -365,7 +365,7 @@ const UserListPage = (props: PageComponentProps) => {
               </Checkbox.Group>
             }
           >
-            <Button>列设置</Button>
+            <Button type="text" icon={<SettingOutlined />} title="列设置" aria-label="列设置" />
           </Popover>
         }
         onRefresh={onRefresh}
