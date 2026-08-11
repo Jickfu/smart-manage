@@ -1,0 +1,36 @@
+.sm-column-settings-modal .ant-modal-body {
+  border-top: 1px solid var(--ant-color-border-secondary);
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.sm-column-settings-body {
+  height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-column-settings-toolbar {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.sm-column-settings-table {
+  flex: 1;
+  min-height: 0;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.sm-column-settings-table .ant-select,
+.sm-column-settings-table .ant-input-number {
+  width: 100%;
+}
+
+.sm-column-settings-modal .ant-modal-footer {
+  margin: 0;
+  padding: 0;
+}

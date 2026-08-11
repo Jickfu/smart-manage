@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { App, Button, Checkbox, Input, Modal, Popover, Space, Tag, Tree, Typography } from 'antd';
-import { CheckOutlined, SettingOutlined } from '@ant-design/icons';
+import { App, Button, Checkbox, Input, Modal, Space, Tag, Tree, Typography } from 'antd';
+import { CheckOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
@@ -27,22 +27,6 @@ import './UserListPage.css';
 const USER_EDIT_KEY = 'sys/base/user/edit';
 const USER_ROLE_ASSIGNMENT_KEY = 'sys/base/user/role-assignment';
 const UNASSIGNED_KEY = '__unassigned__';
-
-type OptionalColumnKey =
-  | 'username'
-  | 'orgNamePath'
-  | 'position'
-  | 'isOrgLeader'
-  | 'isPrimary'
-  | 'enabled';
-const DEFAULT_VISIBLE_COLUMNS: OptionalColumnKey[] = [
-  'username',
-  'orgNamePath',
-  'position',
-  'isOrgLeader',
-  'isPrimary',
-  'enabled',
-];
 
 const toTreeNode = (node: OrgTreeNode): DataNode => ({
   key: node.id,
@@ -84,8 +68,6 @@ const UserListPage = (props: PageComponentProps) => {
   const [treeKeyword, setTreeKeyword] = useState('');
   const [includeDescendants, setIncludeDescendants] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [visibleColumns, setVisibleColumns] =
-    useState<OptionalColumnKey[]>(DEFAULT_VISIBLE_COLUMNS);
   const [resetPassword, setResetPassword] = useState<string>();
   const [resetUsername, setResetUsername] = useState('');
   const treeQuery = useQuery({
@@ -128,6 +110,7 @@ const UserListPage = (props: PageComponentProps) => {
   const columns = useMemo<ColumnsType<UserListVO>>(
     () => [
       {
+        key: 'avatar',
         title: '头像',
         dataIndex: 'avatar',
         width: 58,
@@ -141,6 +124,7 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        key: 'name',
         title: '姓名',
         dataIndex: 'name',
         width: 120,
@@ -150,12 +134,12 @@ const UserListPage = (props: PageComponentProps) => {
           </button>
         ),
       },
-      { title: '工号', dataIndex: 'number', width: 120 },
+      { key: 'number', title: '工号', dataIndex: 'number', width: 120 },
       {
+        key: 'username',
         title: '用户名',
         dataIndex: 'username',
         width: 140,
-        hidden: !visibleColumns.includes('username'),
       },
       {
         title: '部门',
@@ -171,7 +155,6 @@ const UserListPage = (props: PageComponentProps) => {
       {
         title: '部门长名称',
         key: 'orgNamePath',
-        hidden: !visibleColumns.includes('orgNamePath'),
         render: (_, record) => (
           <AssignmentCells
             assignments={record.assignments}
@@ -183,7 +166,6 @@ const UserListPage = (props: PageComponentProps) => {
         title: '职位',
         key: 'position',
         width: 140,
-        hidden: !visibleColumns.includes('position'),
         render: (_, record) => (
           <AssignmentCells
             assignments={record.assignments}
@@ -196,7 +178,6 @@ const UserListPage = (props: PageComponentProps) => {
         key: 'isOrgLeader',
         width: 76,
         align: 'center',
-        hidden: !visibleColumns.includes('isOrgLeader'),
         render: (_, record) => (
           <AssignmentCells
             assignments={record.assignments}
@@ -213,7 +194,6 @@ const UserListPage = (props: PageComponentProps) => {
         key: 'isPrimary',
         width: 64,
         align: 'center',
-        hidden: !visibleColumns.includes('isPrimary'),
         render: (_, record) => (
           <AssignmentCells
             assignments={record.assignments}
@@ -226,14 +206,14 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        key: 'enabled',
         title: '账号状态',
         dataIndex: 'enabled',
         width: 90,
-        hidden: !visibleColumns.includes('enabled'),
         render: (value) => (value ? <Tag color="green">可用</Tag> : <Tag>禁用</Tag>),
       },
     ],
-    [handleOpenEdit, visibleColumns],
+    [handleOpenEdit],
   );
 
   const treePanel = (
@@ -286,6 +266,7 @@ const UserListPage = (props: PageComponentProps) => {
         title="用户"
         access={userAccess}
         treePanel={treePanel}
+        columnSettingsKey={props.componentKey}
         loading={query.isLoading || treeQuery.isLoading}
         error={(query.error ?? treeQuery.error) as Error | null}
         onRetry={() => Promise.all([query.refetch(), treeQuery.refetch()])}
@@ -345,29 +326,6 @@ const UserListPage = (props: PageComponentProps) => {
             },
           },
         ]}
-        tableHeaderExtra={
-          <Popover
-            trigger="click"
-            title="列设置"
-            content={
-              <Checkbox.Group
-                value={visibleColumns}
-                onChange={(values) => setVisibleColumns(values as OptionalColumnKey[])}
-              >
-                <Space orientation="vertical">
-                  <Checkbox value="username">用户名</Checkbox>
-                  <Checkbox value="orgNamePath">部门长名称</Checkbox>
-                  <Checkbox value="position">职位</Checkbox>
-                  <Checkbox value="isOrgLeader">负责人</Checkbox>
-                  <Checkbox value="isPrimary">主职</Checkbox>
-                  <Checkbox value="enabled">账号状态</Checkbox>
-                </Space>
-              </Checkbox.Group>
-            }
-          >
-            <Button type="text" icon={<SettingOutlined />} title="列设置" aria-label="列设置" />
-          </Popover>
-        }
         onRefresh={onRefresh}
         onQuickSearch={onSearch}
         onPageChange={onPageChange}

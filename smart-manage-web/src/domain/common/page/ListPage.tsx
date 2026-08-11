@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { TableProps } from 'antd';
 import { Button, Result, Spin, Table } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import type { ColumnsType, TableRowSelection } from 'antd/es/table/interface';
 import ListFilterBar from './ListFilterBar';
 import ListTableShell from './ListTableShell';
@@ -9,6 +10,18 @@ import type { AccessResource, PermissionAction } from './access';
 import { PermissionActions } from './PermissionActions';
 import './ListPage.css';
 import { usePageTabTitle } from './usePageTabTitle';
+import ColumnSettingsModal from './ColumnSettingsModal';
+import {
+  applyColumnSettings,
+  createColumnSettingsStorageKey,
+  createDefaultColumnSettings,
+  mergeColumnSettings,
+  readStoredColumnSettings,
+  removeStoredColumnSettings,
+  writeStoredColumnSettings,
+} from './columnSettings';
+import type { ColumnSetting } from './columnSettings';
+import { useUserStore } from '@/stores/user';
 
 interface StandardListPermissions {
   save: string;
@@ -29,6 +42,8 @@ interface ListPageProps<T> {
   toolbarExtra?: ReactNode;
   /** 固定在表头可视区域右侧、不随表头横向滚动的操作。 */
   tableHeaderExtra?: ReactNode;
+  /** 传入稳定页面键后启用按当前用户隔离的通用列设置。 */
+  columnSettingsKey?: string;
   /** 当前领域的标准列表权限声明 */
   access?: AccessResource<StandardListPermissions>;
   /** 左侧树面板（左树右表布局） */
@@ -90,6 +105,7 @@ function ListPage<T>({
   toolbarActions,
   toolbarExtra,
   tableHeaderExtra,
+  columnSettingsKey,
   access,
   treePanel,
   loading = false,
@@ -119,6 +135,34 @@ function ListPage<T>({
   onSelectChange,
 }: ListPageProps<T>) {
   usePageTabTitle(title);
+  const userId = useUserStore((state) => state.userInfo?.id);
+  const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
+  const defaultColumnSettings = useMemo(() => createDefaultColumnSettings(columns), [columns]);
+  const storageKey =
+    columnSettingsKey && userId
+      ? createColumnSettingsStorageKey(userId, columnSettingsKey)
+      : undefined;
+  const loadedColumnSettings = useMemo(
+    () =>
+      mergeColumnSettings(
+        defaultColumnSettings,
+        storageKey ? readStoredColumnSettings(storageKey) : undefined,
+      ),
+    [defaultColumnSettings, storageKey],
+  );
+  const [columnSettingsOverride, setColumnSettingsOverride] = useState<{
+    storageKey?: string;
+    settings: ColumnSetting[];
+  }>();
+  const columnSettings =
+    columnSettingsOverride && columnSettingsOverride.storageKey === storageKey
+      ? mergeColumnSettings(defaultColumnSettings, columnSettingsOverride.settings)
+      : loadedColumnSettings;
+
+  const displayedColumns = useMemo(
+    () => (columnSettingsKey ? applyColumnSettings(columns, columnSettings) : columns),
+    [columnSettings, columnSettingsKey, columns],
+  );
   const rowSelection: TableRowSelection<T> | undefined = useMemo(
     () =>
       selectMode
@@ -127,6 +171,7 @@ function ListPage<T>({
             selectedRowKeys,
             onChange: (keys) => onSelectChange?.(keys),
             columnWidth: 36,
+            fixed: true,
           }
         : undefined,
     [selectMode, selectedRowKeys, onSelectChange],
@@ -173,10 +218,22 @@ function ListPage<T>({
               render: (_text: unknown, _record: T, index: number) =>
                 (pageNum - 1) * pageSize + index + 1,
             },
-            ...columns,
+            ...displayedColumns,
           ]
-        : columns,
-    [columns, pageNum, pageSize, showSequence],
+        : displayedColumns,
+    [displayedColumns, pageNum, pageSize, showSequence],
+  );
+
+  const resolvedTableHeaderExtra = columnSettingsKey ? (
+    <Button
+      type="text"
+      icon={<SettingOutlined />}
+      title="列设置"
+      aria-label="列设置"
+      onClick={() => setColumnSettingsOpen(true)}
+    />
+  ) : (
+    tableHeaderExtra
   );
 
   // 错误态
@@ -306,10 +363,29 @@ function ListPage<T>({
             onPageChange={onPageChange}
             showPagination={showPagination}
             treePanel={treePanel}
-            tableHeaderExtra={tableHeaderExtra}
+            tableHeaderExtra={resolvedTableHeaderExtra}
           />
         </Spin>
       </div>
+      {columnSettingsKey && columnSettingsOpen && (
+        <ColumnSettingsModal
+          open={columnSettingsOpen}
+          settings={columnSettings}
+          defaults={defaultColumnSettings}
+          onCancel={() => setColumnSettingsOpen(false)}
+          onConfirm={(nextSettings) => {
+            setColumnSettingsOverride({ storageKey, settings: nextSettings });
+            if (storageKey) {
+              if (JSON.stringify(nextSettings) === JSON.stringify(defaultColumnSettings)) {
+                removeStoredColumnSettings(storageKey);
+              } else {
+                writeStoredColumnSettings(storageKey, nextSettings);
+              }
+            }
+            setColumnSettingsOpen(false);
+          }}
+        />
+      )}
     </section>
   );
 }
