@@ -5,6 +5,7 @@ import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
+import ListTreePanel from '@/domain/common/page/ListTreePanel';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -140,8 +141,9 @@ export default function CacheManagementPage(props: PageComponentProps) {
         quickSearchPlaceholder="搜索 Key 或缓存名称"
         filterSummary={scope.scopeType === 'ALL' ? undefined : scopeLabel}
         treePanel={
-          <div className="sm-list-tree-panel-inner">
+          <ListTreePanel>
             <Tree
+              virtual={false}
               key={scopeTreeQuery.data ? 'scope-tree-loaded' : 'scope-tree-loading'}
               blockNode
               treeData={treeData}
@@ -169,7 +171,7 @@ export default function CacheManagementPage(props: PageComponentProps) {
                 setSelectedRowKeys([]);
               }}
             />
-          </div>
+          </ListTreePanel>
         }
         toolbarActions={[
           {

@@ -6,9 +6,8 @@ import sm.system.form.PageForm;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class OrgListForm extends PageForm {
+public class OrgParentListForm extends PageForm {
     private Long parentId;
-    private Boolean includeDescendants;
-    private Boolean showArchived;
+    private Long excludedId;
     private String keyword;
 }

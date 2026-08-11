@@ -5,6 +5,7 @@ import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
+import ListTreePanel from '@/domain/common/page/ListTreePanel';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
@@ -136,64 +137,68 @@ const BasicDataListPage = (props: PageComponentProps) => {
   ];
 
   const treePanel = (
-    <div className="sm-basic-data-tree">
-      <div className="sm-basic-data-tree-toolbar">
-        <Input.Search
-          placeholder="搜索名称"
-          allowClear
-          className="sm-basic-data-tree-search"
-          onChange={(event) => setTreeKeyword(event.target.value)}
-        />
-        <div className="sm-basic-data-tree-actions">
-          <PermissionActions
-            prefix={basicDataAccess.prefix}
-            actions={[
-              {
-                key: 'add-category',
-                label: <PlusOutlined />,
-                permission: basicDataAccess.permissions.save,
-                disabled: !selectedCloudId,
-                onClick: () => {
-                  setEditingCategoryId(null);
-                  setCategoryModalOpen(true);
-                },
-              },
-              {
-                key: 'edit-category',
-                label: <EditOutlined />,
-                permission: basicDataAccess.permissions.save,
-                disabled: selectedNode?.type !== 'category',
-                onClick: () => {
-                  setEditingCategoryId(selectedCategoryId ?? null);
-                  setCategoryModalOpen(true);
-                },
-              },
-              {
-                key: 'delete-category',
-                label: <DeleteOutlined />,
-                permission: basicDataAccess.permissions.delete,
-                danger: true,
-                disabled: selectedNode?.type !== 'category',
-                onClick: async () => {
-                  if (!selectedCategoryId) return;
-                  const category = await basicDataApi.categoryDetail(selectedCategoryId);
-                  modal.confirm({
-                    title: '确认删除基础资料分类？',
-                    content: `${category.number} - ${category.name}`,
-                    okButtonProps: { danger: true },
-                    onOk: () =>
-                      deleteCategoryMutation.mutateAsync({
-                        id: category.id,
-                        version: category.version,
-                      }),
-                  });
-                },
-              },
-            ]}
+    <ListTreePanel
+      header={
+        <div className="sm-basic-data-tree-toolbar">
+          <Input.Search
+            placeholder="搜索名称"
+            allowClear
+            className="sm-basic-data-tree-search"
+            onChange={(event) => setTreeKeyword(event.target.value)}
           />
+          <div className="sm-basic-data-tree-actions">
+            <PermissionActions
+              prefix={basicDataAccess.prefix}
+              actions={[
+                {
+                  key: 'add-category',
+                  label: <PlusOutlined />,
+                  permission: basicDataAccess.permissions.save,
+                  disabled: !selectedCloudId,
+                  onClick: () => {
+                    setEditingCategoryId(null);
+                    setCategoryModalOpen(true);
+                  },
+                },
+                {
+                  key: 'edit-category',
+                  label: <EditOutlined />,
+                  permission: basicDataAccess.permissions.save,
+                  disabled: selectedNode?.type !== 'category',
+                  onClick: () => {
+                    setEditingCategoryId(selectedCategoryId ?? null);
+                    setCategoryModalOpen(true);
+                  },
+                },
+                {
+                  key: 'delete-category',
+                  label: <DeleteOutlined />,
+                  permission: basicDataAccess.permissions.delete,
+                  danger: true,
+                  disabled: selectedNode?.type !== 'category',
+                  onClick: async () => {
+                    if (!selectedCategoryId) return;
+                    const category = await basicDataApi.categoryDetail(selectedCategoryId);
+                    modal.confirm({
+                      title: '确认删除基础资料分类？',
+                      content: `${category.number} - ${category.name}`,
+                      okButtonProps: { danger: true },
+                      onOk: () =>
+                        deleteCategoryMutation.mutateAsync({
+                          id: category.id,
+                          version: category.version,
+                        }),
+                    });
+                  },
+                },
+              ]}
+            />
+          </div>
         </div>
-      </div>
+      }
+    >
       <Tree
+        virtual={false}
         blockNode
         defaultExpandedKeys={[ROOT_KEY]}
         selectedKeys={selectedNode ? [selectedNode.key] : []}
@@ -209,7 +214,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
           setSelectedNode(flatNodes.find((node) => node.key === keys[0]));
         }}
       />
-    </div>
+    </ListTreePanel>
   );
 
   return (

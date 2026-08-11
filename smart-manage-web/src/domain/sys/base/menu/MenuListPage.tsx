@@ -4,6 +4,7 @@ import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
 import { useQuery } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
+import ListTreePanel from '@/domain/common/page/ListTreePanel';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { useMenuDeleteMutation } from './useMenuDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
@@ -177,8 +178,9 @@ const MenuListPage = (props: PageComponentProps) => {
   const error = treeQuery.error || appsQuery.error;
 
   const treePanel = (
-    <div className="sm-list-tree-panel-inner">
+    <ListTreePanel>
       <Tree
+        virtual={false}
         treeData={treeData}
         showLine={false}
         blockNode
@@ -186,7 +188,7 @@ const MenuListPage = (props: PageComponentProps) => {
         selectedKeys={[selectedNodeKey]}
         onSelect={handleTreeSelect}
       />
-    </div>
+    </ListTreePanel>
   );
 
   return (

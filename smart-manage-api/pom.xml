@@ -143,7 +143,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-        <!-- Rhino: JS 脚本引擎 -->
+        <!-- JS 脚本引擎 -->
         <dependency>
             <groupId>org.graalvm.polyglot</groupId>
             <artifactId>js-community</artifactId>

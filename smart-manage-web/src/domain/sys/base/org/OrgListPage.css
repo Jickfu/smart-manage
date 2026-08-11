@@ -1,0 +1,10 @@
+.sm-org-tree-search {
+  width: 100%;
+}
+
+.sm-org-tree-options {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}

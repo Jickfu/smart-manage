@@ -5,6 +5,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ListPage from '@/domain/common/page/ListPage';
+import ListTreePanel from '@/domain/common/page/ListTreePanel';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -116,8 +117,9 @@ const SysParamListPage = (props: PageComponentProps) => {
       pageNum={pageNum}
       pageSize={pageSize}
       treePanel={
-        <div className="sm-list-tree-panel-inner">
+        <ListTreePanel>
           <Tree
+            virtual={false}
             treeData={treeData}
             blockNode
             defaultExpandedKeys={['all']}
@@ -130,7 +132,7 @@ const SysParamListPage = (props: PageComponentProps) => {
               else setScope({ type: 'all' });
             }}
           />
-        </div>
+        </ListTreePanel>
       }
       quickSearchPlaceholder="搜索编码/名称"
       filterSummary={keyword ? `关键字：${keyword}` : undefined}

@@ -269,7 +269,7 @@ body {
   border-radius: 2px;
   color: #ffffff;
   background: var(--sm-primary);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
   cursor: pointer;
   transition: opacity 0.2s ease;
