@@ -6,7 +6,7 @@ package sm.domain.sys.base.user.model.vo;
 public record UserAuthentication(
         Long userId,
         String username,
-        String nickname,
+        String name,
         boolean passwordReset,
         boolean administrator,
         String message) {

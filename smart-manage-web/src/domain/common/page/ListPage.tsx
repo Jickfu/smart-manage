@@ -25,6 +25,8 @@ interface ListPageProps<T> {
   filterSummary?: ReactNode;
   /** 工具栏额外操作 */
   toolbarActions?: PermissionAction[];
+  /** 业务自定义工具区内容。 */
+  toolbarExtra?: ReactNode;
   /** 当前领域的标准列表权限声明 */
   access?: AccessResource<StandardListPermissions>;
   /** 左侧树面板（左树右表布局） */
@@ -84,6 +86,7 @@ function ListPage<T>({
   filterContent,
   filterSummary,
   toolbarActions,
+  toolbarExtra,
   access,
   treePanel,
   loading = false,
@@ -270,6 +273,7 @@ function ListPage<T>({
               ...(toolbarActions ?? []),
             ]}
           />
+          {toolbarExtra}
         </div>
       </div>
 

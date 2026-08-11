@@ -1,39 +1,110 @@
-import { useState, useCallback } from 'react';
-import { App, Avatar, Button, Input, Modal, Space, Tag, Typography } from 'antd';
+import { useCallback, useMemo, useState } from 'react';
+import { App, Button, Checkbox, Input, Modal, Popover, Space, Tag, Tree, Typography } from 'antd';
+import { CheckOutlined } from '@ant-design/icons';
+import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
+import { useQuery } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ListPage from '@/domain/common/page/ListPage';
+import ListTreePanel from '@/domain/common/page/ListTreePanel';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { useUserDeleteMutation } from './useUserDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { getRegisteredTabTitle } from '@/domain/common/registry/componentRegistry';
 import { OperationType } from '@/domain/common/page/types';
+import { orgApi } from '@/domain/sys/base/org/api';
+import { orgQueryKeys } from '@/domain/sys/base/org/queryKeys';
+import type { OrgTreeNode } from '@/domain/sys/base/org/types';
 import { userApi } from './api';
 import { userQueryKeys } from './queryKeys';
-import type { UserListVO } from './types';
+import type { UserAssignmentVO, UserListVO } from './types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { userAccess } from './permissions';
+import { UserAvatar } from './UserAvatar';
 import './UserListPage.css';
 
-/** 用户编辑页 componentKey */
 const USER_EDIT_KEY = 'sys/base/user/edit';
 const USER_ROLE_ASSIGNMENT_KEY = 'sys/base/user/role-assignment';
+const UNASSIGNED_KEY = '__unassigned__';
 
-/** 用户管理列表页 */
+type OptionalColumnKey =
+  | 'username'
+  | 'orgNamePath'
+  | 'position'
+  | 'isOrgLeader'
+  | 'isPrimary'
+  | 'enabled';
+const DEFAULT_VISIBLE_COLUMNS: OptionalColumnKey[] = [
+  'username',
+  'orgNamePath',
+  'position',
+  'isOrgLeader',
+  'isPrimary',
+  'enabled',
+];
+
+const toTreeNode = (node: OrgTreeNode): DataNode => ({
+  key: node.id,
+  title: node.name,
+  children: node.children.map(toTreeNode),
+});
+
+const filterTree = (nodes: OrgTreeNode[], keyword: string): OrgTreeNode[] => {
+  const normalized = keyword.trim().toLowerCase();
+  if (!normalized) return nodes;
+  return nodes.flatMap((node) => {
+    const children = filterTree(node.children, normalized);
+    const matches =
+      node.name.toLowerCase().includes(normalized) ||
+      node.number.toLowerCase().includes(normalized);
+    return matches || children.length ? [{ ...node, children }] : [];
+  });
+};
+
+const AssignmentCells = ({
+  assignments,
+  render,
+}: {
+  assignments: UserAssignmentVO[];
+  render: (assignment: UserAssignmentVO) => React.ReactNode;
+}) => (
+  <div className="sm-user-assignment-cells">
+    {assignments.map((assignment) => (
+      <div key={assignment.id ?? assignment.orgId} className="sm-user-assignment-cell">
+        {render(assignment)}
+      </div>
+    ))}
+  </div>
+);
+
 const UserListPage = (props: PageComponentProps) => {
   const { message, modal } = App.useApp();
-  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
-    useListPageQuery({
-      queryKey: userQueryKeys.lists(),
-      queryFn: (params) => userApi.listPage(params),
-    });
-
+  const [selectedTreeKey, setSelectedTreeKey] = useState<string>();
+  const [treeKeyword, setTreeKeyword] = useState('');
+  const [includeDescendants, setIncludeDescendants] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [visibleColumns, setVisibleColumns] =
+    useState<OptionalColumnKey[]>(DEFAULT_VISIBLE_COLUMNS);
   const [resetPassword, setResetPassword] = useState<string>();
   const [resetUsername, setResetUsername] = useState('');
-  const openBillTab = useWorkbenchStore((s) => s.openBillTab);
-  const openAddNewTab = useWorkbenchStore((s) => s.openAddNewTab);
+  const treeQuery = useQuery({
+    queryKey: orgQueryKeys.tree(false),
+    queryFn: () => orgApi.tree(false),
+  });
+  const effectiveTreeKey = selectedTreeKey ?? treeQuery.data?.[0]?.id;
+  const unassigned = effectiveTreeKey === UNASSIGNED_KEY;
+  const scope = {
+    ...(unassigned ? { unassigned: true } : effectiveTreeKey ? { orgId: effectiveTreeKey } : {}),
+    includeDescendants: unassigned ? false : includeDescendants,
+  };
+  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
+    useListPageQuery({
+      queryKey: userQueryKeys.list(scope),
+      queryFn: (params) => userApi.listPage({ ...params, ...scope }),
+    });
+  const openBillTab = useWorkbenchStore((state) => state.openBillTab);
+  const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
   const addContentTab = useWorkbenchStore((state) => state.addContentTab);
   const deleteMutation = useUserDeleteMutation(async () => {
     setSelectedRowKeys([]);
@@ -47,123 +118,196 @@ const UserListPage = (props: PageComponentProps) => {
     mutationFn: (id: string) => userApi.resetPassword(id),
     onSuccess: (result) => setResetPassword(result.password),
   });
-
   const handleOpenEdit = useCallback(
     (id: string) => {
       openBillTab(props.appNumber, USER_EDIT_KEY, id, OperationType.EDIT);
     },
-    [props.appNumber, openBillTab],
+    [openBillTab, props.appNumber],
   );
 
-  const handleOpenAdd = useCallback(() => {
-    openAddNewTab(props.appNumber, USER_EDIT_KEY);
-  }, [props.appNumber, openAddNewTab]);
-
-  const handleDelete = useCallback(() => {
-    if (selectedRowKeys.length === 0) return;
-    modal.confirm({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
-      okText: '删除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
-    });
-  }, [selectedRowKeys, deleteMutation, modal]);
-
-  const handleAssignRoles = useCallback(() => {
-    if (selectedRowKeys.length !== 1) return;
-    const userId = String(selectedRowKeys[0]);
-    addContentTab(props.appNumber, {
-      key: `assignment:${USER_ROLE_ASSIGNMENT_KEY}:${userId}`,
-      label: getRegisteredTabTitle(USER_ROLE_ASSIGNMENT_KEY, 'CUSTOM'),
-      closable: true,
-      componentKey: USER_ROLE_ASSIGNMENT_KEY,
-      pageType: 'CUSTOM',
-      billId: userId,
-    });
-  }, [addContentTab, props.appNumber, selectedRowKeys]);
-
-  const handleResetPassword = useCallback(() => {
-    if (selectedRowKeys.length !== 1) return;
-    const userId = String(selectedRowKeys[0]);
-    const user = records.find((record) => record.id === userId);
-    modal.confirm({
-      title: '确认重置密码',
-      content: `确定要重置用户“${user?.username ?? userId}”的密码吗？该用户已有登录状态将立即失效。`,
-      okText: '重置',
-      cancelText: '取消',
-      onOk: async () => {
-        setResetUsername(user?.username ?? userId);
-        await resetPasswordMutation.mutateAsync(userId);
+  const columns = useMemo<ColumnsType<UserListVO>>(
+    () => [
+      {
+        title: '头像',
+        dataIndex: 'avatar',
+        width: 58,
+        render: (src, record) => (
+          <UserAvatar
+            src={src}
+            name={record.name}
+            number={record.number}
+            username={record.username}
+          />
+        ),
       },
-    });
-  }, [modal, records, resetPasswordMutation, selectedRowKeys]);
+      {
+        title: '姓名',
+        dataIndex: 'name',
+        width: 120,
+        render: (text, record) => (
+          <button type="button" className="sm-table-link" onClick={() => handleOpenEdit(record.id)}>
+            {text}
+          </button>
+        ),
+      },
+      { title: '工号', dataIndex: 'number', width: 120 },
+      {
+        title: '用户名',
+        dataIndex: 'username',
+        width: 140,
+        hidden: !visibleColumns.includes('username'),
+      },
+      {
+        title: '部门',
+        key: 'orgName',
+        width: 150,
+        render: (_, record) => (
+          <AssignmentCells
+            assignments={record.assignments}
+            render={(assignment) => assignment.orgName}
+          />
+        ),
+      },
+      {
+        title: '部门长名称',
+        key: 'orgNamePath',
+        hidden: !visibleColumns.includes('orgNamePath'),
+        render: (_, record) => (
+          <AssignmentCells
+            assignments={record.assignments}
+            render={(assignment) => assignment.orgNamePath}
+          />
+        ),
+      },
+      {
+        title: '职位',
+        key: 'position',
+        width: 140,
+        hidden: !visibleColumns.includes('position'),
+        render: (_, record) => (
+          <AssignmentCells
+            assignments={record.assignments}
+            render={(assignment) => assignment.position}
+          />
+        ),
+      },
+      {
+        title: '负责人',
+        key: 'isOrgLeader',
+        width: 76,
+        align: 'center',
+        hidden: !visibleColumns.includes('isOrgLeader'),
+        render: (_, record) => (
+          <AssignmentCells
+            assignments={record.assignments}
+            render={(assignment) =>
+              assignment.isOrgLeader ? (
+                <CheckOutlined className="sm-user-assignment-check" title="部门负责人" />
+              ) : null
+            }
+          />
+        ),
+      },
+      {
+        title: '主职',
+        key: 'isPrimary',
+        width: 64,
+        align: 'center',
+        hidden: !visibleColumns.includes('isPrimary'),
+        render: (_, record) => (
+          <AssignmentCells
+            assignments={record.assignments}
+            render={(assignment) =>
+              assignment.isPrimary ? (
+                <CheckOutlined className="sm-user-assignment-check" title="主职" />
+              ) : null
+            }
+          />
+        ),
+      },
+      {
+        title: '账号状态',
+        dataIndex: 'enabled',
+        width: 90,
+        hidden: !visibleColumns.includes('enabled'),
+        render: (value) => (value ? <Tag color="green">可用</Tag> : <Tag>禁用</Tag>),
+      },
+    ],
+    [handleOpenEdit, visibleColumns],
+  );
 
-  const closeResetPasswordModal = useCallback(() => {
-    setResetPassword(undefined);
-    setResetUsername('');
-  }, []);
+  const treePanel = (
+    <ListTreePanel
+      header={
+        <Input.Search
+          placeholder="搜索组织"
+          allowClear
+          onChange={(event) => setTreeKeyword(event.target.value)}
+        />
+      }
+      footer={
+        <Checkbox
+          disabled={unassigned}
+          checked={!unassigned && includeDescendants}
+          onChange={(event) => {
+            setIncludeDescendants(event.target.checked);
+            setSelectedRowKeys([]);
+          }}
+        >
+          包含下级
+        </Checkbox>
+      }
+    >
+      <Tree
+        virtual={false}
+        blockNode
+        defaultExpandAll
+        selectedKeys={effectiveTreeKey ? [effectiveTreeKey] : []}
+        treeData={[
+          ...filterTree(treeQuery.data ?? [], treeKeyword).map(toTreeNode),
+          ...('未分配部门'.includes(treeKeyword.trim())
+            ? [{ key: UNASSIGNED_KEY, title: '未分配部门' }]
+            : []),
+        ]}
+        onSelect={(keys) => {
+          if (!keys[0]) return;
+          setSelectedTreeKey(String(keys[0]));
+          setSelectedRowKeys([]);
+        }}
+      />
+    </ListTreePanel>
+  );
 
-  const copyResetPassword = useCallback(async () => {
-    if (!resetPassword) return;
-    try {
-      await navigator.clipboard.writeText(resetPassword);
-      message.success('新密码已复制');
-    } catch {
-      message.error('复制失败，请手动复制');
-    }
-  }, [message, resetPassword]);
-
-  const columns: ColumnsType<UserListVO> = [
-    {
-      title: '用户名',
-      dataIndex: 'username',
-      width: 160,
-      render: (text, record) => (
-        <Button type="link" size="small" onClick={() => handleOpenEdit(record.id)}>
-          {text}
-        </Button>
-      ),
-    },
-    { title: '昵称', dataIndex: 'nickname' },
-    {
-      title: '头像',
-      dataIndex: 'avatar',
-      width: 60,
-      render: (url) => (url ? <Avatar src={url} size="small" /> : <Avatar size="small">-</Avatar>),
-    },
-    {
-      title: '状态',
-      dataIndex: 'enabled',
-      width: 80,
-      render: (value) => (value ? <Tag color="green">启用</Tag> : <Tag color="default">停用</Tag>),
-    },
-    { title: '创建时间', dataIndex: 'createTime', width: 180 },
-  ];
-
+  const selectedUser = records.find((record) => selectedRowKeys[0] === record.id);
   return (
     <>
       <ListPage<UserListVO>
         {...props}
         title="用户"
         access={userAccess}
-        loading={query.isLoading}
-        error={query.error as Error | null}
-        onRetry={() => query.refetch()}
+        treePanel={treePanel}
+        loading={query.isLoading || treeQuery.isLoading}
+        error={(query.error ?? treeQuery.error) as Error | null}
+        onRetry={() => Promise.all([query.refetch(), treeQuery.refetch()])}
         total={total}
         pageNum={pageNum}
         pageSize={pageSize}
-        quickSearchPlaceholder="搜索用户名/昵称"
+        quickSearchPlaceholder="搜索姓名/工号/用户名"
         filterSummary={keyword ? `关键字：${keyword}` : undefined}
-        onAddNew={handleOpenAdd}
-        onDelete={handleDelete}
+        onAddNew={() => openAddNewTab(props.appNumber, USER_EDIT_KEY)}
+        onDelete={() =>
+          modal.confirm({
+            title: '确认删除',
+            content: `确定删除选中的 ${selectedRowKeys.length} 个用户吗？`,
+            okType: 'danger',
+            onOk: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
+          })
+        }
         onEnable={() => enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: true })}
         onDisable={() =>
           enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: false })
         }
         enabledCommandLoading={enabledMutation.isPending}
-        onRefresh={onRefresh}
         toolbarActions={[
           {
             key: 'resetPassword',
@@ -171,16 +315,60 @@ const UserListPage = (props: PageComponentProps) => {
             permission: userAccess.permissions.resetPassword,
             disabled: selectedRowKeys.length !== 1,
             loading: resetPasswordMutation.isPending,
-            onClick: handleResetPassword,
+            onClick: () => {
+              if (!selectedUser) return;
+              modal.confirm({
+                title: '确认重置密码',
+                content: `确定重置用户“${selectedUser.username}”的密码吗？`,
+                onOk: async () => {
+                  setResetUsername(selectedUser.username);
+                  await resetPasswordMutation.mutateAsync(selectedUser.id);
+                },
+              });
+            },
           },
           {
             key: 'assignRoles',
             label: '分配角色',
             permission: userAccess.permissions.assignRoles,
             disabled: selectedRowKeys.length !== 1,
-            onClick: handleAssignRoles,
+            onClick: () => {
+              if (!selectedUser) return;
+              addContentTab(props.appNumber, {
+                key: `assignment:${USER_ROLE_ASSIGNMENT_KEY}:${selectedUser.id}`,
+                label: getRegisteredTabTitle(USER_ROLE_ASSIGNMENT_KEY, 'CUSTOM'),
+                closable: true,
+                componentKey: USER_ROLE_ASSIGNMENT_KEY,
+                pageType: 'CUSTOM',
+                billId: selectedUser.id,
+              });
+            },
           },
         ]}
+        toolbarExtra={
+          <Popover
+            trigger="click"
+            title="列设置"
+            content={
+              <Checkbox.Group
+                value={visibleColumns}
+                onChange={(values) => setVisibleColumns(values as OptionalColumnKey[])}
+              >
+                <Space orientation="vertical">
+                  <Checkbox value="username">用户名</Checkbox>
+                  <Checkbox value="orgNamePath">部门长名称</Checkbox>
+                  <Checkbox value="position">职位</Checkbox>
+                  <Checkbox value="isOrgLeader">负责人</Checkbox>
+                  <Checkbox value="isPrimary">主职</Checkbox>
+                  <Checkbox value="enabled">账号状态</Checkbox>
+                </Space>
+              </Checkbox.Group>
+            }
+          >
+            <Button>列设置</Button>
+          </Popover>
+        }
+        onRefresh={onRefresh}
         onQuickSearch={onSearch}
         onPageChange={onPageChange}
         rowKey="id"
@@ -188,28 +376,29 @@ const UserListPage = (props: PageComponentProps) => {
         dataSource={records}
         selectMode="checkbox"
         selectedRowKeys={selectedRowKeys}
-        onSelectChange={(keys) => setSelectedRowKeys(keys)}
+        onSelectChange={setSelectedRowKeys}
       />
       <Modal
         title="密码重置成功"
         open={Boolean(resetPassword)}
-        closable
         mask={{ closable: false }}
-        destroyOnHidden
-        onCancel={closeResetPasswordModal}
-        footer={[
-          <Button key="close" onClick={closeResetPasswordModal}>
-            关闭
-          </Button>,
-          <Button key="copy" type="primary" onClick={copyResetPassword}>
+        onCancel={() => setResetPassword(undefined)}
+        footer={
+          <Button
+            type="primary"
+            onClick={async () => {
+              if (resetPassword) {
+                await navigator.clipboard.writeText(resetPassword);
+                message.success('新密码已复制');
+              }
+            }}
+          >
             复制密码
-          </Button>,
-        ]}
+          </Button>
+        }
       >
         <Space orientation="vertical" className="sm-user-reset-password-content">
-          <Typography.Text>
-            用户“{resetUsername}”下次登录时必须修改密码。新密码仅展示一次，请及时复制。
-          </Typography.Text>
+          <Typography.Text>用户“{resetUsername}”下次登录时必须修改密码。</Typography.Text>
           <Input value={resetPassword} readOnly />
         </Space>
       </Modal>

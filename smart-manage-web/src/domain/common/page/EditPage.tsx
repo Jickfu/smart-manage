@@ -114,6 +114,12 @@ interface EditPageProps {
   headerActions?: PermissionAction[];
   /** 额外的聚合内容，仍处于同一个 Form 中，例如主从单据明细。 */
   detailContent?: (editable: boolean) => ReactNode;
+  /** 基本信息折叠面板标题。 */
+  basicLabel?: ReactNode;
+  /** 明细折叠面板标题。 */
+  detailLabel?: ReactNode;
+  /** 自定义基本信息布局，用于头像等非标准表单。 */
+  basicContent?: (editable: boolean) => ReactNode;
   /** 明细标题栏右侧操作区。 */
   detailExtra?: (editable: boolean) => ReactNode;
   /** 启用业务附件面板；附件上传、删除和表单字段组装统一由通用编辑页处理。 */
@@ -154,6 +160,9 @@ const EditPage = ({
   access,
   headerActions,
   detailContent,
+  basicLabel = '基本信息',
+  detailLabel = '明细信息',
+  basicContent,
   detailExtra,
   attachmentResource,
   closeGuard,
@@ -297,14 +306,16 @@ const EditPage = ({
           items={[
             {
               key: 'basic',
-              label: '基本信息',
-              children: <EditFormFields fields={fields} editable={editable} />,
+              label: basicLabel,
+              children: basicContent?.(editable) ?? (
+                <EditFormFields fields={fields} editable={editable} />
+              ),
             },
             ...(detailContent
               ? [
                   {
                     key: 'detail',
-                    label: '明细信息',
+                    label: detailLabel,
                     children: detailContent(editable),
                     extra: detailExpanded ? detailExtra?.(editable) : undefined,
                   },

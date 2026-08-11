@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { App, Avatar, Button, Dropdown, Popover, Tooltip } from 'antd';
+import { App, Button, Dropdown, Popover, Tooltip } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import type { MenuProps } from 'antd';
-import { UserOutlined, LogoutOutlined, SkinOutlined } from '@ant-design/icons';
+import { LogoutOutlined, SkinOutlined } from '@ant-design/icons';
+import { UserAvatar } from '@/domain/sys/base/user/UserAvatar';
 import { useHeaderTabsStore } from '@/stores/headerTabs';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { useUserStore } from '@/stores/user';
@@ -170,9 +171,13 @@ const Header = () => {
           />
         </Popover>
         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-          <Avatar size={32} className="sm-header-avatar" icon={<UserOutlined />}>
-            {userInfo?.nickname?.[0]}
-          </Avatar>
+          <UserAvatar
+            size={32}
+            className="sm-header-avatar"
+            src={userInfo?.avatar}
+            name={userInfo?.name}
+            username={userInfo?.username}
+          />
         </Dropdown>
       </div>
     </header>

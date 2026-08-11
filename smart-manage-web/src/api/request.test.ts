@@ -25,6 +25,21 @@ beforeAll(async () => {
 });
 
 describe('request authentication handling', () => {
+  it('passes through successful blob responses without Result parsing', async () => {
+    const image = new Blob(['image-content'], { type: 'image/jpeg' });
+    const adapter: AxiosAdapter = async (config) => ({
+      data: image,
+      status: 200,
+      statusText: 'OK',
+      headers: { 'content-type': 'image/jpeg' },
+      config,
+    });
+
+    await expect(
+      request.get('/protected-image', { adapter, responseType: 'blob' }),
+    ).resolves.toMatchObject({ data: image, status: 200 });
+  });
+
   it('clears local authentication before redirecting on business 401', async () => {
     localStorage.setItem('token', 'expired-token');
     windowStub.location.href = 'http://localhost:8000/index.html?app=home';

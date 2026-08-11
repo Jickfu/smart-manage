@@ -26,6 +26,14 @@ import sm.system.response.PageData;
 import sm.system.response.Result;
 
 import java.util.List;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
+import sm.system.storage.FileStorageService;
+import sm.system.storage.FileStorageServiceFactory;
 
 /**
  * 用户管理
@@ -37,6 +45,24 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserController {
 	private final UserService service;
+	private final FileStorageServiceFactory storageFactory;
+
+	@GetMapping("/sys/base/user/avatar/{userId}")
+	public ResponseEntity<StreamingResponseBody> avatar(@PathVariable Long userId) {
+		AttachmentEntity attachment = service.requireAvatar(userId);
+		FileStorageService storage = storageFactory.getService(attachment.getStorageType());
+		StreamingResponseBody body = outputStream -> {
+			try (java.io.InputStream inputStream = storage.openStream(attachment.getObjectKey())) {
+				inputStream.transferTo(outputStream);
+			}
+		};
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType(attachment.getMimeType()))
+				.contentLength(attachment.getFileSize())
+				.header("X-Content-Type-Options", "nosniff")
+				.header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+				.body(body);
+	}
 
 	@PostMapping("/sys/base/user/listPage")
 	@Operation(summary = "用户列表", description = "获取用户分页列表数据")

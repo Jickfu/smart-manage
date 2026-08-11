@@ -14,7 +14,7 @@ public class LoginVO {
 	private String token;
 
 	@Schema(description = "姓名")
-	private String nickname;
+	private String name;
 
 	@Schema(description = "消息")
 	private String msg;

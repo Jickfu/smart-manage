@@ -28,6 +28,14 @@ export interface OrgListVO {
 
 export type OrgDetailVO = OrgListVO;
 
+export interface OrgOptionVO {
+  id: string;
+  number: string;
+  name: string;
+  parentId?: string;
+  namePath: string;
+}
+
 export interface OrgListForm {
   pageNum: number;
   pageSize: number;

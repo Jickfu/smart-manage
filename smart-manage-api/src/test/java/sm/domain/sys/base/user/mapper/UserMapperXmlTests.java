@@ -1,0 +1,45 @@
+package sm.domain.sys.base.user.mapper;
+
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import org.apache.ibatis.builder.xml.XMLMapperBuilder;
+import org.apache.ibatis.mapping.BoundSql;
+import org.junit.jupiter.api.Test;
+
+import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class UserMapperXmlTests {
+    private static final String MAPPER_RESOURCE = "mapper/sys/base/user/UserMapper.xml";
+
+    @Test
+    void organizationScopeUsesExistsWithoutDuplicatingUsers() {
+        MybatisConfiguration configuration = configuration();
+        BoundSql boundSql = configuration.getMappedStatement(UserMapper.class.getName() + ".selectScopedPage")
+                .getBoundSql(Map.of("keyword", "", "orgIds", List.of(10L, 11L), "unassigned", false));
+        String sql = boundSql.getSql().replaceAll("\\s+", " ");
+
+        assertTrue(sql.contains("EXISTS ( SELECT 1 FROM t_sys_user_assignment b"));
+        assertTrue(sql.contains("b.org_id IN"));
+    }
+
+    @Test
+    void unassignedScopeUsesNotExists() {
+        MybatisConfiguration configuration = configuration();
+        BoundSql boundSql = configuration.getMappedStatement(UserMapper.class.getName() + ".selectScopedPage")
+                .getBoundSql(Map.of("keyword", "", "orgIds", List.of(), "unassigned", true));
+
+        assertTrue(boundSql.getSql().replaceAll("\\s+", " ").contains("NOT EXISTS"));
+    }
+
+    private MybatisConfiguration configuration() {
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        InputStream mapperInput = getClass().getClassLoader().getResourceAsStream(MAPPER_RESOURCE);
+        assertNotNull(mapperInput, "用户 Mapper XML 不存在");
+        new XMLMapperBuilder(mapperInput, configuration, MAPPER_RESOURCE, configuration.getSqlFragments()).parse();
+        return configuration;
+    }
+}

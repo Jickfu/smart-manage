@@ -1,3 +1,22 @@
 .sm-user-reset-password-content {
   width: 100%;
 }
+
+.sm-user-assignment-cells {
+  margin: -8px;
+}
+
+.sm-user-assignment-cell {
+  min-height: 32px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--sm-color-divider);
+}
+
+.sm-user-assignment-cell:last-child {
+  border-bottom: 0;
+}
+
+.sm-user-assignment-check {
+  color: rgb(38, 177, 117);
+  font-size: 16px;
+}

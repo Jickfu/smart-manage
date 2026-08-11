@@ -8,6 +8,11 @@ import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
+import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
+import sm.domain.sys.base.org.mapper.OrgMapper;
+import sm.domain.sys.base.org.model.entity.OrgEntity;
+import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
+import sm.domain.sys.base.user.model.form.UserAssignmentForm;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.entity.UserRoleEntity;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
@@ -20,6 +25,8 @@ import sm.system.util.PasswordGeneratorUtil;
 
 import java.util.Objects;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import sm.system.util.EnabledCommandUtil;
 
 /**
@@ -34,10 +41,17 @@ import sm.system.util.EnabledCommandUtil;
 class UserTxService {
     private final UserMapper mapper;
     private final UserRoleMapper userRoleMapper;
+    private final UserAssignmentMapper userAssignmentMapper;
+    private final OrgMapper orgMapper;
     private final CurrentUserContext currentUserContext;
 
     /** 新增/编辑用户 */
     public Long save(UserSaveForm form) {
+        return save(form, form.getId());
+    }
+
+    /** 新增时允许上层预分配ID，供头像附件绑定使用。 */
+    public Long save(UserSaveForm form, Long desiredId) {
         // 检查用户名唯一性
         LambdaQueryWrapper<UserEntity> checkWrapper = new LambdaQueryWrapper<UserEntity>()
                 .eq(UserEntity::getUsername, form.getUsername());
@@ -47,6 +61,13 @@ class UserTxService {
         if (mapper.selectCount(checkWrapper) > 0) {
             throw new BizException(ResultEnum.UNIQUE_CONFLICT, "用户名已存在");
         }
+		LambdaQueryWrapper<UserEntity> numberCheck = new LambdaQueryWrapper<UserEntity>()
+				.eq(UserEntity::getNumber, form.getNumber().trim());
+		if (form.getId() != null) numberCheck.ne(UserEntity::getId, form.getId());
+		if (mapper.selectCount(numberCheck) > 0) {
+			throw new BizException(ResultEnum.UNIQUE_CONFLICT, "工号已存在");
+		}
+		validateAssignments(form.getAssignments());
 
         UserEntity entity;
         if (form.getId() != null) {
@@ -62,6 +83,7 @@ class UserTxService {
             }
         } else {
             entity = new UserEntity();
+            entity.setId(desiredId);
         }
 
 		if (form.getId() != null && !Objects.equals(entity.getUsername(), form.getUsername())) {
@@ -77,18 +99,17 @@ class UserTxService {
         if (form.getId() == null && form.getPassword() != null && !form.getPassword().isEmpty()) {
             entity.setPassword(Argon2Helper.encode(form.getPassword()));
         }
-        if (form.getNickname() != null) {
-            entity.setNickname(form.getNickname());
-        }
+        entity.setName(form.getName().trim());
+        entity.setNumber(form.getNumber().trim());
+        entity.setGender(form.getGender());
+        entity.setBirthday(form.getBirthday());
         if (form.getEmail() != null) {
             entity.setEmail(normalizeOptional(form.getEmail()));
         }
         if (form.getPhone() != null) {
             entity.setPhone(normalizeOptional(form.getPhone()));
         }
-        if (form.getAvatar() != null) {
-            entity.setAvatar(form.getAvatar());
-        }
+        entity.setAvatarAttachmentId(form.getAvatarAttachmentId());
         if (form.getId() == null) {
             // 新增用户：密码必填
             if (entity.getPassword() == null || entity.getPassword().isBlank()) {
@@ -105,6 +126,7 @@ class UserTxService {
                 throw new BizException(ResultEnum.DATA_CONFLICT, "用户已被其他用户修改，请刷新后重试");
             }
         }
+        replaceAssignments(entity.getId(), form.getAssignments());
         return entity.getId();
     }
 
@@ -169,6 +191,8 @@ class UserTxService {
         }
         userRoleMapper.delete(new LambdaQueryWrapper<UserRoleEntity>()
                 .eq(UserRoleEntity::getUserId, id));
+        userAssignmentMapper.delete(new LambdaQueryWrapper<UserAssignmentEntity>()
+                .eq(UserAssignmentEntity::getUserId, id));
         if (mapper.deleteById(id) == 0) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "用户不存在或已被删除");
         }
@@ -198,4 +222,41 @@ class UserTxService {
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
     }
+
+	private void validateAssignments(List<UserAssignmentForm> assignments) {
+		Set<Long> orgIds = new HashSet<>();
+		int primaryCount = 0;
+		for (UserAssignmentForm assignment : assignments) {
+			if (!orgIds.add(assignment.getOrgId())) {
+				throw new BizException(ResultEnum.PARAM_ERROR, "同一部门不能重复任职");
+			}
+			if (Boolean.TRUE.equals(assignment.getIsPrimary())) primaryCount++;
+		}
+		if (!assignments.isEmpty() && primaryCount != 1) {
+			throw new BizException(ResultEnum.PARAM_ERROR, "存在任职时必须且只能设置一个主职");
+		}
+		if (!orgIds.isEmpty()) {
+			List<OrgEntity> organizations = orgMapper.selectByIds(orgIds);
+			if (organizations.size() != orgIds.size()
+					|| organizations.stream().anyMatch(org -> !Boolean.TRUE.equals(org.getEnabled()) || Boolean.TRUE.equals(org.getArchived()))) {
+				throw new BizException(ResultEnum.PARAM_ERROR, "任职部门不存在或不可用");
+			}
+		}
+	}
+
+	private void replaceAssignments(Long userId, List<UserAssignmentForm> assignments) {
+		userAssignmentMapper.delete(new LambdaQueryWrapper<UserAssignmentEntity>()
+				.eq(UserAssignmentEntity::getUserId, userId));
+		for (UserAssignmentForm assignment : assignments) {
+			UserAssignmentEntity entity = new UserAssignmentEntity();
+			entity.setUserId(userId);
+			entity.setOrgId(assignment.getOrgId());
+			entity.setPosition(assignment.getPosition().trim());
+			entity.setIsOrgLeader(Boolean.TRUE.equals(assignment.getIsOrgLeader()));
+			entity.setIsPrimary(Boolean.TRUE.equals(assignment.getIsPrimary()));
+			if (userAssignmentMapper.insert(entity) != 1) {
+				throw new BizException(ResultEnum.PERSISTENCE_ERROR, "用户任职保存失败");
+			}
+		}
+	}
 }

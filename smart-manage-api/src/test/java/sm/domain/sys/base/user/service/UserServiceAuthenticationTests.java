@@ -9,6 +9,9 @@ import sm.domain.sys.base.menu.service.MenuService;
 import sm.domain.sys.base.permission.service.PermissionService;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
+import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
+import sm.domain.sys.base.org.mapper.OrgMapper;
+import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.vo.UserAuthentication;
 import sm.system.helper.Argon2Helper;
@@ -33,6 +36,9 @@ class UserServiceAuthenticationTests {
 		UserService service = new UserService(
 				userMapper,
 				mock(UserRoleMapper.class),
+				mock(UserAssignmentMapper.class),
+				mock(OrgMapper.class),
+				mock(AttachmentService.class),
 				mock(UserTxService.class),
 				mock(MenuService.class),
 				mock(PermissionService.class),

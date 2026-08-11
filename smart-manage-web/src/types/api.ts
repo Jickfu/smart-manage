@@ -29,7 +29,7 @@ export interface IdForm {
 export interface UserInfoVO {
   id: string;
   username: string;
-  nickname: string;
+  name: string;
   avatar: string;
   themeColor: string;
 }

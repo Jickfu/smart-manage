@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.sys.base.user.mapper.UserMapper">
+    <select id="selectScopedPage" resultType="sm.domain.sys.base.user.model.entity.UserEntity">
+        SELECT a.id,
+               a.username,
+               a.password,
+               a.name,
+               a.number,
+               a.gender,
+               a.birthday,
+               a.avatar_attachment_id,
+               a.email,
+               a.phone,
+               a.theme_color,
+               a.password_reset,
+               a.enabled,
+               a.create_time,
+               a.create_user,
+               a.update_time,
+               a.update_user,
+               a.version
+        FROM t_sys_user a
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (a.username LIKE CONCAT('%', #{keyword}, '%')
+                  OR a.name LIKE CONCAT('%', #{keyword}, '%')
+                  OR a.number LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <choose>
+                <when test="unassigned">
+                    AND NOT EXISTS (
+                        SELECT 1 FROM t_sys_user_assignment b WHERE b.user_id = a.id
+                    )
+                </when>
+                <when test="orgIds != null">
+                    AND EXISTS (
+                        SELECT 1
+                        FROM t_sys_user_assignment b
+                        WHERE b.user_id = a.id
+                          AND b.org_id IN
+                          <foreach collection="orgIds" item="orgId" open="(" separator="," close=")">
+                              #{orgId}
+                          </foreach>
+                    )
+                </when>
+            </choose>
+        </where>
+        ORDER BY a.number, a.id
+    </select>
+</mapper>

@@ -16,4 +16,13 @@ import sm.system.form.PageForm;
 public class UserListForm extends PageForm {
 	@Schema(description = "关键词（用户名、昵称模糊匹配）")
 	private String keyword;
+
+	@Schema(description = "组织ID")
+	private Long orgId;
+
+	@Schema(description = "是否包含下级组织")
+	private Boolean includeDescendants;
+
+	@Schema(description = "是否只查询未分配部门的用户")
+	private Boolean unassigned;
 }

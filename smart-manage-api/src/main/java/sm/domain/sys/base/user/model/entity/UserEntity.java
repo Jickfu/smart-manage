@@ -8,6 +8,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import sm.system.entity.BaseEntity;
 
+import java.time.LocalDate;
+import sm.domain.sys.base.user.model.Gender;
+
 /**
  * @author Chekfu
  */
@@ -28,11 +31,14 @@ public class UserEntity extends BaseEntity {
 	/*
 	 * 昵称
 	 */
-	private String nickname;
+	private String name;
+	private String number;
+	private Gender gender;
+	private LocalDate birthday;
 	/*
 	 * 头像地址
 	 */
-	private String avatar;
+	private Long avatarAttachmentId;
 	/*
 	 * 邮箱地址
 	 */

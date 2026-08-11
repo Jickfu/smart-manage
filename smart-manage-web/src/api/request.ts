@@ -28,6 +28,11 @@ request.interceptors.request.use((config) => {
 /** 响应拦截器 - 统一错误处理，保留完整业务错误信息 */
 request.interceptors.response.use(
   (response) => {
+    // 文件下载和受保护图片返回二进制内容，不使用 Result<T> 包装。
+    // 必须在业务码判断前直接放行，否则 Blob 没有 code 字段，会被误判为失败。
+    if (response.data instanceof Blob || response.config.responseType === 'blob') {
+      return response;
+    }
     const result = response.data as Result;
     if (result.code !== SUCCESS_CODE) {
       // 未登录，跳转登录页。

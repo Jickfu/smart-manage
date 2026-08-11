@@ -45,7 +45,7 @@ public class AuthListener implements SaTokenListener {
                     UserEntity u = userService.requireUser(uid);
                     if (u != null) {
                         e.setUsername(u.getUsername());
-                        e.setNickname(u.getNickname());
+                        e.setNickname(u.getName());
                     }
                 } catch (Exception ignored) {
                 }
@@ -73,7 +73,7 @@ public class AuthListener implements SaTokenListener {
                     UserEntity u = userService.requireUser(uid);
                     if (u != null) {
                         e.setUsername(u.getUsername());
-                        e.setNickname(u.getNickname());
+                        e.setNickname(u.getName());
                     }
                 } catch (Exception ignored) {
                 }
@@ -197,7 +197,7 @@ public class AuthListener implements SaTokenListener {
         entity.setUserId(userId);
         UserEntity user = userService.requireUser(userId);
         entity.setUsername(user.getUsername());
-        entity.setNickname(user.getNickname());
+        entity.setNickname(user.getName());
     }
 
 }

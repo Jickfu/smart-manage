@@ -122,7 +122,7 @@ public class LoginService {
 	private void writePasswordChangeRequired(sm.domain.sys.base.user.model.vo.UserAuthentication authentication) {
 		RequestMeta requestMeta = requestMeta();
 		logWriteService.writeAuthenticationEvent(authentication.userId(), authentication.username(),
-				authentication.nickname(), LoginEventType.PASSWORD_CHANGE_REQUIRED, true, null,
+				authentication.name(), LoginEventType.PASSWORD_CHANGE_REQUIRED, true, null,
 				requestMeta.ip(), requestMeta.userAgent());
 	}
 

@@ -5,7 +5,9 @@ import lombok.Data;
 import sm.domain.sys.base.menu.model.vo.MenuVO;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
+import sm.domain.sys.base.user.model.Gender;
 
 /**
  * 用户信息面板
@@ -23,10 +25,14 @@ public class UserInfoVO {
 	private String username;
 
 	@Schema(description = "姓名")
-	private String nickname;
+	private String name;
+	private String number;
+	private Gender gender;
+	private LocalDate birthday;
 
 	@Schema(description = "头像")
 	private String avatar;
+	private Long avatarAttachmentId;
 
 	@Schema(description = "主题颜色")
 	private String themeColor;
@@ -45,6 +51,8 @@ public class UserInfoVO {
 
 	@Schema(description = "当前组织下的角色ID列表")
 	private List<Long> roleIds;
+
+	private List<UserAssignmentVO> assignments;
 
 	@Schema(description = "菜单")
 	private MenuVO menus;

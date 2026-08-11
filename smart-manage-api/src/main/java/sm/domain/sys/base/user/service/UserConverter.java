@@ -11,9 +11,13 @@ import sm.framework.mapping.SmMapperConfig;
 @Mapper(config = SmMapperConfig.class)
 interface UserConverter {
 
+    @Mapping(target = "assignments", ignore = true)
+    @Mapping(target = "avatar", ignore = true)
     UserListVO toListVO(UserEntity entity);
 
     @Mapping(target = "roleIds", ignore = true)
+    @Mapping(target = "assignments", ignore = true)
     @Mapping(target = "menus", ignore = true)
+    @Mapping(target = "avatar", ignore = true)
     UserInfoVO toInfoVO(UserEntity entity);
 }

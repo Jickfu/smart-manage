@@ -1,20 +1,29 @@
-import { useMemo } from 'react';
-import { App } from 'antd';
+import { useMemo, useRef, useState } from 'react';
+import dayjs from 'dayjs';
+import { App, Button } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import EditPage from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
-import type { EditField } from '@/domain/common/page/EditPage';
 import { useWorkbenchStore } from '@/stores/workbench';
+import { orgApi } from '@/domain/sys/base/org/api';
+import { orgQueryKeys } from '@/domain/sys/base/org/queryKeys';
 import { userApi } from './api';
 import { userAccess } from './permissions';
 import { userQueryKeys } from './queryKeys';
+import { UserProfileFields } from './UserProfileFields';
+import { UserAssignmentTable } from './UserAssignmentTable';
+import type { UserAssignmentTableRef } from './UserAssignmentTable';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import type { UserAssignmentVO } from './types';
+import type { OrgRefRecord } from '@/domain/sys/base/org/refSelector/useOrgRefSelector';
+import './UserEditPage.css';
 
-/** 用户编辑页只维护用户资料，角色关系由专用分配页面处理。 */
 const UserEditPage = (props: PageComponentProps) => {
   const { message } = App.useApp();
+  const assignmentTableRef = useRef<UserAssignmentTableRef>(null);
+  const [hasSelectedAssignments, setHasSelectedAssignments] = useState(false);
   const queryClient = useQueryClient();
   const { appNumber, tabKey, operationType, billId } = props;
   const isAddNew = operationType === OperationType.ADDNEW;
@@ -25,73 +34,68 @@ const UserEditPage = (props: PageComponentProps) => {
     queryFn: () => userApi.detail(billId!),
     enabled: Boolean(billId),
   });
+  const orgQuery = useQuery({
+    queryKey: [...orgQueryKeys.all, 'options'],
+    queryFn: orgApi.options,
+  });
   const detail = detailQuery.data;
-  const fields: EditField[] = useMemo(
-    () => [
-      {
-        label: '用户名',
-        dataIndex: 'username',
-        type: 'text',
-        disabled: !isAddNew,
-        rules: [{ required: true, message: '用户名不能为空' }],
-      },
-      ...(isAddNew
-        ? [
-            {
-              label: '密码',
-              dataIndex: 'password',
-              type: 'password' as const,
-              placeholder: '请输入初始密码',
-              rules: [{ required: true, message: '密码不能为空' }],
-            },
-          ]
-        : []),
-      { label: '昵称', dataIndex: 'nickname', type: 'text' },
-      {
-        label: '邮箱',
-        dataIndex: 'email',
-        type: 'text',
-        rules: [{ type: 'email', message: '邮箱格式不正确' }],
-      },
-      {
-        label: '手机号',
-        dataIndex: 'phone',
-        type: 'text',
-        rules: [{ pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确' }],
-      },
-      { label: '头像URL', dataIndex: 'avatar', type: 'text' },
-      { label: '创建时间', dataIndex: 'createTime', type: 'datetime', disabled: true },
-      { label: '更新时间', dataIndex: 'updateTime', type: 'datetime', disabled: true },
-    ],
-    [isAddNew],
-  );
   const initialValues = useMemo(
     () =>
       detail
         ? {
-            username: detail.username ?? '',
-            nickname: detail.nickname ?? '',
+            username: detail.username,
+            name: detail.name,
+            number: detail.number,
+            gender: detail.gender,
+            birthday: detail.birthday ? dayjs(detail.birthday) : undefined,
             email: detail.email ?? '',
             phone: detail.phone ?? '',
             avatar: detail.avatar ?? '',
-            createTime: detail.createTime ?? '',
-            updateTime: detail.updateTime ?? '',
+            avatarAttachmentId: detail.avatarAttachmentId,
+            avatarUploadSessionId: undefined,
+            assignments: (detail.assignments ?? []).map((assignment) => {
+              const organization = orgQuery.data?.find((item) => item.id === assignment.orgId);
+              return {
+                ...assignment,
+                org: {
+                  id: assignment.orgId,
+                  number: organization?.number ?? '',
+                  name: organization?.name ?? assignment.orgName ?? assignment.orgNamePath ?? '',
+                } satisfies OrgRefRecord,
+              };
+            }),
           }
-        : {},
-    [detail],
+        : { assignments: [] },
+    [detail, orgQuery.data],
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
-      const username = (values.username as string).trim();
       const savedId = await userApi.save({
         id: billId ?? undefined,
         version: detail?.version,
-        username,
+        username: String(values.username).trim(),
         password: (values.password as string) || undefined,
-        nickname: (values.nickname as string) ?? undefined,
-        email: ((values.email as string) ?? '').trim() || undefined,
-        phone: ((values.phone as string) ?? '').trim() || undefined,
-        avatar: (values.avatar as string) ?? undefined,
+        name: String(values.name).trim(),
+        number: String(values.number).trim(),
+        gender: values.gender as 'MALE' | 'FEMALE' | undefined,
+        birthday: values.birthday
+          ? dayjs(values.birthday as dayjs.ConfigType).format('YYYY-MM-DD')
+          : undefined,
+        email: String(values.email ?? '').trim() || undefined,
+        phone: String(values.phone ?? '').trim() || undefined,
+        avatarAttachmentId: values.avatarAttachmentId as string | undefined,
+        attachmentUploadSessions:
+          values.avatarAttachmentId && values.avatarUploadSessionId
+            ? {
+                [String(values.avatarAttachmentId)]: String(values.avatarUploadSessionId),
+              }
+            : {},
+        assignments: (
+          (values.assignments as (UserAssignmentVO & { org?: OrgRefRecord })[] | undefined) ?? []
+        ).map(({ org, ...assignment }) => ({
+          ...assignment,
+          orgId: org!.id,
+        })),
       });
       if (isAddNew) {
         const nextKey = createBillTabKey(props.componentKey, savedId);
@@ -109,20 +113,46 @@ const UserEditPage = (props: PageComponentProps) => {
       message.success(isAddNew ? '新增成功' : '保存成功');
     },
   });
-
   return (
     <EditPage
       access={userAccess}
       title="用户"
-      fields={fields}
+      fields={[]}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
-      loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
-      onRetry={() => detailQuery.refetch()}
+      loading={detailQuery.isLoading || orgQuery.isLoading}
+      error={(detailQuery.error ?? orgQuery.error) as Error | null}
+      onRetry={() => Promise.all([detailQuery.refetch(), orgQuery.refetch()])}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
+      basicContent={(editable) => <UserProfileFields editable={editable} isAddNew={isAddNew} />}
+      detailLabel="部门信息"
+      detailContent={(editable) => (
+        <UserAssignmentTable
+          ref={assignmentTableRef}
+          editable={editable}
+          organizations={orgQuery.data ?? []}
+          onSelectionChange={setHasSelectedAssignments}
+        />
+      )}
+      detailExtra={(editable) =>
+        editable ? (
+          <div className="sm-user-assignment-actions">
+            <Button type="link" onClick={() => assignmentTableRef.current?.add()}>
+              新增
+            </Button>
+            <Button
+              type="link"
+              danger
+              disabled={!hasSelectedAssignments}
+              onClick={() => assignmentTableRef.current?.removeSelected()}
+            >
+              删除
+            </Button>
+          </div>
+        ) : undefined
+      }
       onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
     />
   );

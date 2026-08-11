@@ -5,11 +5,16 @@ import type {
   OrgListForm,
   OrgListVO,
   OrgParentListForm,
+  OrgOptionVO,
   OrgSaveForm,
   OrgTreeNode,
 } from './types';
 
 export const orgApi = {
+  options: () =>
+    request
+      .get<Result<OrgOptionVO[]>>('/sys/base/org/options')
+      .then((response) => response.data.data),
   tree: (showArchived = false) =>
     request
       .get<Result<OrgTreeNode[]>>('/sys/base/org/tree', { params: { showArchived } })

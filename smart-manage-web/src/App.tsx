@@ -40,7 +40,7 @@ export default function App() {
       setUserInfo({
         id: String(info.id),
         username: info.username,
-        nickname: info.nickname,
+        name: info.name,
         avatar: info.avatar,
         themeColor: info.themeColor,
       });
