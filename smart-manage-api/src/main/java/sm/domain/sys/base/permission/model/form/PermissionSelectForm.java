@@ -19,4 +19,10 @@ public class PermissionSelectForm extends PageForm {
 
 	@Schema(description = "应用ID（必填，按应用过滤）")
 	private Long appId;
+
+	@Schema(description = "功能ID（按功能过滤）")
+	private Long featureId;
+
+	@Schema(description = "是否只查询应用级权限")
+	private Boolean appLevel;
 }

@@ -4,6 +4,7 @@ import { definePageRegistrations } from '@/domain/common/registry/componentRegis
 export default definePageRegistrations([
   {
     componentKey: 'sys/base/org',
+    featureKey: 'sys/base/org',
     title: '组织管理',
     pageType: 'LIST',
     component: lazy(() => import('./OrgListPage')),

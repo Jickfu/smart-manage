@@ -251,7 +251,6 @@ const UserListPage = (props: PageComponentProps) => {
             : []),
         ]}
         onSelect={(keys) => {
-          if (!keys[0]) return;
           setSelectedTreeKey(String(keys[0]));
           setSelectedRowKeys([]);
         }}

@@ -57,6 +57,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 7. 组件注册表无差异检查；
 8. PostgreSQL 16 上的 Flyway 空库迁移；
 9. 使用迁移完成后的真实权限目录执行代码权限一致性校验。
+10. 使用迁移完成后的真实功能目录校验全部页面注册的 `featureKey`，并校验菜单与入口权限属于同一功能。
 
 主分支保护属于 GitHub 仓库外部设置，需要由仓库管理员启用并要求质量门禁通过。
 

@@ -7,6 +7,9 @@ const catalogFileArgument = process.argv.find((argument) => argument.startsWith(
 const menuCatalogFileArgument = process.argv.find((argument) =>
   argument.startsWith('--menu-catalog-file='),
 );
+const featureCatalogFileArgument = process.argv.find((argument) =>
+  argument.startsWith('--feature-catalog-file='),
+);
 
 function filesUnder(directory, predicate) {
   const result = [];
@@ -20,6 +23,7 @@ function filesUnder(directory, predicate) {
 
 const catalog = new Set();
 const menuCatalog = new Set();
+const featureCatalog = new Set();
 if (catalogFileArgument) {
   const catalogFile = catalogFileArgument.substring('--catalog-file='.length);
   for (const permission of readFileSync(catalogFile, 'utf8').split(/\r?\n/)) {
@@ -27,11 +31,11 @@ if (catalogFileArgument) {
   }
 } else {
   // 本地快速检查没有数据库时使用迁移字面量；CI 会传入 Flyway 迁移后的最终目录。
-  for (const path of filesUnder(join(repoRoot, 'db', 'migration'), (file) => file.endsWith('.sql'))) {
+  for (const path of filesUnder(join(repoRoot, 'db', 'migration'), (file) =>
+    file.endsWith('.sql'),
+  )) {
     const text = readFileSync(path, 'utf8');
-    for (const match of text.matchAll(
-      /['"]([a-z][a-z0-9-]*(?::[A-Za-z][A-Za-z0-9-]*){2,})['"]/g,
-    )) {
+    for (const match of text.matchAll(/['"]([a-z][a-z0-9-]*(?::[A-Za-z][A-Za-z0-9-]*){2,})['"]/g)) {
       catalog.add(match[1]);
     }
   }
@@ -41,6 +45,29 @@ if (menuCatalogFileArgument) {
   const menuCatalogFile = menuCatalogFileArgument.substring('--menu-catalog-file='.length);
   for (const permission of readFileSync(menuCatalogFile, 'utf8').split(/\r?\n/)) {
     if (permission.trim()) menuCatalog.add(permission.trim());
+  }
+}
+if (featureCatalogFileArgument) {
+  const featureCatalogFile = featureCatalogFileArgument.substring('--feature-catalog-file='.length);
+  for (const featureKey of readFileSync(featureCatalogFile, 'utf8').split(/\r?\n/)) {
+    if (featureKey.trim()) featureCatalog.add(featureKey.trim());
+  }
+}
+
+const registeredFeatures = new Set();
+for (const path of filesUnder(join(webRoot, 'src', 'domain'), (file) =>
+  file.endsWith('pageRegistration.ts'),
+)) {
+  const text = readFileSync(path, 'utf8');
+  for (const match of text.matchAll(/featureKey:\s*'([^']+)'/g)) registeredFeatures.add(match[1]);
+}
+if (featureCatalogFileArgument) {
+  const missingFeatures = [...registeredFeatures]
+    .filter((featureKey) => !featureCatalog.has(featureKey))
+    .sort();
+  if (missingFeatures.length > 0) {
+    console.error(`以下页面注册的功能未在 Flyway 功能目录中注册：\n${missingFeatures.join('\n')}`);
+    process.exit(1);
   }
 }
 
@@ -87,7 +114,9 @@ const unused = catalogFileArgument
       .sort()
   : [];
 if (unused.length > 0) {
-  console.warn(`以下目录权限当前没有被前后端代码引用，请确认是否为预留或待清理项：\n${unused.join('\n')}`);
+  console.warn(
+    `以下目录权限当前没有被前后端代码引用，请确认是否为预留或待清理项：\n${unused.join('\n')}`,
+  );
 }
 console.log(
   `权限目录校验通过：${used.size} 个代码权限、${menuCatalog.size} 个菜单入口权限均已注册，${unused.length} 个目录权限待复核。`,

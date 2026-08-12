@@ -15,6 +15,7 @@ $backendPomPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\sma
 $migrationLocation = 'filesystem:' + $migrationDirectory.Replace('\', '/')
 $permissionCatalogFile = [System.IO.Path]::GetTempFileName()
 $menuPermissionCatalogFile = [System.IO.Path]::GetTempFileName()
+$featureCatalogFile = [System.IO.Path]::GetTempFileName()
 $env:PGPASSWORD = $DbPassword
 $env:PGCLIENTENCODING = 'UTF8'
 
@@ -52,6 +53,15 @@ try {
         '-c', "SELECT count(*) AS menu_count FROM t_sys_menu;",
         '-c', "SELECT count(*) AS flyway_version_count FROM flyway_schema_history WHERE success;"
     )
+    $menuFeatureMismatchCount = & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
+        -v ON_ERROR_STOP=1 -A -t -c 'SELECT count(*) FROM t_sys_menu menu JOIN t_sys_permission permission ON permission.id = menu.permission_id WHERE menu.feature_id <> permission.feature_id'
+    if ($LASTEXITCODE -ne 0 -or [int]$menuFeatureMismatchCount -ne 0) {
+        throw "menu feature consistency verification failed: $menuFeatureMismatchCount mismatches"
+    }
+    Invoke-Psql $verifyDatabase @(
+        '-v', 'ON_ERROR_STOP=1',
+        '-c', "SELECT 1 / count(*) AS invalid_feature_keys_removed FROM (SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM t_sys_feature WHERE feature_key IN ('sys/base', 'sys/log', 'sys/scheduler', 'scm/procurement'))) verification;"
+    )
     $permissionNumbers = & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
         -v ON_ERROR_STOP=1 -A -t -c 'SELECT number FROM t_sys_permission ORDER BY number'
     if ($LASTEXITCODE -ne 0) {
@@ -64,8 +74,14 @@ try {
         throw "menu permission catalog query failed with exit code $LASTEXITCODE"
     }
     [System.IO.File]::WriteAllLines($menuPermissionCatalogFile, [string[]]$menuPermissionNumbers)
+    $featureKeys = & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
+        -v ON_ERROR_STOP=1 -A -t -c 'SELECT feature_key FROM t_sys_feature ORDER BY feature_key'
+    if ($LASTEXITCODE -ne 0) {
+        throw "feature catalog query failed with exit code $LASTEXITCODE"
+    }
+    [System.IO.File]::WriteAllLines($featureCatalogFile, [string[]]$featureKeys)
     $permissionVerifier = Join-Path $PSScriptRoot '..\smart-manage-web\scripts\verify-permissions.mjs'
-    & $NodePath $permissionVerifier "--catalog-file=$permissionCatalogFile" "--menu-catalog-file=$menuPermissionCatalogFile"
+    & $NodePath $permissionVerifier "--catalog-file=$permissionCatalogFile" "--menu-catalog-file=$menuPermissionCatalogFile" "--feature-catalog-file=$featureCatalogFile"
     if ($LASTEXITCODE -ne 0) {
         throw "permission catalog verification failed with exit code $LASTEXITCODE"
     }
@@ -77,4 +93,5 @@ finally {
         -c "DROP DATABASE IF EXISTS $verifyDatabase WITH (FORCE)"
     Remove-Item -LiteralPath $permissionCatalogFile -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $menuPermissionCatalogFile -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $featureCatalogFile -Force -ErrorAction SilentlyContinue
 }

@@ -33,6 +33,9 @@ public class MenuDetailVO {
 	@Schema(description = "所属应用信息")
 	private ReferenceInfo app;
 
+	@Schema(description = "所属功能信息")
+	private ReferenceInfo feature;
+
 	@Schema(description = "权限信息")
 	private ReferenceInfo permission;
 

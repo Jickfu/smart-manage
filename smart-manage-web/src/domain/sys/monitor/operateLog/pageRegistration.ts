@@ -4,12 +4,14 @@ import { definePageRegistrations } from '@/domain/common/registry/componentRegis
 export default definePageRegistrations([
   {
     componentKey: 'sys/monitor/operate-log',
+    featureKey: 'sys/log/operate',
     title: '操作日志',
     pageType: 'LIST',
     component: lazy(() => import('./OperateLogPage')),
   },
   {
     componentKey: 'sys/monitor/operate-log/detail',
+    featureKey: 'sys/log/operate',
     title: '操作日志',
     pageType: 'EDIT',
     component: lazy(() => import('./OperateLogDetailPage')),

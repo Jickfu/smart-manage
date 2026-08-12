@@ -4,6 +4,7 @@ import { definePageRegistrations } from '@/domain/common/registry/componentRegis
 export default definePageRegistrations([
   {
     componentKey: 'sys/base/permission',
+    featureKey: 'sys/base/permission',
     title: '权限',
     pageType: 'LIST',
     component: lazy(() => import('./PermissionListPage')),

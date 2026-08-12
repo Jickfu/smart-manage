@@ -30,6 +30,7 @@ describe('resolveIcon', () => {
       'ApartmentOutlined',
       'AppstoreOutlined',
       'ClockCircleOutlined',
+      'ClusterOutlined',
       'CodeOutlined',
       'ConsoleSqlOutlined',
       'DashboardOutlined',

@@ -28,6 +28,7 @@ export interface MenuTreeVO {
   level: number;
   parentId: string;
   appId: string;
+  featureId?: string;
   appName: string;
   path: string;
   component: string;
@@ -52,6 +53,7 @@ export interface MenuDetailVO {
   name: string;
   level: number;
   app?: MenuReferenceVO;
+  feature?: MenuReferenceVO;
   permission?: MenuReferenceVO;
   path: string;
   component: string;
@@ -79,6 +81,7 @@ export interface MenuSaveForm {
   level: number;
   parentId?: string;
   appId: string;
+  featureId?: string;
   permissionId?: string;
   path?: string;
   component?: string;

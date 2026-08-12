@@ -5,12 +5,14 @@ import { componentKeys } from '@/domain/common/registry/componentKeys';
 export default definePageRegistrations([
   {
     componentKey: componentKeys.schedulerJob,
+    featureKey: 'sys/scheduler/job',
     title: '定时任务',
     pageType: 'LIST',
     component: lazy(() => import('./JobListPage')),
   },
   {
     componentKey: componentKeys.schedulerJobEdit,
+    featureKey: 'sys/scheduler/job',
     title: '定时任务',
     pageType: 'EDIT',
     component: lazy(() => import('./JobEditPage')),

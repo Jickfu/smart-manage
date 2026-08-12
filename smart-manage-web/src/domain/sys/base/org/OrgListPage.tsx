@@ -185,7 +185,6 @@ const OrgListPage = (props: PageComponentProps) => {
         selectedKeys={effectiveTreeKey ? [effectiveTreeKey] : []}
         treeData={filterTree(treeQuery.data ?? [], treeKeyword).map(toTreeNode)}
         onSelect={(keys) => {
-          if (!keys[0]) return;
           setSelectedTreeKey(String(keys[0]));
           setSelectedRowKeys([]);
         }}

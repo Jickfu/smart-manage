@@ -22,11 +22,13 @@ const appInfo: AppVO = {
 describe('workbench store', () => {
   beforeEach(() => {
     componentRegistry[COMPONENT_KEY] = {
+      featureKey: 'scm/procurement/purchase-requisition',
       title: '采购申请',
       pageType: 'EDIT',
       component: () => null,
     };
     componentRegistry['sys/base/ui-config'] = {
+      featureKey: 'sys/base/ui-config',
       title: '界面配置',
       pageType: 'CUSTOM',
       component: () => null,

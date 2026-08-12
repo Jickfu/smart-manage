@@ -9,6 +9,10 @@ import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuSaveForm;
 import sm.domain.sys.base.menu.mapper.MenuMapper;
+import sm.domain.sys.base.permission.mapper.PermissionMapper;
+import sm.domain.sys.base.permission.model.entity.PermissionEntity;
+import sm.domain.sys.base.feature.mapper.FeatureMapper;
+import sm.domain.sys.base.feature.model.entity.FeatureEntity;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -32,6 +36,8 @@ class MenuTxService {
 
     private final CurrentUserContext currentUserContext;
     private final MenuMapper mapper;
+    private final PermissionMapper permissionMapper;
+    private final FeatureMapper featureMapper;
 
     public Long save(MenuSaveForm form) {
         MenuEntity entity = new MenuEntity();
@@ -61,6 +67,9 @@ class MenuTxService {
         }
         // 页面层级必须指定权限和路径；分组层级不需要路径和组件，但保留权限用于菜单可见性控制
         if (form.getLevel().equals(MenuLevelEnum.PAGE)) {
+            if (form.getFeatureId() == null) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "页面层级菜单必须选择所属功能");
+            }
             if (form.getPermissionId() == null) {
                 throw new BizException(ResultEnum.PARAM_ERROR, "页面层级菜单必须选择权限");
             }
@@ -74,6 +83,22 @@ class MenuTxService {
             entity.setComponent(null);
         }
         entity.setPermissionId(form.getPermissionId());
+        FeatureEntity feature = form.getFeatureId() == null ? null : featureMapper.selectById(form.getFeatureId());
+        if (form.getFeatureId() != null
+                && (feature == null || !java.util.Objects.equals(feature.getAppId(), form.getAppId()))) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "菜单与功能必须属于同一应用");
+        }
+        entity.setFeatureId(feature == null ? null : feature.getId());
+        if (form.getPermissionId() != null) {
+            PermissionEntity permission = permissionMapper.selectById(form.getPermissionId());
+            boolean sameFeature = feature != null && permission != null
+                    && java.util.Objects.equals(permission.getFeatureId(), feature.getId());
+            boolean sameApplication = feature == null && permission != null && permission.getFeatureId() == null
+                    && java.util.Objects.equals(permission.getAppId(), form.getAppId());
+            if (!sameFeature && !sameApplication) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "菜单入口权限必须属于所选功能");
+            }
+        }
         entity.setLevel(form.getLevel());
         entity.setParentId(form.getParentId() != null ? form.getParentId() : 0L);
         entity.setAppId(form.getAppId());

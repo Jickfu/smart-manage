@@ -28,6 +28,7 @@ public class PermissionEntity extends BaseEntity {
 	/**
 	 * 应用ID
 	 */
+	private Long featureId;
 	private Long appId;
 
 	@Version

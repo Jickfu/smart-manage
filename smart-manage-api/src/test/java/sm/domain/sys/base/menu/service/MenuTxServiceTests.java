@@ -4,6 +4,10 @@ import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.menu.mapper.MenuMapper;
+import sm.domain.sys.base.permission.mapper.PermissionMapper;
+import sm.domain.sys.base.feature.mapper.FeatureMapper;
+import sm.domain.sys.base.feature.model.entity.FeatureEntity;
+import sm.domain.sys.base.permission.model.entity.PermissionEntity;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuSaveForm;
 import sm.system.exception.BizException;
@@ -19,7 +23,9 @@ import static org.mockito.Mockito.when;
 class MenuTxServiceTests {
     private final CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
     private final MenuMapper mapper = mock(MenuMapper.class);
-    private final MenuTxService txService = new MenuTxService(currentUserContext, mapper);
+    private final PermissionMapper permissionMapper = mock(PermissionMapper.class);
+    private final FeatureMapper featureMapper = mock(FeatureMapper.class);
+    private final MenuTxService txService = new MenuTxService(currentUserContext, mapper, permissionMapper, featureMapper);
 
     @Test
     void staleVersionCannotOverwriteMenu() {
@@ -70,6 +76,20 @@ class MenuTxServiceTests {
     }
 
     @Test
+    void menuPermissionMustBelongToSelectedFeature() {
+        MenuSaveForm form = validEditForm();
+        form.setId(null);
+        form.setPermissionId(200L);
+        PermissionEntity permission = new PermissionEntity();
+        permission.setId(200L);
+        permission.setFeatureId(101L);
+        when(permissionMapper.selectById(200L)).thenReturn(permission);
+
+        assertThrows(BizException.class, () -> txService.save(form));
+        verify(mapper, never()).insert(any(MenuEntity.class));
+    }
+
+    @Test
     void menuLevelsUseZeroAndOne() {
         assertEquals(0, MenuLevelEnum.CATEGORY.getCode());
         assertEquals(1, MenuLevelEnum.PAGE.getCode());
@@ -82,6 +102,11 @@ class MenuTxServiceTests {
         form.setName("菜单");
         form.setLevel(MenuLevelEnum.CATEGORY);
         form.setAppId(31L);
+        form.setFeatureId(100L);
+        FeatureEntity feature = new FeatureEntity();
+        feature.setId(100L);
+        feature.setAppId(31L);
+        when(featureMapper.selectById(100L)).thenReturn(feature);
         return form;
     }
 }

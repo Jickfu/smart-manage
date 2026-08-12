@@ -21,6 +21,8 @@
 - `@SaCheckPermission`：权限接口；
 - 无上述注解：由全局过滤器执行登录校验。
 
+系统功能、菜单和权限的归属必须遵守[功能、菜单与权限模型](./feature-and-permission.md)。权限直接归属 `Feature`，应用由功能推导；菜单与入口权限必须属于同一功能，写入时必须校验该约束。
+
 分页入参继承 `PageForm`，分页结果使用 `PageData<T>`。Controller 只依赖公开 Service，禁止直接依赖 Mapper 或 TxService。
 
 ## Service 与事务

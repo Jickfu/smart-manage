@@ -2,6 +2,7 @@ import type { ComponentType, LazyExoticComponent } from 'react';
 import type { PageComponentProps, PageType } from '@/domain/common/page/types';
 
 export interface PageRegistration {
+  featureKey: string;
   componentKey: string;
   title: string;
   pageType: PageType;
@@ -38,12 +39,15 @@ export function definePageRegistrations(
     throw new Error('[registry] 页面注册清单不能为空。');
   }
   const moduleKeys = new Set<string>();
-  for (const { componentKey, title } of registrations) {
+  for (const { featureKey, componentKey, title } of registrations) {
     if (moduleKeys.has(componentKey)) {
       throw new Error(`[registry] 模块清单内的 componentKey "${componentKey}" 重复。`);
     }
     if (!title.trim()) {
       throw new Error(`[registry] 页面 "${componentKey}" 的 title 不能为空。`);
+    }
+    if (!featureKey.trim()) {
+      throw new Error(`[registry] 页面 "${componentKey}" 的 featureKey 不能为空。`);
     }
     moduleKeys.add(componentKey);
   }
@@ -58,11 +62,16 @@ export function registerPageRegistrationModules(
     throw new Error('[registry] 未发现页面注册模块。');
   }
   for (const registrations of modules) {
-    for (const { componentKey, title, pageType, component } of registrations) {
+    for (const { featureKey, componentKey, title, pageType, component } of registrations) {
       if (componentRegistry[componentKey]) {
         throw new Error(`[registry] componentKey "${componentKey}" 重复注册。`);
       }
-      componentRegistry[componentKey] = { title: title.trim(), pageType, component };
+      componentRegistry[componentKey] = {
+        featureKey: featureKey.trim(),
+        title: title.trim(),
+        pageType,
+        component,
+      };
     }
   }
 }

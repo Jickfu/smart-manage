@@ -1,27 +1,61 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { App, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import type { DataNode } from 'antd/es/tree';
+import { useQuery } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
+import ListTree from '@/domain/common/page/ListTree';
+import ListTreePanel from '@/domain/common/page/ListTreePanel';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
-import { usePermissionDeleteMutation } from './usePermissionDeleteMutation';
+import type { PageComponentProps } from '@/domain/common/page/types';
+import { fetchAppsAll } from '@/domain/sys/base/app/api';
+import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';
+import { featureApi } from '@/domain/sys/base/feature/api';
+import { featureQueryKeys } from '@/domain/sys/base/feature/queryKeys';
+import type { FeatureVO } from '@/domain/sys/base/feature/types';
+import PermissionEditPage from './PermissionEditPage';
 import { permissionApi } from './api';
+import { permissionAccess } from './permissions';
 import { permissionQueryKeys } from './queryKeys';
 import type { PermissionListVO } from './types';
-import type { PageComponentProps } from '@/domain/common/page/types';
-import PermissionEditPage from './PermissionEditPage';
-import { permissionAccess } from './permissions';
+import { usePermissionDeleteMutation } from './usePermissionDeleteMutation';
 
-/** 权限管理列表页 */
+type PermissionScope =
+  | { type: 'all' }
+  | { type: 'cloud'; id: string }
+  | { type: 'app'; id: string }
+  | { type: 'feature'; id: string };
+
 const PermissionListPage = (props: PageComponentProps) => {
   const { modal } = App.useApp();
   const { can } = usePermissionAccess(permissionAccess.prefix);
-  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
-    useListPageQuery({
-      queryKey: permissionQueryKeys.lists(),
-      queryFn: (params) => permissionApi.listPage(params),
-    });
-
+  const [scope, setScope] = useState<PermissionScope>({ type: 'all' });
+  const appsQuery = useQuery({ queryKey: appQueryKeys.cloudAppsAll(), queryFn: fetchAppsAll });
+  const featuresQuery = useQuery({
+    queryKey: featureQueryKeys.visible(),
+    queryFn: featureApi.listAllVisible,
+  });
+  const scopeParams = {
+    appId: scope.type === 'app' ? scope.id : undefined,
+    cloudId: scope.type === 'cloud' ? scope.id : undefined,
+    featureId: scope.type === 'feature' ? scope.id : undefined,
+  };
+  const {
+    records,
+    total,
+    pageNum,
+    pageSize,
+    keyword,
+    query,
+    onSearch,
+    onPageChange,
+    onRefresh,
+    resetPage,
+  } = useListPageQuery({
+    queryKey: permissionQueryKeys.list(scopeParams),
+    queryFn: (params) => permissionApi.listPage({ ...params, ...scopeParams }),
+  });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -29,45 +63,18 @@ const PermissionListPage = (props: PageComponentProps) => {
     setSelectedRowKeys([]);
     await query.refetch();
   });
-
-  const handleOpenEdit = useCallback((id: string) => {
+  const openEdit = useCallback((id: string | null) => {
     setEditId(id);
     setModalOpen(true);
   }, []);
-
-  const handleOpenAdd = useCallback(() => {
-    setEditId(null);
-    setModalOpen(true);
-  }, []);
-
-  const handleModalClose = useCallback(() => {
-    setModalOpen(false);
-  }, []);
-
-  const handleSaved = useCallback(() => {
-    query.refetch();
-  }, [query]);
-
-  const handleDelete = useCallback(() => {
-    if (selectedRowKeys.length === 0) return;
-    modal.confirm({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
-      okText: '删除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
-    });
-  }, [selectedRowKeys, deleteMutation, modal]);
-
   const columns: ColumnsType<PermissionListVO> = [
     {
       title: '编码',
       dataIndex: 'number',
-      width: 220,
+      width: 240,
       render: (text, record) =>
         can(permissionAccess.permissions.detail) ? (
-          <Button type="link" size="small" onClick={() => handleOpenEdit(record.id)}>
+          <Button type="link" size="small" onClick={() => openEdit(record.id)}>
             {text}
           </Button>
         ) : (
@@ -75,7 +82,39 @@ const PermissionListPage = (props: PageComponentProps) => {
         ),
     },
     { title: '名称', dataIndex: 'name' },
+    {
+      title: '所属功能',
+      dataIndex: 'featureName',
+      width: 160,
+      render: (value) => value ?? '应用级权限',
+    },
+    { title: '所属应用', dataIndex: 'appName', width: 160 },
   ];
+  const treeData = useMemo<DataNode[]>(() => {
+    const featuresByApp = new Map<string, FeatureVO[]>();
+    for (const feature of featuresQuery.data ?? []) {
+      featuresByApp.set(feature.appId, [...(featuresByApp.get(feature.appId) ?? []), feature]);
+    }
+    return [
+      {
+        key: 'all',
+        title: '全部功能',
+        children: (appsQuery.data ?? []).map((cloud) => ({
+          key: `cloud:${cloud.id}`,
+          title: cloud.name,
+          children: cloud.appList.map((application) => ({
+            key: `app:${application.id}`,
+            title: application.name,
+            children: (featuresByApp.get(application.id) ?? []).map((feature) => ({
+              key: `feature:${feature.id}`,
+              title: feature.name,
+              isLeaf: true,
+            })),
+          })),
+        })),
+      },
+    ];
+  }, [appsQuery.data, featuresQuery.data]);
 
   return (
     <>
@@ -83,17 +122,49 @@ const PermissionListPage = (props: PageComponentProps) => {
         {...props}
         title="权限"
         access={permissionAccess}
-        loading={query.isLoading}
-        error={query.error as Error | null}
-        onRetry={() => query.refetch()}
+        loading={query.isLoading || appsQuery.isLoading || featuresQuery.isLoading}
+        error={(query.error ?? appsQuery.error ?? featuresQuery.error) as Error | null}
+        onRetry={() => Promise.all([query.refetch(), appsQuery.refetch(), featuresQuery.refetch()])}
         total={total}
         pageNum={pageNum}
         pageSize={pageSize}
         quickSearchPlaceholder="搜索编码/名称"
         filterSummary={keyword ? `关键字：${keyword}` : undefined}
-        onAddNew={handleOpenAdd}
-        onDelete={handleDelete}
-        onRefresh={onRefresh}
+        treePanel={
+          <ListTreePanel>
+            <ListTree
+              virtual={false}
+              blockNode
+              treeData={treeData}
+              defaultExpandedKeys={['all']}
+              selectedKeys={[scope.type === 'all' ? 'all' : `${scope.type}:${scope.id}`]}
+              onSelect={(keys) => {
+                const [type, id] = String(keys[0] ?? 'all').split(':');
+                setSelectedRowKeys([]);
+                resetPage();
+                if (type === 'cloud' && id) setScope({ type: 'cloud', id });
+                else if (type === 'app' && id) setScope({ type: 'app', id });
+                else if (type === 'feature' && id) setScope({ type: 'feature', id });
+                else setScope({ type: 'all' });
+              }}
+            />
+          </ListTreePanel>
+        }
+        onAddNew={() => openEdit(null)}
+        onDelete={() => {
+          if (selectedRowKeys.length === 0) return;
+          modal.confirm({
+            title: '确认删除',
+            content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
+            okText: '删除',
+            okType: 'danger',
+            cancelText: '取消',
+            onOk: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
+          });
+        }}
+        onRefresh={async () => {
+          await Promise.all([onRefresh(), appsQuery.refetch(), featuresQuery.refetch()]);
+        }}
         onQuickSearch={onSearch}
         onPageChange={onPageChange}
         rowKey="id"
@@ -101,13 +172,16 @@ const PermissionListPage = (props: PageComponentProps) => {
         dataSource={records}
         selectMode="checkbox"
         selectedRowKeys={selectedRowKeys}
-        onSelectChange={(keys) => setSelectedRowKeys(keys)}
+        onSelectChange={setSelectedRowKeys}
       />
       <PermissionEditPage
         open={modalOpen}
         permissionId={editId}
-        onClose={handleModalClose}
-        onSaved={handleSaved}
+        onClose={() => setModalOpen(false)}
+        onSaved={() => {
+          setModalOpen(false);
+          query.refetch();
+        }}
       />
     </>
   );

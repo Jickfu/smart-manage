@@ -39,6 +39,9 @@ public class MenuSaveForm {
 	@Schema(description = "应用 id")
 	private Long appId;
 
+	@Schema(description = "功能 id，页面菜单必填；应用分组菜单可为空")
+	private Long featureId;
+
 	@Schema(description = "权限 id，页面层级必填")
 	private Long permissionId;
 

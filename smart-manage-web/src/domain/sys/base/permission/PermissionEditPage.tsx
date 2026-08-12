@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ModalEditPage from '@/domain/common/page/ModalEditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
-import { useAppRefSelector } from '@/domain/sys/base/app/refSelector';
+import { useFeatureRefSelector } from '@/domain/sys/base/feature/refSelector/index';
 import { permissionApi } from './api';
 import { permissionAccess } from './permissions';
 import { permissionQueryKeys } from './queryKeys';
@@ -16,12 +16,11 @@ interface Props {
   onSaved: () => void;
 }
 
-/** 权限编辑弹框 */
 const PermissionEditPage = ({ open, permissionId, onClose, onSaved }: Props) => {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const isAddNew = permissionId === null;
-  const appRefSelector = useAppRefSelector();
+  const featureRefSelector = useFeatureRefSelector();
   const fields = useMemo<EditField[]>(
     () => [
       {
@@ -37,14 +36,14 @@ const PermissionEditPage = ({ open, permissionId, onClose, onSaved }: Props) => 
         rules: [{ required: true, message: '名称不能为空' }],
       },
       {
-        label: '所属应用',
-        dataIndex: 'app',
+        label: '所属功能',
+        dataIndex: 'feature',
         type: 'ref-selector',
-        rules: [{ required: true, message: '所属应用不能为空' }],
-        refSelector: appRefSelector,
+        rules: [{ required: true, message: '所属功能不能为空' }],
+        refSelector: featureRefSelector,
       },
     ],
-    [appRefSelector],
+    [featureRefSelector],
   );
 
   const detailQuery = useQuery({
@@ -53,36 +52,34 @@ const PermissionEditPage = ({ open, permissionId, onClose, onSaved }: Props) => 
     enabled: Boolean(open && permissionId),
     staleTime: 0,
   });
-
   const detail = detailQuery.data;
+  const initialValues = useMemo(
+    () =>
+      detail
+        ? {
+            number: detail.number ?? '',
+            name: detail.name ?? '',
+            feature: { id: detail.featureId, name: detail.featureName },
+          }
+        : {},
+    [detail],
+  );
 
-  const initialValues = useMemo(() => {
-    if (!detail) return {};
-    // 详情 VO 中 appId 始终保持字符串，RefSelector 回显需要完整对象。
-    const appId = detail.appId;
-    return {
-      number: detail.number ?? '',
-      name: detail.name ?? '',
-      app: appId != null ? { id: appId } : null,
-    };
-  }, [detail]);
-
-  const handleSave = async (values: Record<string, unknown>) => {
-    const app = values.app as { id: string } | null;
-    if (!app?.id) throw new Error('所属应用不能为空');
-    await permissionApi.save({
-      id: permissionId ?? undefined,
-      version: detail?.version,
-      name: (values.name as string).trim(),
-      number: (values.number as string).trim(),
-      appId: app.id,
-    });
-    await queryClient.invalidateQueries({ queryKey: permissionQueryKeys.all });
-    message.success(isAddNew ? '新增成功' : '保存成功');
-    onSaved();
-  };
   const saveMutation = useCommandMutation({
-    mutationFn: handleSave,
+    mutationFn: async (values: Record<string, unknown>) => {
+      const feature = values.feature as { id: string } | null;
+      if (!feature?.id) throw new Error('所属功能不能为空');
+      await permissionApi.save({
+        id: permissionId ?? undefined,
+        version: detail?.version,
+        name: (values.name as string).trim(),
+        number: (values.number as string).trim(),
+        featureId: feature.id,
+      });
+      await queryClient.invalidateQueries({ queryKey: permissionQueryKeys.all });
+      message.success(isAddNew ? '新增成功' : '保存成功');
+      onSaved();
+    },
   });
 
   return (

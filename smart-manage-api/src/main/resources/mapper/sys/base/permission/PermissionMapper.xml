@@ -1,6 +1,63 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="sm.domain.sys.base.permission.mapper.PermissionMapper">
+    <sql id="permissionProjection">
+        a.id, a.version, a.name, a.number, a.feature_id, b.feature_key,
+        COALESCE(b.custom_name, b.default_name) AS feature_name,
+        COALESCE(b.app_id, a.app_id) AS app_id, c.name AS app_name
+    </sql>
+    <select id="selectListPage" resultType="sm.domain.sys.base.permission.model.vo.PermissionListVO">
+        SELECT a.id, a.name, a.number, a.feature_id, b.feature_key,
+               COALESCE(b.custom_name, b.default_name) AS feature_name,
+               COALESCE(b.app_id, a.app_id) AS app_id, c.name AS app_name
+        FROM t_sys_permission a
+        LEFT JOIN t_sys_feature b ON b.id = a.feature_id
+        INNER JOIN t_sys_app c ON c.id = COALESCE(b.app_id, a.app_id)
+        <where>
+            <if test="form.appId != null">COALESCE(b.app_id, a.app_id) = #{form.appId}</if>
+            <if test="form.cloudId != null">c.cloud_id = #{form.cloudId}</if>
+            <if test="form.featureId != null">AND a.feature_id = #{form.featureId}</if>
+            <if test="form.keyword != null and form.keyword.trim() != ''">
+                AND (a.name LIKE CONCAT('%', #{form.keyword}, '%')
+                OR a.number LIKE CONCAT('%', #{form.keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY a.number, a.id
+    </select>
+
+    <select id="selectAll" resultType="sm.domain.sys.base.permission.model.vo.PermissionSelectVO">
+        SELECT <include refid="permissionProjection"/>
+        FROM t_sys_permission a
+        LEFT JOIN t_sys_feature b ON b.id = a.feature_id
+        INNER JOIN t_sys_app c ON c.id = COALESCE(b.app_id, a.app_id)
+        ORDER BY COALESCE(b.app_id, a.app_id), COALESCE(b.custom_seq, b.default_seq), a.number
+    </select>
+
+    <select id="selectPage" resultType="sm.domain.sys.base.permission.model.vo.PermissionSelectVO">
+        SELECT <include refid="permissionProjection"/>
+        FROM t_sys_permission a
+        LEFT JOIN t_sys_feature b ON b.id = a.feature_id
+        INNER JOIN t_sys_app c ON c.id = COALESCE(b.app_id, a.app_id)
+        <where>
+            <if test="form.appId != null">COALESCE(b.app_id, a.app_id) = #{form.appId}</if>
+            <if test="form.featureId != null">AND a.feature_id = #{form.featureId}</if>
+            <if test="form.appLevel == true">AND a.feature_id IS NULL</if>
+            <if test="form.keyword != null and form.keyword.trim() != ''">
+                AND (a.number LIKE CONCAT('%', #{form.keyword}, '%')
+                OR a.name LIKE CONCAT('%', #{form.keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY a.number
+    </select>
+
+    <select id="selectDetailById" resultType="sm.domain.sys.base.permission.model.vo.PermissionDetailVO">
+        SELECT <include refid="permissionProjection"/>, a.create_time, a.update_time, a.create_user, a.update_user
+        FROM t_sys_permission a
+        LEFT JOIN t_sys_feature b ON b.id = a.feature_id
+        INNER JOIN t_sys_app c ON c.id = COALESCE(b.app_id, a.app_id)
+        WHERE a.id = #{id}
+    </select>
+
     <select id="selectUserPermissionNumbers" resultType="java.lang.String">
         SELECT DISTINCT a.number
         FROM t_sys_permission a

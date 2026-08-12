@@ -20,4 +20,13 @@ public class PermissionListVO {
 
 	@Schema(description = "应用ID")
 	private Long appId;
+
+	@Schema(description = "应用名称")
+	private String appName;
+
+	private Long featureId;
+
+	private String featureKey;
+
+	private String featureName;
 }

@@ -2,6 +2,7 @@ package sm.domain.sys.base.menu.service;
 
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.app.mapper.AppMapper;
+import sm.domain.sys.base.feature.mapper.FeatureMapper;
 import sm.domain.sys.base.app.model.entity.AppEntity;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
@@ -24,11 +25,12 @@ class MenuServiceTests {
     private final CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
     private final MenuMapper mapper = mock(MenuMapper.class);
     private final AppMapper appMapper = mock(AppMapper.class);
+    private final FeatureMapper featureMapper = mock(FeatureMapper.class);
     private final PermissionMapper permissionMapper = mock(PermissionMapper.class);
     private final MenuTxService txService = mock(MenuTxService.class);
     private final MenuConverter converter = mock(MenuConverter.class);
     private final MenuService service =
-            new MenuService(currentUserContext, mapper, appMapper, permissionMapper, txService, converter);
+            new MenuService(currentUserContext, mapper, appMapper, featureMapper, permissionMapper, txService, converter);
 
     @Test
     void detailAssemblesReferenceObjectsForEditForm() {

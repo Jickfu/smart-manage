@@ -4,6 +4,7 @@ import { definePageRegistrations } from '@/domain/common/registry/componentRegis
 export default definePageRegistrations([
   {
     componentKey: 'sys/monitor/node',
+    featureKey: 'sys/monitor/node',
     title: '运行监控',
     pageType: 'CUSTOM',
     component: lazy(() => import('./NodeMonitorPage')),

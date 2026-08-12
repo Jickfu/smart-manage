@@ -12,6 +12,7 @@ import { menuApi } from './api';
 import { menuAccess } from './permissions';
 import { menuQueryKeys } from './queryKeys';
 import { useAppRefSelector } from '@/domain/sys/base/app/refSelector';
+import { useFeatureRefSelector } from '@/domain/sys/base/feature/refSelector/index';
 import { permissionApi } from '@/domain/sys/base/permission/api';
 import type { PermissionSelectVO } from '@/domain/sys/base/permission/types';
 import type { MenuSelectVO } from './types';
@@ -38,8 +39,17 @@ const MenuEditPage = (props: PageComponentProps) => {
     billId?: string;
     appId?: string;
   }>();
+  const [featureSelection, setFeatureSelection] = useState<{
+    billId?: string;
+    featureId?: string;
+  }>();
   const selectedAppId =
     appSelection && appSelection.billId === billId ? appSelection.appId : detail?.app?.id;
+  const featureRefSelector = useFeatureRefSelector(selectedAppId);
+  const selectedFeatureId =
+    featureSelection && featureSelection.billId === billId
+      ? featureSelection.featureId
+      : detail?.feature?.id;
   const initialValues = useMemo(() => {
     if (!detail) return {};
     return {
@@ -47,6 +57,7 @@ const MenuEditPage = (props: PageComponentProps) => {
       name: detail.name ?? '',
       level: detail.level ?? undefined,
       app: detail.app ?? null,
+      feature: detail.feature ?? null,
       parent: detail.parent ?? null,
       permission: detail.permission ?? null,
       path: detail.path ?? '',
@@ -97,6 +108,14 @@ const MenuEditPage = (props: PageComponentProps) => {
       refSelector: appRefSelector,
     },
     {
+      label: '所属功能',
+      dataIndex: 'feature',
+      type: 'ref-selector',
+      disabled: !selectedAppId,
+      placeholder: selectedAppId ? '请选择所属功能' : '请先选择所属应用',
+      refSelector: featureRefSelector,
+    },
+    {
       label: '父菜单',
       dataIndex: 'parent',
       type: 'ref-selector',
@@ -132,14 +151,19 @@ const MenuEditPage = (props: PageComponentProps) => {
       label: '权限',
       dataIndex: 'permission',
       type: 'ref-selector',
+      disabled: !selectedAppId,
+      placeholder: selectedFeatureId ? '请选择功能权限' : '请选择应用级权限',
       refSelector: defineRefSelector<PermissionSelectVO>({
-        selectorKey: 'sys-perm-menu',
+        selectorKey: ['sys-perm-menu', selectedAppId, selectedFeatureId],
         modalTitle: '选择权限',
         fetchFn: (params) =>
           permissionApi.select({
             pageNum: params.pageNum,
             pageSize: params.pageSize,
             keyword: params.keyword,
+            appId: selectedAppId,
+            featureId: selectedFeatureId,
+            appLevel: !selectedFeatureId,
           }),
         displayRender: (record) => record.name,
         fieldNames: { key: 'id', label: 'name' },
@@ -161,6 +185,7 @@ const MenuEditPage = (props: PageComponentProps) => {
   const handleSave = async (values: Record<string, unknown>) => {
     const name = (values.name as string).trim();
     const app = values.app as { id: string } | null;
+    const feature = values.feature as { id: string } | null;
     const parent = values.parent as { id: string; number?: string; name?: string } | null;
     const permission = values.permission as { id: string } | null;
 
@@ -173,6 +198,7 @@ const MenuEditPage = (props: PageComponentProps) => {
       number: (values.number as string).trim(),
       level: values.level as number,
       appId: app.id,
+      featureId: feature?.id,
       parentId: parent?.id ?? undefined,
       permissionId: permission?.id ?? undefined,
       path: (values.path as string) ?? undefined,
@@ -214,12 +240,20 @@ const MenuEditPage = (props: PageComponentProps) => {
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
       onValuesChange={(changedValues, _allValues, form) => {
+        if (Object.hasOwn(changedValues, 'feature')) {
+          // 权限必须属于当前功能，功能变化后原权限引用不再有效。
+          form.setFieldValue('permission', null);
+          const nextFeature = changedValues.feature as { id?: string } | null;
+          setFeatureSelection({ billId, featureId: nextFeature?.id });
+        }
         if (!Object.hasOwn(changedValues, 'app')) return;
         const nextApp = changedValues.app as { id?: string } | null;
         const nextAppId = nextApp?.id;
         if (nextAppId !== selectedAppId) {
           // 父菜单必须属于当前应用，应用变化后原引用不再有效。
           form.setFieldValue('parent', null);
+          form.setFieldValue('feature', null);
+          form.setFieldValue('permission', null);
         }
         setAppSelection({ billId, appId: nextAppId });
       }}

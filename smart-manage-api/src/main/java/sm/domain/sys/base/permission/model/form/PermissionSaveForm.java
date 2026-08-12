@@ -25,7 +25,7 @@ public class PermissionSaveForm {
 	@Schema(description = "编码")
 	private String number;
 
-	@NotNull(message = "应用不能为空")
-	@Schema(description = "应用ID")
-	private Long appId;
+	@NotNull(message = "功能不能为空")
+	@Schema(description = "功能ID")
+	private Long featureId;
 }

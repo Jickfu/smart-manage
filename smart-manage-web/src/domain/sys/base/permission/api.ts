@@ -7,6 +7,7 @@ import type {
   PermissionDetailVO,
   PermissionSaveForm,
   PermissionSelectVO,
+  PermissionSelectForm,
 } from './types';
 
 export const permissionApi = {
@@ -22,7 +23,7 @@ export const permissionApi = {
       .then((res) => res.data.data),
 
   /** 鍩虹璧勬枡閫夋嫨鍣?*/
-  select: (form: { pageNum: number; pageSize: number; keyword?: string; appId?: string }) =>
+  select: (form: PermissionSelectForm) =>
     request
       .post<Result<PageData<PermissionSelectVO>>>('/sys/base/permission/select', form)
       .then((res) => res.data.data),

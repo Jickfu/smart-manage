@@ -5,12 +5,14 @@ import { componentKeys } from '@/domain/common/registry/componentKeys';
 export default definePageRegistrations([
   {
     componentKey: componentKeys.purchaseRequisition,
+    featureKey: 'scm/procurement/purchase-requisition',
     title: '采购申请',
     pageType: 'LIST',
     component: lazy(() => import('./PurchaseRequisitionListPage')),
   },
   {
     componentKey: componentKeys.purchaseRequisitionEdit,
+    featureKey: 'scm/procurement/purchase-requisition',
     title: '采购申请',
     pageType: 'EDIT',
     component: lazy(() => import('./PurchaseRequisitionEditPage')),

@@ -22,6 +22,7 @@ interface MenuConverter {
     MenuSelectVO toSelectVO(MenuEntity entity);
 
     @Mapping(target = "app", ignore = true)
+    @Mapping(target = "feature", ignore = true)
     @Mapping(target = "parent", ignore = true)
     @Mapping(target = "permission", ignore = true)
     MenuDetailVO toDetailVO(MenuEntity entity);

@@ -40,6 +40,7 @@ public class MenuEntity extends BaseEntity {
 	 * 应用ID
 	 */
 	private Long appId;
+	private Long featureId;
 	/**
 	 * 权限ID
 	 */

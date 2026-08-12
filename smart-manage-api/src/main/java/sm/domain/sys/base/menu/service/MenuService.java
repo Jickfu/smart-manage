@@ -9,6 +9,8 @@ import sm.domain.sys.base.app.model.entity.AppEntity;
 import sm.domain.sys.base.app.mapper.AppMapper;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.domain.sys.base.feature.mapper.FeatureMapper;
+import sm.domain.sys.base.feature.model.entity.FeatureEntity;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuListForm;
 import sm.domain.sys.base.menu.model.form.MenuSaveForm;
@@ -42,6 +44,7 @@ public class MenuService {
 	private final CurrentUserContext currentUserContext;
 	private final MenuMapper mapper;
 	private final AppMapper appMapper;
+	private final FeatureMapper featureMapper;
 	private final PermissionMapper permissionMapper;
 	private final MenuTxService txService;
 	private final MenuConverter converter;
@@ -283,6 +286,12 @@ public class MenuService {
 		AppEntity appEntity = appMapper.selectById(entity.getAppId());
 		if (appEntity != null) {
 			vo.setApp(toReferenceInfo(appEntity.getId(), appEntity.getNumber(), appEntity.getName()));
+		}
+		FeatureEntity featureEntity = featureMapper.selectById(entity.getFeatureId());
+		if (featureEntity != null) {
+			String featureName = featureEntity.getCustomName() == null || featureEntity.getCustomName().isBlank()
+					? featureEntity.getDefaultName() : featureEntity.getCustomName();
+			vo.setFeature(toReferenceInfo(featureEntity.getId(), featureEntity.getFeatureKey(), featureName));
 		}
 		// 引用控件需要完整的标识、编码和名称，不能只返回外键 ID。
 		if (entity.getParentId() != null && entity.getParentId() > 0) {

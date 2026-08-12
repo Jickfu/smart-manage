@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Tree } from 'antd';
 import type { TreeProps } from 'antd';
 import type { DataNode } from 'antd/es/tree';
+import { keepClickedNodeSelected } from './listTreeSelection';
 
 type ListTreeProps = Omit<TreeProps<DataNode>, 'expandedKeys' | 'onExpand'>;
 
@@ -32,11 +33,14 @@ const ListTree = ({
   treeData = [],
   defaultExpandAll = false,
   defaultExpandedKeys = [],
+  defaultSelectedKeys = [],
   fieldNames,
   onSelect,
+  selectedKeys: controlledSelectedKeys,
   ...props
 }: ListTreeProps) => {
   const [expandedKeysOverride, setExpandedKeysOverride] = useState<React.Key[]>();
+  const [uncontrolledSelectedKeys, setUncontrolledSelectedKeys] = useState(defaultSelectedKeys);
   const keyFieldName = fieldNames?.key ?? 'key';
   const childrenFieldName = fieldNames?.children ?? 'children';
   // 首次用户交互前持续从最新异步数据派生默认值；交互后保持用户明确选择的展开状态。
@@ -52,16 +56,22 @@ const ListTree = ({
       treeData={treeData}
       fieldNames={fieldNames}
       expandedKeys={expandedKeys}
+      selectedKeys={controlledSelectedKeys ?? uncontrolledSelectedKeys}
       onExpand={(keys) => setExpandedKeysOverride(keys)}
       onSelect={(keys, info) => {
         const nodeKey = getNodeKey(info.node, keyFieldName);
+        // 列表筛选树的节点选择代表当前查询范围，重复点击只切换展开状态，不能清空范围。
+        const nextSelectedKeys = keepClickedNodeSelected(keys, nodeKey);
+        if (controlledSelectedKeys === undefined) {
+          setUncontrolledSelectedKeys(nextSelectedKeys);
+        }
         if (
           getNodeChildren(info.node, childrenFieldName).length &&
           !expandedKeys.includes(nodeKey)
         ) {
           setExpandedKeysOverride([...expandedKeys, nodeKey]);
         }
-        onSelect?.(keys, info);
+        onSelect?.(nextSelectedKeys, info);
       }}
     />
   );

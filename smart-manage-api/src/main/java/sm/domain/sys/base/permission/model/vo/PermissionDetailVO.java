@@ -28,6 +28,10 @@ public class PermissionDetailVO {
 
 	@Schema(description = "应用ID")
 	private Long appId;
+	private String appName;
+	private Long featureId;
+	private String featureKey;
+	private String featureName;
 
 	@Schema(description = "创建时间")
 	private LocalDateTime createTime;

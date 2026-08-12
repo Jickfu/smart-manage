@@ -11,12 +11,14 @@
 ```tsx
 export default definePageRegistrations([
   {
+    featureKey: 'scm/procurement/purchase-requisition',
     componentKey: 'scm/procurement/purchase-requisition',
     title: '采购申请',
     pageType: 'LIST',
     component: lazy(() => import('./PurchaseRequisitionListPage')),
   },
   {
+    featureKey: 'scm/procurement/purchase-requisition',
     componentKey: 'scm/procurement/purchase-requisition/edit',
     title: '采购申请',
     pageType: 'EDIT',
@@ -41,5 +43,6 @@ export default definePageRegistrations([
 - `pnpm gen:registry` 只发现并导入 `src/domain/**/pageRegistration.ts(x)`。
 - 生成器不解析组件文件名，不从文件名推导页面键，也不使用正则读取业务声明。
 - 页面键、基础标题、页面类型和懒加载组件必须在清单中显式声明。
+- 每个页面必须显式声明 `featureKey`；同一功能的多个页面共享稳定功能键。
 - 未在清单声明的组件不会进入注册表，后端菜单字符串无法加载任意前端模块。
 - 空清单和重复 `componentKey` 在注册阶段直接抛错，不保留兼容逻辑。

@@ -55,6 +55,8 @@
 
 后端菜单只保存稳定业务键，前端通过白名单注册表映射到真实组件。详细规则见[前端页面注册约定](./page-registration-convention.md)。
 
+每个页面注册项必须显式声明稳定 `featureKey`。同一功能可以包含 LIST、EDIT、CUSTOM 等多个页面；页面组件路径不能代替功能身份。功能、菜单和权限之间的完整约束见[功能、菜单与权限模型](./feature-and-permission.md)。
+
 工作台内容页签标题同样属于页面注册边界：菜单只决定打开哪个 `componentKey`，不提供页签标题。LIST、EDIT、CUSTOM 的默认标题规则、通用页面壳同步方式以及业务页面动态覆盖能力统一遵守前端页面注册约定。
 
 强制编码、样式和验证规则由[前端 AGENTS.md](../../smart-manage-web/AGENTS.md)定义。

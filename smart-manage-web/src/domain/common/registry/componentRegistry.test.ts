@@ -16,11 +16,13 @@ describe('componentRegistry 页签标题规则', () => {
 
   it('LIST 追加列表后缀，EDIT 使用基础名称', () => {
     componentRegistry[TEST_LIST_KEY] = {
+      featureKey: 'test/title',
       title: '用户',
       pageType: 'LIST',
       component: () => null,
     };
     componentRegistry[TEST_EDIT_KEY] = {
+      featureKey: 'test/title',
       title: '用户',
       pageType: 'EDIT',
       component: () => null,
@@ -34,6 +36,7 @@ describe('componentRegistry 页签标题规则', () => {
     expect(() =>
       definePageRegistrations([
         {
+          featureKey: 'test/title',
           componentKey: TEST_EDIT_KEY,
           title: '   ',
           pageType: 'EDIT',

@@ -30,32 +30,18 @@ import java.util.List;
 public class PermissionService {
 	private final PermissionMapper mapper;
 	private final PermissionTxService txService;
-	private final PermissionConverter converter;
 
 	public PageData<PermissionListVO> listPage(PermissionListForm form) {
-		LambdaQueryWrapper<PermissionEntity> qw = new LambdaQueryWrapper<PermissionEntity>();
-		qw.eq(form.getAppId() != null, PermissionEntity::getAppId, form.getAppId());
-		if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
-			String keyword = form.getKeyword().trim();
-			qw.and(condition -> condition.like(PermissionEntity::getName, keyword)
-					.or().like(PermissionEntity::getNumber, keyword));
-		}
-		qw.orderByAsc(PermissionEntity::getNumber);
-		Page<PermissionEntity> result = mapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), qw);
-		List<PermissionListVO> records = result.getRecords().stream().map(converter::toListVO).toList();
-		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
+		Page<PermissionListVO> result = mapper.selectListPage(
+				new Page<>(form.getPageNum(), form.getPageSize()), form);
+		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), result.getRecords());
 	}
 
 	/**
 	 * 角色权限分配需要一次性展示全部权限，仅返回选择和分组所需的轻量字段。
 	 */
 	public List<PermissionSelectVO> listAll() {
-		return mapper.selectList(new LambdaQueryWrapper<PermissionEntity>()
-				.orderByAsc(PermissionEntity::getNumber)
-				.orderByAsc(PermissionEntity::getId))
-				.stream()
-				.map(converter::toSelectVO)
-				.toList();
+		return mapper.selectAll();
 	}
 
 	/**
@@ -63,17 +49,9 @@ public class PermissionService {
 	 * 支持按应用、关键词过滤；按编码排序。
 	 */
 	public PageData<PermissionSelectVO> select(PermissionSelectForm form) {
-		LambdaQueryWrapper<PermissionEntity> qw = new LambdaQueryWrapper<PermissionEntity>();
-		qw.eq(form.getAppId() != null, PermissionEntity::getAppId, form.getAppId());
-		if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
-			String keyword = form.getKeyword().trim();
-			qw.and(condition -> condition.like(PermissionEntity::getNumber, keyword)
-					.or().like(PermissionEntity::getName, keyword));
-		}
-		qw.orderByAsc(PermissionEntity::getNumber);
-		Page<PermissionEntity> result = mapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), qw);
-		List<PermissionSelectVO> records = result.getRecords().stream().map(converter::toSelectVO).toList();
-		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), records);
+		Page<PermissionSelectVO> result = mapper.selectPage(
+				new Page<>(form.getPageNum(), form.getPageSize()), form);
+		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), result.getRecords());
 	}
 
 	/**
@@ -100,11 +78,11 @@ public class PermissionService {
 		if (id == null) {
 			throw new BizException(ResultEnum.PARAM_ERROR, "权限ID不能为空");
 		}
-		PermissionEntity entity = mapper.selectById(id);
-		if (entity == null) {
+		PermissionDetailVO detail = mapper.selectDetailById(id);
+		if (detail == null) {
 			throw new BizException(ResultEnum.NOT_FOUND, "权限不存在");
 		}
-		return converter.toDetailVO(entity);
+		return detail;
 	}
 
 	public PermissionCreateNewDataVO createNewData() {

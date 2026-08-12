@@ -21,6 +21,8 @@
 - 代码改动必须遵守[当前架构](./docs/architecture/overview.md)及其关联文档。
 - 数据库结构和必要初始化数据只通过 `db/migration` 中新增 Flyway 迁移维护；已执行迁移禁止修改。
 - 非系统内核业务必须位于独立领域，系统内核禁止反向依赖可选业务模块。
+- 系统功能统一通过稳定 `featureKey` 建模；功能、权限、菜单和前端页面注册必须保持明确关联，禁止在运行时通过权限编码前缀、菜单名称或组件路径推断功能归属。
+- 系统内置功能和权限只通过新增 Flyway 迁移维护；管理员只维护允许覆盖的展示、导航和授权配置，不得修改系统功能稳定身份。
 - 核心架构边界、安全逻辑、状态流转、事务和并发控制必须有自动化测试；不以测试数量或覆盖率为目标。
 - 每项代码任务都必须执行与风险匹配的编译、测试、静态检查、构建或迁移验证。
 - 新增业务聚合必须使用[业务聚合检查清单](./docs/development/business-aggregate-checklist.md)。
@@ -39,6 +41,7 @@
 | 后端代码 | `smart-manage-api/AGENTS.md`、`docs/architecture/backend.md` |
 | 前端代码 | `smart-manage-web/AGENTS.md`、`docs/architecture/frontend.md` |
 | 认证、权限或高风险能力 | `docs/architecture/security.md` |
+| 功能目录、菜单、权限或页面注册 | `docs/architecture/feature-and-permission.md`、`docs/architecture/security.md` |
 | 数据权限、组织范围或对象级访问 | `docs/architecture/data-permission.md` |
 | 数据库或迁移 | `docs/development/database.md` |
 | 构建、测试或 CI | `docs/development/verification.md` |

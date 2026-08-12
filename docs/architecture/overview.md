@@ -28,6 +28,7 @@ smart-manage/
 | 并发控制 | 可修改聚合使用 `version` 和 MyBatis-Plus 乐观锁 |
 | 接口基础设施 | 统一响应、全局异常、权限注解、操作日志和 Trace ID |
 | 权限 | 功能权限使用权限码，高风险能力额外校验 `administrator`；数据权限按独立规范演进 |
+| 功能目录 | `Feature` 是应用下稳定的功能边界，关联页面、菜单和权限；身份由 Flyway 维护，管理员只覆盖展示和排序等运营字段 |
 | 对象映射 | 纯字段映射使用模块内 MapStruct Converter，业务组装留在 Service |
 | 前端状态 | TanStack Query 管理服务端状态，Zustand 管理跨页面客户端状态，Form 管理编辑状态 |
 | 页面架构 | 组件注册白名单、ERP 双页签和通用列表/编辑/自定义页面 |
@@ -66,6 +67,7 @@ CorsFilter（跨域处理）
 - [部署与多实例架构](./deployment.md)
 - [前端架构](./frontend.md)
 - [安全架构](./security.md)
+- [功能、菜单与权限模型](./feature-and-permission.md)
 - [质量验证](../development/verification.md)
 - [日志数据生命周期](./log-lifecycle.md)
 - [新增业务聚合检查清单](../development/business-aggregate-checklist.md)

@@ -4,6 +4,7 @@ import { definePageRegistrations } from '@/domain/common/registry/componentRegis
 export default definePageRegistrations([
   {
     componentKey: 'sys/monitor/thread',
+    featureKey: 'sys/monitor/thread',
     title: '线程诊断',
     pageType: 'CUSTOM',
     component: lazy(() => import('./ThreadDiagnosticPage')),

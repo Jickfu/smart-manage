@@ -15,4 +15,8 @@ public class PermissionSelectVO {
 	private String number;
 	private String name;
 	private Long appId;
+	private String appName;
+	private Long featureId;
+	private String featureKey;
+	private String featureName;
 }
