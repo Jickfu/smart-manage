@@ -10,6 +10,7 @@ public final class UserPermission {
     public static final String DISABLE = "sys:base:user:disable";
     public static final String ASSIGN_ROLES = "sys:base:user:assignRoles";
     public static final String RESET_PASSWORD = "sys:base:user:resetPassword";
+    public static final String TEMPORARY_LOGIN = "sys:base:user:temporaryLogin";
 
     private UserPermission() {
     }

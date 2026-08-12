@@ -28,6 +28,7 @@ public class LoginLogService {
 		qw.select(LoginLogEntity::getId, LoginLogEntity::getUserId, LoginLogEntity::getUsername,
 				LoginLogEntity::getNickname, LoginLogEntity::getEventType, LoginLogEntity::getSuccess,
 				LoginLogEntity::getFailReason, LoginLogEntity::getIp, LoginLogEntity::getTraceId,
+				LoginLogEntity::getIssuerUserId, LoginLogEntity::getGrantId,
 				LoginLogEntity::getCreateTime);
 		if (StringUtils.hasText(form.getKeyword())) {
 			String keyword = form.getKeyword().trim();

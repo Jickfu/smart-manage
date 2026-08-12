@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { App, Button, Checkbox, Input, Modal, Space, Tag, Typography } from 'antd';
+import { App, Button, Checkbox, Form, Input, Modal, Space, Tag, Typography } from 'antd';
 import { CheckOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
@@ -23,11 +23,17 @@ import type { UserAssignmentVO, UserListVO } from './types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { userAccess } from './permissions';
 import { UserAvatar } from './UserAvatar';
+import AppModal from '@/domain/common/component/AppModal';
 import './UserListPage.css';
 
 const USER_EDIT_KEY = 'sys/base/user/edit';
 const USER_ROLE_ASSIGNMENT_KEY = 'sys/base/user/role-assignment';
 const UNASSIGNED_KEY = '__unassigned__';
+
+interface TemporaryLoginFormValues {
+  reason: string;
+  administratorPassword?: string;
+}
 
 const toTreeNode = (node: OrgTreeNode): DataNode => ({
   key: node.id,
@@ -71,6 +77,12 @@ const UserListPage = (props: PageComponentProps) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [resetPassword, setResetPassword] = useState<string>();
   const [resetUsername, setResetUsername] = useState('');
+  const [temporaryLoginOpen, setTemporaryLoginOpen] = useState(false);
+  const [temporaryLoginSafe, setTemporaryLoginSafe] = useState(false);
+  const [temporaryLoginUser, setTemporaryLoginUser] = useState<UserListVO>();
+  const [temporaryLoginCredential, setTemporaryLoginCredential] = useState<string>();
+  const [temporaryLoginExpiresAt, setTemporaryLoginExpiresAt] = useState('');
+  const [temporaryLoginForm] = Form.useForm<TemporaryLoginFormValues>();
   const treeQuery = useQuery({
     queryKey: orgQueryKeys.tree(false),
     queryFn: () => orgApi.tree(false),
@@ -100,6 +112,27 @@ const UserListPage = (props: PageComponentProps) => {
   const resetPasswordMutation = useCommandMutation({
     mutationFn: (id: string) => userApi.resetPassword(id),
     onSuccess: (result) => setResetPassword(result.password),
+  });
+  const temporaryLoginMutation = useCommandMutation({
+    mutationFn: async (values: TemporaryLoginFormValues) => {
+      if (!temporaryLoginUser) throw new Error('未选择目标用户');
+      if (!temporaryLoginSafe) {
+        const publicKey = await userApi.temporaryLoginPublicKey();
+        const encryptedPassword = window.sm2.doEncrypt(
+          values.administratorPassword ?? '',
+          publicKey,
+          1,
+        );
+        await userApi.openTemporaryLoginSafe(encryptedPassword);
+      }
+      return userApi.createTemporaryLoginGrant(temporaryLoginUser.id, values.reason);
+    },
+    onSuccess: (result) => {
+      setTemporaryLoginOpen(false);
+      setTemporaryLoginCredential(result.credential);
+      setTemporaryLoginExpiresAt(result.expiresAt);
+      temporaryLoginForm.resetFields();
+    },
   });
   const handleOpenEdit = useCallback(
     (id: string) => {
@@ -309,6 +342,20 @@ const UserListPage = (props: PageComponentProps) => {
             },
           },
           {
+            key: 'temporaryLogin',
+            label: '生成代登录密码',
+            permission: userAccess.permissions.temporaryLogin,
+            disabled: selectedRowKeys.length !== 1 || selectedUser?.username === 'administrator',
+            loading: temporaryLoginMutation.isPending,
+            onClick: async () => {
+              if (!selectedUser) return;
+              const safe = await userApi.temporaryLoginSafe();
+              setTemporaryLoginSafe(safe);
+              setTemporaryLoginUser(selectedUser);
+              setTemporaryLoginOpen(true);
+            },
+          },
+          {
             key: 'assignRoles',
             label: '分配角色',
             permission: userAccess.permissions.assignRoles,
@@ -359,6 +406,92 @@ const UserListPage = (props: PageComponentProps) => {
         <Space orientation="vertical" className="sm-user-reset-password-content">
           <Typography.Text>用户“{resetUsername}”下次登录时必须修改密码。</Typography.Text>
           <Input value={resetPassword} readOnly />
+        </Space>
+      </Modal>
+      <AppModal
+        title={`生成“${temporaryLoginUser?.username ?? ''}”的代登录密码`}
+        open={temporaryLoginOpen}
+        width={520}
+        bodyMode="natural"
+        closeDisabled={temporaryLoginMutation.isPending}
+        onCancel={() => {
+          setTemporaryLoginOpen(false);
+          temporaryLoginForm.resetFields();
+        }}
+        footer={
+          <>
+            <Button
+              onClick={() => {
+                setTemporaryLoginOpen(false);
+                temporaryLoginForm.resetFields();
+              }}
+              disabled={temporaryLoginMutation.isPending}
+            >
+              取消
+            </Button>
+            <Button
+              type="primary"
+              loading={temporaryLoginMutation.isPending}
+              onClick={() => temporaryLoginForm.submit()}
+            >
+              生成
+            </Button>
+          </>
+        }
+      >
+        <Form
+          form={temporaryLoginForm}
+          layout="vertical"
+          className="sm-user-temporary-login-form"
+          onFinish={(values) => temporaryLoginMutation.mutate(values)}
+        >
+          <Form.Item
+            name="reason"
+            label="代登录原因"
+            rules={[
+              { required: true, whitespace: true, message: '请输入代登录原因' },
+              { max: 500, message: '代登录原因不能超过500个字符' },
+            ]}
+          >
+            <Input.TextArea rows={3} maxLength={500} showCount />
+          </Form.Item>
+          {!temporaryLoginSafe && (
+            <Form.Item
+              name="administratorPassword"
+              label="administrator 密码"
+              extra="验证通过后5分钟内再次生成无需重复输入。"
+              rules={[{ required: true, message: '请输入 administrator 密码' }]}
+            >
+              <Input.Password autoComplete="current-password" />
+            </Form.Item>
+          )}
+        </Form>
+      </AppModal>
+      <Modal
+        title="代登录密码生成成功"
+        open={Boolean(temporaryLoginCredential)}
+        mask={{ closable: false }}
+        onCancel={() => setTemporaryLoginCredential(undefined)}
+        footer={
+          <Button
+            type="primary"
+            onClick={async () => {
+              if (temporaryLoginCredential) {
+                await navigator.clipboard.writeText(temporaryLoginCredential);
+                message.success('代登录密码已复制');
+              }
+            }}
+          >
+            复制代登录密码
+          </Button>
+        }
+      >
+        <Space orientation="vertical" className="sm-user-reset-password-content">
+          <Typography.Text>
+            请在 {temporaryLoginExpiresAt}{' '}
+            前，于无痕窗口使用目标用户名和下方密码登录。密码仅展示一次且成功登录后立即失效。
+          </Typography.Text>
+          <Input value={temporaryLoginCredential} readOnly />
         </Space>
       </Modal>
     </>

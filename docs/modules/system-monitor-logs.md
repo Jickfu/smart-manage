@@ -14,6 +14,8 @@
 | 事件 | 语义 |
 | --- | --- |
 | `LOGIN_SUCCESS` | 已创建正式登录会话 |
+| `TEMPORARY_LOGIN_GRANT_CREATED` | 管理员已为目标用户生成一次性代登录凭证 |
+| `TEMPORARY_LOGIN_SUCCESS` | 一次性代登录凭证已成功消费并创建短期会话 |
 | `LOGIN_FAILURE` | 验证码、凭据或账户状态校验失败 |
 | `PASSWORD_CHANGE_REQUIRED` | 凭据正确但必须先修改密码，尚未创建正式会话 |
 | `LOGOUT` | 用户主动退出 |

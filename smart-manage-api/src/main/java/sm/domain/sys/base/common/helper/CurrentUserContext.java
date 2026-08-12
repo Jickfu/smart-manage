@@ -15,6 +15,17 @@ public class CurrentUserContext {
 	/** 凭据验证并建立正式登录态后，集中初始化服务端认证声明。 */
 	public void initializeIdentity(Long orgId, String username, boolean administrator) {
 		var session = StpUtil.getTokenSession();
+		setIdentityClaims(session, orgId, username, administrator);
+	}
+
+	/** 为显式创建的独立登录令牌初始化服务端认证声明。 */
+	public void initializeIdentity(String token, Long orgId, String username, boolean administrator) {
+		var session = StpUtil.getStpLogic().getTokenSessionByToken(token);
+		setIdentityClaims(session, orgId, username, administrator);
+	}
+
+	private void setIdentityClaims(cn.dev33.satoken.session.SaSession session, Long orgId,
+			String username, boolean administrator) {
 		session.set(ORG_ID_KEY, orgId);
 		session.set(USERNAME_KEY, username);
 		session.set(ADMINISTRATOR_KEY, administrator);

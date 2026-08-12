@@ -71,8 +71,8 @@ management:
 
 logging:
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [${SMART_MANAGE_INSTANCE_ID}] [%X{traceId}] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [${SMART_MANAGE_INSTANCE_ID}] [%X{traceId}] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [${smart-manage.instance-id}] [%X{traceId}] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [${smart-manage.instance-id}] [%X{traceId}] %-5level %logger{36} - %msg%n"
   level:
     root: INFO
     sm: INFO

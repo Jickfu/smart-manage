@@ -46,6 +46,7 @@ class LoginServiceTests {
 	private final ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
 	private LoginService loginService;
 	private final ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
+	private final TemporaryLoginService temporaryLoginService = mock(TemporaryLoginService.class);
 
 	@BeforeEach
 	void setUp() {
@@ -55,8 +56,31 @@ class LoginServiceTests {
 				mock(MenuService.class),
 				logWriteService,
 				redisTemplate,
-				clientIpResolver);
+				clientIpResolver,
+				temporaryLoginService);
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+	}
+
+	@Test
+	void temporaryCredentialUsesOneTimeGrantAuthentication() {
+		LoginForm form = loginForm();
+		LoginVO expected = new LoginVO();
+		expected.setToken("temporary-token");
+		when(valueOperations.get(CAPTCHA_KEY)).thenReturn("ABCD");
+		when(temporaryLoginService.supports("SMTL1.credential")).thenReturn(true);
+		when(temporaryLoginService.consume("administrator", "SMTL1.credential")).thenReturn(expected);
+
+		try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-captcha")).thenReturn("ABCD");
+			sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password"))
+					.thenReturn("SMTL1.credential");
+
+			LoginVO actual = loginService.login(form);
+
+			assertSame(expected, actual);
+			verify(temporaryLoginService).consume("administrator", "SMTL1.credential");
+			verify(userService, never()).authenticate("administrator", "SMTL1.credential");
+		}
 	}
 
 	@Test

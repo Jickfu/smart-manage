@@ -44,6 +44,11 @@ public class SM2Helper {
 		}
 	}
 
+	/** 浏览器端加密所需的公开密钥，不包含任何服务端秘密。 */
+	public static String getPublicKey() {
+		return staticPublicKey;
+	}
+
 	/**
 	 * 解密
 	 */

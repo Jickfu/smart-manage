@@ -1,6 +1,7 @@
 package sm.domain.sys.base.user.service;
 
 import cn.dev33.satoken.stp.StpUtil;
+import cn.dev33.satoken.stp.parameter.SaLoginParameter;
 import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.Cached;
 import com.alicp.jetcache.anno.CacheInvalidate;
@@ -198,6 +199,41 @@ public class UserService {
 				null);
 	}
 
+	/** 二级认证只验证当前真实管理员自己的密码。 */
+	public boolean verifyAdministratorPassword(Long userId, String password) {
+		UserEntity user = mapper.selectById(userId);
+		return user != null
+				&& UserConstant.SUPER_ADMIN.equals(user.getUsername())
+				&& Boolean.TRUE.equals(user.getEnabled())
+				&& Argon2Helper.verify(user.getPassword(), password);
+	}
+
+	/** 代登录不验证目标密码，但复用正式登录的账号和主职组织有效性校验。 */
+	public UserAuthentication authenticateTemporaryLogin(Long userId, String expectedUsername) {
+		UserEntity user = mapper.selectById(userId);
+		if (user == null || !user.getUsername().equals(expectedUsername)
+				|| UserConstant.SUPER_ADMIN.equals(user.getUsername())) {
+			return UserAuthentication.failed("用户名或密码错误");
+		}
+		if (!Boolean.TRUE.equals(user.getEnabled())) {
+			return UserAuthentication.failed("用户名或密码错误");
+		}
+		UserAssignmentEntity primaryAssignment = userAssignmentMapper.selectOne(
+				new LambdaQueryWrapper<UserAssignmentEntity>()
+						.eq(UserAssignmentEntity::getUserId, user.getId())
+						.eq(UserAssignmentEntity::getIsPrimary, true));
+		if (primaryAssignment == null) {
+			return UserAuthentication.failed("用户名或密码错误");
+		}
+		OrgEntity primaryOrganization = orgMapper.selectById(primaryAssignment.getOrgId());
+		if (primaryOrganization == null || !Boolean.TRUE.equals(primaryOrganization.getEnabled())
+				|| Boolean.TRUE.equals(primaryOrganization.getArchived())) {
+			return UserAuthentication.failed("用户名或密码错误");
+		}
+		return new UserAuthentication(user.getId(), user.getUsername(), user.getName(), false,
+				false, primaryOrganization.getId(), null);
+	}
+
 	/** 凭据验证且无需强制改密后，才创建正式登录状态。 */
 	public LoginVO completeLogin(UserAuthentication authentication) {
 		StpUtil.login(authentication.userId());
@@ -209,6 +245,28 @@ public class UserService {
 		vo.setToken(token);
 		vo.setName(authentication.name());
 		vo.setAccess(authentication.administrator() ? "kdcloud" : "");
+		return vo;
+	}
+
+	/** 创建与管理员当前令牌完全独立、固定三十分钟有效的代登录会话。 */
+	public LoginVO completeTemporaryLogin(UserAuthentication authentication, Long issuerUserId,
+			String grantId, String reason) {
+		SaLoginParameter parameter = new SaLoginParameter()
+				.setTimeout(30 * 60)
+				.setDevice("temporary-admin-login")
+				.setIsLastingCookie(false);
+		String token = StpUtil.getStpLogic().createLoginSession(authentication.userId(), parameter);
+		currentUserContext.initializeIdentity(token, authentication.orgId(), authentication.username(), false);
+		var tokenSession = StpUtil.getStpLogic().getTokenSessionByToken(token);
+		tokenSession.set("authenticationMethod", "TEMPORARY_ADMIN_GRANT");
+		tokenSession.set("issuerUserId", issuerUserId);
+		tokenSession.set("grantId", grantId);
+		tokenSession.set("temporaryLoginReason", reason);
+
+		LoginVO vo = new LoginVO();
+		vo.setToken(token);
+		vo.setName(authentication.name());
+		vo.setAccess("");
 		return vo;
 	}
 
@@ -351,6 +409,11 @@ public class UserService {
 			return List.of("*");
 		}
 		return permissionService.getUserPermissionsByPrefix(currentUserContext.getUserId(), currentUserContext.getOrgId(), prefix);
+	}
+
+	/** Controller 需要在返回安全配置前复核真实管理员身份。 */
+	public void checkAdministrator() {
+		currentUserContext.checkAdministrator();
 	}
 
 	/** Redis 远程缓存读取；仅供其他 Spring Bean 外部调用，确保缓存代理生效。 */

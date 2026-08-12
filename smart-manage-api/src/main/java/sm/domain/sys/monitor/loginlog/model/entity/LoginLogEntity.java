@@ -27,4 +27,8 @@ public class LoginLogEntity extends BaseEntity {
 	private String ip;
 	private String userAgent;
 	private String traceId;
+	private Long issuerUserId;
+	private String grantId;
+	private String grantReason;
+	private java.time.LocalDateTime grantExpiresAt;
 }

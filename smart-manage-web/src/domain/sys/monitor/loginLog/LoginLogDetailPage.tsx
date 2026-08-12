@@ -16,15 +16,15 @@ const fields: EditField[] = [
   {
     label: '事件',
     dataIndex: 'eventType',
-    type: 'select',
-    options: [
-      { label: '登录', value: 'LOGIN' },
-      { label: '退出', value: 'LOGOUT' },
-    ],
+    type: 'text',
   },
   { label: 'IP 地址', dataIndex: 'ip', type: 'text' },
   { label: '发生时间', dataIndex: 'createTime', type: 'datetime' },
   { label: 'Trace ID', dataIndex: 'traceId', type: 'text' },
+  { label: '签发管理员 ID', dataIndex: 'issuerUserId', type: 'text' },
+  { label: '代登录授权编号', dataIndex: 'grantId', type: 'text' },
+  { label: '凭证失效时间', dataIndex: 'grantExpiresAt', type: 'datetime' },
+  { label: '代登录原因', dataIndex: 'grantReason', type: 'textarea', fullWidth: true },
   { label: '失败原因', dataIndex: 'failReason', type: 'textarea', fullWidth: true },
   { label: 'User-Agent', dataIndex: 'userAgent', type: 'textarea', fullWidth: true },
 ];

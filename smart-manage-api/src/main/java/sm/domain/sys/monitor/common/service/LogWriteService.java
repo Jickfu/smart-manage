@@ -50,6 +50,8 @@ public class LogWriteService implements OperateLogWriter {
         e.setIp(truncateColumn(e.getIp(), 64));
         e.setUserAgent(truncateColumn(e.getUserAgent(), 1024));
         e.setTraceId(truncateColumn(e.getTraceId(), 64));
+        e.setGrantId(truncateColumn(e.getGrantId(), 64));
+        e.setGrantReason(truncateColumn(e.getGrantReason(), 500));
         runAsync(() -> loginLogMapper.insert(e));
     }
 
@@ -122,6 +124,27 @@ public class LogWriteService implements OperateLogWriter {
         entity.setEventType(eventType.name());
         entity.setSuccess(success);
         entity.setFailReason(reason);
+        entity.setIp(ip);
+        entity.setUserAgent(StringUtils.hasText(userAgent) ? userAgent : null);
+        entity.setCreateTime(LocalDateTime.now());
+        writeLogin(entity);
+    }
+
+    /** 记录一次性代登录凭证的生成或成功消费，不包含明文凭证及其摘要。 */
+    public void writeTemporaryLoginEvent(Long targetUserId, String targetUsername, String targetName,
+                                         Long issuerUserId, String grantId, String reason,
+                                         LocalDateTime expiresAt, LoginEventType eventType,
+                                         String ip, String userAgent) {
+        LoginLogEntity entity = new LoginLogEntity();
+        entity.setUserId(targetUserId);
+        entity.setUsername(targetUsername);
+        entity.setNickname(targetName);
+        entity.setIssuerUserId(issuerUserId);
+        entity.setGrantId(grantId);
+        entity.setGrantReason(reason);
+        entity.setGrantExpiresAt(expiresAt);
+        entity.setEventType(eventType.name());
+        entity.setSuccess(true);
         entity.setIp(ip);
         entity.setUserAgent(StringUtils.hasText(userAgent) ? userAgent : null);
         entity.setCreateTime(LocalDateTime.now());

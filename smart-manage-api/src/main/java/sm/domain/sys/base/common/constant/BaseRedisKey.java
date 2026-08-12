@@ -4,6 +4,7 @@ package sm.domain.sys.base.common.constant;
 public final class BaseRedisKey {
     public static final String CAPTCHA = BaseKeyPrefix.VALUE + "captcha:";
     public static final String PASSWORD_CHANGE_TICKET = BaseKeyPrefix.VALUE + "password-change:";
+    public static final String TEMPORARY_LOGIN_GRANT = BaseKeyPrefix.VALUE + "temporary-login:";
 
     private BaseRedisKey() {
     }

@@ -19,5 +19,6 @@ public class LoginLogListVO implements Serializable {
 	private String ip;
 	private String traceId;
 	private LocalDateTime createTime;
+	private Long issuerUserId;
+	private String grantId;
 }
-

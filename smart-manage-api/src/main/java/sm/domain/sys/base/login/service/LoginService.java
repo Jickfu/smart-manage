@@ -46,6 +46,7 @@ public class LoginService {
 	private final LogWriteService logWriteService;
 	private final RedisTemplate<String, Object> redisTemplate;
 	private final ClientIpResolver clientIpResolver;
+	private final TemporaryLoginService temporaryLoginService;
 
 	public LoginVO login(LoginForm form) {
 		// 验证码校验
@@ -64,6 +65,9 @@ public class LoginService {
 
 		// SM2 解密前端密码
 		String decryptedPassword = decryptLoginPayload(form.getPassword(), form.getUsername());
+		if (temporaryLoginService.supports(decryptedPassword)) {
+			return temporaryLoginService.consume(form.getUsername(), decryptedPassword);
+		}
 		var authentication = userService.authenticate(form.getUsername(), decryptedPassword);
 		if (!authentication.successful()) {
 			LoginVO failed = new LoginVO(authentication.message());

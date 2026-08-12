@@ -2,6 +2,7 @@ import request from '@/api/request';
 import type { PageData, Result } from '@/types/api';
 import type {
   ResetPasswordVO,
+  TemporaryLoginGrantVO,
   UserDetailVO,
   UserListForm,
   UserListVO,
@@ -42,5 +43,30 @@ export const userApi = {
   resetPassword: (id: string) =>
     request
       .post<Result<ResetPasswordVO>>('/sys/base/user/resetPassword', { id })
+      .then((response) => response.data.data),
+
+  temporaryLoginSafe: () =>
+    request
+      .get<Result<boolean>>('/sys/base/user/temporaryLogin/safe')
+      .then((response) => response.data.data),
+
+  temporaryLoginPublicKey: () =>
+    request
+      .get<Result<string>>('/sys/base/user/temporaryLogin/publicKey')
+      .then((response) => response.data.data),
+
+  openTemporaryLoginSafe: (encryptedPassword: string) =>
+    request
+      .post<Result<string>>('/sys/base/user/temporaryLogin/safe', {
+        password: encryptedPassword,
+      })
+      .then((response) => response.data.data),
+
+  createTemporaryLoginGrant: (userId: string, reason: string) =>
+    request
+      .post<Result<TemporaryLoginGrantVO>>('/sys/base/user/temporaryLogin/grant', {
+        userId,
+        reason,
+      })
       .then((response) => response.data.data),
 };

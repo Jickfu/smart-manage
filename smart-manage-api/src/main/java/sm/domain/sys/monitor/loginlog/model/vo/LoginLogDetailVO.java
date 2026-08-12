@@ -20,4 +20,8 @@ public class LoginLogDetailVO implements Serializable {
     private String userAgent;
     private String traceId;
     private LocalDateTime createTime;
+    private Long issuerUserId;
+    private String grantId;
+    private String grantReason;
+    private LocalDateTime grantExpiresAt;
 }

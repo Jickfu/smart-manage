@@ -2,6 +2,10 @@
   width: 100%;
 }
 
+.sm-user-temporary-login-form {
+  padding: 16px;
+}
+
 .sm-user-assignment-cells {
   margin: -8px;
 }

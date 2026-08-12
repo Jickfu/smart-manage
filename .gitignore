@@ -29,6 +29,9 @@ target/
 logs
 .pnpm-store
 
+# 本机开发配置，可能包含数据库、Redis 等敏感凭据。
+smart-manage-api/src/main/resources/application-local.yml
+
 ### AI ###
 .claude
 .agents

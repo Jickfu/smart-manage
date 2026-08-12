@@ -1,6 +1,16 @@
 import type { PageForm } from '@/types/api';
 
-export type LoginEventType = 'LOGIN' | 'LOGOUT';
+export type LoginEventType =
+  | 'LOGIN_SUCCESS'
+  | 'LOGIN_FAILURE'
+  | 'PASSWORD_CHANGE_REQUIRED'
+  | 'LOGOUT'
+  | 'SESSION_KICKED'
+  | 'SESSION_REPLACED'
+  | 'ACCOUNT_DISABLED'
+  | 'PASSWORD_RESET_TERMINATED'
+  | 'TEMPORARY_LOGIN_GRANT_CREATED'
+  | 'TEMPORARY_LOGIN_SUCCESS';
 
 export interface LoginLogListForm extends PageForm {
   keyword?: string;
@@ -22,8 +32,12 @@ export interface LoginLogListVO {
   ip?: string;
   traceId?: string;
   createTime: string;
+  issuerUserId?: string;
+  grantId?: string;
 }
 
 export interface LoginLogDetailVO extends LoginLogListVO {
   userAgent?: string;
+  grantReason?: string;
+  grantExpiresAt?: string;
 }

@@ -19,6 +19,11 @@ import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.base.user.model.vo.UserListVO;
 import sm.domain.sys.base.user.model.vo.ResetPasswordVO;
+import sm.domain.sys.base.user.model.form.TemporaryLoginGrantForm;
+import sm.domain.sys.base.user.model.form.TemporaryLoginSafeForm;
+import sm.domain.sys.base.user.model.vo.TemporaryLoginGrantVO;
+import sm.domain.sys.base.login.service.TemporaryLoginService;
+import sm.system.helper.SM2Helper;
 import sm.domain.sys.base.user.service.UserService;
 import sm.system.form.IdForm;
 import sm.system.form.IdsForm;
@@ -46,6 +51,7 @@ import sm.system.storage.FileStorageServiceFactory;
 public class UserController {
 	private final UserService service;
 	private final FileStorageServiceFactory storageFactory;
+	private final TemporaryLoginService temporaryLoginService;
 
 	@GetMapping("/sys/base/user/avatar/{userId}")
 	public ResponseEntity<StreamingResponseBody> avatar(@PathVariable Long userId) {
@@ -146,5 +152,32 @@ public class UserController {
 	@SaCheckPermission(UserPermission.RESET_PASSWORD)
 	public Result<ResetPasswordVO> resetPassword(@RequestBody @Valid IdForm form) {
 		return Result.success(service.resetPassword(form.getId()));
+	}
+
+	@GetMapping("/sys/base/user/temporaryLogin/publicKey")
+	@SaCheckPermission(UserPermission.TEMPORARY_LOGIN)
+	public Result<String> temporaryLoginPublicKey() {
+		service.checkAdministrator();
+		return Result.success(SM2Helper.getPublicKey());
+	}
+
+	@GetMapping("/sys/base/user/temporaryLogin/safe")
+	@SaCheckPermission(UserPermission.TEMPORARY_LOGIN)
+	public Result<Boolean> temporaryLoginSafe() {
+		return Result.success(temporaryLoginService.isSafe());
+	}
+
+	@PostMapping("/sys/base/user/temporaryLogin/safe")
+	@SaCheckPermission(UserPermission.TEMPORARY_LOGIN)
+	public Result<String> openTemporaryLoginSafe(@RequestBody @Valid TemporaryLoginSafeForm form) {
+		temporaryLoginService.openSafe(form.getPassword());
+		return Result.success();
+	}
+
+	@PostMapping("/sys/base/user/temporaryLogin/grant")
+	@SaCheckPermission(UserPermission.TEMPORARY_LOGIN)
+	public Result<TemporaryLoginGrantVO> createTemporaryLoginGrant(
+			@RequestBody @Valid TemporaryLoginGrantForm form) {
+		return Result.success(temporaryLoginService.createGrant(form));
 	}
 }

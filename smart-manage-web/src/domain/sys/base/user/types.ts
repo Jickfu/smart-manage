@@ -74,3 +74,8 @@ export interface UserSaveForm {
 export interface ResetPasswordVO {
   password: string;
 }
+
+export interface TemporaryLoginGrantVO {
+  credential: string;
+  expiresAt: string;
+}

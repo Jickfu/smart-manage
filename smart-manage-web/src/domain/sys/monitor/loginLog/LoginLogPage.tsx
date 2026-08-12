@@ -18,8 +18,16 @@ interface LoginLogFilters extends AuditLogFilters {
 const LOGIN_LOG_DETAIL_KEY = 'sys/monitor/login-log/detail';
 
 const eventTypeLabels: Record<LoginEventType, string> = {
-  LOGIN: '登录',
+  LOGIN_SUCCESS: '登录成功',
+  LOGIN_FAILURE: '登录失败',
+  PASSWORD_CHANGE_REQUIRED: '要求修改密码',
   LOGOUT: '退出',
+  SESSION_KICKED: '会话被踢下线',
+  SESSION_REPLACED: '会话被顶替',
+  ACCOUNT_DISABLED: '账号禁用',
+  PASSWORD_RESET_TERMINATED: '重置密码下线',
+  TEMPORARY_LOGIN_GRANT_CREATED: '生成代登录密码',
+  TEMPORARY_LOGIN_SUCCESS: '代登录成功',
 };
 
 const LoginLogPage = (props: PageComponentProps) => {
@@ -83,7 +91,10 @@ const LoginLogPage = (props: PageComponentProps) => {
         <AuditLogFilter
           values={list.filters}
           eventTypeOptions={[
-            { label: '登录', value: 'LOGIN' },
+            { label: '登录成功', value: 'LOGIN_SUCCESS' },
+            { label: '登录失败', value: 'LOGIN_FAILURE' },
+            { label: '生成代登录密码', value: 'TEMPORARY_LOGIN_GRANT_CREATED' },
+            { label: '代登录成功', value: 'TEMPORARY_LOGIN_SUCCESS' },
             { label: '退出', value: 'LOGOUT' },
           ]}
           onFilter={list.onFilter}
