@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { App, Button, Checkbox, Input, Tag, Tree } from 'antd';
+import { App, Button, Checkbox, Input, Tag } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
 import ListTreePanel from '@/domain/common/page/ListTreePanel';
+import ListTree from '@/domain/common/page/ListTree';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
@@ -177,7 +178,7 @@ const OrgListPage = (props: PageComponentProps) => {
         </div>
       }
     >
-      <Tree
+      <ListTree
         virtual={false}
         blockNode
         defaultExpandAll

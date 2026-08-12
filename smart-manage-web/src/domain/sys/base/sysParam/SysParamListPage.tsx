@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { App, Button, Tag, Tree } from 'antd';
+import { App, Button, Tag } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ListPage from '@/domain/common/page/ListPage';
 import ListTreePanel from '@/domain/common/page/ListTreePanel';
+import ListTree from '@/domain/common/page/ListTree';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -118,7 +119,7 @@ const SysParamListPage = (props: PageComponentProps) => {
       pageSize={pageSize}
       treePanel={
         <ListTreePanel>
-          <Tree
+          <ListTree
             virtual={false}
             treeData={treeData}
             blockNode

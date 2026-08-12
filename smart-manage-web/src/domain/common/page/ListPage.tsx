@@ -72,6 +72,10 @@ interface ListPageProps<T> {
   showPagination?: boolean;
   /** Ant Design Table 原生展开配置。 */
   expandable?: TableProps<T>['expandable'];
+  /** 是否启用白色/浅灰色交替行，默认关闭。 */
+  striped?: boolean;
+  /** 业务行样式，会与通用斑马纹类名合并。 */
+  rowClassName?: TableProps<T>['rowClassName'];
   /** 数据语义变化时用于重建 Table 内部状态，例如重新应用默认展开行。 */
   tableStateKey?: React.Key;
 
@@ -126,6 +130,8 @@ function ListPage<T>({
   showSequence = true,
   showPagination = true,
   expandable,
+  striped = false,
+  rowClassName,
   tableStateKey,
   rowKey,
   columns,
@@ -235,6 +241,17 @@ function ListPage<T>({
   ) : (
     tableHeaderExtra
   );
+
+  const resolveRowClassName: TableProps<T>['rowClassName'] = (record, index, indent) => {
+    const stripeClass = striped
+      ? index % 2 === 0
+        ? 'sm-list-row-base'
+        : 'sm-list-row-alternate'
+      : undefined;
+    const businessClass =
+      typeof rowClassName === 'function' ? rowClassName(record, index, indent) : rowClassName;
+    return [stripeClass, businessClass].filter(Boolean).join(' ');
+  };
 
   // 错误态
   if (error) {
@@ -350,6 +367,7 @@ function ListPage<T>({
                 columns={fullColumns}
                 dataSource={dataSource}
                 expandable={expandable}
+                rowClassName={resolveRowClassName}
                 size="small"
                 pagination={false}
                 sticky

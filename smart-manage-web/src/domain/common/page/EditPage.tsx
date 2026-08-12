@@ -182,6 +182,22 @@ const EditPage = ({
   }>({ source: undefined, values: [] });
   const editable = isEditable(operationType, billStatus);
   const detailExpanded = activeCollapseKeys.includes('detail');
+  const toggleCollapsePanel = (key: string) => {
+    setActiveCollapseKeys((currentKeys) =>
+      currentKeys.includes(key)
+        ? currentKeys.filter((currentKey) => currentKey !== key)
+        : [...currentKeys, key],
+    );
+  };
+  const renderCollapseLabel = (key: string, label: ReactNode) => (
+    <button
+      type="button"
+      className="sm-edit-collapse-title"
+      onClick={() => toggleCollapsePanel(key)}
+    >
+      {label}
+    </button>
+  );
   const attachments =
     attachmentState.source === attachmentResource?.initialAttachments
       ? attachmentState.values
@@ -306,7 +322,7 @@ const EditPage = ({
           items={[
             {
               key: 'basic',
-              label: basicLabel,
+              label: renderCollapseLabel('basic', basicLabel),
               children: basicContent?.(editable) ?? (
                 <EditFormFields fields={fields} editable={editable} />
               ),
@@ -315,7 +331,7 @@ const EditPage = ({
               ? [
                   {
                     key: 'detail',
-                    label: detailLabel,
+                    label: renderCollapseLabel('detail', detailLabel),
                     children: detailContent(editable),
                     extra: detailExpanded ? detailExtra?.(editable) : undefined,
                   },
@@ -325,7 +341,7 @@ const EditPage = ({
               ? [
                   {
                     key: 'attachments',
-                    label: '附件',
+                    label: renderCollapseLabel('attachments', '附件'),
                     children: (
                       <BusinessAttachmentPanel
                         resourceType={attachmentResource.resourceType}

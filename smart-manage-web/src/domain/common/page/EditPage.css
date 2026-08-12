@@ -64,6 +64,15 @@
   font-weight: 500;
 }
 
+.sm-edit-collapse-title {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
 .sm-edit-collapse .ant-collapse-content {
   border-top: 1px solid var(--sm-color-divider);
 }

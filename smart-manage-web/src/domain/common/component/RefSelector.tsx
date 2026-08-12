@@ -1,9 +1,11 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Input, Table, Tree, Pagination, Spin, Empty, Splitter } from 'antd';
+import { Button, Input, Table, Pagination, Spin, Empty, Splitter } from 'antd';
 import { SearchOutlined, CloseOutlined } from '@ant-design/icons';
 import AppModal from './AppModal';
 import type { ColumnsType, TableRowSelection } from 'antd/es/table/interface';
+import type { DataNode } from 'antd/es/tree';
+import ListTree from '@/domain/common/page/ListTree';
 import { useRefSelectorQuery } from './useRefSelectorQuery';
 import type { RefSelectorFetchFn } from './useRefSelectorQuery';
 import './RefSelector.css';
@@ -423,8 +425,8 @@ function RefSelector<T extends Record<string, unknown>>({
   function renderTree(): ReactNode {
     if (!treeData || treeData.length === 0) return null;
     return (
-      <Tree
-        treeData={treeData as Parameters<typeof Tree>[0]['treeData']}
+      <ListTree
+        treeData={treeData as unknown as DataNode[]}
         fieldNames={treeFieldNames}
         onSelect={(keys) => {
           query.onTreeSelect(keys.length > 0 ? String(keys[0]) : undefined);

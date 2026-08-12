@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { App, Button, Input, Tag, Tree } from 'antd';
+import { App, Button, Input, Tag } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
 import ListTreePanel from '@/domain/common/page/ListTreePanel';
+import ListTree from '@/domain/common/page/ListTree';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
@@ -197,7 +198,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
         </div>
       }
     >
-      <Tree
+      <ListTree
         virtual={false}
         blockNode
         defaultExpandedKeys={[ROOT_KEY]}

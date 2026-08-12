@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import { Tag, Button, Tree } from 'antd';
+import { Tag, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
 import { useQuery } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
 import ListTreePanel from '@/domain/common/page/ListTreePanel';
+import ListTree from '@/domain/common/page/ListTree';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
@@ -36,7 +37,7 @@ const AppListPage = (props: PageComponentProps) => {
     () => [
       {
         key: 'root',
-        title: '全部',
+        title: '全部云',
         children:
           treeQuery.data?.map((cloud) => ({
             key: cloud.id,
@@ -105,7 +106,7 @@ const AppListPage = (props: PageComponentProps) => {
 
   const treePanel = (
     <ListTreePanel>
-      <Tree
+      <ListTree
         virtual={false}
         treeData={treeData}
         showLine={false}

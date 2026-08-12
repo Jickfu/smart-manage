@@ -29,6 +29,8 @@ body {
   --sm-color-layout: #e2e7ef;
   --sm-color-nav: #343848;
   --sm-color-link: #0e5fd8;
+  --sm-table-row-base: #ffffff;
+  --sm-table-row-alternate: #eceef2;
   --sm-shadow-low: 0 3px 8px 1px rgb(0 0 0 / 6%);
   --sm-shadow-middle: 0 6px 16px 3px rgb(0 0 0 / 8%);
   --sm-shadow-high: 0 9px 24px 9px rgb(0 0 0 / 6%);

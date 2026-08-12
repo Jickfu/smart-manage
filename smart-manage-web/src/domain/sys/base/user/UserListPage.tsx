@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { App, Button, Checkbox, Input, Modal, Space, Tag, Tree, Typography } from 'antd';
+import { App, Button, Checkbox, Input, Modal, Space, Tag, Typography } from 'antd';
 import { CheckOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ListPage from '@/domain/common/page/ListPage';
 import ListTreePanel from '@/domain/common/page/ListTreePanel';
+import ListTree from '@/domain/common/page/ListTree';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { useUserDeleteMutation } from './useUserDeleteMutation';
@@ -238,7 +239,7 @@ const UserListPage = (props: PageComponentProps) => {
         </Checkbox>
       }
     >
-      <Tree
+      <ListTree
         virtual={false}
         blockNode
         defaultExpandAll
@@ -332,6 +333,7 @@ const UserListPage = (props: PageComponentProps) => {
         rowKey="id"
         columns={columns}
         dataSource={records}
+        striped
         selectMode="checkbox"
         selectedRowKeys={selectedRowKeys}
         onSelectChange={setSelectedRowKeys}

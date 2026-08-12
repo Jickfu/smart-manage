@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
-import { App, Button, Tag, Tree } from 'antd';
+import { App, Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
 import { useQuery } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
 import ListTreePanel from '@/domain/common/page/ListTreePanel';
+import ListTree from '@/domain/common/page/ListTree';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { useMenuDeleteMutation } from './useMenuDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
@@ -84,7 +85,7 @@ const MenuListPage = (props: PageComponentProps) => {
     () => [
       {
         key: ROOT_NODE_KEY,
-        title: '全部',
+        title: '全部应用',
         children:
           appsQuery.data?.map((cloud) => ({
             key: nodeKey('cloud', cloud.id),
@@ -179,7 +180,7 @@ const MenuListPage = (props: PageComponentProps) => {
 
   const treePanel = (
     <ListTreePanel>
-      <Tree
+      <ListTree
         virtual={false}
         treeData={treeData}
         showLine={false}
@@ -229,6 +230,9 @@ const MenuListPage = (props: PageComponentProps) => {
       selectMode="checkbox"
       selectedRowKeys={selectedRowKeys}
       onSelectChange={setSelectedRowKeys}
+      rowClassName={(record) =>
+        record.level === 0 ? 'sm-list-row-tone-alternate' : 'sm-list-row-tone-base'
+      }
       tableStateKey={`${treeQuery.dataUpdatedAt}:${pageNum}:${pageSize}`}
       expandable={{
         childrenColumnName: 'children',
