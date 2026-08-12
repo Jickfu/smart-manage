@@ -14,7 +14,6 @@ interface RoleConverter {
 
     RoleSelectVO toSelectVO(RoleEntity entity);
 
-    @Mapping(target = "remark", ignore = true)
     RoleListVO toListVO(RoleEntity entity);
 
     @Mapping(target = "permissionIds", ignore = true)

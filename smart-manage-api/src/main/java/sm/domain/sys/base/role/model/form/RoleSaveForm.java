@@ -28,7 +28,7 @@ public class RoleSaveForm {
 	@NotBlank(message = "角色编码不能为空")
 	private String number;
 
-	@Schema(description = "备注")
-	private String remark;
+	@Schema(description = "描述")
+	private String description;
 
 }

@@ -10,7 +10,7 @@ export interface RoleListVO {
   id: string;
   name: string;
   number: string;
-  remark: string;
+  description: string;
 }
 
 /** 角色详情 */
@@ -18,6 +18,7 @@ export interface RoleDetailVO {
   id: string;
   name: string;
   number: string;
+  description?: string;
   createTime?: string;
   updateTime?: string;
   version: number;
@@ -30,7 +31,7 @@ export interface RoleSaveForm {
   version?: number;
   name: string;
   number: string;
-  remark?: string;
+  description?: string;
 }
 
 /** 角色全量列表（不分页） */

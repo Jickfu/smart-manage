@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="sm.domain.sys.base.sysparam.mapper.SysParamMapper">
     <select id="selectListPage" resultType="sm.domain.sys.base.sysparam.model.vo.SysParamVO">
-        SELECT a.id, a.version, a.number, a.name, a.value, a.remark, a.is_system,
+        SELECT a.id, a.version, a.number, a.name, a.value, a.description, a.is_system,
                a.app_id, b.name AS app_name
         FROM t_sys_param a
         LEFT JOIN t_sys_app b ON b.id = a.app_id
@@ -19,7 +19,7 @@
     </select>
 
     <select id="selectDetailById" resultType="sm.domain.sys.base.sysparam.model.vo.SysParamVO">
-        SELECT a.id, a.version, a.number, a.name, a.value, a.remark, a.is_system,
+        SELECT a.id, a.version, a.number, a.name, a.value, a.description, a.is_system,
                a.app_id, b.name AS app_name
         FROM t_sys_param a
         LEFT JOIN t_sys_app b ON b.id = a.app_id

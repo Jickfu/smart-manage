@@ -18,8 +18,8 @@ public class BasicDataItemSaveForm {
     @NotBlank(message = "名称不能为空")
     @Size(max = 128, message = "名称不能超过128个字符")
     private String name;
-    @Size(max = 255, message = "备注不能超过255个字符")
-    private String remark;
+    @Size(max = 255, message = "描述不能超过255个字符")
+    private String description;
     private Integer sort;
     private Boolean enabled;
 }

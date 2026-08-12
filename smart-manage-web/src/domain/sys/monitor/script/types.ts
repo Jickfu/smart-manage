@@ -28,7 +28,7 @@ export interface ScriptListItem {
   version: number;
   number: string;
   name: string;
-  remark?: string;
+  description?: string;
   createTime?: string;
   updateTime?: string;
 }
@@ -44,7 +44,7 @@ export interface ScriptSaveForm {
   number: string;
   name: string;
   content: string;
-  remark?: string;
+  description?: string;
 }
 
 export interface ScriptLogListForm extends PageForm {

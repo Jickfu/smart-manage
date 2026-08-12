@@ -53,8 +53,8 @@ const SysParamEditPage = (props: PageComponentProps) => {
       },
       { label: '参数值', dataIndex: 'value', type: 'textarea', fullWidth: true },
       {
-        label: '备注',
-        dataIndex: 'remark',
+        label: '描述',
+        dataIndex: 'description',
         type: 'textarea',
         fullWidth: true,
         disabled: detail?.isSystem,
@@ -69,7 +69,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
             number: detail.number,
             name: detail.name,
             value: detail.value ?? '',
-            remark: detail.remark ?? '',
+            description: detail.description ?? '',
             application: detail.appId
               ? { id: detail.appId, name: detail.appName ?? detail.appId }
               : null,
@@ -86,7 +86,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
         number: String(values.number).trim(),
         name: String(values.name).trim(),
         value: String(values.value ?? ''),
-        remark: String(values.remark ?? ''),
+        description: String(values.description ?? ''),
         appId: application?.id,
       });
       if (isAddNew) {

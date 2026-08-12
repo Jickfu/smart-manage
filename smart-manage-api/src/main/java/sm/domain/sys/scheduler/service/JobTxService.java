@@ -58,7 +58,7 @@ class JobTxService {
         if (form.getId() == null) {
             entity.setStatus(JobStatus.PAUSED.name());
         }
-        entity.setRemark(form.getRemark());
+        entity.setDescription(form.getDescription());
 
         if (form.getId() == null) {
             if (mapper.insert(entity) != 1) {

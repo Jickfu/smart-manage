@@ -25,6 +25,10 @@ public class RoleEntity extends BaseEntity {
 	 * 角色编码
 	 */
 	private String number;
+	/*
+	 * 角色描述
+	 */
+	private String description;
 
 	@Version
 	private Integer version;

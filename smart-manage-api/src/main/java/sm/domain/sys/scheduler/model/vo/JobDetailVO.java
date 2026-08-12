@@ -32,7 +32,7 @@ public class JobDetailVO {
 
     private String status;
 
-    private String remark;
+    private String description;
 
     private Boolean isSystem;
 

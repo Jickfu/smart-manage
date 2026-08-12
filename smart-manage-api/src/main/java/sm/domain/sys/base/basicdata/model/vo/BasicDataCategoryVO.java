@@ -9,7 +9,7 @@ public class BasicDataCategoryVO {
     private String cloudName;
     private String number;
     private String name;
-    private String remark;
+    private String description;
     private Boolean enabled;
     private Boolean systemPreset;
     private Integer version;

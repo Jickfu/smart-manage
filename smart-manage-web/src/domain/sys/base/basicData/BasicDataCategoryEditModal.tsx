@@ -62,7 +62,7 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
         rules: [{ required: true, message: '所属云不能为空' }],
       },
       { label: '可用状态', dataIndex: 'enabled', type: 'switch' },
-      { label: '备注', dataIndex: 'remark', type: 'textarea', fullWidth: true },
+      { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
     ],
     [cloudsQuery.data],
   );
@@ -73,7 +73,7 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
       number: detail?.number ?? '',
       name: detail?.name ?? '',
       enabled: detail?.enabled ?? true,
-      remark: detail?.remark ?? '',
+      description: detail?.description ?? '',
     }),
     [cloudId, detail],
   );
@@ -86,7 +86,7 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
         number: String(values.number).trim(),
         name: String(values.name).trim(),
         enabled: Boolean(values.enabled),
-        remark: values.remark ? String(values.remark).trim() : undefined,
+        description: values.description ? String(values.description).trim() : undefined,
       };
       await basicDataApi.saveCategory(form);
       onSaved();

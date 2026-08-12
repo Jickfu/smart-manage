@@ -24,6 +24,9 @@ public class RoleDetailVO {
 	@Schema(description = "编码")
 	private String number;
 
+	@Schema(description = "描述")
+	private String description;
+
 	@Schema(description = "创建时间")
 	private LocalDateTime createTime;
 

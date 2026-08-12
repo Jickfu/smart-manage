@@ -4,7 +4,7 @@
 
 任务调度是“系统服务”云下的独立应用，不属于系统监控。它负责管理可执行的定时任务定义和不可变的执行实例记录：
 
-- 定时任务：编码、名称、分组、Spring Job 实现、Cron、参数、启停状态。
+- 定时任务：编码、名称、描述、分组、Spring Job 实现、Cron、参数、启停状态。
 - 执行实例：任务每次实际执行产生的开始时间、结束时间、结果、错误和 Trace ID。
 
 后端领域位于 `sm.domain.sys.scheduler`，前端领域位于 `src/domain/sys/scheduler`。接口、权限和页面组件键统一使用 `sys/scheduler`，不提供已废弃的 `sys/monitor/job` 兼容入口。

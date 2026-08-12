@@ -92,7 +92,7 @@ const BasicDataEditPage = (props: PageComponentProps) => {
       },
       { label: '排序', dataIndex: 'sort', type: 'number' },
       { label: '可用状态', dataIndex: 'enabled', type: 'switch' },
-      { label: '备注', dataIndex: 'remark', type: 'textarea', fullWidth: true },
+      { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
     ],
     [parentsQuery.data],
   );
@@ -104,7 +104,7 @@ const BasicDataEditPage = (props: PageComponentProps) => {
       name: detail?.name ?? '',
       sort: detail?.sort ?? 0,
       enabled: detail?.enabled ?? true,
-      remark: detail?.remark ?? '',
+      description: detail?.description ?? '',
     }),
     [categoryQuery.data, detail],
   );
@@ -118,7 +118,7 @@ const BasicDataEditPage = (props: PageComponentProps) => {
         parentId: values.parentId ? String(values.parentId) : undefined,
         number: String(values.number).trim(),
         name: String(values.name).trim(),
-        remark: values.remark ? String(values.remark).trim() : undefined,
+        description: values.description ? String(values.description).trim() : undefined,
         sort: Number(values.sort ?? 0),
         enabled: Boolean(values.enabled),
       };

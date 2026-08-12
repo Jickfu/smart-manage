@@ -18,7 +18,7 @@ export interface JobVO {
   jobData?: string;
   mutexKey?: string;
   status: JobStatus;
-  remark?: string;
+  description?: string;
   isSystem: boolean;
   nextFireTime?: string;
   lastExecuteTime?: string;
@@ -37,7 +37,7 @@ export interface JobSaveForm {
   cronExpression: string;
   jobData?: string;
   mutexKey?: string;
-  remark?: string;
+  description?: string;
 }
 
 export interface JobCommand {

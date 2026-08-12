@@ -29,7 +29,7 @@ public class ScriptSaveForm {
     @Schema(description = "脚本内容")
     private String content;
 
-    @Schema(description = "备注")
-    @Size(max = 500, message = "备注不能超过500个字符")
-    private String remark;
+    @Schema(description = "描述")
+    @Size(max = 500, message = "描述不能超过500个字符")
+    private String description;
 }

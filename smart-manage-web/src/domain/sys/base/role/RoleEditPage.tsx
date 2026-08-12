@@ -25,6 +25,12 @@ const fields: EditField[] = [
     type: 'text',
     rules: [{ required: true, message: '名称不能为空' }],
   },
+  {
+    label: '描述',
+    dataIndex: 'description',
+    type: 'textarea',
+    fullWidth: true,
+  },
 ];
 
 /** 角色编辑页只维护角色资料，权限关系由专用分配页面处理。 */
@@ -42,7 +48,14 @@ const RoleEditPage = (props: PageComponentProps) => {
   });
   const detail = detailQuery.data;
   const initialValues = useMemo(
-    () => (detail ? { number: detail.number ?? '', name: detail.name ?? '' } : {}),
+    () =>
+      detail
+        ? {
+            number: detail.number ?? '',
+            name: detail.name ?? '',
+            description: detail.description ?? '',
+          }
+        : {},
     [detail],
   );
   const saveMutation = useCommandMutation({
@@ -53,6 +66,7 @@ const RoleEditPage = (props: PageComponentProps) => {
         version: detail?.version,
         name,
         number: (values.number as string).trim(),
+        description: String(values.description ?? '').trim(),
       });
       if (isAddNew) {
         const nextKey = createBillTabKey(props.componentKey, savedId);

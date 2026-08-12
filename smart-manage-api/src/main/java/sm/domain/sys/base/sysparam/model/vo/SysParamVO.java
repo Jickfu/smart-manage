@@ -20,7 +20,7 @@ public class SysParamVO {
 
     private String value;
 
-    private String remark;
+    private String description;
 
     private Boolean isSystem;
 

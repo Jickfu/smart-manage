@@ -10,7 +10,7 @@ public class BasicDataItemDetailVO {
     private Long parentId;
     private String number;
     private String name;
-    private String remark;
+    private String description;
     private Integer sort;
     private Boolean enabled;
     private Boolean systemPreset;

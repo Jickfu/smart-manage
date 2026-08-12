@@ -53,7 +53,7 @@ return result;
 
 ## 脚本管理与审计
 
-- 保存脚本以 `number` 唯一标识，并使用 `version` 乐观锁防止覆盖更新；删除同样校验版本；
+- 保存脚本以 `number` 唯一标识，使用 `description` 记录用途说明，并使用 `version` 乐观锁防止覆盖更新；删除同样校验版本；
 - 执行日志保存实际执行源码快照、关联脚本、事务模式、状态、耗时、事务结果、截断后的输出、错误、执行人、IP 和时间；
 - 删除已保存脚本不会删除历史快照，日志表不设置脚本外键；
 - 状态包括 `SUCCESS`、`ERROR`、`TIMEOUT`，事务结果包括 `COMMITTED`、`ROLLED_BACK`、`NOT_APPLICABLE`。

@@ -230,7 +230,7 @@ public class JobService {
         }
         JobDetail jobDetail = JobBuilder.newJob(ManagedJobDispatcher.class)
                 .withIdentity(entity.getJobName(), entity.getJobGroup())
-                .withDescription(entity.getRemark())
+                .withDescription(entity.getDescription())
                 .usingJobData(dataMap)
                 .storeDurably()
                 .build();

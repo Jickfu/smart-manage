@@ -84,7 +84,7 @@ const RoleListPage = (props: PageComponentProps) => {
       ),
     },
     { title: '名称', dataIndex: 'name', width: 220 },
-    { title: '备注', dataIndex: 'remark', ellipsis: true },
+    { title: '描述', dataIndex: 'description', ellipsis: true },
   ];
 
   return (

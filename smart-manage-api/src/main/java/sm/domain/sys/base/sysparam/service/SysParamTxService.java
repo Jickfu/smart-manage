@@ -57,7 +57,7 @@ class SysParamTxService {
         entity.setNumber(form.getNumber());
         entity.setName(form.getName());
         entity.setValue(form.getValue());
-        entity.setRemark(form.getRemark());
+        entity.setDescription(form.getDescription());
         entity.setAppId(form.getAppId());
         if (form.getId() == null) {
             entity.setIsSystem(false);

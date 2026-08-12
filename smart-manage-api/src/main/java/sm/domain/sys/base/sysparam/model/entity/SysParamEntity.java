@@ -30,8 +30,8 @@ public class SysParamEntity extends BaseEntity {
     /** 参数值 */
     private String value;
 
-    /** 备注 */
-    private String remark;
+    /** 描述 */
+    private String description;
 
     /** 是否系统内置 */
     private Boolean isSystem;

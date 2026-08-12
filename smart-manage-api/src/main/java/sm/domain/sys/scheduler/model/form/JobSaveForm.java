@@ -44,6 +44,6 @@ public class JobSaveForm {
     @Schema(description = "共享资源互斥键；留空表示不启用跨任务互斥")
     private String mutexKey;
 
-    @Schema(description = "备注")
-    private String remark;
+    @Schema(description = "描述")
+    private String description;
 }

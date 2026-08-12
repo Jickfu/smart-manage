@@ -27,7 +27,7 @@ const fields: EditField[] = [
     type: 'text',
     rules: [{ required: true, message: '名称不能为空' }],
   },
-  { label: '备注', dataIndex: 'remark', type: 'textarea', fullWidth: true },
+  { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
   { label: '创建时间', dataIndex: 'createTime', type: 'readonly' },
   { label: '更新时间', dataIndex: 'updateTime', type: 'readonly' },
 ];
@@ -47,7 +47,7 @@ export default function ScriptEditPage(props: PageComponentProps) {
     () => ({
       number: detail?.number ?? '',
       name: detail?.name ?? '',
-      remark: detail?.remark ?? '',
+      description: detail?.description ?? '',
       content: detail?.content ?? '',
       createTime: detail?.createTime ?? '',
       updateTime: detail?.updateTime ?? '',
@@ -62,7 +62,7 @@ export default function ScriptEditPage(props: PageComponentProps) {
         version: detail?.version,
         number: String(values.number).trim(),
         name,
-        remark: String(values.remark ?? ''),
+        description: String(values.description ?? ''),
         content: String(values.content ?? ''),
       });
       if (isAddNew && props.tabKey !== savedId) {

@@ -18,6 +18,6 @@ public class RoleListVO {
 	@Schema(description = "角色编号")
 	private String number;
 
-	@Schema(description = "备注")
-	private String remark;
+	@Schema(description = "描述")
+	private String description;
 }

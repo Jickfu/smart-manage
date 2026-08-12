@@ -13,7 +13,7 @@ export interface SysParamVO {
   number: string;
   name: string;
   value?: string;
-  remark?: string;
+  description?: string;
   isSystem: boolean;
   appId?: string;
   appName?: string;
@@ -25,6 +25,6 @@ export interface SysParamSaveForm {
   number: string;
   name: string;
   value?: string;
-  remark?: string;
+  description?: string;
   appId?: string;
 }

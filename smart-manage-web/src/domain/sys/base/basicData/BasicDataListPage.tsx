@@ -134,7 +134,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
       width: 92,
       render: (value) => (value ? '是' : '否'),
     },
-    { title: '备注', dataIndex: 'remark', width: 200, ellipsis: true },
+    { title: '描述', dataIndex: 'description', width: 200, ellipsis: true },
   ];
 
   const treePanel = (

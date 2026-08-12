@@ -97,7 +97,7 @@ const SysParamListPage = (props: PageComponentProps) => {
     { title: '名称', dataIndex: 'name', width: 180 },
     { title: '所属应用', dataIndex: 'appName', width: 160, render: (value) => value ?? '全局参数' },
     { title: '参数值', dataIndex: 'value', ellipsis: true },
-    { title: '备注', dataIndex: 'remark', ellipsis: true },
+    { title: '描述', dataIndex: 'description', ellipsis: true },
     {
       title: '类型',
       dataIndex: 'isSystem',

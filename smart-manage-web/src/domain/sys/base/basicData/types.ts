@@ -15,7 +15,7 @@ export interface BasicDataCategory {
   cloudName?: string;
   number: string;
   name: string;
-  remark?: string;
+  description?: string;
   enabled: boolean;
   systemPreset: boolean;
   version: number;
@@ -27,7 +27,7 @@ export interface BasicDataCategorySaveForm {
   cloudId: string;
   number: string;
   name: string;
-  remark?: string;
+  description?: string;
   enabled: boolean;
 }
 
@@ -43,7 +43,7 @@ export interface BasicDataListVO {
   parentId?: string;
   number: string;
   name: string;
-  remark?: string;
+  description?: string;
   sort: number;
   enabled: boolean;
   systemPreset: boolean;
@@ -73,7 +73,7 @@ export interface BasicDataSaveForm {
   parentId?: string;
   number: string;
   name: string;
-  remark?: string;
+  description?: string;
   sort: number;
   enabled: boolean;
 }

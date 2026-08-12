@@ -17,7 +17,7 @@ public class ScriptEntity extends BaseEntity {
     private String number;
     private String name;
     private String content;
-    private String remark;
+    private String description;
     @Version
     private Integer version;
 }

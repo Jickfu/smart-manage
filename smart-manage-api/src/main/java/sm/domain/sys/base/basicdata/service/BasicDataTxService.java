@@ -62,7 +62,7 @@ class BasicDataTxService {
         entity.setCloudId(form.getCloudId());
         entity.setNumber(form.getNumber());
         entity.setName(form.getName());
-        entity.setRemark(form.getRemark());
+        entity.setDescription(form.getDescription());
         entity.setEnabled(form.getEnabled() == null || form.getEnabled());
         int affected = form.getId() == null ? categoryMapper.insert(entity) : categoryMapper.updateById(entity);
         if (affected != 1) throw conflict("基础资料分类");
@@ -113,7 +113,7 @@ class BasicDataTxService {
         entity.setParentId(form.getParentId());
         entity.setNumber(form.getNumber());
         entity.setName(form.getName());
-        entity.setRemark(form.getRemark());
+        entity.setDescription(form.getDescription());
         entity.setSort(form.getSort() == null ? 0 : form.getSort());
         entity.setEnabled(form.getEnabled() == null || form.getEnabled());
         entity.setSystemPreset(oldEntity != null && Boolean.TRUE.equals(oldEntity.getSystemPreset()));
@@ -231,13 +231,13 @@ class BasicDataTxService {
     private void normalizeCategory(BasicDataCategorySaveForm form) {
         form.setNumber(form.getNumber().trim());
         form.setName(form.getName().trim());
-        form.setRemark(trimToNull(form.getRemark()));
+        form.setDescription(trimToNull(form.getDescription()));
     }
 
     private void normalizeItem(BasicDataItemSaveForm form) {
         form.setNumber(form.getNumber().trim());
         form.setName(form.getName().trim());
-        form.setRemark(trimToNull(form.getRemark()));
+        form.setDescription(trimToNull(form.getDescription()));
         if (form.getNumber().contains(PATH_SEPARATOR) || form.getName().contains(PATH_SEPARATOR)) {
             throw new BizException(ResultEnum.PARAM_ERROR, "编码和名称不能包含路径分隔符 /");
         }

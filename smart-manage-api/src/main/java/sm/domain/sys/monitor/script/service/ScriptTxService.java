@@ -34,7 +34,7 @@ class ScriptTxService {
         entity.setNumber(form.getNumber().trim());
         entity.setName(form.getName().trim());
         entity.setContent(form.getContent());
-        entity.setRemark(form.getRemark());
+        entity.setDescription(form.getDescription());
         try {
             int affected = form.getId() == null ? mapper.insert(entity) : mapper.updateById(entity);
             if (affected != 1) {

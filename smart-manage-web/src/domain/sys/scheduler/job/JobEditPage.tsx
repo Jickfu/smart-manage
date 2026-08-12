@@ -157,7 +157,7 @@ const JobEditPage = (props: PageComponentProps) => {
         fullWidth: true,
       },
       { label: '任务参数（JSON）', dataIndex: 'jobData', type: 'textarea', fullWidth: true },
-      { label: '备注', dataIndex: 'remark', type: 'textarea', fullWidth: true },
+      { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
     ],
     [
       cronPreviewQuery.data,
@@ -192,7 +192,7 @@ const JobEditPage = (props: PageComponentProps) => {
         cronExpression: String(values.cronExpression).trim(),
         jobData: String(values.jobData ?? ''),
         mutexKey: String(values.mutexKey ?? ''),
-        remark: String(values.remark ?? ''),
+        description: String(values.description ?? ''),
       });
     },
     onSuccess: async (savedId) => {
@@ -231,7 +231,7 @@ const JobEditPage = (props: PageComponentProps) => {
           const selectedClass = changedValues.jobClass as JobClassOption | null;
           if (selectedClass) {
             form.setFieldsValue({
-              remark: selectedClass.description,
+              description: selectedClass.description,
               jobData: selectedClass.parameterTemplate,
             });
           }

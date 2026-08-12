@@ -54,7 +54,7 @@ export default function ScriptListPage(props: PageComponentProps) {
       ),
     },
     { title: '名称', dataIndex: 'name', width: 220 },
-    { title: '备注', dataIndex: 'remark', ellipsis: true },
+    { title: '描述', dataIndex: 'description', ellipsis: true },
     { title: '更新时间', dataIndex: 'updateTime', width: 180 },
     { title: '创建时间', dataIndex: 'createTime', width: 180 },
   ];

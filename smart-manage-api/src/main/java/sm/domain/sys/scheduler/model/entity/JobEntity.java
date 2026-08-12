@@ -48,8 +48,8 @@ public class JobEntity extends BaseEntity {
     /** 是否系统内置 */
     private Boolean isSystem;
 
-    /** 备注 */
-    private String remark;
+    /** 描述 */
+    private String description;
 
     /** 乐观锁版本号 */
     @Version

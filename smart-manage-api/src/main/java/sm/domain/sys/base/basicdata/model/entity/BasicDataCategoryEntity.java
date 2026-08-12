@@ -17,7 +17,7 @@ public class BasicDataCategoryEntity extends BaseEntity {
     private Long cloudId;
     private String number;
     private String name;
-    private String remark;
+    private String description;
     private Boolean enabled;
     private Boolean systemPreset;
     @Version

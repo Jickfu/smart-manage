@@ -30,8 +30,8 @@ public class SysParamSaveForm {
     @Schema(description = "参数值")
     private String value;
 
-    @Schema(description = "备注")
-    private String remark;
+    @Schema(description = "描述")
+    private String description;
 
     @Schema(description = "所属应用ID")
     private Long appId;
