@@ -4,8 +4,20 @@ import react from '@vitejs/plugin-react';
 
 const apiProxyTarget = 'http://localhost:8080';
 
+const browserCryptoStub = {
+  name: 'browser-crypto-stub',
+  enforce: 'pre' as const,
+  resolveId(source: string) {
+    // sm-crypto 在浏览器中使用 Web Crypto，此处排除仅供 Node 环境使用的回退分支。
+    return source === 'crypto' ? '\0browser-crypto-stub' : null;
+  },
+  load(id: string) {
+    return id === '\0browser-crypto-stub' ? 'export default {};' : null;
+  },
+};
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [browserCryptoStub, react()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

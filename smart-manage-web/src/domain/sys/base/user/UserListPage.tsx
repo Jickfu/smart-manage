@@ -4,6 +4,7 @@ import { CheckOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
+import { sm2 } from 'sm-crypto';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ListPage from '@/domain/common/page/ListPage';
 import ListTreePanel from '@/domain/common/page/ListTreePanel';
@@ -118,11 +119,7 @@ const UserListPage = (props: PageComponentProps) => {
       if (!temporaryLoginUser) throw new Error('未选择目标用户');
       if (!temporaryLoginSafe) {
         const publicKey = await userApi.temporaryLoginPublicKey();
-        const encryptedPassword = window.sm2.doEncrypt(
-          values.administratorPassword ?? '',
-          publicKey,
-          1,
-        );
+        const encryptedPassword = sm2.doEncrypt(values.administratorPassword ?? '', publicKey, 1);
         await userApi.openTemporaryLoginSafe(encryptedPassword);
       }
       return userApi.createTemporaryLoginGrant(temporaryLoginUser.id, values.reason);
