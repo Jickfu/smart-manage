@@ -4,7 +4,6 @@ import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import sm.domain.sys.base.common.config.OrgConfig;
 import sm.system.exception.BizException;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -19,16 +18,14 @@ class CurrentUserContextTests {
 
 	@Test
 	void initializeIdentityStoresServerVerifiedClaims() {
-		OrgConfig orgConfig = new OrgConfig();
-		orgConfig.setDefaultId(1L);
 		SaSession session = mock(SaSession.class);
-		CurrentUserContext context = new CurrentUserContext(orgConfig);
+		CurrentUserContext context = new CurrentUserContext();
 		try (MockedStatic<StpUtil> stpUtil = mockStatic(StpUtil.class)) {
 			stpUtil.when(StpUtil::getTokenSession).thenReturn(session);
-			context.initializeIdentity("administrator", true);
+			context.initializeIdentity(10L, "administrator", true);
 		}
 
-		verify(session).set("orgId", 1L);
+		verify(session).set("orgId", 10L);
 		verify(session).set("username", "administrator");
 		verify(session).set("administrator", true);
 	}
@@ -36,7 +33,7 @@ class CurrentUserContextTests {
 	@Test
 	void missingAdministratorClaimFailsClosed() {
 		SaSession session = mock(SaSession.class);
-		CurrentUserContext context = new CurrentUserContext(new OrgConfig());
+		CurrentUserContext context = new CurrentUserContext();
 		try (MockedStatic<StpUtil> stpUtil = mockStatic(StpUtil.class)) {
 			stpUtil.when(StpUtil::isLogin).thenReturn(true);
 			stpUtil.when(StpUtil::getTokenSession).thenReturn(session);
@@ -47,10 +44,21 @@ class CurrentUserContextTests {
 	}
 
 	@Test
+	void missingOrganizationClaimFailsClosed() {
+		SaSession session = mock(SaSession.class);
+		CurrentUserContext context = new CurrentUserContext();
+		try (MockedStatic<StpUtil> stpUtil = mockStatic(StpUtil.class)) {
+			stpUtil.when(StpUtil::getTokenSession).thenReturn(session);
+
+			assertThrows(BizException.class, context::getOrgId);
+		}
+	}
+
+	@Test
 	void verifiedAdministratorClaimPassesCheck() {
 		SaSession session = mock(SaSession.class);
 		when(session.get("administrator")).thenReturn(true);
-		CurrentUserContext context = new CurrentUserContext(new OrgConfig());
+		CurrentUserContext context = new CurrentUserContext();
 		try (MockedStatic<StpUtil> stpUtil = mockStatic(StpUtil.class)) {
 			stpUtil.when(StpUtil::isLogin).thenReturn(true);
 			stpUtil.when(StpUtil::getTokenSession).thenReturn(session);

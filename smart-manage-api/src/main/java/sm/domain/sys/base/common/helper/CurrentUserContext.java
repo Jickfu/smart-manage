@@ -1,25 +1,21 @@
 package sm.domain.sys.base.common.helper;
 
 import cn.dev33.satoken.stp.StpUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import sm.domain.sys.base.common.config.OrgConfig;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
 /** 当前登录用户的 Sa-Token 会话上下文。 */
 @Component
-@RequiredArgsConstructor
 public class CurrentUserContext {
 	private static final String ORG_ID_KEY = "orgId";
 	private static final String USERNAME_KEY = "username";
 	private static final String ADMINISTRATOR_KEY = "administrator";
-	private final OrgConfig orgConfig;
 
 	/** 凭据验证并建立正式登录态后，集中初始化服务端认证声明。 */
-	public void initializeIdentity(String username, boolean administrator) {
+	public void initializeIdentity(Long orgId, String username, boolean administrator) {
 		var session = StpUtil.getTokenSession();
-		session.set(ORG_ID_KEY, orgConfig.getDefaultId());
+		session.set(ORG_ID_KEY, orgId);
 		session.set(USERNAME_KEY, username);
 		session.set(ADMINISTRATOR_KEY, administrator);
 	}
@@ -29,8 +25,11 @@ public class CurrentUserContext {
 	}
 
 	public Long getOrgId() {
-		Long orgId = StpUtil.getTokenSession().getLong(ORG_ID_KEY);
-		return orgId != null ? orgId : orgConfig.getDefaultId();
+		Object orgIdClaim = StpUtil.getTokenSession().get(ORG_ID_KEY);
+		if (!(orgIdClaim instanceof Number orgIdNumber) || orgIdNumber.longValue() <= 0) {
+			throw new BizException(ResultEnum.UNAUTHORIZED, "当前登录会话缺少组织上下文，请重新登录");
+		}
+		return orgIdNumber.longValue();
 	}
 
 	public void setOrgId(Long orgId) {

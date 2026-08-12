@@ -5,6 +5,10 @@ import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.org.model.OrgType;
 import sm.domain.sys.base.org.model.entity.OrgEntity;
 import sm.domain.sys.base.org.model.form.OrgSaveForm;
+import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
+import sm.domain.sys.base.user.mapper.UserMapper;
+import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
+import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -33,7 +37,7 @@ class OrgTxServiceTests {
         when(mapper.selectList(null)).thenReturn(List.of(organization));
         when(mapper.updateById(organization)).thenReturn(1);
 
-        new OrgTxService(mapper).archive(List.of(1L));
+        txService(mapper).archive(List.of(1L));
 
         assertFalse(organization.getEnabled());
         assertTrue(organization.getArchived());
@@ -50,7 +54,7 @@ class OrgTxServiceTests {
         when(mapper.selectList(null)).thenReturn(List.of(parent, child));
 
         BizException exception = assertThrows(BizException.class,
-                () -> new OrgTxService(mapper).archive(List.of(1L)));
+                () -> txService(mapper).archive(List.of(1L)));
 
         assertEquals(ResultEnum.PARAM_ERROR.getCode(), exception.getCode());
         verify(mapper, never()).updateById(any(OrgEntity.class));
@@ -65,7 +69,7 @@ class OrgTxServiceTests {
         when(mapper.selectByIds(List.of(1L))).thenReturn(List.of(organization));
         when(mapper.updateById(organization)).thenReturn(1);
 
-        new OrgTxService(mapper).unarchive(List.of(1L));
+        txService(mapper).unarchive(List.of(1L));
 
         assertFalse(organization.getEnabled());
         assertFalse(organization.getArchived());
@@ -86,11 +90,34 @@ class OrgTxServiceTests {
         form.setOrgType(OrgType.COMPANY);
 
         BizException exception = assertThrows(BizException.class,
-                () -> new OrgTxService(mapper).save(form));
+                () -> txService(mapper).save(form));
 
         assertEquals(ResultEnum.DATA_CONFLICT.getCode(), exception.getCode());
         verify(mapper, never()).updateById(any(OrgEntity.class));
     }
+
+	@Test
+	void disableRejectsOrganizationUsedByEnabledPrimaryUser() {
+		OrgMapper mapper = mock(OrgMapper.class);
+		OrgEntity organization = organization(1L, null, false);
+		organization.setEnabled(true);
+		when(mapper.selectByIds(List.of(1L))).thenReturn(List.of(organization));
+		UserAssignmentMapper assignmentMapper = mock(UserAssignmentMapper.class);
+		UserAssignmentEntity assignment = new UserAssignmentEntity();
+		assignment.setUserId(10L);
+		when(assignmentMapper.selectList(any())).thenReturn(List.of(assignment));
+		UserMapper userMapper = mock(UserMapper.class);
+		UserEntity user = new UserEntity();
+		user.setEnabled(true);
+		when(userMapper.selectByIds(List.of(10L))).thenReturn(List.of(user));
+
+		BizException exception = assertThrows(BizException.class,
+				() -> new OrgTxService(mapper, assignmentMapper, userMapper)
+						.updateEnabled(List.of(1L), false));
+
+		assertEquals(ResultEnum.BILL_STATUS_ERROR.getCode(), exception.getCode());
+		verify(mapper, never()).updateById(any(OrgEntity.class));
+	}
 
     private static OrgEntity organization(Long id, Long parentId, boolean archived) {
         OrgEntity organization = new OrgEntity();
@@ -105,4 +132,8 @@ class OrgTxServiceTests {
         organization.setVersion(0);
         return organization;
     }
+
+	private static OrgTxService txService(OrgMapper mapper) {
+		return new OrgTxService(mapper, mock(UserAssignmentMapper.class), mock(UserMapper.class));
+	}
 }

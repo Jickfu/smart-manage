@@ -8,6 +8,9 @@ import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.org.model.OrgType;
 import sm.domain.sys.base.org.model.entity.OrgEntity;
 import sm.domain.sys.base.org.model.form.OrgSaveForm;
+import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
+import sm.domain.sys.base.user.mapper.UserMapper;
+import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -25,6 +28,8 @@ import java.util.Set;
 class OrgTxService {
     private static final String PATH_SEPARATOR = "/";
     private final OrgMapper mapper;
+    private final UserAssignmentMapper userAssignmentMapper;
+    private final UserMapper userMapper;
 
     public Long save(OrgSaveForm form) {
         normalize(form);
@@ -70,6 +75,7 @@ class OrgTxService {
 
     public void updateEnabled(List<Long> ids, boolean enabled) {
         List<OrgEntity> organizations = requireOrganizations(ids);
+		if (!enabled) validateNoEnabledPrimaryUsers(ids);
         for (OrgEntity organization : organizations) {
             if (enabled && Boolean.TRUE.equals(organization.getArchived())) {
                 throw new BizException(ResultEnum.PARAM_ERROR, "已封存组织不能启用");
@@ -84,6 +90,7 @@ class OrgTxService {
 
     public void archive(List<Long> ids) {
         List<OrgEntity> organizations = requireOrganizations(ids);
+		validateNoEnabledPrimaryUsers(ids);
         Set<Long> selectedIds = new HashSet<>(ids);
         List<OrgEntity> allOrganizations = mapper.selectList(null);
         Map<Long, OrgEntity> organizationById = indexById(allOrganizations);
@@ -188,6 +195,22 @@ class OrgTxService {
         }
         return organizations;
     }
+
+	/** 停用或封存组织前，必须先处理以该组织为主职的启用用户。 */
+	private void validateNoEnabledPrimaryUsers(List<Long> organizationIds) {
+		List<UserAssignmentEntity> assignments = userAssignmentMapper.selectList(
+				new LambdaQueryWrapper<UserAssignmentEntity>()
+						.in(UserAssignmentEntity::getOrgId, organizationIds)
+						.eq(UserAssignmentEntity::getIsPrimary, true));
+		if (assignments.isEmpty()) return;
+		List<Long> userIds = assignments.stream().map(UserAssignmentEntity::getUserId).distinct().toList();
+		boolean hasEnabledUser = userMapper.selectByIds(userIds).stream()
+				.anyMatch(user -> Boolean.TRUE.equals(user.getEnabled()));
+		if (hasEnabledUser) {
+			throw new BizException(ResultEnum.BILL_STATUS_ERROR,
+					"组织仍是启用用户的主职，请先调整用户主职或禁用用户");
+		}
+	}
 
     private Map<Long, OrgEntity> indexById(List<OrgEntity> organizations) {
         Map<Long, OrgEntity> organizationById = new HashMap<>();

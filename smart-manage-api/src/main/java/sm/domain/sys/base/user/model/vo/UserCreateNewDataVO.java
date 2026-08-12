@@ -14,9 +14,6 @@ import java.util.List;
 @Schema(title = "用户新增默认值")
 public class UserCreateNewDataVO {
 
-	@Schema(description = "默认组织ID")
-	private Long defaultOrgId;
-
 	@Schema(description = "是否启用")
 	private Boolean enabled;
 

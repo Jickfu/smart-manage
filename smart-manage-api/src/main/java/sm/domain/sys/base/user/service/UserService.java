@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.UserConstant;
 import sm.domain.sys.base.common.constant.BaseCacheName;
-import sm.domain.sys.base.common.config.OrgConfig;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.login.model.vo.LoginVO;
@@ -76,7 +75,6 @@ public class UserService {
 	private final AuthorizationStateHelper authorizationStateHelper;
 	private final UserConverter converter;
 	private final CurrentUserContext currentUserContext;
-	private final OrgConfig orgConfig;
 
 	public PageData<UserListVO> listPage(UserListForm form) {
 		List<Long> scopedOrgIds = resolveScopedOrgIds(form);
@@ -100,14 +98,19 @@ public class UserService {
 		Long userId = previous == null ? IdWorker.getId() : previous.getId();
 		Long temporaryAvatarId = findTemporaryAvatarId(form.getAvatarAttachmentId());
 		promoteAvatar(form, userId);
+		Long savedId;
 		try {
-			Long savedId = txService.save(form, userId);
+			savedId = txService.save(form, userId);
 			deleteReplacedAvatar(previous, form.getAvatarAttachmentId());
-			return savedId;
 		} catch (RuntimeException exception) {
 			deleteAvatarForCompensation(temporaryAvatarId);
 			throw exception;
 		}
+		if (form.getAssignments().isEmpty()) {
+			authorizationStateHelper.terminateUsers(
+					List.of(savedId), SessionTerminationReason.ACCOUNT_DISABLED);
+		}
+		return savedId;
 	}
 
 	@BizLog("删除用户")
@@ -172,6 +175,18 @@ public class UserService {
 		if (user.getEnabled() == null || !user.getEnabled()) {
 			return UserAuthentication.failed("用户已被禁用");
 		}
+		UserAssignmentEntity primaryAssignment = userAssignmentMapper.selectOne(
+				new LambdaQueryWrapper<UserAssignmentEntity>()
+						.eq(UserAssignmentEntity::getUserId, user.getId())
+						.eq(UserAssignmentEntity::getIsPrimary, true));
+		if (primaryAssignment == null) {
+			return UserAuthentication.failed("用户未配置主职组织，请联系管理员");
+		}
+		OrgEntity primaryOrganization = orgMapper.selectById(primaryAssignment.getOrgId());
+		if (primaryOrganization == null || !Boolean.TRUE.equals(primaryOrganization.getEnabled())
+				|| Boolean.TRUE.equals(primaryOrganization.getArchived())) {
+			return UserAuthentication.failed("用户主职组织不可用，请联系管理员");
+		}
 
 		return new UserAuthentication(
 				user.getId(),
@@ -179,6 +194,7 @@ public class UserService {
 				user.getName(),
 				Boolean.TRUE.equals(user.getPasswordReset()),
 				UserConstant.SUPER_ADMIN.equals(user.getUsername()),
+				primaryOrganization.getId(),
 				null);
 	}
 
@@ -186,7 +202,7 @@ public class UserService {
 	public LoginVO completeLogin(UserAuthentication authentication) {
 		StpUtil.login(authentication.userId());
 		currentUserContext.initializeIdentity(
-				authentication.username(), authentication.administrator());
+				authentication.orgId(), authentication.username(), authentication.administrator());
 		String token = StpUtil.getTokenValue();
 
 		LoginVO vo = new LoginVO();
@@ -353,10 +369,8 @@ public class UserService {
 	 */
 	public UserCreateNewDataVO createNewData() {
 		UserCreateNewDataVO vo = new UserCreateNewDataVO();
-		// 默认组织ID
-		vo.setDefaultOrgId(orgConfig.getDefaultId());
-		// 默认启用
-		vo.setEnabled(true);
+		// 未分配组织的用户只能以禁用状态暂存。
+		vo.setEnabled(false);
 		// 可根据业务需要设置默认角色等
 		return vo;
 	}

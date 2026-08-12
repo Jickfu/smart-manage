@@ -13,6 +13,7 @@ import sm.domain.sys.base.user.model.form.UserAssignmentForm;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.List;
@@ -92,7 +93,18 @@ class UserTxServiceTests {
         UserEntity saved = entityCaptor.getValue();
         assertEquals(UserThemeColor.DEFAULT, saved.getThemeColor());
         assertTrue(saved.getPasswordReset());
+		assertFalse(saved.getEnabled());
     }
+
+	@Test
+	void enableRejectsUserWithoutPrimaryOrganization() {
+		UserTxService service = new UserTxService(
+				mock(UserMapper.class), mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
+				mock(OrgMapper.class), mock(CurrentUserContext.class));
+
+		assertThrows(sm.system.exception.BizException.class,
+				() -> service.updateEnabled(List.of(10L), true));
+	}
 
 	private static UserSaveForm newUserForm() {
 		UserSaveForm form = new UserSaveForm();

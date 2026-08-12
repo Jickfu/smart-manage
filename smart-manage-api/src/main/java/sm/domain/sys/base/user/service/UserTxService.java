@@ -115,13 +115,15 @@ class UserTxService {
             if (entity.getPassword() == null || entity.getPassword().isBlank()) {
                 throw new BizException(ResultEnum.PARAM_ERROR, "新增用户密码不能为空");
             }
-            entity.setEnabled(true);
             entity.setThemeColor(UserThemeColor.DEFAULT);
             entity.setPasswordReset(true);
+			entity.setEnabled(!form.getAssignments().isEmpty());
             if (mapper.insert(entity) != 1) {
                 throw new BizException(sm.system.response.ResultEnum.PERSISTENCE_ERROR, "新增数据失败");
             }
         } else {
+			// 编辑时分配任职不会擅自启用账号，但移除全部任职必须同步禁用。
+			if (form.getAssignments().isEmpty()) entity.setEnabled(false);
             if (mapper.updateById(entity) == 0) {
                 throw new BizException(ResultEnum.DATA_CONFLICT, "用户已被其他用户修改，请刷新后重试");
             }
@@ -177,8 +179,32 @@ class UserTxService {
         if (!enabled && ids.contains(currentUserContext.getUserId())) {
             throw new BizException(ResultEnum.BILL_STATUS_ERROR, "不能禁用当前登录用户");
         }
+		if (enabled) validateEnabledUserAssignments(ids);
         EnabledCommandUtil.update(mapper, UserEntity::getId, UserEntity::getEnabled, ids, enabled, "用户");
     }
+
+	/** 启用账号前必须确认每个用户都有唯一且可用的主职组织。 */
+	private void validateEnabledUserAssignments(List<Long> userIds) {
+		List<UserAssignmentEntity> primaryAssignments = userAssignmentMapper.selectList(
+				new LambdaQueryWrapper<UserAssignmentEntity>()
+						.in(UserAssignmentEntity::getUserId, userIds)
+						.eq(UserAssignmentEntity::getIsPrimary, true));
+		Set<Long> assignedUserIds = new HashSet<>();
+		Set<Long> organizationIds = new HashSet<>();
+		for (UserAssignmentEntity assignment : primaryAssignments) {
+			assignedUserIds.add(assignment.getUserId());
+			organizationIds.add(assignment.getOrgId());
+		}
+		if (!assignedUserIds.containsAll(userIds)) {
+			throw new BizException(ResultEnum.BILL_STATUS_ERROR, "启用用户前必须配置主职组织");
+		}
+		List<OrgEntity> organizations = orgMapper.selectByIds(organizationIds);
+		if (organizations.size() != organizationIds.size()
+				|| organizations.stream().anyMatch(org -> !Boolean.TRUE.equals(org.getEnabled())
+						|| Boolean.TRUE.equals(org.getArchived()))) {
+			throw new BizException(ResultEnum.BILL_STATUS_ERROR, "用户主职组织不存在或不可用");
+		}
+	}
 
     /** 删除用户 */
     public void deleteById(Long id) {
