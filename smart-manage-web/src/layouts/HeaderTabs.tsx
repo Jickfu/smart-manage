@@ -11,7 +11,7 @@ interface Props {
 const HeaderTabs = ({ tabs, activeKey, onActivate, onRemove }: Props) => {
   const fixedTabs = tabs.filter((tab) => !tab.closable);
   const appTabs = tabs.filter((tab) => tab.closable);
-  const { viewportRef, activeTabRef, canScrollLeft, canScrollRight, scroll } =
+  const { viewportRef, activeTabRef, overflowing, canScrollLeft, canScrollRight, scroll } =
     useHorizontalTabScroll(activeKey, appTabs.length);
 
   const renderTab = (tab: HeaderTabItem, activeTab: boolean) => (
@@ -51,29 +51,33 @@ const HeaderTabs = ({ tabs, activeKey, onActivate, onRemove }: Props) => {
       <div className="sm-header-fixed-tabs">
         {fixedTabs.map((tab) => renderTab(tab, activeKey === tab.key))}
       </div>
-      <button
-        type="button"
-        className="sm-header-tabs-scroll-btn"
-        aria-label="向左移动应用页签"
-        disabled={!canScrollLeft}
-        onClick={() => scroll(-1)}
-      >
-        &lt;
-      </button>
+      {overflowing && (
+        <button
+          type="button"
+          className="sm-header-tabs-scroll-btn"
+          aria-label="向左移动应用页签"
+          disabled={!canScrollLeft}
+          onClick={() => scroll(-1)}
+        >
+          &lt;
+        </button>
+      )}
       <div ref={viewportRef} className="sm-header-tabs-viewport">
         <div className="sm-header-scrollable-tabs">
           {appTabs.map((tab) => renderTab(tab, activeKey === tab.key))}
         </div>
       </div>
-      <button
-        type="button"
-        className="sm-header-tabs-scroll-btn"
-        aria-label="向右移动应用页签"
-        disabled={!canScrollRight}
-        onClick={() => scroll(1)}
-      >
-        &gt;
-      </button>
+      {overflowing && (
+        <button
+          type="button"
+          className="sm-header-tabs-scroll-btn"
+          aria-label="向右移动应用页签"
+          disabled={!canScrollRight}
+          onClick={() => scroll(1)}
+        >
+          &gt;
+        </button>
+      )}
     </nav>
   );
 };

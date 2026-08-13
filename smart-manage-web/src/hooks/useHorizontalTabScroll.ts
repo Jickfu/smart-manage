@@ -6,12 +6,14 @@ const SCROLL_DISTANCE = 240;
 export function useHorizontalTabScroll(activeKey: string, tabCount: number) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<HTMLDivElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
   const updateScrollState = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
+    setOverflowing(viewport.scrollWidth > viewport.clientWidth + 1);
     setCanScrollLeft(viewport.scrollLeft > 1);
     setCanScrollRight(viewport.scrollLeft + viewport.clientWidth < viewport.scrollWidth - 1);
   }, []);
@@ -43,5 +45,5 @@ export function useHorizontalTabScroll(activeKey: string, tabCount: number) {
     viewportRef.current?.scrollBy({ left: direction * SCROLL_DISTANCE, behavior: 'smooth' });
   }, []);
 
-  return { viewportRef, activeTabRef, canScrollLeft, canScrollRight, scroll };
+  return { viewportRef, activeTabRef, overflowing, canScrollLeft, canScrollRight, scroll };
 }

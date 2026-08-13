@@ -21,7 +21,7 @@ const ContentTabsBar = ({ appNumber }: Props) => {
   const activeContentTabKey = ws?.activeContentTabKey ?? '';
   const homeTab = contentTabs.find((tab) => tab.key === '__home__');
   const scrollableTabs = contentTabs.filter((tab) => tab.key !== '__home__');
-  const { viewportRef, activeTabRef, canScrollLeft, canScrollRight, scroll } =
+  const { viewportRef, activeTabRef, overflowing, canScrollLeft, canScrollRight, scroll } =
     useHorizontalTabScroll(activeContentTabKey, scrollableTabs.length);
 
   if (!ws) return null;
@@ -112,15 +112,17 @@ const ContentTabsBar = ({ appNumber }: Props) => {
           activeContentTabKey === homeTab.key,
           `sm-content-tab sm-content-tab-home ${activeContentTabKey === homeTab.key ? 'sm-content-tab--active' : ''}`,
         )}
-      <button
-        type="button"
-        className="sm-content-tabs-scroll-btn"
-        aria-label="向左移动页签"
-        disabled={!canScrollLeft}
-        onClick={() => scroll(-1)}
-      >
-        &lt;
-      </button>
+      {overflowing && (
+        <button
+          type="button"
+          className="sm-content-tabs-scroll-btn"
+          aria-label="向左移动页签"
+          disabled={!canScrollLeft}
+          onClick={() => scroll(-1)}
+        >
+          &lt;
+        </button>
+      )}
       <div ref={viewportRef} className="sm-content-tabs-viewport">
         <div className="sm-content-tabs">
           {scrollableTabs.map((tab) => {
@@ -133,15 +135,17 @@ const ContentTabsBar = ({ appNumber }: Props) => {
           })}
         </div>
       </div>
-      <button
-        type="button"
-        className="sm-content-tabs-scroll-btn"
-        aria-label="向右移动页签"
-        disabled={!canScrollRight}
-        onClick={() => scroll(1)}
-      >
-        &gt;
-      </button>
+      {overflowing && (
+        <button
+          type="button"
+          className="sm-content-tabs-scroll-btn"
+          aria-label="向右移动页签"
+          disabled={!canScrollRight}
+          onClick={() => scroll(1)}
+        >
+          &gt;
+        </button>
+      )}
       <div className="sm-content-tabs-actions">
         <Tooltip title="关闭其他页签" placement="bottomRight" autoAdjustOverflow={false}>
           <button
