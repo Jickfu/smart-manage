@@ -57,6 +57,10 @@ export interface RefSelectorFieldConfig {
   }[];
   /** 每页条数，默认 20 */
   pageSize?: number;
+  /** 是否允许拖动选择弹框，默认关闭。 */
+  modalDraggable?: boolean;
+  /** 是否允许调整选择弹框大小，默认关闭。 */
+  modalResizable?: boolean;
   /** 树表模式：树形数据 */
   treeData?: Record<string, unknown>[];
   /** 树表模式：树字段映射 */

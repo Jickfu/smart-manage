@@ -57,6 +57,10 @@ interface RefSelectorProps<T extends Record<string, unknown>> {
   modalTitle: string;
   /** 每页条数，默认 20 */
   pageSize?: number;
+  /** 是否允许拖动选择弹框，默认关闭。 */
+  modalDraggable?: boolean;
+  /** 是否允许调整选择弹框大小，默认关闭。 */
+  modalResizable?: boolean;
 
   /** 树表模式：树形数据 */
   treeData?: Record<string, unknown>[];
@@ -92,6 +96,8 @@ function RefSelector<T extends Record<string, unknown>>({
   mode,
   modalTitle,
   pageSize = 20,
+  modalDraggable = false,
+  modalResizable = false,
   treeData,
   treeFieldNames,
 }: RefSelectorProps<T>) {
@@ -520,6 +526,8 @@ function RefSelector<T extends Record<string, unknown>>({
         bodyMode="fixed"
         className="sm-ref-selector-modal"
         width={mode === 'tree-table' ? 960 : 800}
+        draggable={modalDraggable}
+        resizable={modalResizable}
         footer={modalFooter}
       >
         <Spin spinning={query.loading && query.records.length === 0}>{renderModalBody()}</Spin>

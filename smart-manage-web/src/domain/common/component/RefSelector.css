@@ -67,6 +67,30 @@
   width: 240px;
 }
 
+/* 固定选择器初始高度，避免树筛选后记录数变化带动整个弹框跳动。 */
+.sm-ref-selector-modal .ant-modal-container {
+  height: min(560px, calc(100vh - 64px));
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-ref-selector-modal.sm-app-modal--resizable .ant-modal-container {
+  height: 100%;
+}
+
+.sm-ref-selector-modal .ant-modal-body,
+.sm-ref-selector-modal .ant-spin-nested-loading,
+.sm-ref-selector-modal .ant-spin-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.sm-ref-selector-modal .ant-modal-body,
+.sm-ref-selector-modal .ant-spin-container {
+  display: flex;
+  flex-direction: column;
+}
+
 /* ---- Body 内容区 ---- */
 
 .sm-ref-selector-body {

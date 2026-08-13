@@ -22,6 +22,29 @@
   gap: 12px;
 }
 
+.sm-app-modal-interaction {
+  transform: translate(var(--sm-app-modal-translate-x, 0), var(--sm-app-modal-translate-y, 0));
+}
+
+.sm-app-modal--draggable .sm-app-modal-header-content {
+  cursor: move;
+  user-select: none;
+}
+
+.sm-app-modal--resizable {
+  min-width: 480px;
+  min-height: 320px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  resize: both;
+}
+
+.sm-app-modal--resizable .sm-app-modal-interaction,
+.sm-app-modal--resizable .ant-modal-container {
+  height: 100%;
+}
+
 .sm-app-modal-title {
   min-width: 0;
   flex: 1;
