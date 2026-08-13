@@ -12,6 +12,7 @@ import { logoutCurrentUser, updateCurrentUserTheme } from '@/api/user';
 import { normalizeThemeColor, THEME_COLOR_OPTIONS } from '@/styles/themePalette';
 import { activeUiConfigQueryKey, getActiveUiConfig } from '@/api/uiConfig';
 import { resolveAssetUrl } from '@/utils/assetUrl';
+import HeaderTabs from './HeaderTabs';
 import './Header.css';
 
 const Header = () => {
@@ -122,38 +123,12 @@ const Header = () => {
       <img className="sm-header-logo" src={headerLogo} alt={systemName} />
 
       {/* Header Tabs */}
-      <nav className="sm-header-tabs" role="tablist" aria-label="应用切换">
-        {tabs.map((tab) => (
-          <div
-            key={tab.key}
-            role="tab"
-            tabIndex={0}
-            aria-selected={activeKey === tab.key}
-            className={`sm-header-tab ${activeKey === tab.key ? 'sm-header-tab--active' : ''}`}
-            onClick={() => handleTabClick(tab.key)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleTabClick(tab.key);
-              }
-            }}
-          >
-            <span>{tab.label}</span>
-            {tab.closable && (
-              <div className="sm-header-tab-operate">
-                <button
-                  className="sm-header-tab-operate-close"
-                  onClick={(event) => handleRemove(event, tab.key)}
-                  aria-label={`关闭 ${tab.label}`}
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-      </nav>
-
+      <HeaderTabs
+        tabs={tabs}
+        activeKey={activeKey}
+        onActivate={handleTabClick}
+        onRemove={(event, key) => void handleRemove(event, key)}
+      />
       {/* 右侧操作区 */}
       <div className="sm-header-actions">
         <Popover

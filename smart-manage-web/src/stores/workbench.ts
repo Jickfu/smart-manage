@@ -10,11 +10,8 @@ import type { AppVO } from '@/domain/sys/base/app/types';
 import { getRegisteredTabTitle } from '@/domain/common/registry/componentRegistry';
 import { pushTabHistory, resolveNextActiveTabKey } from './tabHistory';
 
-/** 内容页签最大数量（不含首页） */
-const MAX_CONTENT_TABS = 20;
-
 /** addContentTab 返回结果 */
-export type AddTabResult = 'opened' | 'activated' | 'limit_reached';
+export type AddTabResult = 'opened' | 'activated';
 
 export interface ContentTabItem {
   key: string;
@@ -268,12 +265,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
         },
       });
       return 'activated';
-    }
-
-    // 页签数量限制（不包含首页占位）
-    const nonHomeTabs = ws.contentTabs.filter((t) => t.key !== '__home__');
-    if (nonHomeTabs.length >= MAX_CONTENT_TABS) {
-      return 'limit_reached';
     }
 
     set({

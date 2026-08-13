@@ -26,13 +26,56 @@
   display: flex;
   align-items: stretch;
   height: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
+  min-width: 0;
   font-size: 16px;
 }
 
-.sm-header-tabs::-webkit-scrollbar {
+.sm-header-fixed-tabs,
+.sm-header-scrollable-tabs {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+}
+
+.sm-header-fixed-tabs {
+  flex-shrink: 0;
+}
+
+.sm-header-tabs-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.sm-header-tabs-viewport::-webkit-scrollbar {
   display: none;
+}
+
+.sm-header-scrollable-tabs {
+  width: max-content;
+  min-width: 100%;
+}
+
+.sm-header-tabs-scroll-btn {
+  flex-shrink: 0;
+  width: 28px;
+  padding: 0;
+  color: #666;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.sm-header-tabs-scroll-btn:hover:not(:disabled) {
+  color: var(--ant-color-primary);
+  background: var(--ant-color-primary-bg);
+}
+
+.sm-header-tabs-scroll-btn:disabled {
+  color: #c8c8c8;
+  cursor: default;
 }
 
 .sm-header-tab {
@@ -43,6 +86,7 @@
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .sm-header-tab:hover {

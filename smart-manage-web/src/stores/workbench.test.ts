@@ -153,17 +153,14 @@ describe('workbench store', () => {
     expect(state.beforeCloseCallbacks[`${APP_NUMBER}:${tabKey}`]).toBeUndefined();
   });
 
-  it('达到内容页签上限后拒绝继续打开页签', () => {
+  it('内容页签较多时仍允许继续打开页签', () => {
     const store = useWorkbenchStore.getState();
-    for (let index = 0; index < 20; index += 1) {
+    for (let index = 0; index < 30; index += 1) {
       expect(store.openBillTab(APP_NUMBER, COMPONENT_KEY, String(index), OperationType.VIEW)).toBe(
         'opened',
       );
     }
-
-    expect(store.openBillTab(APP_NUMBER, COMPONENT_KEY, 'overflow', OperationType.VIEW)).toBe(
-      'limit_reached',
-    );
+    expect(useWorkbenchStore.getState().workspaces[APP_NUMBER]!.contentTabs).toHaveLength(31);
   });
 
   it('自定义配置页按 CUSTOM 协议打开且保持单实例', () => {

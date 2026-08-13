@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { App, Spin } from 'antd';
+import { Spin } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { menuQueryKeys } from '@/domain/sys/base/menu/queryKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
@@ -16,7 +16,6 @@ interface Props {
 }
 
 const Workbench = ({ appNumber }: Props) => {
-  const { modal } = App.useApp();
   const ws = useWorkbenchStore((s) => s.workspaces[appNumber]);
   const openListTab = useWorkbenchStore((s) => s.openListTab);
   const openCustomTab = useWorkbenchStore((s) => s.openCustomTab);
@@ -30,18 +29,13 @@ const Workbench = ({ appNumber }: Props) => {
   const handleMenuItemClick = useCallback(
     (item: { component?: string; path?: string; name: string }) => {
       const componentKey = item.component?.trim() || item.path?.trim() || item.name;
-      const result =
-        componentRegistry[componentKey]?.pageType === 'CUSTOM'
-          ? openCustomTab(appNumber, componentKey)
-          : openListTab(appNumber, componentKey);
-      if (result === 'limit_reached') {
-        modal.warning({
-          title: '页签数量已达上限',
-          content: '请先关闭不再使用的页签后再打开新页面。',
-        });
+      if (componentRegistry[componentKey]?.pageType === 'CUSTOM') {
+        openCustomTab(appNumber, componentKey);
+      } else {
+        openListTab(appNumber, componentKey);
       }
     },
-    [appNumber, modal, openCustomTab, openListTab],
+    [appNumber, openCustomTab, openListTab],
   );
 
   if (!ws) return null;
