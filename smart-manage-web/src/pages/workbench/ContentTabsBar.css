@@ -98,7 +98,7 @@
 
 /* 关闭按钮 — hover 显示 */
 .sm-content-tab-close {
-  font-size: 12px;
+  font-size: 14px;
   opacity: 0;
   transition: opacity 0.15s;
   padding: 0 2px 0 4px;
