@@ -79,6 +79,7 @@
 }
 
 .sm-ref-selector-modal .ant-modal-body,
+.sm-ref-selector-modal .ant-modal-body > .ant-spin,
 .sm-ref-selector-modal .ant-spin-nested-loading,
 .sm-ref-selector-modal .ant-spin-container {
   flex: 1;
@@ -86,6 +87,8 @@
 }
 
 .sm-ref-selector-modal .ant-modal-body,
+.sm-ref-selector-modal .ant-modal-body > .ant-spin,
+.sm-ref-selector-modal .ant-spin-nested-loading,
 .sm-ref-selector-modal .ant-spin-container {
   display: flex;
   flex-direction: column;
@@ -95,9 +98,9 @@
 
 .sm-ref-selector-body {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  min-height: 360px;
-  max-height: 56vh;
+  min-height: 0;
 }
 
 /* 元信息栏（总条数 + 分页） */
@@ -187,7 +190,10 @@
   flex: 1;
   min-height: 0;
   max-height: none !important;
-  overflow: auto !important;
+  overflow-x: auto !important;
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable;
+  padding-bottom: 1px;
 }
 
 .sm-ref-selector-table-body .ant-table-sticky-scroll {
@@ -307,6 +313,14 @@
 .sm-ref-selector-split {
   flex: 1;
   min-height: 0;
+}
+
+/* Splitter.Panel 默认 block 布局会让表格按内容高度撑开，面板必须建立完整的 flex 高度链。 */
+.sm-ref-selector-split > .ant-splitter-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* ---- 错误态 ---- */
