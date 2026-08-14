@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Empty, Pagination, Splitter } from 'antd';
+import './ListPage.css';
 
 interface ListTableShellProps {
   table?: ReactNode;

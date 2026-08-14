@@ -20,6 +20,9 @@ interface UserConverter {
     @Mapping(target = "assignments", ignore = true)
     @Mapping(target = "menus", ignore = true)
     @Mapping(target = "avatar", ignore = true)
+    @Mapping(target = "currentOrgId", ignore = true)
+    @Mapping(target = "currentOrgName", ignore = true)
+    @Mapping(target = "companyName", ignore = true)
     UserInfoVO toInfoVO(UserEntity entity);
 
     @Mapping(target = "roleIds", ignore = true)

@@ -42,7 +42,19 @@ export default function App() {
         username: info.username,
         name: info.name,
         avatar: info.avatar,
+        avatarAttachmentId: info.avatarAttachmentId ? String(info.avatarAttachmentId) : undefined,
         themeColor: info.themeColor,
+        number: info.number,
+        email: info.email,
+        phone: info.phone,
+        currentOrgId: String(info.currentOrgId),
+        currentOrgName: info.currentOrgName,
+        companyName: info.companyName,
+        assignments: info.assignments.map((assignment) => ({
+          ...assignment,
+          id: String(assignment.id),
+          orgId: String(assignment.orgId),
+        })),
       });
       setAuthState('authenticated');
     },

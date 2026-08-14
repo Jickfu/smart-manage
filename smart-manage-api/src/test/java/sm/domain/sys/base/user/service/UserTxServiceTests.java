@@ -2,6 +2,7 @@ package sm.domain.sys.base.user.service;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 import sm.domain.sys.base.user.constant.UserThemeColor;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
@@ -11,6 +12,7 @@ import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserAssignmentForm;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.helper.Argon2Helper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -21,8 +23,49 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mockStatic;
 
 class UserTxServiceTests {
+
+	@Test
+	void currentPasswordMustMatchBeforePasswordCanBeChanged() {
+		UserMapper userMapper = mock(UserMapper.class);
+		UserEntity existing = new UserEntity();
+		existing.setId(1L);
+		existing.setPassword("encoded-password");
+		when(userMapper.selectById(1L)).thenReturn(existing);
+		UserTxService service = new UserTxService(
+				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
+				mock(OrgMapper.class), mock(CurrentUserContext.class));
+
+		try (MockedStatic<Argon2Helper> argon2Helper = mockStatic(Argon2Helper.class)) {
+			argon2Helper.when(() -> Argon2Helper.verify("encoded-password", "wrong-password"))
+					.thenReturn(false);
+
+			assertThrows(sm.system.exception.BizException.class,
+					() -> service.updateCurrentPassword(1L, "wrong-password", "new-password"));
+		}
+	}
+
+	@Test
+	void currentProfileOnlyUpdatesSelfMaintainableFields() {
+		UserMapper userMapper = mock(UserMapper.class);
+		UserEntity existing = new UserEntity();
+		existing.setId(1L);
+		existing.setUsername("unchanged-user");
+		when(userMapper.selectById(1L)).thenReturn(existing);
+		when(userMapper.updateById(existing)).thenReturn(1);
+		UserTxService service = new UserTxService(
+				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
+				mock(OrgMapper.class), mock(CurrentUserContext.class));
+
+		service.updateCurrentProfile(1L, " 新姓名 ", 20L);
+
+		assertEquals("新姓名", existing.getName());
+		assertEquals(20L, existing.getAvatarAttachmentId());
+		assertEquals("unchanged-user", existing.getUsername());
+		verify(userMapper).updateById(existing);
+	}
 
 	@Test
 	void assignmentsRequireExactlyOnePrimaryPosition() {

@@ -175,6 +175,34 @@ class UserTxService {
         }
     }
 
+    /** 只更新当前用户允许自行维护的姓名和头像。 */
+    public void updateCurrentProfile(Long userId, String name, Long avatarAttachmentId) {
+        UserEntity entity = mapper.selectById(userId);
+        if (entity == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+        entity.setName(name.trim());
+        entity.setAvatarAttachmentId(avatarAttachmentId);
+        if (mapper.updateById(entity) == 0) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请刷新后重试");
+        }
+    }
+
+    /** 验证原密码后修改密码，避免已登录会话被用于静默接管账号。 */
+    public void updateCurrentPassword(Long userId, String currentPassword, String newPassword) {
+        UserEntity entity = mapper.selectById(userId);
+        if (entity == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+        if (!Argon2Helper.verify(entity.getPassword(), currentPassword)) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "原密码不正确");
+        }
+        if (Argon2Helper.verify(entity.getPassword(), newPassword)) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能与原密码相同");
+        }
+        entity.setPassword(Argon2Helper.encode(newPassword));
+        entity.setPasswordReset(false);
+        if (mapper.updateById(entity) == 0) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请刷新后重试");
+        }
+    }
+
     public void updateEnabled(List<Long> ids, boolean enabled) {
         if (!enabled && ids.contains(currentUserContext.getUserId())) {
             throw new BizException(ResultEnum.BILL_STATUS_ERROR, "不能禁用当前登录用户");

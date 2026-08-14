@@ -151,6 +151,20 @@
   cursor: pointer;
 }
 
+.sm-header-avatar-button {
+  display: flex;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.sm-header-avatar-button:focus-visible {
+  outline: 2px solid var(--ant-color-primary);
+  outline-offset: 2px;
+}
+
 .sm-header-action-button {
   color: #666;
   font-size: 18px;
@@ -246,4 +260,254 @@
 
 .sm-theme-color-swatch--purple {
   background: #701df0;
+}
+
+/* === 用户头像弹层 === */
+
+.sm-user-panel-popover .ant-popover-inner {
+  width: 320px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  box-shadow: 0 9px 24px 6px rgb(0 0 0 / 10%);
+}
+
+.sm-user-panel-popover .ant-popover-container {
+  padding: 0;
+}
+
+.sm-user-panel-hero {
+  position: relative;
+  padding: 32px 20px 14px;
+  background: linear-gradient(135deg, #dbeeff 0%, #edf3ff 60%, #d8e8ff 100%);
+}
+
+.sm-user-panel-actions {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  display: flex;
+  gap: 2px;
+}
+
+.sm-user-panel-actions .ant-btn {
+  color: #42526e;
+}
+
+.sm-user-panel-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sm-user-panel-identity-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 20px;
+}
+
+.sm-user-panel-identity-text strong,
+.sm-user-panel-identity-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-user-panel-identity-text span {
+  color: #5b6575;
+  font-size: 13px;
+}
+
+.sm-user-panel-motto {
+  margin-top: 18px;
+  color: #25324a;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.sm-user-panel-content {
+  padding: 14px 18px 8px;
+}
+
+.sm-user-panel-row {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 28px;
+  align-items: center;
+  min-height: 40px;
+  gap: 8px;
+}
+
+.sm-user-panel-label {
+  color: #8a8f99;
+}
+
+.sm-user-panel-value {
+  overflow: hidden;
+  color: #2f3542;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-user-panel-theme-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sm-user-panel-theme-swatch {
+  width: 14px;
+  height: 14px;
+  background: var(--ant-color-primary);
+  border-radius: 2px;
+}
+
+.sm-user-panel-about {
+  display: block;
+  width: fit-content;
+  height: 26px;
+  margin: 2px auto 8px;
+  padding: 0 4px;
+  font-size: 12px;
+}
+
+.sm-organization-modal .ant-modal-container {
+  display: flex;
+  height: min(560px, calc(100vh - 64px));
+  flex-direction: column;
+}
+
+.sm-organization-modal .ant-modal-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.sm-organization-search {
+  width: 240px;
+}
+
+.sm-organization-modal .sm-list-table-shell {
+  flex: 1;
+}
+
+.sm-organization-modal .sm-list-table-content {
+  padding: 0 8px;
+}
+
+.sm-organization-tree {
+  height: 100%;
+  padding: 8px 6px;
+  overflow: auto;
+}
+
+.sm-organization-tree .ant-tree {
+  font-size: 12px;
+}
+
+.sm-organization-table {
+  height: 100%;
+}
+
+.sm-personal-settings-modal .ant-modal-container {
+  display: flex;
+  height: min(480px, calc(100vh - 64px));
+  flex-direction: column;
+}
+
+.sm-personal-settings-modal .ant-modal-body {
+  min-height: 0;
+  flex: 1;
+  padding: 0;
+}
+
+.sm-personal-settings-layout {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  height: 100%;
+}
+
+.sm-personal-settings-nav {
+  padding: 0;
+  background: #fafafa;
+  border-right: 1px solid var(--ant-color-border-secondary);
+}
+
+.sm-personal-settings-nav button {
+  display: block;
+  width: 100%;
+  height: 38px;
+  padding: 0 16px;
+  color: var(--ant-color-text-secondary);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.sm-personal-settings-nav button:hover {
+  color: var(--ant-color-primary);
+  background: var(--ant-color-primary-bg);
+}
+
+.sm-personal-settings-nav .sm-personal-settings-nav-item--active {
+  color: #fff;
+  background: var(--ant-color-primary);
+}
+
+.sm-personal-settings-nav .sm-personal-settings-nav-item--active:hover {
+  color: #fff;
+  background: var(--ant-color-primary);
+}
+
+.sm-personal-settings-content {
+  min-width: 0;
+  padding: 20px 56px;
+  overflow: auto;
+}
+
+.sm-personal-settings-content > section {
+  height: 100%;
+}
+
+.sm-personal-settings-form {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.sm-personal-settings-avatar {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.sm-personal-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.sm-about-product {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 0;
+}
+
+.sm-about-product img {
+  max-width: 180px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.sm-about-product strong {
+  font-size: 18px;
+}
+
+.sm-about-product span {
+  color: #8a8f99;
 }

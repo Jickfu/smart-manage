@@ -31,7 +31,25 @@ export interface UserInfoVO {
   username: string;
   name: string;
   avatar: string;
+  avatarAttachmentId?: string;
   themeColor: string;
+  number?: string;
+  email?: string;
+  phone?: string;
+  currentOrgId: string;
+  currentOrgName: string;
+  companyName: string;
+  assignments: UserAssignmentVO[];
+}
+
+export interface UserAssignmentVO {
+  id: string;
+  orgId: string;
+  orgName: string;
+  orgNamePath: string;
+  position?: string;
+  isOrgLeader: boolean;
+  isPrimary: boolean;
 }
 
 /** 菜单节点 */

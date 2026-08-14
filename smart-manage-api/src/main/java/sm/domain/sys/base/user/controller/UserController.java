@@ -15,6 +15,9 @@ import sm.domain.sys.base.user.model.form.UserPermissionsForm;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
 import sm.domain.sys.base.user.model.form.CurrentUserThemeForm;
+import sm.domain.sys.base.user.model.form.CurrentOrganizationForm;
+import sm.domain.sys.base.user.model.form.CurrentUserPasswordForm;
+import sm.domain.sys.base.user.model.form.CurrentUserProfileForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.base.user.model.vo.UserDetailVO;
@@ -145,6 +148,33 @@ public class UserController {
 	@SaCheckPermission(UserPermission.ASSIGN_ROLES)
 	public Result<String> assignRoles(@RequestBody @Valid UserRoleAssignForm form) {
 		service.assignRoles(form);
+		return Result.success();
+	}
+
+	@PostMapping("/sys/base/user/current/organization")
+	@Operation(summary = "切换当前组织", description = "切换到当前用户有效任职范围内的组织")
+	public Result<String> switchCurrentOrganization(@RequestBody @Valid CurrentOrganizationForm form) {
+		service.switchCurrentOrganization(form.getOrgId());
+		return Result.success();
+	}
+
+	@PostMapping("/sys/base/user/current/profile")
+	@Operation(summary = "保存个人资料", description = "当前用户修改姓名和头像")
+	public Result<UserInfoVO> updateCurrentProfile(@RequestBody @Valid CurrentUserProfileForm form) {
+		service.updateCurrentProfile(form);
+		return Result.success(service.current());
+	}
+
+	@GetMapping("/sys/base/user/current/password/publicKey")
+	@Operation(summary = "个人改密公钥")
+	public Result<String> currentPasswordPublicKey() {
+		return Result.success(SM2Helper.getPublicKey());
+	}
+
+	@PostMapping("/sys/base/user/current/password")
+	@Operation(summary = "修改个人密码", description = "验证原密码后修改当前用户密码")
+	public Result<String> updateCurrentPassword(@RequestBody @Valid CurrentUserPasswordForm form) {
+		service.updateCurrentPassword(form);
 		return Result.success();
 	}
 

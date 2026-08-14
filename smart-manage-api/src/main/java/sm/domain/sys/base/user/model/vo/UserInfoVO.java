@@ -52,6 +52,15 @@ public class UserInfoVO {
 	@Schema(description = "当前组织下的角色ID列表")
 	private List<Long> roleIds;
 
+	@Schema(description = "当前组织ID")
+	private Long currentOrgId;
+
+	@Schema(description = "当前组织名称")
+	private String currentOrgName;
+
+	@Schema(description = "当前组织所属公司名称")
+	private String companyName;
+
 	private List<UserAssignmentVO> assignments;
 
 	@Schema(description = "菜单")

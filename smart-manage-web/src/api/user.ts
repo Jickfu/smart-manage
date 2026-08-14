@@ -20,6 +20,35 @@ export function updateCurrentUserTheme(themeColor: string) {
     .then((response) => response.data);
 }
 
+/** 切换到当前用户有效任职范围内的组织。 */
+export function switchCurrentUserOrganization(orgId: string) {
+  return request
+    .post<Result<void>>('/sys/base/user/current/organization', { orgId })
+    .then((response) => response.data);
+}
+
+export function updateCurrentUserProfile(form: {
+  name: string;
+  avatarAttachmentId?: string;
+  attachmentUploadSessions: Record<string, string>;
+}) {
+  return request
+    .post<Result<UserInfoVO>>('/sys/base/user/current/profile', form)
+    .then((response) => response.data.data);
+}
+
+export function getCurrentPasswordPublicKey() {
+  return request
+    .get<Result<string>>('/sys/base/user/current/password/publicKey')
+    .then((response) => response.data.data);
+}
+
+export function updateCurrentUserPassword(currentPassword: string, newPassword: string) {
+  return request
+    .post<Result<void>>('/sys/base/user/current/password', { currentPassword, newPassword })
+    .then((response) => response.data);
+}
+
 /** 主动注销当前服务端会话。 */
 export function logoutCurrentUser() {
   return request.post<Result<void>>('/sys/base/logout').then((response) => response.data);

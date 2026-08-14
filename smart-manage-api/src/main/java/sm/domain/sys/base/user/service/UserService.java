@@ -22,6 +22,8 @@ import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.form.UserListForm;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
+import sm.domain.sys.base.user.model.form.CurrentUserPasswordForm;
+import sm.domain.sys.base.user.model.form.CurrentUserProfileForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.base.user.model.vo.UserDetailVO;
@@ -37,6 +39,7 @@ import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.org.model.entity.OrgEntity;
+import sm.domain.sys.base.org.model.OrgType;
 import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
 import sm.domain.sys.base.user.model.vo.UserAssignmentVO;
 import sm.domain.sys.base.user.model.entity.UserRoleEntity;
@@ -338,12 +341,16 @@ public class UserService {
 	}
 
 	private void promoteAvatar(UserSaveForm form, Long userId) {
-		if (form.getAvatarAttachmentId() == null) return;
+		promoteAvatar(form.getAvatarAttachmentId(), form.getAttachmentUploadSessions(), userId);
+	}
+
+	private void promoteAvatar(Long avatarAttachmentId, Map<Long, String> uploadSessions, Long userId) {
+		if (avatarAttachmentId == null || !uploadSessions.containsKey(avatarAttachmentId)) return;
 		AttachmentPromoteForm promoteForm = new AttachmentPromoteForm();
-		promoteForm.setAttachmentIds(List.of(form.getAvatarAttachmentId()));
+		promoteForm.setAttachmentIds(List.of(avatarAttachmentId));
 		promoteForm.setBizType(UserResourceRegistration.RESOURCE_TYPE);
 		promoteForm.setBizId(String.valueOf(userId));
-		promoteForm.setUploadSessions(form.getAttachmentUploadSessions());
+		promoteForm.setUploadSessions(uploadSessions);
 		try {
 			attachmentService.promoteForAggregate(promoteForm);
 		} catch (IOException exception) {
@@ -393,7 +400,118 @@ public class UserService {
 		UserEntity userEntity = mapper.selectById(currentUserContext.getUserId());
 		UserInfoVO vo = converter.toInfoVO(userEntity);
 		vo.setAvatar(avatarUrl(userEntity.getId(), userEntity.getAvatarAttachmentId()));
+		assembleCurrentOrganization(vo, userEntity.getId());
 		return vo;
+	}
+
+	/**
+	 * 切换会话组织前必须重新校验有效任职，不能信任前端传入的组织范围。
+	 */
+	public void switchCurrentOrganization(Long orgId) {
+		Long userId = currentUserContext.getUserId();
+		UserAssignmentEntity assignment = userAssignmentMapper.selectOne(
+				new LambdaQueryWrapper<UserAssignmentEntity>()
+						.eq(UserAssignmentEntity::getUserId, userId)
+						.eq(UserAssignmentEntity::getOrgId, orgId));
+		if (assignment == null) {
+			throw new BizException(ResultEnum.PERMISSION_ERROR, "只能切换到自己的任职组织");
+		}
+		OrgEntity organization = orgMapper.selectById(orgId);
+		if (organization == null || !Boolean.TRUE.equals(organization.getEnabled())
+				|| Boolean.TRUE.equals(organization.getArchived())) {
+			throw new BizException(ResultEnum.PARAM_ERROR, "目标组织不可用");
+		}
+		currentUserContext.setOrgId(orgId);
+	}
+
+	@BizLog("修改个人资料")
+	@CacheInvalidate(name = BaseCacheName.USER_INFO, key = "@currentUserContext.getUserId()")
+	public void updateCurrentProfile(CurrentUserProfileForm form) {
+		Long userId = currentUserContext.getUserId();
+		UserEntity previous = requireUser(userId);
+		Long temporaryAvatarId = findTemporaryAvatarId(form.getAvatarAttachmentId());
+		promoteAvatar(form.getAvatarAttachmentId(), form.getAttachmentUploadSessions(), userId);
+		try {
+			txService.updateCurrentProfile(userId, form.getName(), form.getAvatarAttachmentId());
+			deleteReplacedAvatar(previous, form.getAvatarAttachmentId());
+		} catch (RuntimeException exception) {
+			deleteAvatarForCompensation(temporaryAvatarId);
+			throw exception;
+		}
+	}
+
+	@BizLog(value = "修改个人密码", recordResponse = false)
+	public void updateCurrentPassword(CurrentUserPasswordForm form) {
+		String currentPassword;
+		String newPassword;
+		try {
+			currentPassword = sm.system.helper.SM2Helper.decryptJsCiphertext(form.getCurrentPassword());
+			newPassword = sm.system.helper.SM2Helper.decryptJsCiphertext(form.getNewPassword());
+		} catch (RuntimeException exception) {
+			throw new BizException(ResultEnum.PARAM_ERROR, "密码加密数据无效");
+		}
+		if (newPassword.length() < 8) {
+			throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能少于8位");
+		}
+		Long userId = currentUserContext.getUserId();
+		txService.updateCurrentPassword(userId, currentPassword, newPassword);
+		authorizationStateHelper.terminateUsers(List.of(userId), SessionTerminationReason.PASSWORD_RESET_TERMINATED);
+	}
+
+	private void assembleCurrentOrganization(UserInfoVO vo, Long userId) {
+		List<UserAssignmentEntity> assignments = userAssignmentMapper.selectList(
+				new LambdaQueryWrapper<UserAssignmentEntity>()
+						.eq(UserAssignmentEntity::getUserId, userId)
+						.orderByDesc(UserAssignmentEntity::getIsPrimary)
+						.orderByAsc(UserAssignmentEntity::getOrgId));
+		Set<Long> organizationIds = assignments.stream()
+				.map(UserAssignmentEntity::getOrgId)
+				.collect(Collectors.toSet());
+		Map<Long, OrgEntity> organizationById = new HashMap<>();
+		if (!organizationIds.isEmpty()) {
+			for (OrgEntity organization : orgMapper.selectByIds(organizationIds)) {
+				organizationById.put(organization.getId(), organization);
+			}
+		}
+		List<UserAssignmentVO> availableAssignments = new ArrayList<>();
+		Map<Long, OrgEntity> availableOrganizations = new HashMap<>();
+		for (UserAssignmentEntity assignment : assignments) {
+			OrgEntity organization = organizationById.get(assignment.getOrgId());
+			if (organization == null || !Boolean.TRUE.equals(organization.getEnabled())
+					|| Boolean.TRUE.equals(organization.getArchived())) {
+				continue;
+			}
+			availableOrganizations.put(organization.getId(), organization);
+			UserAssignmentVO assignmentVO = new UserAssignmentVO();
+			assignmentVO.setId(assignment.getId());
+			assignmentVO.setOrgId(organization.getId());
+			assignmentVO.setOrgName(organization.getName());
+			assignmentVO.setOrgNamePath(organization.getNamePath());
+			assignmentVO.setPosition(assignment.getPosition());
+			assignmentVO.setIsOrgLeader(assignment.getIsOrgLeader());
+			assignmentVO.setIsPrimary(assignment.getIsPrimary());
+			availableAssignments.add(assignmentVO);
+		}
+		Long currentOrgId = currentUserContext.getOrgId();
+		OrgEntity currentOrganization = availableOrganizations.get(currentOrgId);
+		if (currentOrganization == null) {
+			throw new BizException(ResultEnum.PERMISSION_ERROR, "当前组织不在用户的有效任职范围内");
+		}
+		vo.setAssignments(availableAssignments);
+		vo.setCurrentOrgId(currentOrgId);
+		vo.setCurrentOrgName(currentOrganization.getName());
+		vo.setCompanyName(resolveCompanyName(currentOrganization));
+	}
+
+	private String resolveCompanyName(OrgEntity organization) {
+		OrgEntity current = organization;
+		String highestOrganizationName = organization.getName();
+		while (current != null) {
+			highestOrganizationName = current.getName();
+			if (OrgType.COMPANY.equals(current.getOrgType())) return current.getName();
+			current = current.getParentId() == null ? null : orgMapper.selectById(current.getParentId());
+		}
+		return highestOrganizationName;
 	}
 
 	@BizLog("修改个人主题")

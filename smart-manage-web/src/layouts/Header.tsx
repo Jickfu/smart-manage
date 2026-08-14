@@ -1,24 +1,45 @@
-import { useEffect, useState } from 'react';
-import { App, Button, Dropdown, Popover, Tooltip } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { App, Button, Input, Popover, Table, Tooltip, Tree } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import type { MenuProps } from 'antd';
-import { LogoutOutlined, SkinOutlined } from '@ant-design/icons';
+import { MessageOutlined } from '@ant-design/icons';
 import { UserAvatar } from '@/domain/sys/base/user/UserAvatar';
+import AppModal from '@/domain/common/component/AppModal';
 import { useHeaderTabsStore } from '@/stores/headerTabs';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { useUserStore } from '@/stores/user';
 import { openApp, closeAppAndRemove } from '@/services/navigationService';
-import { logoutCurrentUser, updateCurrentUserTheme } from '@/api/user';
+import {
+  logoutCurrentUser,
+  switchCurrentUserOrganization,
+  updateCurrentUserTheme,
+} from '@/api/user';
 import { normalizeThemeColor, THEME_COLOR_OPTIONS } from '@/styles/themePalette';
 import { activeUiConfigQueryKey, getActiveUiConfig } from '@/api/uiConfig';
 import { resolveAssetUrl } from '@/utils/assetUrl';
 import HeaderTabs from './HeaderTabs';
+import HeaderUserPanel from './HeaderUserPanel';
+import PersonalSettingsModal from './PersonalSettingsModal';
+import ListTableShell from '@/domain/common/page/ListTableShell';
 import './Header.css';
+
+interface OrganizationTreeNode {
+  key: string;
+  title: string;
+  children: OrganizationTreeNode[];
+}
 
 const Header = () => {
   const { message } = App.useApp();
   const [themeOpen, setThemeOpen] = useState(false);
   const [themeSaving, setThemeSaving] = useState(false);
+  const [userPanelOpen, setUserPanelOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [organizationOpen, setOrganizationOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>();
+  const [selectedOrgPath, setSelectedOrgPath] = useState<string>();
+  const [organizationKeyword, setOrganizationKeyword] = useState('');
+  const [organizationSaving, setOrganizationSaving] = useState(false);
   const tabs = useHeaderTabsStore((s) => s.tabs);
   const activeKey = useHeaderTabsStore((s) => s.activeKey);
   const userInfo = useUserStore((s) => s.userInfo);
@@ -65,15 +86,6 @@ const Header = () => {
     }
   };
 
-  const userMenuItems: MenuProps['items'] = [
-    {
-      key: 'logout',
-      icon: <LogoutOutlined />,
-      label: '退出登录',
-      onClick: handleLogout,
-    },
-  ];
-
   const handleThemeChange = async (themeColor: string) => {
     if (
       themeSaving ||
@@ -118,6 +130,67 @@ const Header = () => {
     </div>
   );
 
+  const openPanelModal = (openModal: () => void) => {
+    setUserPanelOpen(false);
+    setThemeOpen(false);
+    openModal();
+  };
+
+  const openOrganizationModal = () => {
+    setSelectedOrgId(userInfo?.currentOrgId);
+    setSelectedOrgPath(undefined);
+    setOrganizationKeyword('');
+    openPanelModal(() => setOrganizationOpen(true));
+  };
+
+  const organizationTree = useMemo(() => {
+    const roots: OrganizationTreeNode[] = [];
+    for (const assignment of userInfo?.assignments ?? []) {
+      const segments = assignment.orgNamePath.split('/').filter(Boolean);
+      let siblings = roots;
+      let path = '';
+      for (const segment of segments) {
+        path = path ? `${path}/${segment}` : segment;
+        let node = siblings.find((item) => item.key === path);
+        if (!node) {
+          node = { key: path, title: segment, children: [] };
+          siblings.push(node);
+        }
+        siblings = node.children;
+      }
+    }
+    return roots;
+  }, [userInfo?.assignments]);
+
+  const visibleOrganizations = useMemo(() => {
+    const keyword = organizationKeyword.trim().toLowerCase();
+    return (userInfo?.assignments ?? []).filter(
+      (assignment) =>
+        (!selectedOrgPath || assignment.orgNamePath.startsWith(selectedOrgPath)) &&
+        (!keyword ||
+          assignment.orgName.toLowerCase().includes(keyword) ||
+          assignment.orgNamePath.toLowerCase().includes(keyword)),
+    );
+  }, [organizationKeyword, selectedOrgPath, userInfo?.assignments]);
+
+  const handleOrganizationSwitch = async (targetOrgId = selectedOrgId) => {
+    if (!targetOrgId || targetOrgId === userInfo?.currentOrgId) {
+      setOrganizationOpen(false);
+      return;
+    }
+    const allowed = await useWorkbenchStore.getState().checkAllDirty();
+    if (!allowed) return;
+    setOrganizationSaving(true);
+    try {
+      await switchCurrentUserOrganization(targetOrgId);
+      // 组织上下文影响应用、菜单和权限，刷新可确保所有服务端状态按新组织重新加载。
+      window.location.reload();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '切换组织失败');
+      setOrganizationSaving(false);
+    }
+  };
+
   return (
     <header className="sm-header">
       <img className="sm-header-logo" src={headerLogo} alt={systemName} />
@@ -131,30 +204,169 @@ const Header = () => {
       />
       {/* 右侧操作区 */}
       <div className="sm-header-actions">
+        <Button
+          className="sm-header-action-button"
+          type="text"
+          icon={<MessageOutlined />}
+          aria-label="消息"
+        />
         <Popover
-          content={themePicker}
+          content={
+            <HeaderUserPanel
+              userInfo={userInfo}
+              themePicker={themePicker}
+              themeOpen={themeOpen}
+              onThemeOpenChange={setThemeOpen}
+              onOpenProfile={() => openPanelModal(() => setProfileOpen(true))}
+              onOpenOrganization={openOrganizationModal}
+              onOpenAbout={() => openPanelModal(() => setAboutOpen(true))}
+              onLogout={() => {
+                setUserPanelOpen(false);
+                void handleLogout();
+              }}
+            />
+          }
           trigger="click"
           placement="bottomRight"
-          open={themeOpen}
-          onOpenChange={setThemeOpen}
+          align={{ offset: [12, -4] }}
+          arrow={false}
+          rootClassName="sm-user-panel-popover"
+          open={userPanelOpen}
+          onOpenChange={setUserPanelOpen}
         >
-          <Button
-            className="sm-header-action-button"
-            type="text"
-            icon={<SkinOutlined />}
-            aria-label="切换个人主题色"
-          />
+          <button type="button" className="sm-header-avatar-button" aria-label="打开用户菜单">
+            <UserAvatar
+              size={32}
+              className="sm-header-avatar"
+              src={userInfo?.avatar}
+              name={userInfo?.name}
+              username={userInfo?.username}
+            />
+          </button>
         </Popover>
-        <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-          <UserAvatar
-            size={32}
-            className="sm-header-avatar"
-            src={userInfo?.avatar}
-            name={userInfo?.name}
-            username={userInfo?.username}
-          />
-        </Dropdown>
       </div>
+
+      <PersonalSettingsModal
+        open={profileOpen}
+        userInfo={userInfo}
+        onClose={() => setProfileOpen(false)}
+        onProfileSaved={(profile) => {
+          if (userInfo) {
+            useUserStore.getState().setUserInfo({
+              ...userInfo,
+              name: profile.name,
+              avatar: profile.avatar,
+              avatarAttachmentId: profile.avatarAttachmentId
+                ? String(profile.avatarAttachmentId)
+                : undefined,
+            });
+          }
+        }}
+        onPasswordChanged={() => {
+          clearUser();
+          window.location.href = '/login.html';
+        }}
+      />
+
+      <AppModal
+        title="切换组织"
+        open={organizationOpen}
+        className="sm-organization-modal"
+        bodyMode="fixed"
+        width={900}
+        headerExtra={
+          <Input.Search
+            variant="underlined"
+            className="sm-organization-search"
+            placeholder="搜索组织"
+            value={organizationKeyword}
+            onChange={(event) => setOrganizationKeyword(event.target.value)}
+          />
+        }
+        closeDisabled={organizationSaving}
+        onCancel={() => setOrganizationOpen(false)}
+        footer={
+          <>
+            <Button disabled={organizationSaving} onClick={() => setOrganizationOpen(false)}>
+              取消
+            </Button>
+            <Button
+              type="primary"
+              loading={organizationSaving}
+              disabled={!selectedOrgId}
+              onClick={() => void handleOrganizationSwitch()}
+            >
+              确定
+            </Button>
+          </>
+        }
+      >
+        <ListTableShell
+          total={visibleOrganizations.length}
+          selectedCount={selectedOrgId ? 1 : 0}
+          showPagination={false}
+          treePanel={
+            <div className="sm-organization-tree">
+              <Tree
+                treeData={organizationTree}
+                defaultExpandAll
+                blockNode
+                selectedKeys={selectedOrgPath ? [selectedOrgPath] : []}
+                onSelect={(keys) => setSelectedOrgPath(keys[0] ? String(keys[0]) : undefined)}
+              />
+            </div>
+          }
+          table={
+            <Table
+              className="sm-organization-table"
+              size="small"
+              rowKey="orgId"
+              pagination={false}
+              dataSource={visibleOrganizations}
+              rowSelection={{
+                type: 'radio',
+                selectedRowKeys: selectedOrgId ? [selectedOrgId] : [],
+                onChange: (keys) => setSelectedOrgId(keys[0] ? String(keys[0]) : undefined),
+              }}
+              columns={[
+                { title: '组织名称', dataIndex: 'orgName', width: 180 },
+                { title: '组织长名称', dataIndex: 'orgNamePath' },
+                {
+                  title: '岗位',
+                  dataIndex: 'position',
+                  width: 120,
+                  render: (value) => value || '-',
+                },
+              ]}
+              onRow={(record) => ({
+                onClick: () => setSelectedOrgId(record.orgId),
+                onDoubleClick: () => {
+                  setSelectedOrgId(record.orgId);
+                  void handleOrganizationSwitch(record.orgId);
+                },
+              })}
+              sticky
+              tableLayout="fixed"
+              scroll={{ x: 'max-content', y: 1 }}
+            />
+          }
+        />
+      </AppModal>
+
+      <AppModal
+        title="关于产品"
+        open={aboutOpen}
+        width={440}
+        bodyMode="natural"
+        onCancel={() => setAboutOpen(false)}
+        footer={<Button onClick={() => setAboutOpen(false)}>关闭</Button>}
+      >
+        <div className="sm-about-product">
+          <img src={headerLogo} alt={systemName} />
+          <strong>{systemName}</strong>
+          <span>模块化企业管理平台</span>
+        </div>
+      </AppModal>
     </header>
   );
 };
