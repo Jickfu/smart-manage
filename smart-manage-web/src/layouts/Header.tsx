@@ -303,7 +303,12 @@ const Header = () => {
       >
         <ListTableShell
           total={visibleOrganizations.length}
-          selectedCount={selectedOrgId ? 1 : 0}
+          selectedCount={
+            selectedOrgId &&
+            visibleOrganizations.some((organization) => organization.orgId === selectedOrgId)
+              ? 1
+              : 0
+          }
           showPagination={false}
           treePanel={
             <div className="sm-organization-tree">
@@ -318,7 +323,7 @@ const Header = () => {
           }
           table={
             <Table
-              className="sm-organization-table"
+              className="sm-list-table sm-organization-table"
               size="small"
               rowKey="orgId"
               pagination={false}

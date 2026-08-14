@@ -1,6 +1,7 @@
 package sm.domain.sys.monitor.loginlog.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.stp.StpUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,6 +31,12 @@ public class LoginLogController {
 		return Result.success(service.listPage(form));
 	}
 
+	@PostMapping("/sys/log/login/current/listPage")
+	@Operation(summary = "当前账号登录日志分页")
+	public Result<PageData<LoginLogListVO>> currentListPage(@Valid @RequestBody LoginLogListForm form) {
+		return Result.success(service.listCurrentPage(form, StpUtil.getLoginIdAsLong()));
+	}
+
 	@PostMapping("/sys/log/login/detail")
 	@Operation(summary = "登录日志详情")
 	@SaCheckPermission(LoginLogPermission.DETAIL)
@@ -37,4 +44,3 @@ public class LoginLogController {
 		return Result.success(service.detail(form.getId()));
 	}
 }
-

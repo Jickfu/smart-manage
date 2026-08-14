@@ -39,7 +39,7 @@ export default function HeaderUserPanel({
               onClick={onOpenProfile}
             />
           </Tooltip>
-          <Tooltip title="退出登录">
+          <Tooltip title="退出登录" placement="bottomRight">
             <Button
               type="text"
               shape="circle"

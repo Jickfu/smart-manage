@@ -272,6 +272,11 @@
   box-shadow: 0 9px 24px 6px rgb(0 0 0 / 10%);
 }
 
+/* 头像弹层属于 Header 的延伸区域，固定贴合 48px 的 Header 下边界。 */
+.sm-user-panel-popover {
+  top: 48px !important;
+}
+
 .sm-user-panel-popover .ant-popover-container {
   padding: 0;
 }
@@ -472,8 +477,18 @@
 }
 
 .sm-personal-settings-form {
-  max-width: 400px;
+  width: 100%;
+  max-width: 524px;
   margin: 0 auto;
+}
+
+.sm-personal-settings-form .ant-form-item {
+  width: 230px;
+  margin-bottom: 22px;
+}
+
+.sm-personal-settings-form .ant-form-item-label {
+  padding-bottom: 0;
 }
 
 .sm-personal-settings-avatar {
@@ -488,6 +503,31 @@
   justify-content: flex-end;
   gap: 8px;
   padding-top: 8px;
+}
+
+.sm-current-login-log-modal .ant-modal-container {
+  display: flex;
+  height: min(520px, calc(100vh - 64px));
+  flex-direction: column;
+}
+
+.sm-current-login-log-modal .ant-modal-body,
+.sm-current-login-log-table,
+.sm-current-login-log-table > .ant-spin,
+.sm-current-login-log-table > .ant-spin > .ant-spin-container,
+.sm-current-login-log-table .ant-table,
+.sm-current-login-log-table .ant-table-container {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.sm-current-login-log-table .ant-table-body {
+  min-height: 0;
+  max-height: none !important;
+  flex: 1;
+  overflow: auto !important;
 }
 
 .sm-about-product {

@@ -27,6 +27,13 @@ class LoginLogServiceTests {
     }
 
     @Test
+    void currentAccountQueryRequiresAuthenticatedUser() {
+        LoginLogListForm form = new LoginLogListForm();
+
+        assertThrows(BizException.class, () -> service.listCurrentPage(form, null));
+    }
+
+    @Test
     void detailContainsDiagnosticFieldsWithoutTokenData() {
         LoginLogEntity entity = new LoginLogEntity();
         entity.setId(10L);

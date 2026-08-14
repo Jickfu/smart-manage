@@ -8,6 +8,11 @@ export const loginLogApi = {
       .post<Result<PageData<LoginLogListVO>>>('/sys/log/login/listPage', form)
       .then((response) => response.data.data),
 
+  currentListPage: (form: LoginLogListForm) =>
+    request
+      .post<Result<PageData<LoginLogListVO>>>('/sys/log/login/current/listPage', form)
+      .then((response) => response.data.data),
+
   detail: (id: string) =>
     request
       .post<Result<LoginLogDetailVO>>('/sys/log/login/detail', { id })

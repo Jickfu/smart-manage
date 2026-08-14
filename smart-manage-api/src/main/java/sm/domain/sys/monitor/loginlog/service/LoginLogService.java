@@ -22,6 +22,18 @@ public class LoginLogService {
 	private final LoginLogConverter converter;
 
 	public PageData<LoginLogListVO> listPage(LoginLogListForm form) {
+		return listPage(form, null);
+	}
+
+	/** 当前账号入口强制追加用户条件，不能依赖前端传入用户名进行数据隔离。 */
+	public PageData<LoginLogListVO> listCurrentPage(LoginLogListForm form, Long currentUserId) {
+		if (currentUserId == null) {
+			throw new BizException(ResultEnum.UNAUTHORIZED, "当前用户未登录");
+		}
+		return listPage(form, currentUserId);
+	}
+
+	private PageData<LoginLogListVO> listPage(LoginLogListForm form, Long restrictedUserId) {
 		LogQueryValidator.validateTimeRange(form.getBeginTime(), form.getEndTime());
 		LambdaQueryWrapper<LoginLogEntity> qw = new LambdaQueryWrapper<LoginLogEntity>();
 		// 列表不读取 User-Agent 等详情字段，避免大字段放大分页 IO。
@@ -30,6 +42,9 @@ public class LoginLogService {
 				LoginLogEntity::getFailReason, LoginLogEntity::getIp, LoginLogEntity::getTraceId,
 				LoginLogEntity::getIssuerUserId, LoginLogEntity::getGrantId,
 				LoginLogEntity::getCreateTime);
+		if (restrictedUserId != null) {
+			qw.eq(LoginLogEntity::getUserId, restrictedUserId);
+		}
 		if (StringUtils.hasText(form.getKeyword())) {
 			String keyword = form.getKeyword().trim();
 			qw.and(condition -> condition

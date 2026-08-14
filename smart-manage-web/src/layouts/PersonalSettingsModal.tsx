@@ -12,6 +12,7 @@ import {
   updateCurrentUserProfile,
 } from '@/api/user';
 import '@/domain/sys/base/user/UserEditPage.css';
+import CurrentLoginLogModal from './CurrentLoginLogModal';
 
 interface PersonalSettingsModalProps {
   open: boolean;
@@ -49,6 +50,7 @@ export default function PersonalSettingsModal({
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [activeSection, setActiveSection] = useState<'account' | 'password'>('account');
+  const [loginLogOpen, setLoginLogOpen] = useState(false);
   const avatar = Form.useWatch('avatar', profileForm);
   const avatarAttachmentId = Form.useWatch('avatarAttachmentId', profileForm);
   const name = Form.useWatch('name', profileForm);
@@ -202,15 +204,22 @@ export default function PersonalSettingsModal({
                 label="姓名"
                 rules={[{ required: true, message: '姓名不能为空' }]}
               >
-                <Input maxLength={50} />
+                <Input variant="underlined" maxLength={50} />
               </Form.Item>
               <Form.Item label="用户名">
-                <Input value={userInfo?.username} disabled />
+                <Input variant="underlined" value={userInfo?.username} disabled />
               </Form.Item>
               <Form.Item label="工号">
-                <Input value={userInfo?.number} disabled />
+                <Input variant="underlined" value={userInfo?.number} disabled />
+              </Form.Item>
+              <Form.Item label="手机">
+                <Input variant="underlined" value={userInfo?.phone} disabled />
+              </Form.Item>
+              <Form.Item label="邮箱">
+                <Input variant="underlined" value={userInfo?.email} disabled />
               </Form.Item>
               <div className="sm-personal-settings-actions">
+                <Button onClick={() => setLoginLogOpen(true)}>登录日志</Button>
                 <Button onClick={closeModal}>取消</Button>
                 <Button type="primary" loading={profileSaving} onClick={() => void saveProfile()}>
                   保存
@@ -225,14 +234,14 @@ export default function PersonalSettingsModal({
                 label="原密码"
                 rules={[{ required: true, message: '请输入原密码' }]}
               >
-                <Input.Password autoComplete="current-password" />
+                <Input.Password variant="underlined" autoComplete="current-password" />
               </Form.Item>
               <Form.Item
                 name="newPassword"
                 label="新密码"
                 rules={[{ required: true, min: 8, message: '新密码不能少于8位' }]}
               >
-                <Input.Password autoComplete="new-password" />
+                <Input.Password variant="underlined" autoComplete="new-password" />
               </Form.Item>
               <Form.Item
                 name="confirmPassword"
@@ -248,7 +257,7 @@ export default function PersonalSettingsModal({
                   }),
                 ]}
               >
-                <Input.Password autoComplete="new-password" />
+                <Input.Password variant="underlined" autoComplete="new-password" />
               </Form.Item>
               <div className="sm-personal-settings-actions">
                 <Button onClick={closeModal}>取消</Button>
@@ -264,6 +273,7 @@ export default function PersonalSettingsModal({
           </section>
         </div>
       </div>
+      <CurrentLoginLogModal open={loginLogOpen} onClose={() => setLoginLogOpen(false)} />
     </AppModal>
   );
 }
