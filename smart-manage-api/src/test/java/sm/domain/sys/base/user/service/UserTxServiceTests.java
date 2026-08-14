@@ -48,6 +48,26 @@ class UserTxServiceTests {
 	}
 
 	@Test
+	void currentPasswordMustMatchBeforeContactCanBeChanged() {
+		UserMapper userMapper = mock(UserMapper.class);
+		UserEntity existing = new UserEntity();
+		existing.setId(1L);
+		existing.setPassword("encoded-password");
+		when(userMapper.selectById(1L)).thenReturn(existing);
+		UserTxService service = new UserTxService(
+				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
+				mock(OrgMapper.class), mock(CurrentUserContext.class));
+
+		try (MockedStatic<Argon2Helper> argon2Helper = mockStatic(Argon2Helper.class)) {
+			argon2Helper.when(() -> Argon2Helper.verify("encoded-password", "wrong-password"))
+					.thenReturn(false);
+
+			assertThrows(sm.system.exception.BizException.class,
+					() -> service.updateCurrentContact(1L, "wrong-password", "EMAIL", "user@example.com"));
+		}
+	}
+
+	@Test
 	void currentProfileOnlyUpdatesSelfMaintainableFields() {
 		UserMapper userMapper = mock(UserMapper.class);
 		UserEntity existing = new UserEntity();
@@ -59,7 +79,7 @@ class UserTxServiceTests {
 				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
 				mock(OrgMapper.class), mock(CurrentUserContext.class));
 
-		service.updateCurrentProfile(1L, " 新姓名 ", 20L);
+		service.updateCurrentProfile(1L, " 新姓名 ", null, null, 20L);
 
 		assertEquals("新姓名", existing.getName());
 		assertEquals(20L, existing.getAvatarAttachmentId());

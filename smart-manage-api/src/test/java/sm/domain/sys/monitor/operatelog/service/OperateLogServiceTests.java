@@ -27,6 +27,12 @@ class OperateLogServiceTests {
     }
 
     @Test
+    void currentAccountQueryRequiresAuthenticatedUser() {
+        assertThrows(BizException.class,
+                () -> service.listCurrentPage(new OperateLogListForm(), null));
+    }
+
+    @Test
     void detailContainsTraceAndSanitizedPayloadContract() {
         OperateLogEntity entity = new OperateLogEntity();
         entity.setId(20L);

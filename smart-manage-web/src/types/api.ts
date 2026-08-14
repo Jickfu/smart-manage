@@ -34,6 +34,8 @@ export interface UserInfoVO {
   avatarAttachmentId?: string;
   themeColor: string;
   number?: string;
+  gender?: 'MALE' | 'FEMALE';
+  birthday?: string;
   email?: string;
   phone?: string;
   currentOrgId: string;

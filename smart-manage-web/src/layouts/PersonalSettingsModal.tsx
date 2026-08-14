@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Form, Input, Upload } from 'antd';
+import { App, Button, Form, Upload } from 'antd';
+import { DeleteOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
-import { sm2 } from 'sm-crypto';
 import AppModal from '@/domain/common/component/AppModal';
 import { businessAttachmentApi } from '@/domain/common/attachment/api';
 import { UserAvatar } from '@/domain/sys/base/user/UserAvatar';
 import type { UserInfoVO } from '@/types/api';
-import {
-  getCurrentPasswordPublicKey,
-  updateCurrentUserPassword,
-  updateCurrentUserProfile,
-} from '@/api/user';
+import { updateCurrentUserProfile } from '@/api/user';
 import '@/domain/sys/base/user/UserEditPage.css';
 import CurrentLoginLogModal from './CurrentLoginLogModal';
+import CurrentOperateLogModal from './CurrentOperateLogModal';
+import PersonalCredentialModal from './PersonalCredentialModal';
+import PersonalInfoModal from './PersonalInfoModal';
 
 interface PersonalSettingsModalProps {
   open: boolean;
@@ -23,18 +22,12 @@ interface PersonalSettingsModalProps {
 }
 
 interface ProfileValues {
-  name: string;
   avatar?: string;
   avatarAttachmentId?: string;
   avatarUploadSessionId?: string;
 }
 
-interface PasswordValues {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
-
+type CredentialType = 'PHONE' | 'EMAIL' | 'PASSWORD';
 const AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export default function PersonalSettingsModal({
@@ -46,29 +39,40 @@ export default function PersonalSettingsModal({
 }: PersonalSettingsModalProps) {
   const { message } = App.useApp();
   const [profileForm] = Form.useForm<ProfileValues>();
-  const [passwordForm] = Form.useForm<PasswordValues>();
-  const [profileSaving, setProfileSaving] = useState(false);
-  const [passwordSaving, setPasswordSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState<'account' | 'password'>('account');
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const [credentialType, setCredentialType] = useState<CredentialType>();
   const [loginLogOpen, setLoginLogOpen] = useState(false);
+  const [operateLogOpen, setOperateLogOpen] = useState(false);
+  const [personalInfoOpen, setPersonalInfoOpen] = useState(false);
   const avatar = Form.useWatch('avatar', profileForm);
   const avatarAttachmentId = Form.useWatch('avatarAttachmentId', profileForm);
-  const name = Form.useWatch('name', profileForm);
 
   useEffect(() => {
     if (!open) return;
     profileForm.setFieldsValue({
-      name: userInfo?.name,
       avatar: userInfo?.avatar,
       avatarAttachmentId: userInfo?.avatarAttachmentId,
       avatarUploadSessionId: undefined,
     });
-    passwordForm.resetFields();
-  }, [open, passwordForm, profileForm, userInfo]);
+  }, [open, profileForm, userInfo]);
 
-  const closeModal = () => {
-    setActiveSection('account');
-    onClose();
+  const saveAvatar = async (attachmentId?: string, uploadSessionId?: string) => {
+    if (!userInfo) return;
+    setAvatarSaving(true);
+    try {
+      const profile = await updateCurrentUserProfile({
+        name: userInfo.name,
+        gender: userInfo.gender,
+        birthday: userInfo.birthday,
+        avatarAttachmentId: attachmentId,
+        attachmentUploadSessions:
+          attachmentId && uploadSessionId ? { [attachmentId]: uploadSessionId } : {},
+      });
+      onProfileSaved(profile);
+      message.success('头像已更新');
+    } finally {
+      setAvatarSaving(false);
+    }
   };
 
   const uploadAvatar: UploadProps['customRequest'] = async ({ file, onSuccess, onError }) => {
@@ -80,6 +84,7 @@ export default function PersonalSettingsModal({
       reader.readAsDataURL(sourceFile);
       profileForm.setFieldValue('avatarAttachmentId', attachment.id);
       profileForm.setFieldValue('avatarUploadSessionId', attachment.uploadSessionId);
+      await saveAvatar(attachment.id, attachment.uploadSessionId);
       onSuccess?.(attachment);
     } catch (error) {
       message.error(error instanceof Error ? error.message : '头像上传失败');
@@ -87,193 +92,163 @@ export default function PersonalSettingsModal({
     }
   };
 
-  const saveProfile = async () => {
-    const values = await profileForm.validateFields();
-    setProfileSaving(true);
-    try {
-      const result = await updateCurrentUserProfile({
-        name: values.name,
-        avatarAttachmentId: values.avatarAttachmentId,
-        attachmentUploadSessions:
-          values.avatarAttachmentId && values.avatarUploadSessionId
-            ? { [values.avatarAttachmentId]: values.avatarUploadSessionId }
-            : {},
-      });
-      onProfileSaved(result);
-      message.success('个人资料已更新');
-      closeModal();
-    } finally {
-      setProfileSaving(false);
-    }
-  };
-
-  const changePassword = async () => {
-    const values = await passwordForm.validateFields();
-    setPasswordSaving(true);
-    try {
-      const publicKey = await getCurrentPasswordPublicKey();
-      await updateCurrentUserPassword(
-        sm2.doEncrypt(values.currentPassword, publicKey, 1),
-        sm2.doEncrypt(values.newPassword, publicKey, 1),
-      );
-      message.success('密码已修改，请重新登录');
-      onPasswordChanged();
-    } finally {
-      setPasswordSaving(false);
-    }
-  };
+  const rows = [
+    { label: '姓名', value: userInfo?.name || '-' },
+    { label: '公司', value: userInfo?.companyName || '-' },
+    { label: '部门', value: userInfo?.currentOrgName || '-' },
+  ];
 
   return (
-    <AppModal
-      title="个人设置"
-      open={open}
-      width={780}
-      bodyMode="fixed"
-      className="sm-personal-settings-modal"
-      closeDisabled={profileSaving || passwordSaving}
-      onCancel={closeModal}
-      footer={null}
-    >
-      <div className="sm-personal-settings-layout">
-        <nav className="sm-personal-settings-nav" aria-label="个人设置栏目">
-          <button
-            type="button"
-            className={activeSection === 'account' ? 'sm-personal-settings-nav-item--active' : ''}
-            onClick={() => setActiveSection('account')}
-          >
-            账号信息
-          </button>
-          <button
-            type="button"
-            className={activeSection === 'password' ? 'sm-personal-settings-nav-item--active' : ''}
-            onClick={() => setActiveSection('password')}
-          >
-            密码修改
-          </button>
-        </nav>
-        <div className="sm-personal-settings-content">
-          <section hidden={activeSection !== 'account'}>
-            <Form form={profileForm} layout="vertical" className="sm-personal-settings-form">
-              <Form.Item name="avatar" hidden>
-                <Input />
-              </Form.Item>
-              <Form.Item name="avatarAttachmentId" hidden>
-                <Input />
-              </Form.Item>
-              <Form.Item name="avatarUploadSessionId" hidden>
-                <Input />
-              </Form.Item>
+    <>
+      <AppModal
+        title="个人设置"
+        open={open}
+        width={780}
+        bodyMode="fixed"
+        className="sm-personal-settings-modal"
+        closeDisabled={avatarSaving}
+        onCancel={onClose}
+        footer={null}
+      >
+        <div className="sm-personal-settings-layout">
+          <nav className="sm-personal-settings-nav" aria-label="个人设置栏目">
+            <button type="button" className="sm-personal-settings-nav-item--active">
+              账号信息
+            </button>
+            <button type="button" onClick={() => setCredentialType('PASSWORD')}>
+              修改密码
+            </button>
+          </nav>
+          <section className="sm-personal-settings-content">
+            <div className="sm-personal-settings-card">
+              <Form form={profileForm} component={false}>
+                <Form.Item name="avatar" hidden>
+                  <input />
+                </Form.Item>
+                <Form.Item name="avatarAttachmentId" hidden>
+                  <input />
+                </Form.Item>
+                <Form.Item name="avatarUploadSessionId" hidden>
+                  <input />
+                </Form.Item>
+              </Form>
               <div className="sm-personal-settings-avatar">
                 <div className="sm-user-avatar-upload">
-                  <UserAvatar size={120} name={name} username={userInfo?.username} src={avatar} />
-                  {avatarAttachmentId ? (
-                    <div className="sm-user-avatar-upload-mask">
+                  <UserAvatar
+                    size={104}
+                    name={userInfo?.name}
+                    username={userInfo?.username}
+                    src={avatar}
+                  />
+                  <div className="sm-user-avatar-upload-mask sm-user-avatar-upload-mask--full">
+                    <Upload
+                      className="sm-user-avatar-upload-control"
+                      accept="image/jpeg,image/png,image/webp"
+                      disabled={avatarSaving}
+                      maxCount={1}
+                      showUploadList={false}
+                      customRequest={uploadAvatar}
+                      beforeUpload={(file) => {
+                        if (AVATAR_TYPES.has(file.type)) return true;
+                        message.error('头像仅支持 JPG、PNG、WebP 格式');
+                        return Upload.LIST_IGNORE;
+                      }}
+                    >
+                      <button type="button">
+                        <UploadOutlined /> 修改
+                      </button>
+                    </Upload>
+                    {avatarAttachmentId && (
                       <button
                         type="button"
+                        disabled={avatarSaving}
                         onClick={() => {
                           profileForm.setFieldValue('avatar', undefined);
                           profileForm.setFieldValue('avatarAttachmentId', undefined);
-                          profileForm.setFieldValue('avatarUploadSessionId', undefined);
+                          void saveAvatar();
                         }}
                       >
-                        删除头像
+                        <DeleteOutlined /> 删除
                       </button>
-                    </div>
-                  ) : (
-                    <div className="sm-user-avatar-upload-mask sm-user-avatar-upload-mask--full">
-                      <Upload
-                        className="sm-user-avatar-upload-control sm-user-avatar-upload-control--full"
-                        accept="image/jpeg,image/png,image/webp"
-                        maxCount={1}
-                        showUploadList={false}
-                        customRequest={uploadAvatar}
-                        beforeUpload={(file) => {
-                          if (AVATAR_TYPES.has(file.type)) return true;
-                          message.error('头像仅支持 JPG、PNG、WebP 格式');
-                          return Upload.LIST_IGNORE;
-                        }}
-                      >
-                        <button type="button">上传头像</button>
-                      </Upload>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
-              <Form.Item
-                name="name"
-                label="姓名"
-                rules={[{ required: true, message: '姓名不能为空' }]}
-              >
-                <Input variant="underlined" maxLength={50} />
-              </Form.Item>
-              <Form.Item label="用户名">
-                <Input variant="underlined" value={userInfo?.username} disabled />
-              </Form.Item>
-              <Form.Item label="工号">
-                <Input variant="underlined" value={userInfo?.number} disabled />
-              </Form.Item>
-              <Form.Item label="手机">
-                <Input variant="underlined" value={userInfo?.phone} disabled />
-              </Form.Item>
-              <Form.Item label="邮箱">
-                <Input variant="underlined" value={userInfo?.email} disabled />
-              </Form.Item>
-              <div className="sm-personal-settings-actions">
-                <Button onClick={() => setLoginLogOpen(true)}>登录日志</Button>
-                <Button onClick={closeModal}>取消</Button>
-                <Button type="primary" loading={profileSaving} onClick={() => void saveProfile()}>
-                  保存
+
+              <div className="sm-personal-settings-info">
+                {rows.map((row) => (
+                  <div className="sm-personal-settings-row" key={row.label}>
+                    <span>{row.label}</span>
+                    <strong>{row.value}</strong>
+                  </div>
+                ))}
+                <EditableRow
+                  label="手机"
+                  value={userInfo?.phone}
+                  onEdit={() => setCredentialType('PHONE')}
+                />
+                <EditableRow
+                  label="邮箱"
+                  value={userInfo?.email}
+                  onEdit={() => setCredentialType('EMAIL')}
+                />
+                <EditableRow
+                  label="密码"
+                  value="••••••••"
+                  onEdit={() => setCredentialType('PASSWORD')}
+                />
+              </div>
+
+              <div className="sm-personal-settings-footer">
+                <Button type="link" onClick={() => setPersonalInfoOpen(true)}>
+                  个人信息
+                </Button>
+                <Button type="link" onClick={() => setLoginLogOpen(true)}>
+                  登录日志
+                </Button>
+                <Button type="link" onClick={() => setOperateLogOpen(true)}>
+                  操作日志
                 </Button>
               </div>
-            </Form>
-          </section>
-          <section hidden={activeSection !== 'password'}>
-            <Form form={passwordForm} layout="vertical" className="sm-personal-settings-form">
-              <Form.Item
-                name="currentPassword"
-                label="原密码"
-                rules={[{ required: true, message: '请输入原密码' }]}
-              >
-                <Input.Password variant="underlined" autoComplete="current-password" />
-              </Form.Item>
-              <Form.Item
-                name="newPassword"
-                label="新密码"
-                rules={[{ required: true, min: 8, message: '新密码不能少于8位' }]}
-              >
-                <Input.Password variant="underlined" autoComplete="new-password" />
-              </Form.Item>
-              <Form.Item
-                name="confirmPassword"
-                label="确认新密码"
-                dependencies={['newPassword']}
-                rules={[
-                  { required: true, message: '请再次输入新密码' },
-                  ({ getFieldValue }) => ({
-                    validator: (_, value) =>
-                      !value || getFieldValue('newPassword') === value
-                        ? Promise.resolve()
-                        : Promise.reject(new Error('两次输入的密码不一致')),
-                  }),
-                ]}
-              >
-                <Input.Password variant="underlined" autoComplete="new-password" />
-              </Form.Item>
-              <div className="sm-personal-settings-actions">
-                <Button onClick={closeModal}>取消</Button>
-                <Button
-                  type="primary"
-                  loading={passwordSaving}
-                  onClick={() => void changePassword()}
-                >
-                  修改密码
-                </Button>
-              </div>
-            </Form>
+            </div>
           </section>
         </div>
-      </div>
+      </AppModal>
+      {credentialType && (
+        <PersonalCredentialModal
+          key={credentialType}
+          type={credentialType}
+          onClose={() => setCredentialType(undefined)}
+          onProfileSaved={onProfileSaved}
+          onPasswordChanged={onPasswordChanged}
+        />
+      )}
       <CurrentLoginLogModal open={loginLogOpen} onClose={() => setLoginLogOpen(false)} />
-    </AppModal>
+      <CurrentOperateLogModal open={operateLogOpen} onClose={() => setOperateLogOpen(false)} />
+      <PersonalInfoModal
+        open={personalInfoOpen}
+        userInfo={userInfo}
+        onClose={() => setPersonalInfoOpen(false)}
+        onSaved={onProfileSaved}
+      />
+    </>
+  );
+}
+
+function EditableRow({
+  label,
+  value,
+  onEdit,
+}: {
+  label: string;
+  value?: string;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="sm-personal-settings-row">
+      <span>{label}</span>
+      <strong>{value || '-'}</strong>
+      <Button type="text" icon={<EditOutlined />} aria-label={`修改${label}`} onClick={onEdit} />
+    </div>
   );
 }

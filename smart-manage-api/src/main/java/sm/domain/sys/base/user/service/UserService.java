@@ -24,6 +24,7 @@ import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
 import sm.domain.sys.base.user.model.form.CurrentUserPasswordForm;
 import sm.domain.sys.base.user.model.form.CurrentUserProfileForm;
+import sm.domain.sys.base.user.model.form.CurrentUserContactForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.base.user.model.vo.UserDetailVO;
@@ -432,12 +433,25 @@ public class UserService {
 		Long temporaryAvatarId = findTemporaryAvatarId(form.getAvatarAttachmentId());
 		promoteAvatar(form.getAvatarAttachmentId(), form.getAttachmentUploadSessions(), userId);
 		try {
-			txService.updateCurrentProfile(userId, form.getName(), form.getAvatarAttachmentId());
+			txService.updateCurrentProfile(userId, form.getName(), form.getGender(), form.getBirthday(),
+					form.getAvatarAttachmentId());
 			deleteReplacedAvatar(previous, form.getAvatarAttachmentId());
 		} catch (RuntimeException exception) {
 			deleteAvatarForCompensation(temporaryAvatarId);
 			throw exception;
 		}
+	}
+
+	@BizLog(value = "修改个人联系方式", recordResponse = false)
+	@CacheInvalidate(name = BaseCacheName.USER_INFO, key = "@currentUserContext.getUserId()")
+	public void updateCurrentContact(CurrentUserContactForm form) {
+		String password;
+		try {
+			password = sm.system.helper.SM2Helper.decryptJsCiphertext(form.getPassword());
+		} catch (RuntimeException exception) {
+			throw new BizException(ResultEnum.PARAM_ERROR, "密码加密数据无效");
+		}
+		txService.updateCurrentContact(currentUserContext.getUserId(), password, form.getType(), form.getValue());
 	}
 
 	@BizLog(value = "修改个人密码", recordResponse = false)

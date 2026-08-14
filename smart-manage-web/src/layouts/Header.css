@@ -417,7 +417,7 @@
 
 .sm-personal-settings-modal .ant-modal-container {
   display: flex;
-  height: min(480px, calc(100vh - 64px));
+  height: min(520px, calc(100vh - 32px));
   flex-direction: column;
 }
 
@@ -468,8 +468,8 @@
 
 .sm-personal-settings-content {
   min-width: 0;
-  padding: 20px 56px;
-  overflow: auto;
+  padding: 10px 36px;
+  overflow: hidden;
 }
 
 .sm-personal-settings-content > section {
@@ -505,10 +505,140 @@
   padding-top: 8px;
 }
 
+/* 左侧导航保留扩展位，右侧账号卡片在固定内容区内紧凑展示。 */
+.sm-personal-settings-card {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0;
+  font-size: 12px;
+}
+
+.sm-personal-settings-card .sm-personal-settings-avatar {
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+/* 当前账号卡片使用 104px 头像，上传容器与全遮罩必须严格跟随同一尺寸。 */
+.sm-personal-settings-card .sm-user-avatar-upload,
+.sm-personal-settings-card .sm-user-avatar-upload > .ant-avatar,
+.sm-personal-settings-card .sm-user-avatar-upload-mask {
+  width: 104px;
+  height: 104px;
+}
+
+.sm-personal-settings-info {
+  border-top: 1px solid var(--ant-color-border-secondary);
+}
+
+.sm-personal-settings-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 32px;
+  align-items: center;
+  min-height: 40px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.sm-personal-settings-row > span {
+  color: var(--ant-color-text-secondary);
+}
+
+.sm-personal-settings-row > strong {
+  overflow: hidden;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-personal-settings-row:not(:has(.ant-btn)) > strong {
+  grid-column: 2 / 4;
+}
+
+.sm-personal-settings-footer,
+.sm-personal-credential-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.sm-personal-settings-modal .ant-btn,
+.sm-personal-settings-modal button,
+.sm-personal-settings-modal input,
+.sm-personal-settings-modal .ant-select,
+.sm-personal-settings-modal .ant-form-item,
+.sm-personal-settings-modal .ant-typography {
+  font-size: 12px;
+}
+
+.sm-personal-credential {
+  padding: 4px 36px 8px;
+}
+
+.sm-personal-credential-back {
+  margin: -4px 0 12px -12px;
+}
+
 .sm-current-login-log-modal .ant-modal-container {
   display: flex;
   height: min(520px, calc(100vh - 64px));
   flex-direction: column;
+}
+
+/* 本人日志弹框保持固定尺寸，分页数据行数变化不能影响弹框高度。 */
+.sm-current-audit-log-modal .ant-modal-container {
+  display: flex;
+  height: min(520px, calc(100vh - 64px));
+  flex-direction: column;
+}
+
+.sm-current-audit-log-modal .ant-modal-body,
+.sm-current-audit-log-modal .sm-list-table-shell,
+.sm-current-audit-log-modal .sm-list-table-content,
+.sm-current-audit-log-modal .sm-list-table-body {
+  min-height: 0;
+  flex: 1;
+}
+
+.sm-current-audit-log-modal .ant-modal-body,
+.sm-current-audit-log-modal .sm-list-table-shell,
+.sm-current-audit-log-modal .sm-list-table-content,
+.sm-current-audit-log-modal .sm-list-table-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-personal-info-modal .ant-modal-container {
+  display: flex;
+  height: min(620px, calc(100vh - 48px));
+  flex-direction: column;
+}
+
+.sm-personal-info-modal .ant-modal-body {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+}
+
+.sm-personal-info-form .ant-form-item {
+  width: 230px;
+  margin-bottom: 14px;
+}
+
+.sm-personal-info-form .ant-input,
+.sm-personal-info-form .ant-select,
+.sm-personal-info-form .ant-picker {
+  width: 100%;
+}
+
+.sm-personal-info-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 54px;
+}
+
+.sm-personal-info-section-title {
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .sm-current-login-log-modal .ant-modal-body,

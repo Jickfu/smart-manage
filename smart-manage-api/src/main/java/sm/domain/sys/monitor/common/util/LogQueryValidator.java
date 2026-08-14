@@ -15,4 +15,14 @@ public final class LogQueryValidator {
             throw new BizException(ResultEnum.PARAM_ERROR, "开始时间不能晚于结束时间");
         }
     }
+
+    /** 本人日志等受限入口只能收紧时间范围，不能被客户端传入的更早时间放宽。 */
+    public static LocalDateTime resolveRestrictedBeginTime(
+            LocalDateTime requestedBeginTime, LocalDateTime restrictedBeginTime) {
+        if (restrictedBeginTime == null) return requestedBeginTime;
+        if (requestedBeginTime == null || requestedBeginTime.isBefore(restrictedBeginTime)) {
+            return restrictedBeginTime;
+        }
+        return requestedBeginTime;
+    }
 }

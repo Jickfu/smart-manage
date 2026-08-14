@@ -18,6 +18,7 @@ import sm.domain.sys.base.user.model.form.CurrentUserThemeForm;
 import sm.domain.sys.base.user.model.form.CurrentOrganizationForm;
 import sm.domain.sys.base.user.model.form.CurrentUserPasswordForm;
 import sm.domain.sys.base.user.model.form.CurrentUserProfileForm;
+import sm.domain.sys.base.user.model.form.CurrentUserContactForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.base.user.model.vo.UserDetailVO;
@@ -162,6 +163,13 @@ public class UserController {
 	@Operation(summary = "保存个人资料", description = "当前用户修改姓名和头像")
 	public Result<UserInfoVO> updateCurrentProfile(@RequestBody @Valid CurrentUserProfileForm form) {
 		service.updateCurrentProfile(form);
+		return Result.success(service.current());
+	}
+
+	@PostMapping("/sys/base/user/current/contact")
+	@Operation(summary = "修改个人联系方式", description = "当前用户通过密码二级认证修改手机或邮箱")
+	public Result<UserInfoVO> updateCurrentContact(@RequestBody @Valid CurrentUserContactForm form) {
+		service.updateCurrentContact(form);
 		return Result.success(service.current());
 	}
 

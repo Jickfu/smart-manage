@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
-import { App, Button } from 'antd';
+import { App, Button, DatePicker, Form, Input, Select, Table } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
@@ -21,6 +21,8 @@ import type { PageComponentProps } from '@/domain/common/page/types';
 import type { UserAssignmentVO } from './types';
 import type { OrgRefRecord } from '@/domain/sys/base/org/refSelector/useOrgRefSelector';
 import './UserEditPage.css';
+import { updateCurrentUserProfile } from '@/api/user';
+import { useUserStore } from '@/stores/user';
 
 const UserEditPage = (props: PageComponentProps) => {
   const { message } = App.useApp();
@@ -30,52 +32,82 @@ const UserEditPage = (props: PageComponentProps) => {
   const { can } = usePermissionAccess(userAccess.prefix);
   const canReadSensitive = can(userAccess.permissions.readSensitive);
   const { appNumber, tabKey, operationType, billId } = props;
+  const selfMode = props.context?.mode === 'self';
+  const currentUser = useUserStore((state) => state.userInfo);
   const isAddNew = operationType === OperationType.ADDNEW;
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
   const detailQuery = useQuery({
     queryKey: userQueryKeys.detail(billId),
     queryFn: () => userApi.detail(billId!),
-    enabled: Boolean(billId),
+    enabled: Boolean(billId) && !selfMode,
   });
   const orgQuery = useQuery({
     queryKey: [...orgQueryKeys.all, 'options'],
     queryFn: orgApi.options,
+    enabled: !selfMode,
   });
   const detail = detailQuery.data;
   const initialValues = useMemo(
     () =>
-      detail
+      selfMode && currentUser
         ? {
-            username: detail.username,
-            name: detail.name,
-            number: detail.number,
-            gender: detail.gender,
-            birthday: detail.birthday ? dayjs(detail.birthday) : undefined,
-            email: detail.email ?? '',
-            phone: detail.phone ?? '',
-            emailChanged: 'false',
-            phoneChanged: 'false',
-            avatar: detail.avatar ?? '',
-            avatarAttachmentId: detail.avatarAttachmentId,
-            avatarUploadSessionId: undefined,
-            assignments: (detail.assignments ?? []).map((assignment) => {
-              const organization = orgQuery.data?.find((item) => item.id === assignment.orgId);
-              return {
-                ...assignment,
-                org: {
-                  id: assignment.orgId,
-                  number: organization?.number ?? '',
-                  name: organization?.name ?? assignment.orgName ?? assignment.orgNamePath ?? '',
-                } satisfies OrgRefRecord,
-              };
-            }),
+            username: currentUser.username,
+            name: currentUser.name,
+            number: currentUser.number ?? '',
+            gender: currentUser.gender,
+            birthday: currentUser.birthday ? dayjs(currentUser.birthday) : undefined,
+            companyName: currentUser.companyName,
+            currentOrgName: currentUser.currentOrgName,
+            email: currentUser.email ?? '',
+            phone: currentUser.phone ?? '',
+            assignments: currentUser.assignments,
           }
-        : { assignments: [] },
-    [detail, orgQuery.data],
+        : detail
+          ? {
+              username: detail.username,
+              name: detail.name,
+              number: detail.number,
+              gender: detail.gender,
+              birthday: detail.birthday ? dayjs(detail.birthday) : undefined,
+              email: detail.email ?? '',
+              phone: detail.phone ?? '',
+              emailChanged: 'false',
+              phoneChanged: 'false',
+              avatar: detail.avatar ?? '',
+              avatarAttachmentId: detail.avatarAttachmentId,
+              avatarUploadSessionId: undefined,
+              assignments: (detail.assignments ?? []).map((assignment) => {
+                const organization = orgQuery.data?.find((item) => item.id === assignment.orgId);
+                return {
+                  ...assignment,
+                  org: {
+                    id: assignment.orgId,
+                    number: organization?.number ?? '',
+                    name: organization?.name ?? assignment.orgName ?? assignment.orgNamePath ?? '',
+                  } satisfies OrgRefRecord,
+                };
+              }),
+            }
+          : { assignments: [] },
+    [currentUser, detail, orgQuery.data, selfMode],
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
+      if (selfMode && currentUser) {
+        const profile = await updateCurrentUserProfile({
+          name: String(values.name).trim(),
+          gender: values.gender as 'MALE' | 'FEMALE' | undefined,
+          birthday: values.birthday
+            ? dayjs(values.birthday as dayjs.ConfigType).format('YYYY-MM-DD')
+            : undefined,
+          avatarAttachmentId: currentUser.avatarAttachmentId,
+          attachmentUploadSessions: {},
+        });
+        useUserStore.getState().setUserInfo({ ...currentUser, ...profile });
+        message.success('个人信息已保存');
+        return;
+      }
       const savedId = await userApi.save({
         id: billId ?? undefined,
         version: detail?.version,
@@ -129,35 +161,98 @@ const UserEditPage = (props: PageComponentProps) => {
   });
   return (
     <EditPage
-      access={userAccess}
-      title="用户"
+      access={selfMode ? undefined : userAccess}
+      title={selfMode ? '个人信息' : '用户'}
       fields={[]}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
-      loading={detailQuery.isLoading || orgQuery.isLoading}
-      error={(detailQuery.error ?? orgQuery.error) as Error | null}
+      loading={selfMode ? false : detailQuery.isLoading || orgQuery.isLoading}
+      error={selfMode ? null : ((detailQuery.error ?? orgQuery.error) as Error | null)}
       onRetry={() => Promise.all([detailQuery.refetch(), orgQuery.refetch()])}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
-      basicContent={(editable) => (
-        <UserProfileFields
-          editable={editable}
-          isAddNew={isAddNew}
-          canReadSensitive={canReadSensitive}
-        />
-      )}
+      basicContent={(editable) =>
+        selfMode ? (
+          <div className="sm-user-profile-grid">
+            <Form.Item name="username" label="用户名">
+              <Input disabled />
+            </Form.Item>
+            <Form.Item name="number" label="工号">
+              <Input disabled />
+            </Form.Item>
+            <Form.Item
+              name="name"
+              label="姓名"
+              rules={[{ required: true, message: '姓名不能为空' }]}
+            >
+              <Input disabled={!editable} maxLength={50} />
+            </Form.Item>
+            <Form.Item name="gender" label="性别">
+              <Select
+                disabled={!editable}
+                allowClear
+                options={[
+                  { value: 'MALE', label: '男' },
+                  { value: 'FEMALE', label: '女' },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item name="birthday" label="生日">
+              <DatePicker disabled={!editable} />
+            </Form.Item>
+            <Form.Item name="companyName" label="公司">
+              <Input disabled />
+            </Form.Item>
+            <Form.Item name="currentOrgName" label="部门">
+              <Input disabled />
+            </Form.Item>
+            <Form.Item name="phone" label="手机">
+              <Input disabled />
+            </Form.Item>
+            <Form.Item name="email" label="邮箱">
+              <Input disabled />
+            </Form.Item>
+          </div>
+        ) : (
+          <UserProfileFields
+            editable={editable}
+            isAddNew={isAddNew}
+            canReadSensitive={canReadSensitive}
+          />
+        )
+      }
       detailLabel="部门信息"
-      detailContent={(editable) => (
-        <UserAssignmentTable
-          ref={assignmentTableRef}
-          editable={editable}
-          organizations={orgQuery.data ?? []}
-          onSelectionChange={setHasSelectedAssignments}
-        />
-      )}
+      detailContent={(editable) =>
+        selfMode ? (
+          <Table
+            size="small"
+            pagination={false}
+            rowKey="id"
+            dataSource={currentUser?.assignments ?? []}
+            columns={[
+              { title: '部门', dataIndex: 'orgName' },
+              { title: '部门长名称', dataIndex: 'orgNamePath' },
+              { title: '岗位', dataIndex: 'position', width: 160, render: (value) => value || '-' },
+              {
+                title: '主职',
+                dataIndex: 'isPrimary',
+                width: 80,
+                render: (value) => (value ? '是' : '否'),
+              },
+            ]}
+          />
+        ) : (
+          <UserAssignmentTable
+            ref={assignmentTableRef}
+            editable={editable}
+            organizations={orgQuery.data ?? []}
+            onSelectionChange={setHasSelectedAssignments}
+          />
+        )
+      }
       detailExtra={(editable) =>
-        editable ? (
+        !selfMode && editable ? (
           <div className="sm-user-assignment-actions">
             <Button type="link" onClick={() => assignmentTableRef.current?.add()}>
               新增

@@ -18,6 +18,7 @@ import sm.domain.sys.base.user.model.entity.UserRoleEntity;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
 import sm.domain.sys.base.user.constant.UserThemeColor;
+import sm.domain.sys.base.user.model.Gender;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.helper.Argon2Helper;
@@ -27,6 +28,7 @@ import java.util.Objects;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
+import java.time.LocalDate;
 import sm.system.util.EnabledCommandUtil;
 
 /**
@@ -175,12 +177,38 @@ class UserTxService {
         }
     }
 
-    /** 只更新当前用户允许自行维护的姓名和头像。 */
-    public void updateCurrentProfile(Long userId, String name, Long avatarAttachmentId) {
+    /** 只更新当前用户允许自行维护的基础资料。 */
+    public void updateCurrentProfile(Long userId, String name, Gender gender, LocalDate birthday,
+            Long avatarAttachmentId) {
         UserEntity entity = mapper.selectById(userId);
         if (entity == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
         entity.setName(name.trim());
+        entity.setGender(gender);
+        entity.setBirthday(birthday);
         entity.setAvatarAttachmentId(avatarAttachmentId);
+        if (mapper.updateById(entity) == 0) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请刷新后重试");
+        }
+    }
+
+    /** 联系方式修改必须在同一事务内验证当前密码并写入，避免验证结果被重放。 */
+    public void updateCurrentContact(Long userId, String password, String type, String value) {
+        UserEntity entity = mapper.selectById(userId);
+        if (entity == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+        if (!Argon2Helper.verify(entity.getPassword(), password)) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "密码不正确");
+        }
+        String normalizedValue = value.trim();
+        if ("PHONE".equals(type)) {
+            entity.setPhone(normalizedValue);
+        } else if ("EMAIL".equals(type)) {
+            if (!normalizedValue.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "邮箱格式不正确");
+            }
+            entity.setEmail(normalizedValue);
+        } else {
+            throw new BizException(ResultEnum.PARAM_ERROR, "联系方式类型无效");
+        }
         if (mapper.updateById(entity) == 0) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请刷新后重试");
         }

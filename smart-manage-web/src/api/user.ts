@@ -29,11 +29,24 @@ export function switchCurrentUserOrganization(orgId: string) {
 
 export function updateCurrentUserProfile(form: {
   name: string;
+  gender?: 'MALE' | 'FEMALE';
+  birthday?: string;
   avatarAttachmentId?: string;
   attachmentUploadSessions: Record<string, string>;
 }) {
   return request
     .post<Result<UserInfoVO>>('/sys/base/user/current/profile', form)
+    .then((response) => response.data.data);
+}
+
+export function updateCurrentUserContact(form: {
+  verificationMethod: 'PASSWORD';
+  password: string;
+  type: 'PHONE' | 'EMAIL';
+  value: string;
+}) {
+  return request
+    .post<Result<UserInfoVO>>('/sys/base/user/current/contact', form)
     .then((response) => response.data.data);
 }
 

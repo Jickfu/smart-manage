@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import java.time.LocalDateTime;
 import sm.domain.sys.monitor.common.util.LogQueryValidator;
 import sm.domain.sys.monitor.loginlog.model.entity.LoginLogEntity;
 import sm.domain.sys.monitor.loginlog.model.form.LoginLogListForm;
@@ -22,7 +23,7 @@ public class LoginLogService {
 	private final LoginLogConverter converter;
 
 	public PageData<LoginLogListVO> listPage(LoginLogListForm form) {
-		return listPage(form, null);
+		return listPage(form, null, null);
 	}
 
 	/** 当前账号入口强制追加用户条件，不能依赖前端传入用户名进行数据隔离。 */
@@ -30,10 +31,11 @@ public class LoginLogService {
 		if (currentUserId == null) {
 			throw new BizException(ResultEnum.UNAUTHORIZED, "当前用户未登录");
 		}
-		return listPage(form, currentUserId);
+		return listPage(form, currentUserId, LocalDateTime.now().minusDays(7));
 	}
 
-	private PageData<LoginLogListVO> listPage(LoginLogListForm form, Long restrictedUserId) {
+	private PageData<LoginLogListVO> listPage(
+			LoginLogListForm form, Long restrictedUserId, LocalDateTime restrictedBeginTime) {
 		LogQueryValidator.validateTimeRange(form.getBeginTime(), form.getEndTime());
 		LambdaQueryWrapper<LoginLogEntity> qw = new LambdaQueryWrapper<LoginLogEntity>();
 		// 列表不读取 User-Agent 等详情字段，避免大字段放大分页 IO。
@@ -63,8 +65,10 @@ public class LoginLogService {
 		if (StringUtils.hasText(form.getTraceId())) {
 			qw.eq(LoginLogEntity::getTraceId, form.getTraceId().trim());
 		}
-		if (form.getBeginTime() != null) {
-			qw.ge(LoginLogEntity::getCreateTime, form.getBeginTime());
+		LocalDateTime effectiveBeginTime = LogQueryValidator.resolveRestrictedBeginTime(
+				form.getBeginTime(), restrictedBeginTime);
+		if (effectiveBeginTime != null) {
+			qw.ge(LoginLogEntity::getCreateTime, effectiveBeginTime);
 		}
 		if (form.getEndTime() != null) {
 			qw.le(LoginLogEntity::getCreateTime, form.getEndTime());

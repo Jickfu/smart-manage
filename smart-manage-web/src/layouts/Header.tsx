@@ -259,6 +259,10 @@ const Header = () => {
               avatarAttachmentId: profile.avatarAttachmentId
                 ? String(profile.avatarAttachmentId)
                 : undefined,
+              phone: profile.phone,
+              email: profile.email,
+              gender: profile.gender,
+              birthday: profile.birthday,
             });
           }
         }}

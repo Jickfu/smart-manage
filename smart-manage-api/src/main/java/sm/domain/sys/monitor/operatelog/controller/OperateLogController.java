@@ -1,6 +1,7 @@
 package sm.domain.sys.monitor.operatelog.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.stp.StpUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,6 +31,12 @@ public class OperateLogController {
 		return Result.success(service.listPage(form));
 	}
 
+	@PostMapping("/sys/log/operate/current/listPage")
+	@Operation(summary = "当前账号操作日志分页", description = "仅返回当前用户的概要信息")
+	public Result<PageData<OperateLogListVO>> currentListPage(@Valid @RequestBody OperateLogListForm form) {
+		return Result.success(service.listCurrentPage(form, StpUtil.getLoginIdAsLong()));
+	}
+
 	@PostMapping("/sys/log/operate/detail")
 	@Operation(summary = "操作日志详情")
 	@SaCheckPermission(OperateLogPermission.DETAIL)
@@ -37,4 +44,3 @@ public class OperateLogController {
 		return Result.success(service.detail(form.getId()));
 	}
 }
-
