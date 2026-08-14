@@ -14,6 +14,7 @@ import sm.system.resource.BusinessResourceRegistry;
 import sm.system.storage.FileStorageServiceFactory;
 import sm.system.storage.FileStorageService;
 import sm.domain.sys.base.attachmentconfig.service.AttachmentConfigService;
+import sm.domain.sys.base.user.mapper.UserMapper;
 
 import java.util.List;
 
@@ -35,9 +36,11 @@ class AttachmentServiceAuthorizationTests {
     private final CurrentOperatorProvider currentOperatorProvider = mock(CurrentOperatorProvider.class);
     private final BusinessResourceAccessPolicy policy = mock(BusinessResourceAccessPolicy.class);
     private final AttachmentConfigService attachmentConfigService = mock(AttachmentConfigService.class);
+    private final UserMapper userMapper = mock(UserMapper.class);
     private final BusinessResourceRegistry registry = new BusinessResourceRegistry(List.of(registration()), attachmentConfigService);
     private final AttachmentService service = new AttachmentService(
-            mapper, bizMapper, storageFactory, txService, registry, currentOperatorProvider, attachmentConfigService);
+            mapper, bizMapper, storageFactory, txService, registry, currentOperatorProvider,
+            attachmentConfigService, userMapper);
 
     @Test
     void temporaryAttachmentCanOnlyBeDownloadedByCreator() {
@@ -86,6 +89,20 @@ class AttachmentServiceAuthorizationTests {
         when(bizMapper.selectOne(any())).thenReturn(null);
 
         assertThrows(BizException.class, () -> service.requireDownloadableAttachment(1L, null));
+    }
+
+    @Test
+    void previewRejectsUnsupportedMimeTypeAfterAuthorization() {
+        AttachmentEntity attachment = attachment(false, 10L);
+        attachment.setMimeType("application/zip");
+        BizAttachmentEntity mapping = new BizAttachmentEntity();
+        mapping.setBizType(RESOURCE_TYPE);
+        mapping.setBizId("100");
+        when(mapper.selectById(1L)).thenReturn(attachment);
+        when(bizMapper.selectOne(any())).thenReturn(mapping);
+
+        assertThrows(BizException.class, () -> service.requirePreviewableAttachment(1L, null));
+        verify(policy).requireAllowed("100", BusinessResourceAction.READ);
     }
 
     @Test

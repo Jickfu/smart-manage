@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.model.form.AttachmentRemarkUpdateForm;
 import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
 import sm.domain.sys.base.attachment.model.vo.AttachmentDownloadAccessVO;
 import sm.domain.sys.base.attachment.service.AttachmentService;
@@ -61,6 +62,15 @@ public class AttachmentController {
         return Result.success();
     }
 
+    @PostMapping("/sys/base/attachment/updateRemark")
+    @Operation(summary = "更新附件备注", description = "更新附件在当前业务资源中的备注")
+    public Result<AttachmentVO> updateRemark(
+            @RequestBody @Valid AttachmentRemarkUpdateForm form,
+            @RequestHeader(value = "X-Upload-Session", required = false) String uploadSessionId) {
+        return Result.success(service.updateRemark(
+                form.getId(), form.getBusinessAttachmentId(), form.getRemark(), uploadSessionId));
+    }
+
     @PostMapping("/sys/base/attachment/listByBiz")
     @Operation(summary = "按业务查询附件", description = "根据业务类型和单据ID查询附件列表")
     public Result<List<AttachmentVO>> listByBiz(@RequestBody AttachmentPromoteForm form) {
@@ -87,6 +97,28 @@ public class AttachmentController {
                 .header("X-Content-Type-Options", "nosniff")
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename*=UTF-8''" + encodedName)
+                .body(body);
+    }
+
+    @PostMapping("/sys/base/attachment/preview")
+    @Operation(summary = "预览附件", description = "按附件ID预览图片或 PDF")
+    public ResponseEntity<StreamingResponseBody> preview(
+            @RequestBody @Valid IdForm form,
+            @RequestHeader(value = "X-Upload-Session", required = false) String uploadSessionId) throws IOException {
+        AttachmentEntity entity = service.requirePreviewableAttachment(form.getId(), uploadSessionId);
+        FileStorageService storage = storageFactory.getService(entity.getStorageType());
+        StreamingResponseBody body = outputStream -> {
+            try (java.io.InputStream inputStream = storage.openStream(entity.getObjectKey())) {
+                inputStream.transferTo(outputStream);
+            }
+        };
+        String encodedName = URLEncoder.encode(entity.getOriginalName(), StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(entity.getMimeType()))
+                .contentLength(entity.getFileSize())
+                .header("X-Content-Type-Options", "nosniff")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename*=UTF-8''" + encodedName)
                 .body(body);
     }
 

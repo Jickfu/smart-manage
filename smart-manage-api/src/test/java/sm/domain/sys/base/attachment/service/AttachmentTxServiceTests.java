@@ -131,4 +131,30 @@ class AttachmentTxServiceTests {
 		}
 		verify(storage).delete("sys/stored.txt");
 	}
+
+	@Test
+	void updateRemarkTrimsAndPersistsBusinessAttachmentRemark() {
+		BizAttachmentEntity mapping = new BizAttachmentEntity();
+		mapping.setId(2L);
+		mapping.setAttachmentId(1L);
+		when(bizMapper.selectById(2L)).thenReturn(mapping);
+		when(bizMapper.updateById(mapping)).thenReturn(1);
+
+		txService.updateRemark(2L, 1L, "  采购合同  ");
+
+		assertEquals("采购合同", mapping.getRemark());
+		verify(bizMapper).updateById(mapping);
+	}
+
+	@Test
+	void updateRemarkRejectsMismatchedBusinessAttachment() {
+		BizAttachmentEntity mapping = new BizAttachmentEntity();
+		mapping.setId(2L);
+		mapping.setAttachmentId(99L);
+		when(bizMapper.selectById(2L)).thenReturn(mapping);
+
+		assertThrows(BizException.class, () -> txService.updateRemark(2L, 1L, "备注"));
+
+		verify(bizMapper, never()).updateById(mapping);
+	}
 }

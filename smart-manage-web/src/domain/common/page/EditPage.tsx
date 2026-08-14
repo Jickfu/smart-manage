@@ -222,7 +222,10 @@ const EditPage = ({
     };
   };
 
-  const updateAttachments = (values: BusinessAttachment[], changeType: 'upload' | 'delete') => {
+  const updateAttachments = (
+    values: BusinessAttachment[],
+    changeType: 'upload' | 'delete' | 'metadata',
+  ) => {
     if (changeType === 'upload') {
       revisionRef.current += 1;
       dirtyRef.current = true;

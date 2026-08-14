@@ -77,6 +77,10 @@ class AttachmentTxService {
                 if (bizMapper.insert(biz) != 1) {
                     throw new BizException(ResultEnum.PERSISTENCE_ERROR, "聚合明细写入失败");
                 }
+                AttachmentVO attachment = assembleAttachmentVO(entity);
+                attachment.setBusinessAttachmentId(biz.getId());
+                log.info("附件上传: id={}, name={}, temp=true", entity.getId(), originalName);
+                return attachment;
             }
             log.info("附件上传: id={}, name={}, temp={}", entity.getId(), originalName, isTemp);
             return assembleAttachmentVO(entity);
@@ -162,6 +166,18 @@ class AttachmentTxService {
         });
     }
 
+    /** 更新附件在当前业务资源中的备注。 */
+    public void updateRemark(Long businessAttachmentId, Long attachmentId, String remark) {
+        BizAttachmentEntity mapping = bizMapper.selectById(businessAttachmentId);
+        if (mapping == null || !attachmentId.equals(mapping.getAttachmentId())) {
+            throw new BizException(ResultEnum.NOT_FOUND, "附件缺少业务资源归属");
+        }
+        mapping.setRemark(remark == null || remark.isBlank() ? null : remark.trim());
+        if (bizMapper.updateById(mapping) != 1) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "附件备注已被其他操作修改");
+        }
+    }
+
     /** 按附件 ID 查询业务映射 */
     private BizAttachmentEntity selectBizByAttachmentId(Long attachmentId) {
         return bizMapper.selectOne(new LambdaQueryWrapper<BizAttachmentEntity>()
@@ -177,6 +193,7 @@ class AttachmentTxService {
         vo.setFileExt(entity.getFileExt());
         vo.setIsTemp("TEMP".equals(entity.getStatus()));
         vo.setUploadSessionId(entity.getUploadSessionId());
+        vo.setUploaderId(entity.getCreateUser());
         if (entity.getCreateTime() != null) {
             vo.setCreateTime(entity.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }

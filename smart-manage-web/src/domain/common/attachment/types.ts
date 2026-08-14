@@ -1,5 +1,6 @@
 export interface BusinessAttachment {
   id: string;
+  businessAttachmentId: string;
   originalName: string;
   fileSize?: number;
   mimeType?: string;
@@ -7,6 +8,9 @@ export interface BusinessAttachment {
   isTemp?: boolean;
   uploadSessionId?: string;
   createTime?: string;
+  uploaderId?: string;
+  uploaderName?: string;
+  remark?: string;
 }
 
 export interface AttachmentDownloadAccess {

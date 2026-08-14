@@ -24,4 +24,5 @@ public class BizAttachmentEntity extends BaseEntity {
     private String bizId;
     private Long attachmentId;
     private Integer sort;
+    private String remark;
 }

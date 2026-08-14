@@ -19,10 +19,16 @@ import sm.system.helper.CurrentOperatorProvider;
 import sm.system.resource.BusinessResourceAction;
 import sm.system.resource.BusinessResourceRegistry;
 import sm.domain.sys.base.attachmentconfig.service.AttachmentConfigService;
+import sm.domain.sys.base.user.mapper.UserMapper;
+import sm.domain.sys.base.user.model.entity.UserEntity;
 
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -34,6 +40,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class AttachmentService {
+    private static final Set<String> PREVIEWABLE_IMAGE_TYPES = Set.of(
+            "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp");
     private final AttachmentMapper mapper;
     private final BizAttachmentMapper bizMapper;
     private final FileStorageServiceFactory storageFactory;
@@ -41,6 +49,7 @@ public class AttachmentService {
     private final BusinessResourceRegistry resourceRegistry;
     private final CurrentOperatorProvider currentOperatorProvider;
     private final AttachmentConfigService attachmentConfigService;
+    private final UserMapper userMapper;
 
     /** 上传附件：传 bizType 时存入临时目录（需 promote），否则直接存 sys 系统目录 */
     @BizLog(value = "上传附件", recordRequest = false)
@@ -49,8 +58,10 @@ public class AttachmentService {
             throw new BizException(ResultEnum.PARAM_ERROR, "附件业务资源类型不能为空");
         }
         resourceRegistry.validateUpload(bizType, file);
-        return txService.upload(file, bizType, resourceRegistry.objectPrefix(bizType),
+        AttachmentVO attachment = txService.upload(file, bizType, resourceRegistry.objectPrefix(bizType),
                 attachmentConfigService.uploadPolicy().tempExpireHours());
+        attachUploaderNames(List.of(attachment));
+        return attachment;
     }
 
     /** 提升附件：关联业务单据 + 移出临时目录 */
@@ -94,7 +105,11 @@ public class AttachmentService {
     public List<AttachmentVO> listByBiz(String bizType, String bizId) {
         resourceRegistry.requireAllowed(bizType, bizId, BusinessResourceAction.READ);
         List<AttachmentEntity> entities = mapper.selectByBiz(bizType, bizId);
-        return entities.stream().map(this::assembleAttachmentVO).collect(Collectors.toList());
+        List<BizAttachmentEntity> mappings = bizMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BizAttachmentEntity>()
+                        .eq(BizAttachmentEntity::getBizType, bizType)
+                        .eq(BizAttachmentEntity::getBizId, bizId));
+        return assembleAttachmentVOs(entities, mappings);
     }
 
     /** 列出可用附件；删除中和已删除记录不再属于可引用资源。 */
@@ -102,10 +117,26 @@ public class AttachmentService {
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
-        return mapper.selectByIds(ids).stream()
+        List<AttachmentEntity> entities = mapper.selectByIds(ids).stream()
                 .filter(entity -> "TEMP".equals(entity.getStatus()) || "ACTIVE".equals(entity.getStatus()))
-                .map(this::assembleAttachmentVO)
-                .collect(Collectors.toList());
+                .toList();
+        return assembleAttachmentVOs(entities, selectMappings(entities));
+    }
+
+    /** 更新附件备注；正式附件继承业务资源维护权限，临时附件校验上传会话。 */
+    @BizLog("更新附件备注")
+    public AttachmentVO updateRemark(Long id, Long businessAttachmentId, String remark, String uploadSessionId) {
+        AttachmentEntity entity = mapper.selectById(id);
+        if (entity == null) {
+            throw new BizException(ResultEnum.NOT_FOUND, "附件不存在");
+        }
+        requireAttachmentAccess(entity, BusinessResourceAction.ATTACH, uploadSessionId);
+        txService.updateRemark(businessAttachmentId, id, remark);
+        BizAttachmentEntity mapping = new BizAttachmentEntity();
+        mapping.setId(businessAttachmentId);
+        mapping.setAttachmentId(id);
+        mapping.setRemark(remark == null || remark.isBlank() ? null : remark.trim());
+        return assembleAttachmentVOs(List.of(entity), List.of(mapping)).getFirst();
     }
 
     public AttachmentEntity requireDownloadableAttachment(Long id, String uploadSessionId) {
@@ -114,6 +145,16 @@ public class AttachmentService {
             throw new BizException(ResultEnum.NOT_FOUND, "附件不存在");
         }
         requireAttachmentAccess(entity, BusinessResourceAction.READ, uploadSessionId);
+        return entity;
+    }
+
+    /** 预览仅允许浏览器可安全内嵌展示的图片和 PDF。 */
+    public AttachmentEntity requirePreviewableAttachment(Long id, String uploadSessionId) {
+        AttachmentEntity entity = requireDownloadableAttachment(id, uploadSessionId);
+        String mimeType = entity.getMimeType();
+        if (!PREVIEWABLE_IMAGE_TYPES.contains(mimeType) && !"application/pdf".equals(mimeType)) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "该文件类型不支持在线预览");
+        }
         return entity;
     }
 
@@ -207,9 +248,57 @@ public class AttachmentService {
         vo.setFileExt(entity.getFileExt());
         vo.setIsTemp("TEMP".equals(entity.getStatus()));
         vo.setUploadSessionId(entity.getUploadSessionId());
+        vo.setUploaderId(entity.getCreateUser());
         if (entity.getCreateTime() != null) {
             vo.setCreateTime(entity.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
         return vo;
+    }
+
+    private List<AttachmentVO> assembleAttachmentVOs(
+            List<AttachmentEntity> entities, List<BizAttachmentEntity> mappings) {
+        if (entities.isEmpty()) {
+            return List.of();
+        }
+        List<AttachmentVO> attachments = entities.stream().map(this::assembleAttachmentVO).toList();
+        Map<Long, BizAttachmentEntity> mappingsByAttachmentId = mappings.stream()
+                .collect(Collectors.toMap(BizAttachmentEntity::getAttachmentId,
+                        Function.identity(), (left, right) -> left));
+        for (AttachmentVO attachment : attachments) {
+            BizAttachmentEntity mapping = mappingsByAttachmentId.get(attachment.getId());
+            if (mapping != null) {
+                attachment.setBusinessAttachmentId(mapping.getId());
+                attachment.setRemark(mapping.getRemark());
+            }
+        }
+        attachUploaderNames(attachments);
+        return attachments;
+    }
+
+    private List<BizAttachmentEntity> selectMappings(List<AttachmentEntity> entities) {
+        if (entities.isEmpty()) {
+            return List.of();
+        }
+        return bizMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BizAttachmentEntity>()
+                        .in(BizAttachmentEntity::getAttachmentId,
+                                entities.stream().map(AttachmentEntity::getId).toList()));
+    }
+
+    private void attachUploaderNames(List<AttachmentVO> attachments) {
+        List<Long> uploaderIds = attachments.stream()
+                .map(AttachmentVO::getUploaderId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (uploaderIds.isEmpty()) {
+            return;
+        }
+        Map<Long, UserEntity> users = userMapper.selectBatchIds(uploaderIds).stream()
+                .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+        for (AttachmentVO attachment : attachments) {
+            UserEntity uploader = users.get(attachment.getUploaderId());
+            attachment.setUploaderName(uploader == null ? null : uploader.getName());
+        }
     }
 }
