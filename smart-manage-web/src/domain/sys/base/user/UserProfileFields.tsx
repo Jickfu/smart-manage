@@ -1,4 +1,4 @@
-import { App, DatePicker, Form, Input, Select, Upload } from 'antd';
+import { App, Button, DatePicker, Form, Input, Select, Upload } from 'antd';
 import type { UploadProps } from 'antd';
 import { businessAttachmentApi } from '@/domain/common/attachment/api';
 import { UserAvatar } from './UserAvatar';
@@ -6,11 +6,16 @@ import { UserAvatar } from './UserAvatar';
 interface UserProfileFieldsProps {
   editable: boolean;
   isAddNew: boolean;
+  canReadSensitive: boolean;
 }
 
 const AVATAR_ACCEPT = 'image/jpeg,image/png,image/webp';
 const ALLOWED_AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-export function UserProfileFields({ editable, isAddNew }: UserProfileFieldsProps) {
+export function UserProfileFields({
+  editable,
+  isAddNew,
+  canReadSensitive,
+}: UserProfileFieldsProps) {
   const { message } = App.useApp();
   const form = Form.useFormInstance();
   const name = Form.useWatch('name', form) as string | undefined;
@@ -18,6 +23,10 @@ export function UserProfileFields({ editable, isAddNew }: UserProfileFieldsProps
   const username = Form.useWatch('username', form) as string | undefined;
   const avatar = Form.useWatch('avatar', form) as string | undefined;
   const avatarAttachmentId = Form.useWatch('avatarAttachmentId', form) as string | undefined;
+  const phoneChanged = Form.useWatch('phoneChanged', form) as string | undefined;
+  const emailChanged = Form.useWatch('emailChanged', form) as string | undefined;
+  const phoneProtected = !isAddNew && !canReadSensitive && phoneChanged !== 'true';
+  const emailProtected = !isAddNew && !canReadSensitive && emailChanged !== 'true';
   const customRequest: UploadProps['customRequest'] = async ({ file, onSuccess, onError }) => {
     try {
       const sourceFile = file as File;
@@ -48,6 +57,12 @@ export function UserProfileFields({ editable, isAddNew }: UserProfileFieldsProps
         <Input />
       </Form.Item>
       <Form.Item name="avatarUploadSessionId" hidden>
+        <Input />
+      </Form.Item>
+      <Form.Item name="phoneChanged" hidden>
+        <Input />
+      </Form.Item>
+      <Form.Item name="emailChanged" hidden>
         <Input />
       </Form.Item>
       <div className="sm-user-profile-avatar">
@@ -160,8 +175,21 @@ export function UserProfileFields({ editable, isAddNew }: UserProfileFieldsProps
                 name="phone"
                 label="手机"
                 rules={[{ pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确' }]}
+                extra={
+                  editable && phoneProtected ? (
+                    <Button
+                      type="link"
+                      onClick={() => {
+                        form.setFieldValue('phone', '');
+                        form.setFieldValue('phoneChanged', 'true');
+                      }}
+                    >
+                      重新填写手机号
+                    </Button>
+                  ) : undefined
+                }
               >
-                <Input variant="underlined" disabled={!editable} />
+                <Input variant="underlined" disabled={!editable || phoneProtected} />
               </Form.Item>
             </div>
             <div className="sm-user-profile-field">
@@ -169,8 +197,21 @@ export function UserProfileFields({ editable, isAddNew }: UserProfileFieldsProps
                 name="email"
                 label="邮箱"
                 rules={[{ type: 'email', message: '邮箱格式不正确' }]}
+                extra={
+                  editable && emailProtected ? (
+                    <Button
+                      type="link"
+                      onClick={() => {
+                        form.setFieldValue('email', '');
+                        form.setFieldValue('emailChanged', 'true');
+                      }}
+                    >
+                      重新填写邮箱
+                    </Button>
+                  ) : undefined
+                }
               >
-                <Input variant="underlined" disabled={!editable} />
+                <Input variant="underlined" disabled={!editable || emailProtected} />
               </Form.Item>
             </div>
           </div>

@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { App, Button } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import EditPage from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
@@ -14,6 +15,7 @@ import { userAccess } from './permissions';
 import { userQueryKeys } from './queryKeys';
 import { UserProfileFields } from './UserProfileFields';
 import { UserAssignmentTable } from './UserAssignmentTable';
+import { resolveSensitiveContactUpdate } from './sensitiveContact';
 import type { UserAssignmentTableRef } from './UserAssignmentTable';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import type { UserAssignmentVO } from './types';
@@ -25,6 +27,8 @@ const UserEditPage = (props: PageComponentProps) => {
   const assignmentTableRef = useRef<UserAssignmentTableRef>(null);
   const [hasSelectedAssignments, setHasSelectedAssignments] = useState(false);
   const queryClient = useQueryClient();
+  const { can } = usePermissionAccess(userAccess.prefix);
+  const canReadSensitive = can(userAccess.permissions.readSensitive);
   const { appNumber, tabKey, operationType, billId } = props;
   const isAddNew = operationType === OperationType.ADDNEW;
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
@@ -50,6 +54,8 @@ const UserEditPage = (props: PageComponentProps) => {
             birthday: detail.birthday ? dayjs(detail.birthday) : undefined,
             email: detail.email ?? '',
             phone: detail.phone ?? '',
+            emailChanged: 'false',
+            phoneChanged: 'false',
             avatar: detail.avatar ?? '',
             avatarAttachmentId: detail.avatarAttachmentId,
             avatarUploadSessionId: undefined,
@@ -81,8 +87,16 @@ const UserEditPage = (props: PageComponentProps) => {
         birthday: values.birthday
           ? dayjs(values.birthday as dayjs.ConfigType).format('YYYY-MM-DD')
           : undefined,
-        email: String(values.email ?? '').trim() || undefined,
-        phone: String(values.phone ?? '').trim() || undefined,
+        email: resolveSensitiveContactUpdate(values.email, {
+          isAddNew,
+          canReadSensitive,
+          changed: values.emailChanged === 'true',
+        }),
+        phone: resolveSensitiveContactUpdate(values.phone, {
+          isAddNew,
+          canReadSensitive,
+          changed: values.phoneChanged === 'true',
+        }),
         avatarAttachmentId: values.avatarAttachmentId as string | undefined,
         attachmentUploadSessions:
           values.avatarAttachmentId && values.avatarUploadSessionId
@@ -126,7 +140,13 @@ const UserEditPage = (props: PageComponentProps) => {
       onRetry={() => Promise.all([detailQuery.refetch(), orgQuery.refetch()])}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
-      basicContent={(editable) => <UserProfileFields editable={editable} isAddNew={isAddNew} />}
+      basicContent={(editable) => (
+        <UserProfileFields
+          editable={editable}
+          isAddNew={isAddNew}
+          canReadSensitive={canReadSensitive}
+        />
+      )}
       detailLabel="部门信息"
       detailContent={(editable) => (
         <UserAssignmentTable

@@ -41,6 +41,7 @@
 | 后端代码 | `smart-manage-api/AGENTS.md`、`docs/architecture/backend.md` |
 | 前端代码 | `smart-manage-web/AGENTS.md`、`docs/architecture/frontend.md` |
 | 认证、权限或高风险能力 | `docs/architecture/security.md` |
+| 数据脱敏、隐私字段或凭据清除 | `docs/architecture/data-masking.md`、`docs/architecture/security.md` |
 | 功能目录、菜单、权限或页面注册 | `docs/architecture/feature-and-permission.md`、`docs/architecture/security.md` |
 | 数据权限、组织范围或对象级访问 | `docs/architecture/data-permission.md` |
 | 数据库或迁移 | `docs/development/database.md` |

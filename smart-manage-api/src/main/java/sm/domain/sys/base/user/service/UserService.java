@@ -24,6 +24,7 @@ import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
+import sm.domain.sys.base.user.model.vo.UserDetailVO;
 import sm.domain.sys.base.user.model.vo.UserListVO;
 import sm.domain.sys.base.user.model.vo.ResetPasswordVO;
 import sm.domain.sys.base.user.model.vo.UserAuthentication;
@@ -141,12 +142,12 @@ public class UserService {
 	}
 
 	/** 查询用户及当前组织下的角色明细。 */
-	public UserInfoVO detail(Long id) {
+	public UserDetailVO detail(Long id) {
 		UserEntity userEntity = mapper.selectById(id);
 		if (userEntity == null) {
 			throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
 		}
-		UserInfoVO userInfoVO = converter.toInfoVO(userEntity);
+		UserDetailVO userInfoVO = converter.toDetailVO(userEntity);
 		userInfoVO.setAvatar(avatarUrl(id, userEntity.getAvatarAttachmentId()));
 		userInfoVO.setAssignments(loadAssignments(List.of(id), null).getOrDefault(id, List.of()));
 		userInfoVO.setRoleIds(userRoleMapper.selectList(new LambdaQueryWrapper<UserRoleEntity>()

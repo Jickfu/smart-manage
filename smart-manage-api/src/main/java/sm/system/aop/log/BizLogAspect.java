@@ -65,7 +65,8 @@ public class BizLogAspect {
 
         String params = null;
         if (bizLog.recordRequest()) {
-            params = LogPayloadUtil.truncate(LogPayloadUtil.maskJsonLike(serializeArgs(joinPoint.getArgs())), bizLog.maxParamLen());
+            params = LogPayloadUtil.truncate(
+                    LogPayloadUtil.redactJson(serializeArgs(joinPoint.getArgs()), jsonMapper), bizLog.maxParamLen());
         }
 
         String err = null;
@@ -81,7 +82,8 @@ public class BizLogAspect {
         long duration = System.currentTimeMillis() - t0;
         String body = null;
         if (bizLog.recordResponse()) {
-            body = LogPayloadUtil.truncate(LogPayloadUtil.maskJsonLike(serializeObject(result)), bizLog.maxResponseLen());
+            body = LogPayloadUtil.truncate(
+                    LogPayloadUtil.redactJson(serializeObject(result), jsonMapper), bizLog.maxResponseLen());
         }
         writeLog(bizLog, joinPoint, true, null, ip, userAgent, requestUri, requestMethod, userId, username, params, body, duration);
         return result;
@@ -129,7 +131,7 @@ public class BizLogAspect {
         try {
             return jsonMapper.writeValueAsString(o);
         } catch (JacksonException e) {
-            return o.toString();
+            return "[unserializable response]";
         }
     }
 }

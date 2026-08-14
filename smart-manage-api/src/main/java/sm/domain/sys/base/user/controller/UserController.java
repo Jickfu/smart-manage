@@ -17,6 +17,7 @@ import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
 import sm.domain.sys.base.user.model.form.CurrentUserThemeForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
+import sm.domain.sys.base.user.model.vo.UserDetailVO;
 import sm.domain.sys.base.user.model.vo.UserListVO;
 import sm.domain.sys.base.user.model.vo.ResetPasswordVO;
 import sm.domain.sys.base.user.model.form.TemporaryLoginGrantForm;
@@ -99,7 +100,7 @@ public class UserController {
 	@Operation(summary = "用户详情", description = "按ID查询用户")
 	@SaCheckPermission(UserPermission.DETAIL)
 	@PostMapping("/sys/base/user/detail")
-	public Result<UserInfoVO> detail(@RequestBody @Valid IdForm form) {
+	public Result<UserDetailVO> detail(@RequestBody @Valid IdForm form) {
 		return Result.success(service.detail(form.getId()));
 	}
 

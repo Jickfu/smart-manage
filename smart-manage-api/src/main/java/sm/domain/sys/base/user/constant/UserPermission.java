@@ -11,6 +11,7 @@ public final class UserPermission {
     public static final String ASSIGN_ROLES = "sys:base:user:assignRoles";
     public static final String RESET_PASSWORD = "sys:base:user:resetPassword";
     public static final String TEMPORARY_LOGIN = "sys:base:user:temporaryLogin";
+    public static final String READ_SENSITIVE = "sys:base:user:sensitive:read";
 
     private UserPermission() {
     }

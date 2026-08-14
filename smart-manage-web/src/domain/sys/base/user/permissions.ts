@@ -10,4 +10,5 @@ export const userAccess = defineAccessResource('sys:base:user', {
   assignRoles: 'assignRoles',
   resetPassword: 'resetPassword',
   temporaryLogin: 'temporaryLogin',
+  readSensitive: 'sensitive:read',
 });
