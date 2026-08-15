@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.base.basicdata.mapper.BasicDataCategoryMapper;
 import sm.domain.sys.base.basicdata.mapper.BasicDataItemMapper;
+import sm.domain.sys.base.basicdata.model.BasicDataNumberMode;
 import sm.domain.sys.base.basicdata.model.entity.BasicDataCategoryEntity;
 import sm.domain.sys.base.basicdata.model.entity.BasicDataItemEntity;
 import sm.domain.sys.base.basicdata.model.form.BasicDataCategorySaveForm;
@@ -20,6 +21,10 @@ import sm.system.helper.CacheHelper;
 import sm.system.response.ResultEnum;
 import sm.system.util.EnabledCommandUtil;
 import sm.system.util.TransactionUtil;
+import sm.domain.sys.base.numberrule.model.NumberGenerationContext;
+import sm.domain.sys.base.numberrule.model.NumberScopeType;
+import sm.domain.sys.base.numberrule.constant.NumberRuleKeys;
+import sm.domain.sys.base.numberrule.service.NumberGeneratorAccessor;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +43,7 @@ class BasicDataTxService {
     private final BasicDataItemMapper itemMapper;
     private final CloudMapper cloudMapper;
     private final CacheHelper cacheHelper;
+    private final NumberGeneratorAccessor numberGeneratorAccessor;
 
     public Long saveCategory(BasicDataCategorySaveForm form) {
         normalizeCategory(form);
@@ -64,6 +70,8 @@ class BasicDataTxService {
         entity.setName(form.getName());
         entity.setDescription(form.getDescription());
         entity.setEnabled(form.getEnabled() == null || form.getEnabled());
+        entity.setNumberMode(form.getNumberMode());
+        entity.setNumberRuleKey(form.getNumberRuleKey());
         int affected = form.getId() == null ? categoryMapper.insert(entity) : categoryMapper.updateById(entity);
         if (affected != 1) throw conflict("基础资料分类");
         invalidateAfterCommit(oldNumber, entity.getNumber());
@@ -97,6 +105,8 @@ class BasicDataTxService {
                 throw new BizException(ResultEnum.PARAM_ERROR, "基础资料不能跨分类移动");
             }
         }
+        form.setNumber(resolveItemNumber(form, category, oldEntity));
+        validateItemNumberAndName(form);
         BasicDataItemEntity parent = validateParent(form, oldEntity);
         long duplicateCount = itemMapper.selectCount(new LambdaQueryWrapper<BasicDataItemEntity>()
                 .eq(BasicDataItemEntity::getCategoryId, form.getCategoryId())
@@ -232,12 +242,57 @@ class BasicDataTxService {
         form.setNumber(form.getNumber().trim());
         form.setName(form.getName().trim());
         form.setDescription(trimToNull(form.getDescription()));
+        form.setNumberMode(form.getNumberMode().trim().toUpperCase());
+        form.setNumberRuleKey(form.getNumberRuleKey().trim());
+        BasicDataNumberMode numberMode;
+        try {
+            numberMode = BasicDataNumberMode.valueOf(form.getNumberMode());
+        } catch (IllegalArgumentException exception) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "基础资料编号模式无效");
+        }
+        numberGeneratorAccessor.validateRule(NumberRuleKeys.BASIC_DATA_ITEM_REFERENCE,
+                form.getNumberRuleKey(), NumberScopeType.CATEGORY,
+                numberMode != BasicDataNumberMode.MANUAL);
     }
 
     private void normalizeItem(BasicDataItemSaveForm form) {
-        form.setNumber(form.getNumber().trim());
+        form.setNumber(trimToNull(form.getNumber()));
         form.setName(form.getName().trim());
         form.setDescription(trimToNull(form.getDescription()));
+    }
+
+    private String resolveItemNumber(BasicDataItemSaveForm form, BasicDataCategoryEntity category,
+                                     BasicDataItemEntity oldEntity) {
+        BasicDataNumberMode numberMode;
+        try {
+            numberMode = BasicDataNumberMode.valueOf(category.getNumberMode());
+        } catch (RuntimeException exception) {
+            throw new BizException(ResultEnum.PERSISTENCE_ERROR, "基础资料分类编号模式无效");
+        }
+        if (oldEntity != null) {
+            if (numberMode == BasicDataNumberMode.AUTO_LOCKED) {
+                if (form.getNumber() != null && !oldEntity.getNumber().equals(form.getNumber())) {
+                    throw new BizException(ResultEnum.PARAM_ERROR, "自动锁定模式不允许修改基础资料编码");
+                }
+                return oldEntity.getNumber();
+            }
+            if (form.getNumber() == null) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "修改基础资料时编码不能为空");
+            }
+            return form.getNumber();
+        }
+        if (numberMode == BasicDataNumberMode.MANUAL) {
+            if (form.getNumber() == null) throw new BizException(ResultEnum.PARAM_ERROR, "基础资料编码不能为空");
+            return form.getNumber();
+        }
+        if (numberMode == BasicDataNumberMode.AUTO_DEFAULT && form.getNumber() != null) {
+            return form.getNumber();
+        }
+        return numberGeneratorAccessor.nextNumber(NumberRuleKeys.BASIC_DATA_ITEM_REFERENCE,
+                category.getNumberRuleKey(), NumberGenerationContext.forCategory(category.getId()));
+    }
+
+    private void validateItemNumberAndName(BasicDataItemSaveForm form) {
         if (form.getNumber().contains(PATH_SEPARATOR) || form.getName().contains(PATH_SEPARATOR)) {
             throw new BizException(ResultEnum.PARAM_ERROR, "编码和名称不能包含路径分隔符 /");
         }

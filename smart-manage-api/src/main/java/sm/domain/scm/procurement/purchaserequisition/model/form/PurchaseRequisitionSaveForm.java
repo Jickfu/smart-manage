@@ -14,7 +14,6 @@ import java.util.Map;
 public class PurchaseRequisitionSaveForm {
     private Long id;
     private Integer version;
-    @NotBlank(message = "编码不能为空")
     private String number;
     @NotBlank(message = "主题不能为空")
     private String subject;

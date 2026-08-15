@@ -12,5 +12,7 @@ public class BasicDataCategoryVO {
     private String description;
     private Boolean enabled;
     private Boolean systemPreset;
+    private String numberMode;
+    private String numberRuleKey;
     private Integer version;
 }

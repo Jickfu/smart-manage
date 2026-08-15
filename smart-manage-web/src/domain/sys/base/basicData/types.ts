@@ -1,5 +1,7 @@
 import type { PageForm } from '@/types/api';
 
+export type BasicDataNumberMode = 'MANUAL' | 'AUTO_LOCKED' | 'AUTO_DEFAULT';
+
 export interface BasicDataTreeNode {
   key: string;
   type: 'cloud' | 'category';
@@ -19,6 +21,8 @@ export interface BasicDataCategory {
   enabled: boolean;
   systemPreset: boolean;
   version: number;
+  numberMode: BasicDataNumberMode;
+  numberRuleKey: string;
 }
 
 export interface BasicDataCategorySaveForm {
@@ -29,6 +33,8 @@ export interface BasicDataCategorySaveForm {
   name: string;
   description?: string;
   enabled: boolean;
+  numberMode: BasicDataNumberMode;
+  numberRuleKey: string;
 }
 
 export interface BasicDataListForm extends PageForm {
@@ -71,7 +77,7 @@ export interface BasicDataSaveForm {
   version?: number;
   categoryId: string;
   parentId?: string;
-  number: string;
+  number?: string;
   name: string;
   description?: string;
   sort: number;

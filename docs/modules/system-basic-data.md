@@ -17,6 +17,7 @@
 
 - 云是分类的展示和归属维度；分类只能直接归属于一个云，分类本身不嵌套。
 - 分类 `number` 是供业务代码稳定引用的全局唯一标识。
+- 分类为资料节点选择编号模式和 `CATEGORY` 作用域的公共编号规则；分类自身的稳定编码不自动生成。
 - 分类和资料节点的长期说明统一使用 `description`。
 - 资料节点通过 `parent_id` 在同一分类内形成任意级树；平级资料是所有节点 `parent_id` 为空的特例。
 - 分类与资料节点分别按命令维护，不再一次性加载和保存整个分类的全部节点。
@@ -38,6 +39,19 @@
 - 非叶子节点不能删除；分类下存在资料时不能删除分类。
 - 系统预置分类和资料不能删除。
 - 分类和资料节点都使用乐观锁版本号；路径变更在同一事务内更新全部后代。
+
+## 节点编号
+
+基础资料分类默认使用 `AUTO_DEFAULT`，并支持三种节点编号模式：
+
+- `MANUAL`：新增时必须人工填写编码；
+- `AUTO_LOCKED`：新增保存事务内自动生成，生成后禁止修改；
+- `AUTO_DEFAULT`：新增时留空则自动生成，也允许人工填写；已有节点允许修改编码。
+
+自动生成使用编号引用 `sys/base/basic-data-item.number` 调用公共 `NumberGeneratorAccessor`，以分类 ID 作为
+流水作用域。规则格式可以加入受控变量 `category.number` 显示分类编码；分类编码变化只影响之后生成的号码，
+计数器仍使用稳定分类 ID。人工填写不消耗流水。
+修改已有编码时，后端继续在同一事务中更新全部后代 `number_path`。分类切换模式或规则不会重编已有节点。
 
 ## 页面交互
 
@@ -62,6 +76,7 @@
 | 批量启停 | `/sys/base/basic-data/enable`、`disable` | 对应启停权限 |
 | 上级资料选项 | `/sys/base/basic-data/parentOptions` | `sys:base:basic-data:detail` |
 | 有效叶子选项 | `/sys/base/basic-data/options` | 登录用户 |
+| 分类编号规则选项 | `/sys/base/basic-data/numberRuleOptions` | `sys:base:basic-data:detail` |
 
 ## 缓存
 
@@ -70,6 +85,6 @@
 ## 数据库迁移
 
 - 基线表由 `V1__baseline_schema.sql` 建立。
-- `V22__harden_basic_data_aggregate.sql` 是旧主从模型的历史加固迁移。
-- `V24__rebuild_basic_data_as_hierarchy.sql` 将旧分类和明细迁移为云下分类与多级资料节点，并增加路径、级次、系统预置、叶子状态和资料节点乐观锁。
+- `V12__add_numbering_rules.sql` 为分类增加节点编号模式和规则引用，已有分类默认使用 `AUTO_DEFAULT`。
+- `V13__refine_numbering_rules.sql` 增加编号引用和结构化格式段，并将基础资料规则关联到 Feature。
 - 已执行迁移不得修改，后续结构和初始化数据继续通过新增 Flyway 迁移维护。

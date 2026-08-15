@@ -12,7 +12,6 @@ public class BasicDataItemSaveForm {
     @NotNull(message = "基础资料分类不能为空")
     private Long categoryId;
     private Long parentId;
-    @NotBlank(message = "编码不能为空")
     @Size(max = 64, message = "编码不能超过64个字符")
     private String number;
     @NotBlank(message = "名称不能为空")

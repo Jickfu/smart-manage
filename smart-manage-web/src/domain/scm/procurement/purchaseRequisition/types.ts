@@ -62,7 +62,7 @@ export interface PurchaseRequisitionCreateNewDataVO {
 export interface PurchaseRequisitionSaveForm {
   id?: string;
   version?: number;
-  number: string;
+  number?: string;
   subject: string;
   bizDate: string;
   requiredDate?: string;

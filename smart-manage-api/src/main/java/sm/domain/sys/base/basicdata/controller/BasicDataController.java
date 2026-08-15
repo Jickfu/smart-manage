@@ -24,6 +24,7 @@ import sm.system.form.IdForm;
 import sm.system.form.IdsForm;
 import sm.system.response.PageData;
 import sm.system.response.Result;
+import sm.domain.sys.base.numberrule.model.vo.NumberRuleOptionVO;
 
 import java.util.List;
 
@@ -36,6 +37,12 @@ public class BasicDataController {
     @SaCheckPermission(BasicDataPermission.LIST)
     public Result<List<BasicDataTreeVO>> categoryTree() {
         return Result.success(service.categoryTree());
+    }
+
+    @GetMapping("/sys/base/basic-data/numberRuleOptions")
+    @SaCheckPermission(BasicDataPermission.DETAIL)
+    public Result<List<NumberRuleOptionVO>> numberRuleOptions() {
+        return Result.success(service.numberRuleOptions());
     }
 
     @PostMapping("/sys/base/basic-data/categoryDetail")

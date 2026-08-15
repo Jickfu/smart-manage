@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.sys.base.numberrule.mapper.NumberRuleMapper">
+    <select id="selectListPage" resultType="sm.domain.sys.base.numberrule.model.vo.NumberRuleVO">
+        SELECT a.id, a.version, a.rule_key, a.reference_key, b.name AS reference_name,
+               c.id AS feature_id, c.feature_key, COALESCE(c.custom_name, c.default_name) AS feature_name,
+               d.id AS app_id, d.name AS app_name, e.id AS cloud_id, e.name AS cloud_name,
+               a.name, a.pattern, a.scope_type, a.reset_period, a.start_value, a.enabled,
+               a.system_preset, (b.default_rule_key = a.rule_key) AS default_rule, a.description,
+               ((SELECT count(*) FROM t_sys_number_reference usage_ref
+                 WHERE usage_ref.default_rule_key = a.rule_key)
+                + (SELECT count(*) FROM t_sys_basic_data_category usage_category
+                   WHERE usage_category.number_rule_key = a.rule_key
+                     AND usage_category.number_mode != 'MANUAL')) AS usage_count
+        FROM t_sys_number_rule a
+        INNER JOIN t_sys_number_reference b ON b.reference_key = a.reference_key
+        INNER JOIN t_sys_feature c ON c.id = b.feature_id
+        INNER JOIN t_sys_app d ON d.id = c.app_id
+        INNER JOIN t_sys_cloud e ON e.id = d.cloud_id
+        <where>
+            <if test="form.scopeType != null and form.scopeType != ''">
+                a.scope_type = #{form.scopeType}
+            </if>
+            <if test="form.cloudId != null">AND e.id = #{form.cloudId}</if>
+            <if test="form.appId != null">AND d.id = #{form.appId}</if>
+            <if test="form.featureId != null">AND c.id = #{form.featureId}</if>
+            <if test="form.referenceKey != null and form.referenceKey != ''">
+                AND a.reference_key = #{form.referenceKey}
+            </if>
+            <if test="form.enabled != null">AND a.enabled = #{form.enabled}</if>
+            <if test="form.keyword != null and form.keyword.trim() != ''">
+                AND (a.rule_key LIKE CONCAT('%', #{form.keyword}, '%')
+                OR a.name LIKE CONCAT('%', #{form.keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY e.seq, d.seq, COALESCE(c.custom_seq, c.default_seq), a.system_preset DESC, a.rule_key, a.id
+    </select>
+
+    <select id="selectDetailById" resultType="sm.domain.sys.base.numberrule.model.vo.NumberRuleVO">
+        SELECT a.id, a.version, a.rule_key, a.reference_key, b.name AS reference_name,
+               c.id AS feature_id, c.feature_key, COALESCE(c.custom_name, c.default_name) AS feature_name,
+               d.id AS app_id, d.name AS app_name, e.id AS cloud_id, e.name AS cloud_name,
+               a.name, a.pattern, a.scope_type, a.reset_period, a.start_value, a.enabled,
+               a.system_preset, (b.default_rule_key = a.rule_key) AS default_rule, a.description,
+               ((SELECT count(*) FROM t_sys_number_reference usage_ref
+                 WHERE usage_ref.default_rule_key = a.rule_key)
+                + (SELECT count(*) FROM t_sys_basic_data_category usage_category
+                   WHERE usage_category.number_rule_key = a.rule_key
+                     AND usage_category.number_mode != 'MANUAL')) AS usage_count
+        FROM t_sys_number_rule a
+        INNER JOIN t_sys_number_reference b ON b.reference_key = a.reference_key
+        INNER JOIN t_sys_feature c ON c.id = b.feature_id
+        INNER JOIN t_sys_app d ON d.id = c.app_id
+        INNER JOIN t_sys_cloud e ON e.id = d.cloud_id
+        WHERE a.id = #{id}
+    </select>
+
+    <select id="selectReferences" resultType="sm.domain.sys.base.numberrule.model.vo.NumberReferenceVO">
+        SELECT a.reference_key, a.name, b.id AS feature_id, b.feature_key,
+               COALESCE(b.custom_name, b.default_name) AS feature_name,
+               c.id AS app_id, c.name AS app_name, d.id AS cloud_id, d.name AS cloud_name
+        FROM t_sys_number_reference a
+        INNER JOIN t_sys_feature b ON b.id = a.feature_id
+        INNER JOIN t_sys_app c ON c.id = b.app_id
+        INNER JOIN t_sys_cloud d ON d.id = c.cloud_id
+        ORDER BY d.seq, c.seq, COALESCE(b.custom_seq, b.default_seq), a.reference_key
+    </select>
+
+    <!-- PostgreSQL 在唯一分段行上完成原子 UPSERT，多实例不需要 Redis 或 JVM 锁。 -->
+    <select id="nextValue" resultType="java.lang.Long" flushCache="true">
+        INSERT INTO t_sys_number_counter (rule_key, scope_key, period_key, current_value)
+        VALUES (#{ruleKey}, #{scopeKey}, #{periodKey}, #{startValue})
+        ON CONFLICT (rule_key, scope_key, period_key)
+        DO UPDATE SET current_value = t_sys_number_counter.current_value + 1,
+                      update_time = now()
+        RETURNING current_value
+    </select>
+
+    <select id="currentValue" resultType="java.lang.Long">
+        SELECT a.current_value
+        FROM t_sys_number_counter a
+        WHERE a.rule_key = #{ruleKey}
+          AND a.scope_key = #{scopeKey}
+          AND a.period_key = #{periodKey}
+    </select>
+
+    <select id="countAutomaticCategoryReferences" resultType="long">
+        SELECT count(*) FROM t_sys_basic_data_category a
+        WHERE a.number_rule_key = #{ruleKey} AND a.number_mode != 'MANUAL'
+    </select>
+
+    <select id="countDefaultReferences" resultType="long">
+        SELECT count(*) FROM t_sys_number_reference a WHERE a.default_rule_key = #{ruleKey}
+    </select>
+
+    <select id="countCounters" resultType="long">
+        SELECT count(*) FROM t_sys_number_counter a WHERE a.rule_key = #{ruleKey}
+    </select>
+</mapper>

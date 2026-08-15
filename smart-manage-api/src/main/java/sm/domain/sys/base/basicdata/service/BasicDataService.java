@@ -26,6 +26,9 @@ import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.domain.sys.base.numberrule.model.vo.NumberRuleOptionVO;
+import sm.domain.sys.base.numberrule.constant.NumberRuleKeys;
+import sm.domain.sys.base.numberrule.service.NumberRuleService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,6 +46,11 @@ public class BasicDataService {
     private final CloudMapper cloudMapper;
     private final BasicDataTxService txService;
     private final BasicDataConverter converter;
+    private final NumberRuleService numberRuleService;
+
+    public List<NumberRuleOptionVO> numberRuleOptions() {
+        return numberRuleService.options("CATEGORY", NumberRuleKeys.BASIC_DATA_ITEM_REFERENCE);
+    }
 
     public List<BasicDataTreeVO> categoryTree() {
         List<BasicDataCategoryEntity> categories = categoryMapper.selectList(

@@ -1,0 +1,14 @@
+.sm-number-rule-segments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.sm-number-rule-segments .ant-input-number {
+  width: 100%;
+}
+
+.sm-number-rule-scope {
+  width: 230px;
+}

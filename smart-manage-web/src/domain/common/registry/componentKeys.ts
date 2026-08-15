@@ -8,6 +8,8 @@ export const componentKeys = {
   rolePermissionAssignment: 'sys/base/role/permission-assignment',
   sysParam: 'sys/base/sys-param',
   sysParamEdit: 'sys/base/sys-param/edit',
+  numberRule: 'sys/base/number-rule',
+  numberRuleEdit: 'sys/base/number-rule/edit',
   sqlConsole: 'sys/monitor/sql-console',
   sqlLog: 'sys/monitor/sql-log',
   sqlLogDetail: 'sys/monitor/sql-log/detail',

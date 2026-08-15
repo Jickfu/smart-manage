@@ -10,8 +10,13 @@ import type {
   BasicDataSaveForm,
   BasicDataTreeNode,
 } from './types';
+import type { NumberRuleOption } from '@/domain/sys/base/numberRule/types';
 
 export const basicDataApi = {
+  numberRuleOptions: () =>
+    request
+      .get<Result<NumberRuleOption[]>>('/sys/base/basic-data/numberRuleOptions')
+      .then((response) => response.data.data),
   categoryTree: () =>
     request
       .get<Result<BasicDataTreeNode[]>>('/sys/base/basic-data/categoryTree')

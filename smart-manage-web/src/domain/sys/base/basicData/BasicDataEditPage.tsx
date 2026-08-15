@@ -62,6 +62,7 @@ const BasicDataEditPage = (props: PageComponentProps) => {
     enabled: Boolean(categoryId),
   });
   const detail = detailQuery.data;
+  const numberMode = categoryQuery.data?.numberMode ?? 'AUTO_DEFAULT';
   const fields = useMemo<EditField[]>(
     () => [
       { label: '所属分类', dataIndex: 'categoryName', type: 'readonly' },
@@ -76,8 +77,19 @@ const BasicDataEditPage = (props: PageComponentProps) => {
         label: '编码',
         dataIndex: 'number',
         type: 'text',
+        disabled: numberMode === 'AUTO_LOCKED',
+        placeholder:
+          numberMode === 'AUTO_DEFAULT'
+            ? '留空则保存时自动生成'
+            : numberMode === 'AUTO_LOCKED'
+              ? '保存时自动生成'
+              : undefined,
         rules: [
-          { required: true, whitespace: true, message: '编码不能为空' },
+          {
+            required: numberMode === 'MANUAL' || !isAddNew,
+            whitespace: true,
+            message: '编码不能为空',
+          },
           { max: 64, message: '编码不能超过64个字符' },
         ],
       },
@@ -94,7 +106,7 @@ const BasicDataEditPage = (props: PageComponentProps) => {
       { label: '可用状态', dataIndex: 'enabled', type: 'switch' },
       { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
     ],
-    [parentsQuery.data],
+    [isAddNew, numberMode, parentsQuery.data],
   );
   const initialValues = useMemo(
     () => ({
@@ -116,7 +128,7 @@ const BasicDataEditPage = (props: PageComponentProps) => {
         version: detail?.version,
         categoryId,
         parentId: values.parentId ? String(values.parentId) : undefined,
-        number: String(values.number).trim(),
+        number: values.number ? String(values.number).trim() : undefined,
         name: String(values.name).trim(),
         description: values.description ? String(values.description).trim() : undefined,
         sort: Number(values.sort ?? 0),

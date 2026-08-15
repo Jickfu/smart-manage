@@ -20,6 +20,8 @@ public class BasicDataCategoryEntity extends BaseEntity {
     private String description;
     private Boolean enabled;
     private Boolean systemPreset;
+    private String numberMode;
+    private String numberRuleKey;
     @Version
     private Integer version;
 }

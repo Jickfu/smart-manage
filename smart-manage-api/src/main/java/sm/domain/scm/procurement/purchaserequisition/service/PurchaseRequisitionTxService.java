@@ -19,6 +19,9 @@ import sm.system.response.ResultEnum;
 import sm.system.util.BillStatusUtil;
 import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
 import sm.domain.sys.base.attachment.service.AttachmentService;
+import sm.domain.sys.base.numberrule.constant.NumberRuleKeys;
+import sm.domain.sys.base.numberrule.model.NumberGenerationContext;
+import sm.domain.sys.base.numberrule.service.NumberGeneratorAccessor;
 
 import java.util.Objects;
 
@@ -31,20 +34,23 @@ class PurchaseRequisitionTxService {
     private final PurchaseRequisitionMapper mapper;
     private final PurchaseRequisitionEntryMapper entryMapper;
     private final AttachmentService attachmentService;
+    private final NumberGeneratorAccessor numberGeneratorAccessor;
 
     public Long save(PurchaseRequisitionSaveForm form) {
         PurchaseRequisitionEntity entity;
         if (form.getId() == null) {
             entity = new PurchaseRequisitionEntity();
-            entity.setOrgId(currentUserContext.getOrgId());
+            Long orgId = currentUserContext.getOrgId();
+            entity.setOrgId(orgId);
             entity.setApplicantId(currentUserContext.getUserId());
             entity.setBillStatus(BillStatusEnum.SAVED.getValue());
+            entity.setNumber(numberGeneratorAccessor.nextNumber(NumberRuleKeys.PURCHASE_REQUISITION_REFERENCE,
+                    NumberGenerationContext.forOrganization(orgId, form.getBizDate())));
         } else {
             entity = requireEntity(form.getId());
             BillStatusUtil.requireCanSave(entity.getBillStatus());
             requireVersion(entity, form.getVersion());
         }
-        entity.setNumber(form.getNumber().trim());
         entity.setSubject(form.getSubject().trim());
         entity.setBizDate(form.getBizDate());
         entity.setRequiredDate(form.getRequiredDate());

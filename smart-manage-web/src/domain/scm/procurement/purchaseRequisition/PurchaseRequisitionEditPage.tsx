@@ -33,7 +33,8 @@ const fields: EditField[] = [
     label: '编码',
     dataIndex: 'number',
     type: 'text',
-    rules: [{ required: true, message: '编码不能为空' }],
+    disabled: true,
+    placeholder: '保存时自动生成',
   },
   {
     label: '主题',
@@ -110,7 +111,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
     const form: PurchaseRequisitionSaveForm = {
       id: billId,
       version: detail?.version,
-      number: String(values.number).trim(),
+      number: detail?.number,
       subject: String(values.subject).trim(),
       bizDate: String(values.bizDate),
       requiredDate: values.requiredDate ? String(values.requiredDate) : undefined,

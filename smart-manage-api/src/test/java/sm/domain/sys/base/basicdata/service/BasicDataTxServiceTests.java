@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.basicdata.mapper.BasicDataCategoryMapper;
 import sm.domain.sys.base.basicdata.mapper.BasicDataItemMapper;
 import sm.domain.sys.base.basicdata.model.entity.BasicDataCategoryEntity;
+import sm.domain.sys.base.basicdata.model.BasicDataNumberMode;
+import sm.domain.sys.base.numberrule.service.NumberGeneratorAccessor;
 import sm.domain.sys.base.basicdata.model.entity.BasicDataItemEntity;
 import sm.domain.sys.base.basicdata.model.form.BasicDataDeleteForm;
 import sm.domain.sys.base.basicdata.model.form.BasicDataItemSaveForm;
@@ -24,13 +26,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class BasicDataTxServiceTests {
     private final BasicDataCategoryMapper categoryMapper = mock(BasicDataCategoryMapper.class);
     private final BasicDataItemMapper itemMapper = mock(BasicDataItemMapper.class);
     private final CacheHelper cacheHelper = mock(CacheHelper.class);
+    private final NumberGeneratorAccessor numberGeneratorAccessor = mock(NumberGeneratorAccessor.class);
     private final BasicDataTxService txService = new BasicDataTxService(
-            categoryMapper, itemMapper, mock(CloudMapper.class), cacheHelper);
+            categoryMapper, itemMapper, mock(CloudMapper.class), cacheHelper,
+            numberGeneratorAccessor);
 
     @BeforeAll
     static void initializeMybatisMetadata() {
@@ -60,6 +65,7 @@ class BasicDataTxServiceTests {
         BasicDataCategoryEntity category = new BasicDataCategoryEntity();
         category.setId(1L);
         category.setNumber("industry");
+        category.setNumberMode(BasicDataNumberMode.AUTO_DEFAULT.name());
         BasicDataItemEntity parent = item(10L, null, true);
         parent.setLevel(1);
         parent.setNumberPath("A");
@@ -79,6 +85,31 @@ class BasicDataTxServiceTests {
 
         assertFalse(parent.getIsLeaf());
         verify(itemMapper).updateById(parent);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void autoDefaultGeneratesNumberOnlyWhenNewItemLeavesItBlank() {
+        BasicDataCategoryEntity category = new BasicDataCategoryEntity();
+        category.setId(1L);
+        category.setNumber("industry");
+        category.setNumberMode(BasicDataNumberMode.AUTO_DEFAULT.name());
+        category.setNumberRuleKey("sys/base/basic-data-item");
+        when(categoryMapper.selectById(1L)).thenReturn(category);
+        when(numberGeneratorAccessor.nextNumber(any(), any(), any())).thenReturn("BD-0001");
+        when(itemMapper.selectCount(any())).thenReturn(0L);
+        when(itemMapper.insert(isA(BasicDataItemEntity.class))).thenAnswer(invocation -> {
+            BasicDataItemEntity inserted = invocation.getArgument(0);
+            inserted.setId(12L);
+            return 1;
+        });
+        when(cacheHelper.getCache(any(), any())).thenReturn(mock(Cache.class));
+        BasicDataItemSaveForm form = saveForm(null);
+        form.setNumber(null);
+
+        assertEquals(12L, txService.saveItem(form));
+
+        verify(numberGeneratorAccessor).nextNumber(any(), any(), any());
     }
 
     private BasicDataItemSaveForm saveForm(Long parentId) {

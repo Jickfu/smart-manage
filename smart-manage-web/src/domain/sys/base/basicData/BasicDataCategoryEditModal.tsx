@@ -5,6 +5,7 @@ import type { EditField } from '@/domain/common/page/EditPage';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { cloudApi } from '@/domain/sys/base/cloud/api';
 import { cloudQueryKeys } from '@/domain/sys/base/cloud/queryKeys';
+import { numberRuleQueryKeys } from '@/domain/sys/base/numberRule/queryKeys';
 import { basicDataApi } from './api';
 import { basicDataAccess } from './permissions';
 import { basicDataQueryKeys } from './queryKeys';
@@ -28,6 +29,11 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
   const cloudsQuery = useQuery({
     queryKey: [...cloudQueryKeys.lists(), 'basic-data-category'],
     queryFn: () => cloudApi.select({ pageNum: 1, pageSize: 1000 }),
+    enabled: open,
+  });
+  const numberRulesQuery = useQuery({
+    queryKey: numberRuleQueryKeys.options('CATEGORY'),
+    queryFn: basicDataApi.numberRuleOptions,
     enabled: open,
   });
   const fields = useMemo<EditField[]>(
@@ -61,10 +67,31 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
         })),
         rules: [{ required: true, message: '所属云不能为空' }],
       },
+      {
+        label: '节点编号模式',
+        dataIndex: 'numberMode',
+        type: 'select',
+        options: [
+          { label: '留空自动生成，可修改', value: 'AUTO_DEFAULT' },
+          { label: '自动生成并锁定', value: 'AUTO_LOCKED' },
+          { label: '人工填写', value: 'MANUAL' },
+        ],
+        rules: [{ required: true, message: '请选择节点编号模式' }],
+      },
+      {
+        label: '节点编号规则',
+        dataIndex: 'numberRuleKey',
+        type: 'select',
+        options: (numberRulesQuery.data ?? []).map((rule) => ({
+          label: `${rule.name}（${rule.pattern}）`,
+          value: rule.ruleKey,
+        })),
+        rules: [{ required: true, message: '请选择节点编号规则' }],
+      },
       { label: '可用状态', dataIndex: 'enabled', type: 'switch' },
       { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
     ],
-    [cloudsQuery.data],
+    [cloudsQuery.data, numberRulesQuery.data],
   );
   const detail = detailQuery.data;
   const initialValues = useMemo(
@@ -73,9 +100,14 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
       number: detail?.number ?? '',
       name: detail?.name ?? '',
       enabled: detail?.enabled ?? true,
+      numberMode: detail?.numberMode ?? 'AUTO_DEFAULT',
+      numberRuleKey:
+        detail?.numberRuleKey ??
+        numberRulesQuery.data?.find((rule) => rule.defaultRule)?.ruleKey ??
+        'sys/base/basic-data-item',
       description: detail?.description ?? '',
     }),
-    [cloudId, detail],
+    [cloudId, detail, numberRulesQuery.data],
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
@@ -86,6 +118,8 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
         number: String(values.number).trim(),
         name: String(values.name).trim(),
         enabled: Boolean(values.enabled),
+        numberMode: values.numberMode as BasicDataCategorySaveForm['numberMode'],
+        numberRuleKey: String(values.numberRuleKey),
         description: values.description ? String(values.description).trim() : undefined,
       };
       await basicDataApi.saveCategory(form);
@@ -103,9 +137,11 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
       initialValues={initialValues}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
-      loading={detailQuery.isLoading || cloudsQuery.isLoading}
-      error={(detailQuery.error ?? cloudsQuery.error) as Error | null}
-      onRetry={() => Promise.all([detailQuery.refetch(), cloudsQuery.refetch()])}
+      loading={detailQuery.isLoading || cloudsQuery.isLoading || numberRulesQuery.isLoading}
+      error={(detailQuery.error ?? cloudsQuery.error ?? numberRulesQuery.error) as Error | null}
+      onRetry={() =>
+        Promise.all([detailQuery.refetch(), cloudsQuery.refetch(), numberRulesQuery.refetch()])
+      }
       access={basicDataAccess}
     />
   );
