@@ -631,14 +631,31 @@
 }
 
 .sm-personal-info-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 54px;
+  display: grid;
+  grid-template-columns: repeat(2, 230px);
+  column-gap: 64px;
+  justify-content: center;
+}
+
+.sm-personal-info-assignments {
+  width: 100%;
+  margin-top: 4px;
 }
 
 .sm-personal-info-section-title {
-  margin-bottom: 8px;
+  width: fit-content;
+  margin: 0 0 10px;
+  padding: 5px 14px;
+  color: var(--ant-color-text-heading);
+  background: var(--ant-color-fill-secondary);
+  border-radius: var(--ant-border-radius-sm);
+  font-size: 14px;
   font-weight: 500;
+}
+
+.sm-personal-info-assignment-table .ant-table-cell {
+  padding-top: 7px !important;
+  padding-bottom: 7px !important;
 }
 
 .sm-current-login-log-modal .ant-modal-body,

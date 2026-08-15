@@ -119,18 +119,31 @@ export default function PersonalInfoModal({
       <div className="sm-personal-info-assignments">
         <div className="sm-personal-info-section-title">部门信息</div>
         <Table
+          className="sm-list-table sm-personal-info-assignment-table"
           size="small"
           pagination={false}
+          tableLayout="fixed"
           rowKey="id"
+          rowClassName={(_, index) =>
+            index % 2 === 0 ? 'sm-list-row-base' : 'sm-list-row-alternate'
+          }
           dataSource={userInfo?.assignments ?? []}
           columns={[
-            { title: '部门', dataIndex: 'orgName' },
-            { title: '部门长名称', dataIndex: 'orgNamePath' },
+            {
+              title: '#',
+              width: 44,
+              align: 'center',
+              className: 'sm-list-sequence-column',
+              render: (_, __, index) => index + 1,
+            },
+            { title: '部门', dataIndex: 'orgName', ellipsis: true },
+            { title: '部门长名称', dataIndex: 'orgNamePath', ellipsis: true },
             { title: '岗位', dataIndex: 'position', width: 140, render: (value) => value || '-' },
             {
               title: '主职',
               dataIndex: 'isPrimary',
               width: 70,
+              align: 'center',
               render: (value) => (value ? '是' : '否'),
             },
           ]}
