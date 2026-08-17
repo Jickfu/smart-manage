@@ -211,7 +211,8 @@ const SegmentEditor = ({ references }: { references: NumberReference[] }) => {
             <Space>
               <Button
                 onClick={() => {
-                  const currentSegments = (form.getFieldValue('segments') ?? []) as NumberRuleSegment[];
+                  const currentSegments = (form.getFieldValue('segments') ??
+                    []) as NumberRuleSegment[];
                   const sequenceIndex = currentSegments.findIndex(
                     (segment) => segment.segmentType === 'SEQUENCE',
                   );
