@@ -191,8 +191,7 @@
   min-height: 0;
   max-height: none !important;
   overflow-x: auto !important;
-  overflow-y: scroll !important;
-  scrollbar-gutter: stable;
+  overflow-y: auto !important;
   padding-bottom: 1px;
 }
 

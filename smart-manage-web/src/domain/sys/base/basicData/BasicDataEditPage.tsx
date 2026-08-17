@@ -46,7 +46,8 @@ const BasicDataEditPage = (props: PageComponentProps) => {
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
   const detailQuery = useQuery({
-    queryKey: basicDataQueryKeys.detail(billId),
+    // 新增页使用临时页签标识隔离查询状态，避免复用 detail(undefined) 的历史错误缓存。
+    queryKey: basicDataQueryKeys.detail(isAddNew ? tabKey : billId),
     queryFn: () => basicDataApi.detail(billId!),
     enabled: Boolean(!isAddNew && billId),
   });
@@ -161,9 +162,16 @@ const BasicDataEditPage = (props: PageComponentProps) => {
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
       loading={detailQuery.isLoading || categoryQuery.isLoading || parentsQuery.isLoading}
-      error={(detailQuery.error ?? categoryQuery.error ?? parentsQuery.error) as Error | null}
+      error={
+        ((!isAddNew ? detailQuery.error : null) ??
+          categoryQuery.error ??
+          parentsQuery.error) as Error | null
+      }
       onRetry={() =>
-        Promise.all([detailQuery.refetch(), categoryQuery.refetch(), parentsQuery.refetch()])
+        Promise.all([
+          ...(!isAddNew && billId ? [detailQuery.refetch()] : []),
+          ...(categoryId ? [categoryQuery.refetch(), parentsQuery.refetch()] : []),
+        ])
       }
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}

@@ -126,15 +126,27 @@ public class NumberGeneratorAccessor {
         };
         NumberResetPeriod resetPeriod = parseResetPeriod(rule.getResetPeriod());
         LocalDate businessDate = context.businessDate();
-        boolean hasDateSegment = segments.stream().anyMatch(segment -> "DATE".equals(segment.getSegmentType()));
-        if ((resetPeriod != NumberResetPeriod.NEVER || hasDateSegment) && businessDate == null) {
+        boolean hasBusinessDateSegment = segments.stream().anyMatch(segment ->
+                "DATE".equals(segment.getSegmentType())
+                        && !NumberRuleBuiltInVariables.SYSTEM_DATE_KEY.equals(segment.getValue()));
+        boolean hasSystemDateSegment = segments.stream().anyMatch(segment ->
+                "DATE".equals(segment.getSegmentType())
+                        && NumberRuleBuiltInVariables.SYSTEM_DATE_KEY.equals(segment.getValue()));
+        if (hasBusinessDateSegment && businessDate == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "编号规则需要业务日期");
+        }
+        LocalDate periodDate = businessDate;
+        if (resetPeriod != NumberResetPeriod.NEVER && periodDate == null) {
+            if (!hasSystemDateSegment) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "编号规则需要业务日期");
+            }
+            periodDate = LocalDate.now();
         }
         String periodKey = switch (resetPeriod) {
             case NEVER -> NEVER_PERIOD_KEY;
-            case YEAR -> businessDate.format(DateTimeFormatter.ofPattern("yyyy"));
-            case MONTH -> businessDate.format(DateTimeFormatter.ofPattern("yyyyMM"));
-            case DAY -> businessDate.format(DateTimeFormatter.BASIC_ISO_DATE);
+            case YEAR -> periodDate.format(DateTimeFormatter.ofPattern("yyyy"));
+            case MONTH -> periodDate.format(DateTimeFormatter.ofPattern("yyyyMM"));
+            case DAY -> periodDate.format(DateTimeFormatter.BASIC_ISO_DATE);
         };
         return new ResolvedSegment(scopeKey, periodKey);
     }

@@ -87,4 +87,5 @@
 - 基线表由 `V1__baseline_schema.sql` 建立。
 - `V12__add_numbering_rules.sql` 为分类增加节点编号模式和规则引用，已有分类默认使用 `AUTO_DEFAULT`。
 - `V13__refine_numbering_rules.sql` 增加编号引用和结构化格式段，并将基础资料规则关联到 Feature。
+- `V14__add_basic_data_item_version.sql` 补齐资料节点的乐观锁版本号字段。
 - 已执行迁移不得修改，后续结构和初始化数据继续通过新增 Flyway 迁移维护。

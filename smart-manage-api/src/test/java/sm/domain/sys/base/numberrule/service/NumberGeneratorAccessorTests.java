@@ -67,6 +67,43 @@ class NumberGeneratorAccessorTests {
         }
     }
 
+    @Test
+    void rendersSystemDateWithoutBusinessDate() {
+        NumberRuleMapper mapper = mock(NumberRuleMapper.class);
+        NumberRuleSegmentMapper segmentMapper = mock(NumberRuleSegmentMapper.class);
+        NumberRuleEntity rule = new NumberRuleEntity();
+        rule.setRuleKey("system-date");
+        rule.setReferenceKey("reference");
+        rule.setScopeType("ORG");
+        rule.setResetPeriod("NEVER");
+        rule.setStartValue(1L);
+        rule.setEnabled(true);
+        when(mapper.selectOne(any())).thenReturn(rule);
+        when(mapper.nextValue("system-date", "20", "NEVER", 1L)).thenReturn(1L);
+        NumberRuleSegmentEntity date = new NumberRuleSegmentEntity();
+        date.setSort(1);
+        date.setSegmentType("DATE");
+        date.setValue(NumberRuleBuiltInVariables.SYSTEM_DATE_KEY);
+        date.setFormat("yyyyMMdd");
+        date.setSeparator("-");
+        NumberRuleSegmentEntity sequence = new NumberRuleSegmentEntity();
+        sequence.setSort(2);
+        sequence.setSegmentType("SEQUENCE");
+        sequence.setLength(3);
+        sequence.setSeparator("");
+        when(segmentMapper.selectList(any())).thenReturn(List.of(date, sequence));
+        NumberGeneratorAccessor accessor = accessor(mapper, segmentMapper);
+
+        try (MockedStatic<TransactionSynchronizationManager> transaction =
+                     mockStatic(TransactionSynchronizationManager.class)) {
+            transaction.when(TransactionSynchronizationManager::isActualTransactionActive).thenReturn(true);
+            String number = accessor.nextNumber("reference", "system-date",
+                    NumberGenerationContext.forOrganization(20L, null));
+            assertEquals(LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE) + "-001",
+                    number);
+        }
+    }
+
     private NumberGeneratorAccessor accessor(NumberRuleMapper mapper, NumberRuleSegmentMapper segmentMapper) {
         NumberReferenceDefinition definition = new NumberReferenceDefinition(
                 "reference", "feature", Set.of(NumberScopeType.ORG),

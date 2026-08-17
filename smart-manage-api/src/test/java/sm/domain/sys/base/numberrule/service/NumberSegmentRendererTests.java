@@ -51,6 +51,20 @@ class NumberSegmentRendererTests {
                 segment(2, "SEQUENCE", null, null, 5, "")), reference));
     }
 
+    @Test
+    void rendersBuiltInSystemDateWithoutBusinessDate() {
+        List<NumberRuleSegmentEntity> segments = List.of(
+                segment(1, "DATE", NumberRuleBuiltInVariables.SYSTEM_DATE_KEY, "yyyyMMdd", null, "-"),
+                segment(2, "SEQUENCE", null, null, 3, ""));
+
+        NumberSegmentRenderer.validate(segments, reference);
+
+        assertEquals(LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE) + "-001",
+                NumberSegmentRenderer.render(segments, 1,
+                        new NumberGenerationContext(null, null, null),
+                        new NumberVariableResolverRegistry(List.of())));
+    }
+
     private NumberRuleSegmentEntity segment(int sort, String type, String value, String format,
                                             Integer length, String separator) {
         NumberRuleSegmentEntity segment = new NumberRuleSegmentEntity();

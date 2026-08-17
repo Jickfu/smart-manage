@@ -61,7 +61,10 @@ public class NumberRuleService {
             }
             reference.setAllowedScopes(definition.allowedScopes().stream().map(Enum::name)
                     .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new)));
-            reference.setVariables(definition.variables().stream()
+            List<sm.domain.sys.base.numberrule.model.NumberVariableDefinition> variables =
+                    new ArrayList<>(definition.variables());
+            variables.add(NumberRuleBuiltInVariables.SYSTEM_DATE);
+            reference.setVariables(variables.stream()
                     .map(variable -> new NumberVariableVO(
                             variable.key(), variable.name(), variable.segmentType().name()))
                     .toList());

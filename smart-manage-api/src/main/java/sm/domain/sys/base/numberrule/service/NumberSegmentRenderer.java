@@ -27,6 +27,7 @@ final class NumberSegmentRenderer {
         if (segments.size() > 20) throw invalid("编号格式段不能超过20段");
         Map<String, NumberVariableDefinition> variables = reference.variables().stream()
                 .collect(java.util.stream.Collectors.toMap(NumberVariableDefinition::key, value -> value));
+        variables.put(NumberRuleBuiltInVariables.SYSTEM_DATE_KEY, NumberRuleBuiltInVariables.SYSTEM_DATE);
         int sequenceCount = 0;
         int expectedSort = 1;
         int minimumResultLength = 0;
@@ -75,7 +76,7 @@ final class NumberSegmentRenderer {
             switch (type) {
                 case FIXED -> result.append(segment.getValue());
                 case VARIABLE -> result.append(resolvers.resolve(segment.getValue(), context));
-                case DATE -> result.append(formatDate(context.businessDate(), segment.getFormat()));
+                case DATE -> result.append(formatDate(resolveDate(segment.getValue(), context), segment.getFormat()));
                 case SEQUENCE -> result.append(String.format("%0" + segment.getLength() + "d", sequenceValue));
             }
             result.append(segment.getSeparator() == null ? "" : segment.getSeparator());
@@ -122,6 +123,12 @@ final class NumberSegmentRenderer {
             case "category.number" -> "CATEGORY";
             default -> "VALUE";
         };
+    }
+
+    private static LocalDate resolveDate(String variableKey, NumberGenerationContext context) {
+        return NumberRuleBuiltInVariables.SYSTEM_DATE_KEY.equals(variableKey)
+                ? LocalDate.now()
+                : context.businessDate();
     }
 
     private static String formatDate(LocalDate date, String format) {

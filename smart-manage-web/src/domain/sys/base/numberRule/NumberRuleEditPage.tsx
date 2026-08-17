@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Button, Form, Input, InputNumber, Select, Space, Table } from 'antd';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Key, RefObject } from 'react';
+import { App, Button, Form, Input, InputNumber, Select, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import type { FormListOperation } from 'antd/es/form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
+import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
@@ -42,28 +45,22 @@ const segmentTypeOptions = [
   { label: '顺序号', value: 'SEQUENCE' },
 ];
 
-const ScopeSelector = ({
-  references,
-  disabled,
-}: {
-  references: NumberReference[];
-  disabled?: boolean;
-}) => {
+const ScopeSelector = ({ disabled }: { disabled?: boolean }) => {
   const form = Form.useFormInstance();
-  const referenceKey = Form.useWatch('referenceKey', form) as string | undefined;
+  const selectedReference = Form.useWatch('reference', form) as NumberReference | undefined;
   const scopeType = Form.useWatch('scopeType', form) as NumberScopeType | undefined;
-  const reference = references.find((item) => item.referenceKey === referenceKey);
   useEffect(() => {
-    if (reference && (!scopeType || !reference.allowedScopes.includes(scopeType))) {
-      form.setFieldValue('scopeType', reference.allowedScopes[0]);
+    if (selectedReference && (!scopeType || !selectedReference.allowedScopes.includes(scopeType))) {
+      form.setFieldValue('scopeType', selectedReference.allowedScopes[0]);
     }
-  }, [form, reference, scopeType]);
+  }, [form, scopeType, selectedReference]);
   return (
     <Form.Item name="scopeType" rules={[{ required: true, message: '请选择流水作用域' }]} noStyle>
       <Select
         className="sm-number-rule-scope"
+        variant="underlined"
         disabled={disabled}
-        options={(reference?.allowedScopes ?? []).map((scope) => ({
+        options={(selectedReference?.allowedScopes ?? []).map((scope) => ({
           label: scopeLabels[scope],
           value: scope,
         }))}
@@ -72,10 +69,25 @@ const ScopeSelector = ({
   );
 };
 
-const SegmentEditor = ({ references }: { references: NumberReference[] }) => {
+interface SegmentEditorProps {
+  editable: boolean;
+  selectedRowKeys: Key[];
+  onSelectedRowKeysChange: (keys: Key[]) => void;
+  onSelectedIndexChange: (index: number | undefined) => void;
+  operationsRef: RefObject<FormListOperation | null>;
+  indexByKeyRef: RefObject<Map<Key, number>>;
+}
+
+const SegmentEditor = ({
+  editable,
+  selectedRowKeys,
+  onSelectedRowKeysChange,
+  onSelectedIndexChange,
+  operationsRef,
+  indexByKeyRef,
+}: SegmentEditorProps) => {
   const form = Form.useFormInstance();
-  const referenceKey = Form.useWatch('referenceKey', form) as string | undefined;
-  const reference = references.find((item) => item.referenceKey === referenceKey);
+  const reference = Form.useWatch('reference', form) as NumberReference | undefined;
   const variableOptions = (type: 'VARIABLE' | 'DATE') =>
     reference?.variables
       .filter((variable) => variable.segmentType === type)
@@ -96,15 +108,21 @@ const SegmentEditor = ({ references }: { references: NumberReference[] }) => {
         },
       ]}
     >
-      {(fields, { add, remove, move }, { errors }) => {
+      {(fields, { add, remove, move }) => {
+        operationsRef.current = { add, remove, move };
+        indexByKeyRef.current = new Map(fields.map((field) => [field.key, field.name]));
         const columns: ColumnsType<(typeof fields)[number]> = [
           { title: '顺序', width: 54, render: (_, __, index) => index + 1 },
           {
             title: '值类型',
             width: 130,
             render: (_, field) => (
-              <Form.Item name={[field.name, 'segmentType']} rules={[{ required: true }]} noStyle>
-                <Select options={segmentTypeOptions} />
+              <Form.Item
+                name={[field.name, 'segmentType']}
+                rules={[{ required: true, message: '请选择值类型' }]}
+                noStyle
+              >
+                <Select variant="underlined" disabled={!editable} options={segmentTypeOptions} />
               </Form.Item>
             ),
           },
@@ -118,19 +136,37 @@ const SegmentEditor = ({ references }: { references: NumberReference[] }) => {
                     | undefined;
                   if (type === 'VARIABLE' || type === 'DATE') {
                     return (
-                      <Form.Item name={[field.name, 'value']} rules={[{ required: true }]} noStyle>
-                        <Select placeholder="选择受控业务变量" options={variableOptions(type)} />
+                      <Form.Item
+                        name={[field.name, 'value']}
+                        rules={[{ required: true, message: '请选择值或来源' }]}
+                        noStyle
+                      >
+                        <Select
+                          variant="underlined"
+                          disabled={!editable}
+                          placeholder="选择受控业务变量"
+                          options={variableOptions(type)}
+                        />
                       </Form.Item>
                     );
                   }
                   if (type === 'FIXED') {
                     return (
-                      <Form.Item name={[field.name, 'value']} rules={[{ required: true }]} noStyle>
-                        <Input maxLength={200} placeholder="固定文本" />
+                      <Form.Item
+                        name={[field.name, 'value']}
+                        rules={[{ required: true, whitespace: true, message: '请输入固定值' }]}
+                        noStyle
+                      >
+                        <Input
+                          variant="underlined"
+                          disabled={!editable}
+                          maxLength={200}
+                          placeholder="固定文本"
+                        />
                       </Form.Item>
                     );
                   }
-                  return <Input disabled placeholder="由流水计数器生成" />;
+                  return <Input variant="underlined" disabled placeholder="由流水计数器生成" />;
                 }}
               </Form.Item>
             ),
@@ -146,8 +182,14 @@ const SegmentEditor = ({ references }: { references: NumberReference[] }) => {
                     | undefined;
                   if (type === 'DATE') {
                     return (
-                      <Form.Item name={[field.name, 'format']} rules={[{ required: true }]} noStyle>
+                      <Form.Item
+                        name={[field.name, 'format']}
+                        rules={[{ required: true, message: '请选择日期格式' }]}
+                        noStyle
+                      >
                         <Select
+                          variant="underlined"
+                          disabled={!editable}
                           options={[
                             { label: 'yyyy', value: 'yyyy' },
                             { label: 'yyyyMM', value: 'yyyyMM' },
@@ -159,12 +201,22 @@ const SegmentEditor = ({ references }: { references: NumberReference[] }) => {
                   }
                   if (type === 'SEQUENCE') {
                     return (
-                      <Form.Item name={[field.name, 'length']} rules={[{ required: true }]} noStyle>
-                        <InputNumber min={1} max={18} precision={0} />
+                      <Form.Item
+                        name={[field.name, 'length']}
+                        rules={[{ required: true, message: '请输入流水号位数' }]}
+                        noStyle
+                      >
+                        <InputNumber
+                          variant="underlined"
+                          disabled={!editable}
+                          min={1}
+                          max={18}
+                          precision={0}
+                        />
                       </Form.Item>
                     );
                   }
-                  return <Input disabled />;
+                  return <Input variant="underlined" disabled />;
                 }}
               </Form.Item>
             ),
@@ -174,28 +226,13 @@ const SegmentEditor = ({ references }: { references: NumberReference[] }) => {
             width: 130,
             render: (_, field) => (
               <Form.Item name={[field.name, 'separator']} noStyle>
-                <Input maxLength={10} placeholder="默认 -" />
+                <Input
+                  variant="underlined"
+                  disabled={!editable}
+                  maxLength={10}
+                  placeholder="默认 -"
+                />
               </Form.Item>
-            ),
-          },
-          {
-            title: '操作',
-            width: 170,
-            render: (_, field, index) => (
-              <Space size="small">
-                <Button disabled={index === 0} onClick={() => move(index, index - 1)}>
-                  上移
-                </Button>
-                <Button
-                  disabled={index === fields.length - 1}
-                  onClick={() => move(index, index + 1)}
-                >
-                  下移
-                </Button>
-                <Button danger onClick={() => remove(field.name)}>
-                  删除
-                </Button>
-              </Space>
             ),
           },
         ];
@@ -207,30 +244,23 @@ const SegmentEditor = ({ references }: { references: NumberReference[] }) => {
               pagination={false}
               columns={columns}
               dataSource={fields}
+              tableLayout="fixed"
+              scroll={{ x: 800 }}
+              rowSelection={
+                editable
+                  ? {
+                      selectedRowKeys,
+                      onChange: (keys) => {
+                        onSelectedRowKeysChange(keys);
+                        onSelectedIndexChange(
+                          keys.length === 1 ? indexByKeyRef.current.get(keys[0]!) : undefined,
+                        );
+                      },
+                    }
+                  : undefined
+              }
             />
-            <Space>
-              <Button
-                onClick={() => {
-                  const currentSegments = (form.getFieldValue('segments') ??
-                    []) as NumberRuleSegment[];
-                  const sequenceIndex = currentSegments.findIndex(
-                    (segment) => segment.segmentType === 'SEQUENCE',
-                  );
-                  const insertIndex = sequenceIndex >= 0 ? sequenceIndex : fields.length;
-                  add(
-                    {
-                      segmentType: 'FIXED',
-                      value: '',
-                      separator: fields.length ? '-' : '',
-                    },
-                    insertIndex,
-                  );
-                }}
-              >
-                添加格式段
-              </Button>
-              <Form.ErrorList errors={errors} />
-            </Space>
+            <NumberPreview />
           </div>
         );
       }}
@@ -238,41 +268,141 @@ const SegmentEditor = ({ references }: { references: NumberReference[] }) => {
   );
 };
 
+interface SegmentActionsProps {
+  selectedRowKeys: Key[];
+  selectedIndex: number | undefined;
+  onSelectedRowKeysChange: (keys: Key[]) => void;
+  onSelectedIndexChange: (index: number | undefined) => void;
+  operationsRef: RefObject<FormListOperation | null>;
+  indexByKeyRef: RefObject<Map<Key, number>>;
+}
+
+const SegmentActions = ({
+  selectedRowKeys,
+  selectedIndex,
+  onSelectedRowKeysChange,
+  onSelectedIndexChange,
+  operationsRef,
+  indexByKeyRef,
+}: SegmentActionsProps) => {
+  const form = Form.useFormInstance();
+  const segments = Form.useWatch('segments', form) as NumberRuleSegment[] | undefined;
+  const segmentCount = segments?.length ?? 0;
+  return (
+    <div className="sm-number-rule-segment-actions">
+      <Button
+        type="link"
+        onClick={() => {
+          const currentSegments = (form.getFieldValue('segments') ?? []) as NumberRuleSegment[];
+          const sequenceIndex = currentSegments.findIndex(
+            (segment) => segment.segmentType === 'SEQUENCE',
+          );
+          operationsRef.current?.add(
+            {
+              segmentType: 'FIXED',
+              value: '',
+              separator: currentSegments.length ? '-' : '',
+            },
+            sequenceIndex >= 0 ? sequenceIndex : currentSegments.length,
+          );
+        }}
+      >
+        添加格式段
+      </Button>
+      <Button
+        type="link"
+        disabled={selectedIndex === undefined || selectedIndex === 0}
+        onClick={() => {
+          if (selectedIndex === undefined) return;
+          operationsRef.current?.move(selectedIndex, selectedIndex - 1);
+          onSelectedIndexChange(selectedIndex - 1);
+        }}
+      >
+        上移
+      </Button>
+      <Button
+        type="link"
+        disabled={selectedIndex === undefined || selectedIndex === segmentCount - 1}
+        onClick={() => {
+          if (selectedIndex === undefined) return;
+          operationsRef.current?.move(selectedIndex, selectedIndex + 1);
+          onSelectedIndexChange(selectedIndex + 1);
+        }}
+      >
+        下移
+      </Button>
+      <Button
+        type="link"
+        danger
+        disabled={selectedRowKeys.length === 0}
+        onClick={() => {
+          const selectedIndexes = selectedRowKeys
+            .map((key) => indexByKeyRef.current.get(key))
+            .filter((index): index is number => index !== undefined);
+          operationsRef.current?.remove(selectedIndexes);
+          onSelectedRowKeysChange([]);
+          onSelectedIndexChange(undefined);
+        }}
+      >
+        删除
+      </Button>
+    </div>
+  );
+};
+
 const NumberPreview = () => {
   const form = Form.useFormInstance();
+  const { message } = App.useApp();
   const [preview, setPreview] = useState('');
   const { can } = usePermissionAccess(numberRuleAccess.prefix);
   const previewMutation = useMutation({
     mutationFn: async () => {
-      const values = await form.validateFields(['referenceKey', 'segments', 'startValue']);
+      const values = await form.validateFields(['reference', 'segments', 'startValue']);
+      const reference = values.reference as NumberReference;
       const segments = (values.segments as NumberRuleSegment[]).map((segment, index) => ({
         ...segment,
         sort: index + 1,
         separator: segment.separator ?? '',
       }));
-      return numberRuleApi.preview(
-        String(values.referenceKey),
-        segments,
-        Number(values.startValue),
-      );
+      return numberRuleApi.preview(reference.referenceKey, segments, Number(values.startValue));
     },
     onSuccess: setPreview,
+    onError: (error) => {
+      const validationError = error as {
+        errorFields?: { name: (string | number)[]; errors: string[] }[];
+      };
+      const firstError = validationError.errorFields?.[0];
+      if (!firstError) return;
+      void message.error(firstError.errors[0] || '请完善编号格式后再生成预览');
+      form.scrollToField(firstError.name, { focus: true });
+    },
   });
   return (
-    <Space.Compact block>
-      <Input readOnly value={preview} placeholder="点击预览，不消耗流水" />
+    <div className="sm-number-rule-preview">
+      <div className="sm-number-rule-preview-content">
+        <span className="sm-number-rule-preview-label">格式预览</span>
+        <code className={preview ? '' : 'sm-number-rule-preview-placeholder'}>
+          {preview || '点击右侧按钮生成示例编号'}
+        </code>
+        <span className="sm-number-rule-preview-hint">仅模拟生成，不消耗实际流水号</span>
+      </div>
       <Button
+        type="primary"
         disabled={!can(numberRuleAccess.permissions.preview)}
         loading={previewMutation.isPending}
         onClick={() => previewMutation.mutate()}
       >
-        预览
+        生成预览
       </Button>
-    </Space.Compact>
+    </div>
   );
 };
 
 const NumberRuleEditPage = (props: PageComponentProps) => {
+  const [selectedSegmentKeys, setSelectedSegmentKeys] = useState<Key[]>([]);
+  const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number>();
+  const segmentOperationsRef = useRef<FormListOperation | null>(null);
+  const segmentIndexByKeyRef = useRef(new Map<Key, number>());
   const queryClient = useQueryClient();
   const { appNumber, tabKey, operationType, billId } = props;
   const isAddNew = operationType === OperationType.ADDNEW;
@@ -289,17 +419,50 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
   });
   const detail = detailQuery.data;
   const references = useMemo(() => referencesQuery.data ?? [], [referencesQuery.data]);
+  const referenceSelector = useMemo(
+    () =>
+      defineRefSelector<NumberReference>({
+        selectorKey: numberRuleQueryKeys.references(),
+        modalTitle: '选择编号引用',
+        fieldNames: { key: 'referenceKey', label: 'name' },
+        displayRender: (reference) => `${reference.featureName} / ${reference.name}`,
+        columns: [
+          { title: '所属云', dataIndex: 'cloudName', width: 140 },
+          { title: '所属应用', dataIndex: 'appName', width: 160 },
+          { title: '功能', dataIndex: 'featureName', width: 180 },
+          { title: '编号引用', dataIndex: 'name' },
+        ],
+        fetchFn: async ({ pageNum, pageSize, keyword }) => {
+          const normalizedKeyword = keyword?.trim().toLowerCase();
+          const matchedReferences = normalizedKeyword
+            ? references.filter((reference) =>
+                [
+                  reference.referenceKey,
+                  reference.name,
+                  reference.featureName,
+                  reference.appName,
+                  reference.cloudName,
+                ].some((value) => value.toLowerCase().includes(normalizedKeyword)),
+              )
+            : references;
+          const startIndex = (pageNum - 1) * pageSize;
+          return {
+            records: matchedReferences.slice(startIndex, startIndex + pageSize),
+            total: matchedReferences.length,
+          };
+        },
+      }),
+    [references],
+  );
   const fields = useMemo<EditField[]>(
     () => [
       {
         label: '编号引用',
-        dataIndex: 'referenceKey',
-        type: 'select',
+        dataIndex: 'reference',
+        type: 'ref-selector',
         disabled: Boolean(detail),
-        options: references.map((reference) => ({
-          label: `${reference.featureName} / ${reference.name}`,
-          value: reference.referenceKey,
-        })),
+        placeholder: '请选择编号引用',
+        refSelector: referenceSelector,
         rules: [{ required: true, message: '请选择编号引用' }],
       },
       {
@@ -319,7 +482,7 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
         label: '流水作用域',
         dataIndex: 'scopeTypeEditor',
         type: 'custom',
-        content: <ScopeSelector references={references} disabled={detail?.systemPreset} />,
+        content: <ScopeSelector disabled={detail?.systemPreset} />,
       },
       {
         label: '重置周期',
@@ -334,27 +497,15 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
         type: 'number',
         rules: [{ required: true, type: 'number', min: 1, message: '起始流水值不能小于1' }],
       },
-      {
-        label: '编号格式',
-        dataIndex: 'segmentsEditor',
-        type: 'custom',
-        fullWidth: true,
-        content: <SegmentEditor references={references} />,
-      },
-      {
-        label: '格式预览',
-        dataIndex: 'preview',
-        type: 'custom',
-        fullWidth: true,
-        content: <NumberPreview />,
-      },
       { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
     ],
-    [detail, references],
+    [detail, referenceSelector],
   );
   const initialValues = useMemo(
     () => ({
-      referenceKey: detail?.referenceKey ?? references[0]?.referenceKey,
+      reference:
+        references.find((reference) => reference.referenceKey === detail?.referenceKey) ??
+        references[0],
       ruleKey: detail?.ruleKey ?? '',
       name: detail?.name ?? '',
       scopeType: detail?.scopeType ?? references[0]?.allowedScopes[0] ?? 'GLOBAL',
@@ -370,6 +521,7 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
+      const reference = values.reference as NumberReference;
       const segments = (values.segments as NumberRuleSegment[]).map((segment, index) => ({
         ...segment,
         sort: index + 1,
@@ -378,7 +530,7 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
       const savedId = await numberRuleApi.save({
         id: billId,
         version: detail?.version,
-        referenceKey: String(values.referenceKey),
+        referenceKey: reference.referenceKey,
         ruleKey: String(values.ruleKey).trim(),
         name: String(values.name).trim(),
         scopeType: values.scopeType as NumberScopeType,
@@ -408,6 +560,29 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
       access={numberRuleAccess}
       title="编号规则"
       fields={fields}
+      detailLabel="编号格式"
+      detailContent={(editable) => (
+        <SegmentEditor
+          editable={editable}
+          selectedRowKeys={selectedSegmentKeys}
+          onSelectedRowKeysChange={setSelectedSegmentKeys}
+          onSelectedIndexChange={setSelectedSegmentIndex}
+          operationsRef={segmentOperationsRef}
+          indexByKeyRef={segmentIndexByKeyRef}
+        />
+      )}
+      detailExtra={(editable) =>
+        editable ? (
+          <SegmentActions
+            selectedRowKeys={selectedSegmentKeys}
+            selectedIndex={selectedSegmentIndex}
+            onSelectedRowKeysChange={setSelectedSegmentKeys}
+            onSelectedIndexChange={setSelectedSegmentIndex}
+            operationsRef={segmentOperationsRef}
+            indexByKeyRef={segmentIndexByKeyRef}
+          />
+        ) : null
+      }
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
