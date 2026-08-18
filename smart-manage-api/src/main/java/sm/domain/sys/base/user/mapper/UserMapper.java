@@ -6,6 +6,7 @@ import sm.domain.sys.base.user.model.entity.UserEntity;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 import java.util.List;
+import sm.system.query.ListSqlQuery;
 
 /**
  * @author Chekfu
@@ -15,5 +16,6 @@ public interface UserMapper extends BaseMapper<UserEntity> {
 	Page<UserEntity> selectScopedPage(Page<UserEntity> page,
 			@Param("keyword") String keyword,
 			@Param("orgIds") List<Long> orgIds,
-			@Param("unassigned") boolean unassigned);
+			@Param("unassigned") boolean unassigned,
+			@Param("listQuery") ListSqlQuery listQuery);
 }

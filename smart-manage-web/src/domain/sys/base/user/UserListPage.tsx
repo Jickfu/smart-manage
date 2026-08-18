@@ -26,6 +26,14 @@ import { userAccess } from './permissions';
 import { UserAvatar } from './UserAvatar';
 import AppModal from '@/domain/common/component/AppModal';
 import './UserListPage.css';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+
+const columnFeatures: ListColumnFeatures = {
+  name: { label: '姓名', filter: { type: 'string' }, sorter: true },
+  number: { label: '工号', filter: { type: 'string' }, sorter: true },
+  username: { label: '用户名', filter: { type: 'string' }, sorter: true },
+  enabled: { label: '账号状态', filter: { type: 'boolean' }, sorter: true },
+};
 
 const USER_EDIT_KEY = 'sys/base/user/edit';
 const USER_ROLE_ASSIGNMENT_KEY = 'sys/base/user/role-assignment';
@@ -94,11 +102,21 @@ const UserListPage = (props: PageComponentProps) => {
     ...(unassigned ? { unassigned: true } : effectiveTreeKey ? { orgId: effectiveTreeKey } : {}),
     includeDescendants: unassigned ? false : includeDescendants,
   };
-  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
-    useListPageQuery({
-      queryKey: userQueryKeys.list(scope),
-      queryFn: (params) => userApi.listPage({ ...params, ...scope }),
-    });
+  const {
+    records,
+    total,
+    pageNum,
+    pageSize,
+    keyword,
+    query,
+    onSearch,
+    onPageChange,
+    onRefresh,
+    columnQueryProps,
+  } = useListPageQuery({
+    queryKey: userQueryKeys.list(scope),
+    queryFn: (params) => userApi.listPage({ ...params, ...scope }),
+  });
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
   const addContentTab = useWorkbenchStore((state) => state.addContentTab);
@@ -375,6 +393,8 @@ const UserListPage = (props: PageComponentProps) => {
         onPageChange={onPageChange}
         rowKey="id"
         columns={columns}
+        columnFeatures={columnFeatures}
+        {...columnQueryProps}
         dataSource={records}
         striped
         selectMode="checkbox"

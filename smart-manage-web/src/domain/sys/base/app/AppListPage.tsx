@@ -15,6 +15,17 @@ import { appQueryKeys } from './queryKeys';
 import type { AppListVO } from './types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { appAccess } from './permissions';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+
+const columnFeatures: ListColumnFeatures = {
+  number: { label: '编码', filter: { type: 'string' }, sorter: true },
+  name: { label: '名称', filter: { type: 'string' }, sorter: true },
+  cloudName: { label: '所属云', filter: { type: 'string' } },
+  seq: { label: '排序', filter: { type: 'number' }, sorter: true },
+  enabled: { label: '状态', filter: { type: 'boolean' }, sorter: true },
+  description: { label: '描述', filter: { type: 'string' } },
+  createTime: { label: '创建时间', filter: { type: 'date' }, sorter: true },
+};
 
 /** 应用编辑页 componentKey */
 const APP_EDIT_KEY = 'sys/base/app/edit';
@@ -50,15 +61,25 @@ const AppListPage = (props: PageComponentProps) => {
   );
 
   // 右侧列表
-  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
-    useListPageQuery({
-      queryKey: appQueryKeys.list({ cloudId: selectedCloudId }),
-      queryFn: (params) =>
-        appApi.listPage({
-          ...params,
-          cloudId: selectedCloudId,
-        }),
-    });
+  const {
+    records,
+    total,
+    pageNum,
+    pageSize,
+    keyword,
+    query,
+    onSearch,
+    onPageChange,
+    onRefresh,
+    columnQueryProps,
+  } = useListPageQuery({
+    queryKey: appQueryKeys.list({ cloudId: selectedCloudId }),
+    queryFn: (params) =>
+      appApi.listPage({
+        ...params,
+        cloudId: selectedCloudId,
+      }),
+  });
   const enabledMutation = useEnabledMutation(appApi.setEnabled, async () => {
     setSelectedRowKeys([]);
     await Promise.all([query.refetch(), treeQuery.refetch()]);
@@ -141,6 +162,8 @@ const AppListPage = (props: PageComponentProps) => {
       onPageChange={onPageChange}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      {...columnQueryProps}
       dataSource={records}
       selectMode="checkbox"
       selectedRowKeys={selectedRowKeys}

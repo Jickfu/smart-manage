@@ -19,6 +19,16 @@ import { sysParamApi } from './api';
 import { sysParamAccess } from './permissions';
 import { sysParamQueryKeys } from './queryKeys';
 import type { SysParamVO } from './types';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+
+const columnFeatures: ListColumnFeatures = {
+  number: { label: '编码', filter: { type: 'string' }, sorter: true },
+  name: { label: '名称', filter: { type: 'string' }, sorter: true },
+  appName: { label: '所属应用', filter: { type: 'string' } },
+  value: { label: '参数值', filter: { type: 'string' } },
+  description: { label: '描述', filter: { type: 'string' } },
+  isSystem: { label: '类型', filter: { type: 'boolean' } },
+};
 
 const EDIT_KEY = componentKeys.sysParamEdit;
 
@@ -45,11 +55,21 @@ const SysParamListPage = (props: PageComponentProps) => {
     cloudId: scope.type === 'cloud' ? scope.id : undefined,
     globalOnly: scope.type === 'global' ? true : undefined,
   };
-  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
-    useListPageQuery({
-      queryKey: sysParamQueryKeys.list(scopeParams),
-      queryFn: (params) => sysParamApi.listPage({ ...params, ...scopeParams }),
-    });
+  const {
+    records,
+    total,
+    pageNum,
+    pageSize,
+    keyword,
+    query,
+    onSearch,
+    onPageChange,
+    onRefresh,
+    columnQueryProps,
+  } = useListPageQuery({
+    queryKey: sysParamQueryKeys.list(scopeParams),
+    queryFn: (params) => sysParamApi.listPage({ ...params, ...scopeParams }),
+  });
   const deleteMutation = useCommandMutation({
     mutationFn: sysParamApi.delete,
     onSuccess: async () => {
@@ -163,6 +183,8 @@ const SysParamListPage = (props: PageComponentProps) => {
       onPageChange={onPageChange}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      {...columnQueryProps}
       dataSource={records}
       selectMode="radio"
       selectedRowKeys={selectedRowKeys}

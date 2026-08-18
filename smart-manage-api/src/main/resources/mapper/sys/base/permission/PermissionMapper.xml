@@ -21,8 +21,12 @@
                 AND (a.name LIKE CONCAT('%', #{form.keyword}, '%')
                 OR a.number LIKE CONCAT('%', #{form.keyword}, '%'))
             </if>
+            <include refid="sm.system.query.ListSqlQueryMapper.conditions"/>
         </where>
-        ORDER BY a.number, a.id
+        <choose>
+            <when test="listQuery.sortColumn != null">ORDER BY ${listQuery.sortColumn} ${listQuery.sortOrder}, a.id</when>
+            <otherwise>ORDER BY a.number, a.id</otherwise>
+        </choose>
     </select>
 
     <select id="selectAll" resultType="sm.domain.sys.base.permission.model.vo.PermissionSelectVO">

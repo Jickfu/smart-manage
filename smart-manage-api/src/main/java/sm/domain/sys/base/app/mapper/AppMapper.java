@@ -12,10 +12,12 @@ import sm.domain.sys.base.app.model.vo.AppVO;
 import sm.domain.sys.base.app.model.vo.CloudAppRowVO;
 
 import java.util.List;
+import sm.system.query.ListSqlQuery;
 
 @Mapper
 public interface AppMapper extends BaseMapper<AppEntity> {
-    Page<AppListVO> selectListPage(Page<AppListVO> page, @Param("form") AppListForm form);
+    Page<AppListVO> selectListPage(Page<AppListVO> page, @Param("form") AppListForm form,
+                                  @Param("listQuery") ListSqlQuery listQuery);
 
     AppDetailVO selectDetailById(Long id);
 

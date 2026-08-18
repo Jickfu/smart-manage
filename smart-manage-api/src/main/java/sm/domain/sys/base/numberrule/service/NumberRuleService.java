@@ -25,14 +25,29 @@ import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListSqlQuery;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class NumberRuleService {
+    private static final String USAGE_COUNT_SQL = "((SELECT count(*) FROM t_sys_number_reference usage_ref "
+            + "WHERE usage_ref.default_rule_key = a.rule_key) + (SELECT count(*) FROM t_sys_basic_data_category "
+            + "usage_category WHERE usage_category.number_rule_key = a.rule_key "
+            + "AND usage_category.number_mode != 'MANUAL'))";
+    private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
+            "ruleKey", ListSqlQuery.string("a.rule_key", true),
+            "name", ListSqlQuery.string("a.name", true),
+            "featureName", ListSqlQuery.string("COALESCE(c.custom_name, c.default_name)", false),
+            "pattern", ListSqlQuery.string("a.pattern", false),
+            "scopeType", ListSqlQuery.enumeration("a.scope_type", false),
+            "usageCount", ListSqlQuery.number(USAGE_COUNT_SQL, true),
+            "defaultRule", ListSqlQuery.bool("(b.default_rule_key = a.rule_key)", false),
+            "enabled", ListSqlQuery.bool("a.enabled", false));
     private final NumberRuleMapper mapper;
     private final NumberReferenceMapper referenceMapper;
     private final NumberRuleSegmentMapper segmentMapper;
@@ -40,7 +55,8 @@ public class NumberRuleService {
     private final NumberReferenceRegistry referenceRegistry;
 
     public PageData<NumberRuleVO> listPage(NumberRuleListForm form) {
-        Page<NumberRuleVO> page = mapper.selectListPage(new Page<>(form.getPageNum(), form.getPageSize()), form);
+        Page<NumberRuleVO> page = mapper.selectListPage(new Page<>(form.getPageNum(), form.getPageSize()),
+                form, ListSqlQuery.of(form, LIST_FIELDS));
         return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(), page.getRecords());
     }
 

@@ -9,10 +9,12 @@ import sm.domain.sys.base.feature.model.form.FeatureListForm;
 import sm.domain.sys.base.feature.model.vo.FeatureVO;
 
 import java.util.List;
+import sm.system.query.ListSqlQuery;
 
 @Mapper
 public interface FeatureMapper extends BaseMapper<FeatureEntity> {
-    Page<FeatureVO> selectListPage(Page<FeatureVO> page, @Param("form") FeatureListForm form);
+    Page<FeatureVO> selectListPage(Page<FeatureVO> page, @Param("form") FeatureListForm form,
+                                   @Param("listQuery") ListSqlQuery listQuery);
     FeatureVO selectDetailById(@Param("id") Long id);
     List<FeatureVO> selectAllVisible();
 }

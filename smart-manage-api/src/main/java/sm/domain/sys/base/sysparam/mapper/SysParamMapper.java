@@ -7,13 +7,15 @@ import org.apache.ibatis.annotations.Param;
 import sm.domain.sys.base.sysparam.model.entity.SysParamEntity;
 import sm.domain.sys.base.sysparam.model.form.SysParamListForm;
 import sm.domain.sys.base.sysparam.model.vo.SysParamVO;
+import sm.system.query.ListSqlQuery;
 
 /**
  * @author Chekfu
  */
 @Mapper
 public interface SysParamMapper extends BaseMapper<SysParamEntity> {
-    Page<SysParamVO> selectListPage(Page<SysParamVO> page, @Param("form") SysParamListForm form);
+    Page<SysParamVO> selectListPage(Page<SysParamVO> page, @Param("form") SysParamListForm form,
+                                    @Param("listQuery") ListSqlQuery listQuery);
 
     SysParamVO selectDetailById(@Param("id") Long id);
 }

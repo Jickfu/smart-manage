@@ -21,6 +21,19 @@ import { basicDataAccess } from './permissions';
 import { basicDataQueryKeys } from './queryKeys';
 import type { BasicDataListVO, BasicDataTreeNode } from './types';
 import './BasicDataListPage.css';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+
+const columnFeatures: ListColumnFeatures = {
+  number: { label: '编码', filter: { type: 'string' } },
+  name: { label: '名称', filter: { type: 'string' } },
+  namePath: { label: '长名称', filter: { type: 'string' } },
+  numberPath: { label: '长编码', filter: { type: 'string' } },
+  level: { label: '级次', filter: { type: 'number' } },
+  isLeaf: { label: '叶子节点', filter: { type: 'boolean' } },
+  enabled: { label: '状态', filter: { type: 'boolean' } },
+  systemPreset: { label: '系统预置', filter: { type: 'boolean' } },
+  description: { label: '描述', filter: { type: 'string' } },
+};
 
 const EDIT_KEY = componentKeys.basicDataEdit;
 const ROOT_KEY = 'basic-data-root';
@@ -70,11 +83,20 @@ const BasicDataListPage = (props: PageComponentProps) => {
           cloud.children.some((category) => category.id === selectedCategoryId),
         )?.id;
 
-  const { records, total, pageNum, pageSize, query, onSearch, onPageChange, onRefresh } =
-    useListPageQuery({
-      queryKey: basicDataQueryKeys.list({ categoryId: listCategoryId }),
-      queryFn: (params) => basicDataApi.listPage({ ...params, categoryId: listCategoryId }),
-    });
+  const {
+    records,
+    total,
+    pageNum,
+    pageSize,
+    query,
+    onSearch,
+    onPageChange,
+    onRefresh,
+    columnQueryProps,
+  } = useListPageQuery({
+    queryKey: basicDataQueryKeys.list({ categoryId: listCategoryId }),
+    queryFn: (params) => basicDataApi.listPage({ ...params, categoryId: listCategoryId }),
+  });
   const refreshAll = async () => {
     setSelectedRowKeys([]);
     await queryClient.invalidateQueries({ queryKey: basicDataQueryKeys.all });
@@ -271,6 +293,8 @@ const BasicDataListPage = (props: PageComponentProps) => {
         onPageChange={onPageChange}
         rowKey="id"
         columns={columns}
+        columnFeatures={columnFeatures}
+        {...columnQueryProps}
         dataSource={records}
         selectMode="checkbox"
         selectedRowKeys={selectedRowKeys}

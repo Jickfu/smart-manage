@@ -3,12 +3,17 @@ import { useQuery } from '@tanstack/react-query';
 import type { QueryKey } from '@tanstack/react-query';
 import type { PaginationProps } from 'antd';
 import type { PageData } from '@/types/api';
+import type { ListFilterCondition, ListSortCondition } from './listQuery';
+import { serializeListFilters } from './listQuery';
 
 /** 标准列表查询参数 */
 export interface ListPageQueryParams {
   pageNum: number;
   pageSize: number;
   keyword?: string;
+  filters?: string;
+  sortField?: string;
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 /** 标准列表查询结果 */
@@ -40,14 +45,20 @@ export function useListPageQuery<T>({
   const [pageNum, setPageNum] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [keyword, setKeyword] = useState('');
+  const [columnFilters, setColumnFilters] = useState<ListFilterCondition[]>([]);
+  const [columnSort, setColumnSort] = useState<ListSortCondition>();
+  const serializedFilters = serializeListFilters(columnFilters);
 
   const query = useQuery({
-    queryKey: [...queryKey, pageNum, pageSize, keyword],
+    queryKey: [...queryKey, pageNum, pageSize, keyword, serializedFilters, columnSort],
     queryFn: () =>
       queryFn({
         pageNum,
         pageSize,
         keyword: keyword || undefined,
+        filters: serializedFilters,
+        sortField: columnSort?.field,
+        sortOrder: columnSort?.order,
       }),
   });
 
@@ -73,6 +84,16 @@ export function useListPageQuery<T>({
 
   const resetPage = useCallback(() => setPageNum(1), []);
 
+  const onColumnFiltersChange = useCallback((filters: ListFilterCondition[]) => {
+    setColumnFilters(filters);
+    setPageNum(1);
+  }, []);
+
+  const onColumnSortChange = useCallback((sort?: ListSortCondition) => {
+    setColumnSort(sort);
+    setPageNum(1);
+  }, []);
+
   return {
     /** TanStack Query 原始结果（含 isLoading / isError / error 等） */
     query,
@@ -81,9 +102,19 @@ export function useListPageQuery<T>({
     pageNum,
     pageSize,
     keyword,
+    columnFilters,
+    columnSort,
     onSearch,
     onPageChange,
     onRefresh,
     resetPage,
+    onColumnFiltersChange,
+    onColumnSortChange,
+    columnQueryProps: {
+      columnFilters,
+      columnSort,
+      onColumnFiltersChange,
+      onColumnSortChange,
+    },
   };
 }

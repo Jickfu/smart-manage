@@ -15,6 +15,26 @@ import FeatureEditPage from './FeatureEditPage';
 import { featureAccess } from './permissions';
 import { featureQueryKeys } from './queryKeys';
 import type { FeatureVO } from './types';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+
+const columnFeatures: ListColumnFeatures = {
+  featureKey: { label: '功能键', filter: { type: 'string' }, sorter: true },
+  name: { label: '名称', filter: { type: 'string' }, sorter: true },
+  appName: { label: '所属应用', filter: { type: 'string' } },
+  source: {
+    label: '来源',
+    filter: {
+      type: 'enum',
+      options: [
+        { label: '系统', value: 'SYSTEM' },
+        { label: '插件', value: 'PLUGIN' },
+        { label: '外部', value: 'EXTERNAL' },
+      ],
+    },
+  },
+  seq: { label: '排序', filter: { type: 'number' }, sorter: true },
+  visible: { label: '目录状态', filter: { type: 'boolean' } },
+};
 
 type Scope = { type: 'all' } | { type: 'cloud'; id: string } | { type: 'app'; id: string };
 
@@ -37,6 +57,7 @@ const FeatureListPage = (props: PageComponentProps) => {
     onPageChange,
     onRefresh,
     resetPage,
+    columnQueryProps,
   } = useListPageQuery({
     queryKey: featureQueryKeys.list(scopeParams),
     queryFn: (params) => featureApi.listPage({ ...params, ...scopeParams }),
@@ -119,6 +140,8 @@ const FeatureListPage = (props: PageComponentProps) => {
         onPageChange={onPageChange}
         rowKey="id"
         columns={columns}
+        columnFeatures={columnFeatures}
+        {...columnQueryProps}
         dataSource={records}
       />
       <FeatureEditPage open={Boolean(editId)} featureId={editId} onClose={() => setEditId(null)} />

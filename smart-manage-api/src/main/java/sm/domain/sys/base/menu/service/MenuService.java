@@ -24,6 +24,7 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListSqlQuery;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,6 +42,14 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class MenuService {
+	private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
+			"number", ListSqlQuery.string("number", false),
+			"name", ListSqlQuery.string("name", false),
+			"level", ListSqlQuery.enumeration("level", false),
+			"path", ListSqlQuery.string("path", false),
+			"component", ListSqlQuery.string("component", false),
+			"sort", ListSqlQuery.number("sort", false),
+			"enabled", ListSqlQuery.bool("enabled", false));
 	private final CurrentUserContext currentUserContext;
 	private final MenuMapper mapper;
 	private final AppMapper appMapper;
@@ -123,21 +132,23 @@ public class MenuService {
 				.orderByAsc(MenuEntity::getLevel)
 				.orderByAsc(MenuEntity::getSort)
 				.orderByAsc(MenuEntity::getId));
-		menus = filterTreeMenus(menus, form.getKeyword());
+		menus = filterTreeMenus(menus, form.getKeyword(), ListSqlQuery.of(form, LIST_FIELDS));
 		return assembleMenuTree(menus, appNames);
 	}
 
 	/** 关键词命中页面时保留其父分组，保证返回结果始终可以组成完整层级。 */
-	private List<MenuEntity> filterTreeMenus(List<MenuEntity> menus, String keyword) {
-		if (keyword == null || keyword.isBlank()) {
+	private List<MenuEntity> filterTreeMenus(List<MenuEntity> menus, String keyword, ListSqlQuery listQuery) {
+		if ((keyword == null || keyword.isBlank()) && listQuery.conditions().isEmpty()) {
 			return menus;
 		}
-		String normalizedKeyword = keyword.trim().toLowerCase(Locale.ROOT);
+		String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
 		Set<Long> includedIds = new HashSet<>();
 		for (MenuEntity menu : menus) {
 			String name = menu.getName() == null ? "" : menu.getName().toLowerCase(Locale.ROOT);
 			String path = menu.getPath() == null ? "" : menu.getPath().toLowerCase(Locale.ROOT);
-			if (name.contains(normalizedKeyword) || path.contains(normalizedKeyword)) {
+			boolean keywordMatches = normalizedKeyword.isEmpty()
+					|| name.contains(normalizedKeyword) || path.contains(normalizedKeyword);
+			if (keywordMatches && listQuery.conditions().stream().allMatch(condition -> matches(menu, condition))) {
 				includedIds.add(menu.getId());
 				if (MenuLevelEnum.PAGE.equals(menu.getLevel()) && menu.getParentId() != null) {
 					includedIds.add(menu.getParentId());
@@ -151,6 +162,40 @@ public class MenuService {
 			}
 		}
 		return filteredMenus;
+	}
+
+	private boolean matches(MenuEntity menu, ListSqlQuery.Condition condition) {
+		Object rawValue = switch (condition.column()) {
+			case "number" -> menu.getNumber();
+			case "name" -> menu.getName();
+			case "level" -> menu.getLevel();
+			case "path" -> menu.getPath();
+			case "component" -> menu.getComponent();
+			case "sort" -> menu.getSort();
+			case "enabled" -> menu.getEnabled();
+			default -> null;
+		};
+		String text = rawValue == null ? "" : String.valueOf(rawValue);
+		String expected = condition.value() == null ? "" : String.valueOf(condition.value());
+		int comparison = rawValue instanceof Number && condition.value() instanceof Number
+				? new java.math.BigDecimal(text).compareTo((java.math.BigDecimal) condition.value())
+				: text.compareTo(expected);
+		return switch (condition.operator()) {
+			case EMPTY -> rawValue == null || text.isEmpty();
+			case NOT_EMPTY -> rawValue != null && !text.isEmpty();
+			case IN -> condition.values().stream().anyMatch(value -> String.valueOf(value).equals(text));
+			case CONTAINS -> text.contains(expected);
+			case NOT_CONTAINS -> !text.contains(expected);
+			case STARTS_WITH -> text.startsWith(expected);
+			case ENDS_WITH -> text.endsWith(expected);
+			case EQ -> comparison == 0;
+			case NE -> comparison != 0;
+			case GT -> comparison > 0;
+			case GE -> comparison >= 0;
+			case LT -> comparison < 0;
+			case LE -> comparison <= 0;
+			default -> false;
+		};
 	}
 
 	/** 按分组、页面两层结构组装 Ant Design Table 可直接消费的 children 数据。 */

@@ -26,6 +26,9 @@ export interface SqlLogListForm {
   resultType?: SqlResultType;
   startTime?: string;
   endTime?: string;
+  filters?: string;
+  sortField?: string;
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 export interface SqlLogListItem {

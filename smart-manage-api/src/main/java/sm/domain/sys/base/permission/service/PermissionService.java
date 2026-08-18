@@ -20,6 +20,8 @@ import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 
 import java.util.List;
+import java.util.Map;
+import sm.system.query.ListSqlQuery;
 
 /**
  * @author Chekfu
@@ -28,12 +30,17 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class PermissionService {
+	private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
+			"number", ListSqlQuery.string("a.number", true),
+			"name", ListSqlQuery.string("a.name", true),
+			"featureName", ListSqlQuery.string("COALESCE(b.custom_name, b.default_name)", false),
+			"appName", ListSqlQuery.string("c.name", false));
 	private final PermissionMapper mapper;
 	private final PermissionTxService txService;
 
 	public PageData<PermissionListVO> listPage(PermissionListForm form) {
 		Page<PermissionListVO> result = mapper.selectListPage(
-				new Page<>(form.getPageNum(), form.getPageSize()), form);
+				new Page<>(form.getPageNum(), form.getPageSize()), form, ListSqlQuery.of(form, LIST_FIELDS));
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), result.getRecords());
 	}
 

@@ -14,6 +14,7 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListSqlQuery;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -25,12 +26,21 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class AppService {
+	private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
+			"number", ListSqlQuery.string("a.number", true),
+			"name", ListSqlQuery.string("a.name", true),
+			"cloudName", ListSqlQuery.string("b.name", false),
+			"seq", ListSqlQuery.number("a.seq", true),
+			"enabled", ListSqlQuery.bool("a.enabled", true),
+			"description", ListSqlQuery.string("a.description", false),
+			"createTime", ListSqlQuery.dateTime("a.create_time", true));
 	private final CurrentUserContext currentUserContext;
 	private final AppMapper mapper;
 	private final AppTxService txService;
 
 	public PageData<AppListVO> listPage(AppListForm form) {
-		Page<AppListVO> result = mapper.selectListPage(new Page<>(form.getPageNum(), form.getPageSize()), form);
+		Page<AppListVO> result = mapper.selectListPage(new Page<>(form.getPageNum(), form.getPageSize()),
+				form, ListSqlQuery.of(form, LIST_FIELDS));
 		return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), result.getRecords());
 	}
 

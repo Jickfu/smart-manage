@@ -12,8 +12,30 @@ import { useWorkbenchStore } from '@/stores/workbench';
 import { sqlApi } from './api';
 import { sqlQueryKeys } from './queryKeys';
 import type { SqlLogListForm, SqlLogListItem, SqlResultType } from './types';
+import {
+  serializeListFilters,
+  type ListColumnFeatures,
+  type ListFilterCondition,
+  type ListSortCondition,
+} from '@/domain/common/page/listQuery';
 
 const DETAIL_KEY = componentKeys.sqlLogDetail;
+const columnFeatures: ListColumnFeatures = {
+  id: { label: '日志 ID', filter: { type: 'number' }, sorter: true },
+  sqlText: { label: 'SQL', filter: { type: 'string' } },
+  resultType: {
+    label: '结果',
+    filter: {
+      type: 'enum',
+      options: ['QUERY', 'DML', 'DDL', 'ERROR'].map((value) => ({ label: value, value })),
+    },
+  },
+  rowCount: { label: '行数', filter: { type: 'number' }, sorter: true },
+  executeDuration: { label: '耗时', filter: { type: 'number' }, sorter: true },
+  createName: { label: '执行人', filter: { type: 'string' } },
+  createIp: { label: 'IP', filter: { type: 'string' } },
+  createTime: { label: '执行时间', filter: { type: 'date' }, sorter: true },
+};
 
 export default function SqlLogPage(props: PageComponentProps) {
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
@@ -22,6 +44,8 @@ export default function SqlLogPage(props: PageComponentProps) {
   const [keyword, setKeyword] = useState('');
   const [resultType, setResultType] = useState<SqlResultType>();
   const [timeRange, setTimeRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [columnFilters, setColumnFilters] = useState<ListFilterCondition[]>([]);
+  const [columnSort, setColumnSort] = useState<ListSortCondition>();
   const params: SqlLogListForm = {
     pageNum,
     pageSize,
@@ -29,6 +53,9 @@ export default function SqlLogPage(props: PageComponentProps) {
     resultType,
     startTime: timeRange?.[0].format('YYYY-MM-DDTHH:mm:ss'),
     endTime: timeRange?.[1].format('YYYY-MM-DDTHH:mm:ss'),
+    filters: serializeListFilters(columnFilters),
+    sortField: columnSort?.field,
+    sortOrder: columnSort?.order,
   };
   const query = useQuery({
     queryKey: sqlQueryKeys.logList(params),
@@ -117,6 +144,17 @@ export default function SqlLogPage(props: PageComponentProps) {
       }}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      columnFilters={columnFilters}
+      columnSort={columnSort}
+      onColumnFiltersChange={(filters) => {
+        setColumnFilters(filters);
+        setPageNum(1);
+      }}
+      onColumnSortChange={(sort) => {
+        setColumnSort(sort);
+        setPageNum(1);
+      }}
       dataSource={query.data?.records ?? []}
     />
   );

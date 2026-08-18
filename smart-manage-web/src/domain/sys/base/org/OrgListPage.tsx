@@ -16,6 +16,28 @@ import { orgAccess } from './permissions';
 import { orgQueryKeys } from './queryKeys';
 import type { OrgListVO, OrgTreeNode, OrgType } from './types';
 import './OrgListPage.css';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+
+const columnFeatures: ListColumnFeatures = {
+  number: { label: '编码', filter: { type: 'string' } },
+  name: { label: '名称', filter: { type: 'string' } },
+  namePath: { label: '长名称', filter: { type: 'string' } },
+  orgType: {
+    label: '组织类型',
+    filter: {
+      type: 'enum',
+      options: [
+        { label: '集团', value: 'GROUP' },
+        { label: '公司', value: 'COMPANY' },
+        { label: '部门', value: 'DEPARTMENT' },
+      ],
+    },
+  },
+  enabled: { label: '使用状态', filter: { type: 'boolean' } },
+  archived: { label: '封存状态', filter: { type: 'boolean' } },
+  archivedAt: { label: '封存日期', filter: { type: 'date' } },
+  description: { label: '描述', filter: { type: 'string' } },
+};
 
 const ORG_TYPE_LABELS: Record<OrgType, string> = {
   GROUP: '集团',
@@ -77,11 +99,21 @@ const OrgListPage = (props: PageComponentProps) => {
     includeDescendants,
     showArchived,
   };
-  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
-    useListPageQuery({
-      queryKey: orgQueryKeys.list(listScope),
-      queryFn: (params) => orgApi.listPage({ ...params, ...listScope }),
-    });
+  const {
+    records,
+    total,
+    pageNum,
+    pageSize,
+    keyword,
+    query,
+    onSearch,
+    onPageChange,
+    onRefresh,
+    columnQueryProps,
+  } = useListPageQuery({
+    queryKey: orgQueryKeys.list(listScope),
+    queryFn: (params) => orgApi.listPage({ ...params, ...listScope }),
+  });
   const selectedRecords = records.filter((record) => selectedRowKeys.includes(record.id));
 
   const refreshAll = async () => {
@@ -261,6 +293,8 @@ const OrgListPage = (props: PageComponentProps) => {
         onPageChange={onPageChange}
         rowKey="id"
         columns={columns}
+        columnFeatures={columnFeatures}
+        {...columnQueryProps}
         dataSource={records}
         selectMode="checkbox"
         selectedRowKeys={selectedRowKeys}

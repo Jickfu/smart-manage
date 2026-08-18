@@ -21,15 +21,24 @@ import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListQueryUtil;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /** 采购申请聚合的唯一公开服务。 */
 @Service
 @RequiredArgsConstructor
 public class PurchaseRequisitionService {
+	private static final Map<String, ListQueryUtil.Field<PurchaseRequisitionEntity>> LIST_FIELDS = Map.of(
+			"number", ListQueryUtil.string(PurchaseRequisitionEntity::getNumber, true),
+			"subject", ListQueryUtil.string(PurchaseRequisitionEntity::getSubject, true),
+			"bizDate", ListQueryUtil.date(PurchaseRequisitionEntity::getBizDate, true),
+			"requiredDate", ListQueryUtil.date(PurchaseRequisitionEntity::getRequiredDate, true),
+			"billStatus", ListQueryUtil.enumeration(PurchaseRequisitionEntity::getBillStatus, true),
+			"createTime", ListQueryUtil.dateTime(PurchaseRequisitionEntity::getCreateTime, true));
 	private final CurrentUserContext currentUserContext;
     private final PurchaseRequisitionMapper mapper;
     private final PurchaseRequisitionEntryMapper entryMapper;
@@ -46,7 +55,9 @@ public class PurchaseRequisitionService {
         }
         queryWrapper.eq(form.getBillStatus() != null && !form.getBillStatus().isBlank(),
                 PurchaseRequisitionEntity::getBillStatus, form.getBillStatus());
-        queryWrapper.orderByDesc(PurchaseRequisitionEntity::getCreateTime);
+        ListQueryUtil.apply(queryWrapper, form, LIST_FIELDS);
+        if (!ListQueryUtil.hasSort(form)) queryWrapper.orderByDesc(PurchaseRequisitionEntity::getCreateTime);
+        if (!ListQueryUtil.isSortedBy(form, "id")) queryWrapper.orderByDesc(PurchaseRequisitionEntity::getId);
         Page<PurchaseRequisitionEntity> page = mapper.selectPage(
                 new Page<>(form.getPageNum(), form.getPageSize()), queryWrapper);
         List<PurchaseRequisitionListVO> records = page.getRecords().stream().map(converter::toListVO).toList();

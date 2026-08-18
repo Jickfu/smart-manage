@@ -17,6 +17,30 @@ import { menuQueryKeys } from './queryKeys';
 import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';
 import type { MenuTreeVO } from './types';
 import { menuAccess } from './permissions';
+import {
+  serializeListFilters,
+  type ListColumnFeatures,
+  type ListFilterCondition,
+} from '@/domain/common/page/listQuery';
+
+const columnFeatures: ListColumnFeatures = {
+  number: { label: '编码', filter: { type: 'string' } },
+  name: { label: '名称', filter: { type: 'string' } },
+  level: {
+    label: '层级',
+    filter: {
+      type: 'enum',
+      options: [
+        { label: '分组', value: 'CATEGORY' },
+        { label: '页面', value: 'PAGE' },
+      ],
+    },
+  },
+  path: { label: '路径', filter: { type: 'string' } },
+  component: { label: '组件', filter: { type: 'string' } },
+  sort: { label: '排序', filter: { type: 'number' } },
+  enabled: { label: '状态', filter: { type: 'boolean' } },
+};
 
 /** 菜单编辑页 componentKey */
 const MENU_EDIT_KEY = 'sys/base/menu/edit';
@@ -38,6 +62,7 @@ const MenuListPage = (props: PageComponentProps) => {
   const [pageNum, setPageNum] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [columnFilters, setColumnFilters] = useState<ListFilterCondition[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
 
@@ -52,12 +77,14 @@ const MenuListPage = (props: PageComponentProps) => {
       type: selectedScope.type,
       id: selectedScope.type === 'root' ? '' : selectedScope.id,
       keyword,
+      filters: serializeListFilters(columnFilters),
     }),
     queryFn: () =>
       menuApi.listTree({
         cloudId: selectedScope.type === 'cloud' ? selectedScope.id : undefined,
         appId: selectedScope.type === 'app' ? selectedScope.id : undefined,
         keyword: keyword || undefined,
+        filters: serializeListFilters(columnFilters),
       }),
   });
   const records = useMemo(() => treeQuery.data ?? [], [treeQuery.data]);
@@ -226,6 +253,13 @@ const MenuListPage = (props: PageComponentProps) => {
       }}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      columnFilters={columnFilters}
+      onColumnFiltersChange={(filters) => {
+        setColumnFilters(filters);
+        setSelectedRowKeys([]);
+        setPageNum(1);
+      }}
       dataSource={pagedRecords}
       selectMode="checkbox"
       selectedRowKeys={selectedRowKeys}

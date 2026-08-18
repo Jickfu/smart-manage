@@ -12,6 +12,7 @@ import { purchaseRequisitionApi } from './api';
 import { purchaseRequisitionAccess } from './permissions';
 import { purchaseRequisitionQueryKeys } from './queryKeys';
 import type { PurchaseRequisitionListVO } from './types';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 
 const EDIT_COMPONENT_KEY = componentKeys.purchaseRequisitionEdit;
 
@@ -21,6 +22,21 @@ const statusView = {
   [BillStatus.AUDITED]: { label: '审核通过', color: 'green' },
   [BillStatus.CLOSED]: { label: '已关闭', color: 'default' },
 } as const;
+
+const columnFeatures: ListColumnFeatures = {
+  number: { label: '编码', filter: { type: 'string' }, sorter: true },
+  subject: { label: '主题', filter: { type: 'string' } },
+  bizDate: { label: '业务日期', filter: { type: 'date' }, sorter: true },
+  requiredDate: { label: '需求日期', filter: { type: 'date' }, sorter: true },
+  billStatus: {
+    label: '单据状态',
+    filter: {
+      type: 'enum',
+      options: Object.entries(statusView).map(([value, view]) => ({ value, label: view.label })),
+    },
+  },
+  createTime: { label: '创建时间', filter: { type: 'date' }, sorter: true },
+};
 
 const PurchaseRequisitionListPage = (props: PageComponentProps) => {
   const { modal } = App.useApp();
@@ -108,6 +124,8 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
       onPageChange={listQuery.onPageChange}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      {...listQuery.columnQueryProps}
       dataSource={listQuery.records}
       selectMode="checkbox"
       selectedRowKeys={selectedRowKeys}

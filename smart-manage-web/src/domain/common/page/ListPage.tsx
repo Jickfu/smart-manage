@@ -2,8 +2,14 @@ import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import type { TableProps } from 'antd';
 import { Button, Result, Spin, Table } from 'antd';
-import { SettingOutlined } from '@ant-design/icons';
-import type { ColumnsType, TableRowSelection } from 'antd/es/table/interface';
+import { FilterOutlined, SettingOutlined } from '@ant-design/icons';
+import type {
+  ColumnType,
+  ColumnsType,
+  FilterDropdownProps,
+  SorterResult,
+  TableRowSelection,
+} from 'antd/es/table/interface';
 import ListFilterBar from './ListFilterBar';
 import ListTableShell from './ListTableShell';
 import type { AccessResource, PermissionAction } from './access';
@@ -22,6 +28,10 @@ import {
 } from './columnSettings';
 import type { ColumnSetting } from './columnSettings';
 import { useUserStore } from '@/stores/user';
+import ListColumnFilter from './ListColumnFilter';
+import ListFilterSummary from './ListFilterSummary';
+import ListExpandedFilters from './ListExpandedFilters';
+import type { ListColumnFeatures, ListFilterCondition, ListSortCondition } from './listQuery';
 
 interface StandardListPermissions {
   save: string;
@@ -29,6 +39,42 @@ interface StandardListPermissions {
   enable?: string;
   disable?: string;
 }
+
+const operatorLabels: Record<string, string> = {
+  CONTAINS: '包含',
+  NOT_CONTAINS: '不包含',
+  EQ: '等于',
+  NE: '不等于',
+  STARTS_WITH: '开头是',
+  ENDS_WITH: '结尾是',
+  EMPTY: '为空',
+  NOT_EMPTY: '不为空',
+  GT: '大于',
+  GE: '大于等于',
+  LT: '小于',
+  LE: '小于等于',
+  TODAY: '今天',
+  THIS_WEEK: '本周',
+  THIS_MONTH: '本月',
+  LAST_MONTH: '上月',
+  PAST_MONTH: '过去一个月',
+  PAST_THREE_MONTHS: '过去三个月',
+  BETWEEN: '从…到…',
+  IN: '是',
+};
+
+const filterSummaryLabel = (
+  condition: ListFilterCondition,
+  feature: ListColumnFeatures[string] | undefined,
+) => {
+  const values = condition.values ?? (condition.value == null ? [] : [condition.value]);
+  const displayValues = values.map((value) => {
+    const option = feature?.filter?.options?.find((item) => item.value === value);
+    return typeof option?.label === 'string' ? option.label : String(value);
+  });
+  const suffix = displayValues.length ? ` ${displayValues.join('、')}` : '';
+  return `${feature?.label ?? condition.field}：${operatorLabels[condition.operator] ?? condition.operator}${suffix}`;
+};
 
 interface ListPageProps<T> {
   title: string;
@@ -44,6 +90,14 @@ interface ListPageProps<T> {
   tableHeaderExtra?: ReactNode;
   /** 传入稳定页面键后启用按当前用户隔离的通用列设置。 */
   columnSettingsKey?: string;
+  /** 表头筛选和排序能力，键为列 key 或 dataIndex。 */
+  columnFeatures?: ListColumnFeatures;
+  /** 已应用的表头筛选条件。 */
+  columnFilters?: ListFilterCondition[];
+  /** 已应用的服务端排序。 */
+  columnSort?: ListSortCondition;
+  onColumnFiltersChange?: (filters: ListFilterCondition[]) => void;
+  onColumnSortChange?: (sort?: ListSortCondition) => void;
   /** 当前领域的标准列表权限声明 */
   access?: AccessResource<StandardListPermissions>;
   /** 左侧树面板（左树右表布局） */
@@ -110,6 +164,11 @@ function ListPage<T>({
   toolbarExtra,
   tableHeaderExtra,
   columnSettingsKey,
+  columnFeatures,
+  columnFilters = [],
+  columnSort,
+  onColumnFiltersChange,
+  onColumnSortChange,
   access,
   treePanel,
   loading = false,
@@ -165,9 +224,67 @@ function ListPage<T>({
       ? mergeColumnSettings(defaultColumnSettings, columnSettingsOverride.settings)
       : loadedColumnSettings;
 
+  const configuredColumns = useMemo(
+    () =>
+      columns.map((column) => {
+        if ('children' in column) return column;
+        const typedColumn = column as ColumnType<T>;
+        const dataIndex = typedColumn.dataIndex;
+        const columnKey = String(
+          typedColumn.key ?? (Array.isArray(dataIndex) ? dataIndex.join('.') : (dataIndex ?? '')),
+        );
+        const feature = columnFeatures?.[columnKey];
+        if (!feature) return typedColumn;
+        const filter = columnFilters.find((item) => item.field === columnKey);
+        return {
+          ...typedColumn,
+          // antd 的服务端排序回调依赖 columnKey；业务列未显式声明 key 时使用稳定字段键补齐。
+          key: typedColumn.key ?? columnKey,
+          ...(feature.filter
+            ? {
+                filteredValue: filter ? [JSON.stringify(filter)] : null,
+                filterIcon: (filtered: boolean) => (
+                  <FilterOutlined className={filtered ? 'sm-list-filter-icon-active' : undefined} />
+                ),
+                filterDropdown: ({ confirm }: FilterDropdownProps) => (
+                  <ListColumnFilter
+                    key={`${columnKey}-${JSON.stringify(filter ?? null)}`}
+                    field={columnKey}
+                    type={feature.filter?.type ?? 'string'}
+                    options={feature.filter?.options}
+                    value={filter}
+                    onConfirm={(condition) => {
+                      const nextFilters = columnFilters.filter((item) => item.field !== columnKey);
+                      if (condition) nextFilters.push(condition);
+                      onColumnFiltersChange?.(nextFilters);
+                      confirm({ closeDropdown: true });
+                    }}
+                  />
+                ),
+              }
+            : {}),
+          ...(feature.sorter
+            ? {
+                sorter: true,
+                sortOrder:
+                  columnSort?.field === columnKey
+                    ? columnSort.order === 'ASC'
+                      ? ('ascend' as const)
+                      : ('descend' as const)
+                    : null,
+              }
+            : {}),
+        };
+      }) as ColumnsType<T>,
+    [columnFeatures, columnFilters, columnSort, columns, onColumnFiltersChange],
+  );
+
   const displayedColumns = useMemo(
-    () => (columnSettingsKey ? applyColumnSettings(columns, columnSettings) : columns),
-    [columnSettings, columnSettingsKey, columns],
+    () =>
+      columnSettingsKey
+        ? applyColumnSettings(configuredColumns, columnSettings)
+        : configuredColumns,
+    [columnSettings, columnSettingsKey, configuredColumns],
   );
   const rowSelection: TableRowSelection<T> | undefined = useMemo(
     () =>
@@ -242,6 +359,31 @@ function ListPage<T>({
     tableHeaderExtra
   );
 
+  const resolvedFilterSummary = (
+    <div className="sm-list-filter-summary-combined">
+      {filterSummary}
+      {columnFilters.length > 0 && (
+        <ListFilterSummary
+          items={columnFilters.map((filter) => ({
+            key: `column-${filter.field}`,
+            label: filterSummaryLabel(filter, columnFeatures?.[filter.field]),
+            onRemove: () =>
+              onColumnFiltersChange?.(columnFilters.filter((item) => item.field !== filter.field)),
+          }))}
+        />
+      )}
+    </div>
+  );
+  const resolvedFilterContent =
+    filterContent ??
+    (columnFeatures && onColumnFiltersChange ? (
+      <ListExpandedFilters
+        features={columnFeatures}
+        filters={columnFilters}
+        onChange={onColumnFiltersChange}
+      />
+    ) : undefined);
+
   const resolveRowClassName: TableProps<T>['rowClassName'] = (record, index, indent) => {
     const stripeClass = striped
       ? index % 2 === 0
@@ -253,6 +395,19 @@ function ListPage<T>({
     return [stripeClass, businessClass].filter(Boolean).join(' ');
   };
 
+  const handleTableChange: TableProps<T>['onChange'] = (_pagination, _filters, sorter, extra) => {
+    if (extra.action !== 'sort') return;
+    const activeSorter = (Array.isArray(sorter) ? sorter[0] : sorter) as SorterResult<T>;
+    if (!activeSorter?.order || activeSorter.columnKey === undefined) {
+      onColumnSortChange?.(undefined);
+      return;
+    }
+    onColumnSortChange?.({
+      field: String(activeSorter.columnKey),
+      order: activeSorter.order === 'ascend' ? 'ASC' : 'DESC',
+    });
+  };
+
   // 错误态
   if (error) {
     return (
@@ -260,8 +415,8 @@ function ListPage<T>({
         <div className="sm-list-top">
           <ListFilterBar
             title={title}
-            filterContent={filterContent}
-            filterSummary={filterSummary}
+            filterContent={resolvedFilterContent}
+            filterSummary={resolvedFilterSummary}
             quickSearchPlaceholder={quickSearchPlaceholder}
             onQuickSearch={onQuickSearch}
           />
@@ -289,8 +444,8 @@ function ListPage<T>({
       <div className="sm-list-top">
         <ListFilterBar
           title={title}
-          filterContent={filterContent}
-          filterSummary={filterSummary}
+          filterContent={resolvedFilterContent}
+          filterSummary={resolvedFilterSummary}
           quickSearchPlaceholder={quickSearchPlaceholder}
           onQuickSearch={onQuickSearch}
         />
@@ -365,6 +520,7 @@ function ListPage<T>({
                 rowSelection={rowSelection}
                 onRow={onRow}
                 columns={fullColumns}
+                onChange={handleTableChange}
                 dataSource={dataSource}
                 expandable={expandable}
                 rowClassName={resolveRowClassName}

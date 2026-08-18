@@ -26,6 +26,7 @@ import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListQueryUtil;
 import sm.domain.sys.base.numberrule.model.vo.NumberRuleOptionVO;
 import sm.domain.sys.base.numberrule.constant.NumberRuleKeys;
 import sm.domain.sys.base.numberrule.service.NumberRuleService;
@@ -41,6 +42,16 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class BasicDataService {
+    private static final Map<String, ListQueryUtil.Field<BasicDataItemEntity>> LIST_FIELDS = Map.ofEntries(
+            Map.entry("number", ListQueryUtil.string(BasicDataItemEntity::getNumber, false)),
+            Map.entry("name", ListQueryUtil.string(BasicDataItemEntity::getName, false)),
+            Map.entry("namePath", ListQueryUtil.string(BasicDataItemEntity::getNamePath, false)),
+            Map.entry("numberPath", ListQueryUtil.string(BasicDataItemEntity::getNumberPath, false)),
+            Map.entry("level", ListQueryUtil.number(BasicDataItemEntity::getLevel, false)),
+            Map.entry("isLeaf", ListQueryUtil.bool(BasicDataItemEntity::getIsLeaf, false)),
+            Map.entry("enabled", ListQueryUtil.bool(BasicDataItemEntity::getEnabled, false)),
+            Map.entry("systemPreset", ListQueryUtil.bool(BasicDataItemEntity::getSystemPreset, false)),
+            Map.entry("description", ListQueryUtil.string(BasicDataItemEntity::getDescription, false)));
     private final BasicDataCategoryMapper categoryMapper;
     private final BasicDataItemMapper itemMapper;
     private final CloudMapper cloudMapper;
@@ -91,6 +102,7 @@ public class BasicDataService {
                     .or().like(BasicDataItemEntity::getName, keyword)
                     .or().like(BasicDataItemEntity::getNamePath, keyword));
         }
+        ListQueryUtil.apply(wrapper, form, LIST_FIELDS);
         wrapper.orderByAsc(BasicDataItemEntity::getNumberPath).orderByAsc(BasicDataItemEntity::getId);
         Page<BasicDataItemEntity> result = itemMapper.selectPage(
                 new Page<>(form.getPageNum(), form.getPageSize()), wrapper);

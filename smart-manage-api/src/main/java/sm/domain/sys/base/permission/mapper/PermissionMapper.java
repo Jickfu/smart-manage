@@ -12,6 +12,7 @@ import sm.domain.sys.base.permission.model.vo.PermissionSelectVO;
 import sm.domain.sys.base.permission.model.form.PermissionSelectForm;
 
 import java.util.List;
+import sm.system.query.ListSqlQuery;
 
 /**
  * @author Chekfu
@@ -19,7 +20,8 @@ import java.util.List;
 @Mapper
 public interface PermissionMapper extends BaseMapper<PermissionEntity> {
     Page<PermissionListVO> selectListPage(Page<PermissionListVO> page,
-                                          @Param("form") PermissionListForm form);
+                                          @Param("form") PermissionListForm form,
+                                          @Param("listQuery") ListSqlQuery listQuery);
     List<PermissionSelectVO> selectAll();
     Page<PermissionSelectVO> selectPage(Page<PermissionSelectVO> page,
                                         @Param("form") PermissionSelectForm form);

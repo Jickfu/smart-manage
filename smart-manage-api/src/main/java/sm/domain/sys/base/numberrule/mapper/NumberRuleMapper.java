@@ -10,10 +10,12 @@ import sm.domain.sys.base.numberrule.model.vo.NumberRuleVO;
 import sm.domain.sys.base.numberrule.model.vo.NumberReferenceVO;
 
 import java.util.List;
+import sm.system.query.ListSqlQuery;
 
 @Mapper
 public interface NumberRuleMapper extends BaseMapper<NumberRuleEntity> {
-    Page<NumberRuleVO> selectListPage(Page<NumberRuleVO> page, @Param("form") NumberRuleListForm form);
+    Page<NumberRuleVO> selectListPage(Page<NumberRuleVO> page, @Param("form") NumberRuleListForm form,
+                                      @Param("listQuery") ListSqlQuery listQuery);
 
     NumberRuleVO selectDetailById(@Param("id") Long id);
 

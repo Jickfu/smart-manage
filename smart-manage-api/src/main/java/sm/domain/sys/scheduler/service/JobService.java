@@ -22,6 +22,7 @@ import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.query.ListQueryUtil;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,13 @@ public class JobService {
     private final CurrentUserContext currentUserContext;
 
     private static final String MANAGED_JOB_ID_KEY = "smartManageJobId";
+    private static final Map<String, ListQueryUtil.Field<JobEntity>> LIST_FIELDS = Map.of(
+            "number", ListQueryUtil.string(JobEntity::getNumber, true),
+            "jobName", ListQueryUtil.string(JobEntity::getJobName, true),
+            "jobGroup", ListQueryUtil.string(JobEntity::getJobGroup, true),
+            "cronExpression", ListQueryUtil.string(JobEntity::getCronExpression, false),
+            "status", ListQueryUtil.enumeration(JobEntity::getStatus, true),
+            "jobClassName", ListQueryUtil.string(JobEntity::getJobClassName, false));
 
     private final JobMapper mapper;
     private final JobLogMapper jobLogMapper;
@@ -60,7 +68,9 @@ public class JobService {
             JobStatus.require(form.getStatus());
             qw.eq(JobEntity::getStatus, form.getStatus());
         }
-        qw.orderByDesc(JobEntity::getCreateTime);
+        ListQueryUtil.apply(qw, form, LIST_FIELDS);
+        if (!ListQueryUtil.hasSort(form)) qw.orderByDesc(JobEntity::getCreateTime);
+        if (!ListQueryUtil.isSortedBy(form, "id")) qw.orderByDesc(JobEntity::getId);
 
         Page<JobEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
         Page<JobEntity> result = mapper.selectPage(page, qw);

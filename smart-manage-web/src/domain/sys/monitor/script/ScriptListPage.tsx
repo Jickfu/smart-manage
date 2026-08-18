@@ -13,8 +13,17 @@ import { scriptApi } from './api';
 import { scriptAccess } from './permissions';
 import { scriptQueryKeys } from './queryKeys';
 import type { ScriptListItem } from './types';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 
 const EDIT_KEY = componentKeys.scriptManageEdit;
+
+const columnFeatures: ListColumnFeatures = {
+  number: { label: '编码', filter: { type: 'string' }, sorter: true },
+  name: { label: '名称', filter: { type: 'string' }, sorter: true },
+  description: { label: '描述', filter: { type: 'string' } },
+  updateTime: { label: '更新时间', filter: { type: 'date' }, sorter: true },
+  createTime: { label: '创建时间', filter: { type: 'date' }, sorter: true },
+};
 
 export default function ScriptListPage(props: PageComponentProps) {
   const { modal, message } = App.useApp();
@@ -22,11 +31,21 @@ export default function ScriptListPage(props: PageComponentProps) {
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
-  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
-    useListPageQuery({
-      queryKey: scriptQueryKeys.lists(),
-      queryFn: scriptApi.listPage,
-    });
+  const {
+    records,
+    total,
+    pageNum,
+    pageSize,
+    keyword,
+    query,
+    onSearch,
+    onPageChange,
+    onRefresh,
+    columnQueryProps,
+  } = useListPageQuery({
+    queryKey: scriptQueryKeys.lists(),
+    queryFn: scriptApi.listPage,
+  });
   const deleteMutation = useCommandMutation({
     mutationFn: async () => {
       const selected = records.filter((record) => selectedKeys.includes(record.id));
@@ -90,6 +109,8 @@ export default function ScriptListPage(props: PageComponentProps) {
       }}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      {...columnQueryProps}
       dataSource={records}
       selectMode="checkbox"
       selectedRowKeys={selectedKeys}

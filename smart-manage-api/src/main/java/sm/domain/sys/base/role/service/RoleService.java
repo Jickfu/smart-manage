@@ -22,8 +22,10 @@ import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
+import sm.system.query.ListQueryUtil;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +37,10 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class RoleService {
+	private static final Map<String, ListQueryUtil.Field<RoleEntity>> LIST_FIELDS = Map.of(
+			"number", ListQueryUtil.string(RoleEntity::getNumber, true),
+			"name", ListQueryUtil.string(RoleEntity::getName, true),
+			"description", ListQueryUtil.string(RoleEntity::getDescription, false));
 	private final RoleMapper mapper;
 	private final RolePermissionMapper permissionMapper;
 	private final RoleTxService txService;
@@ -42,12 +48,14 @@ public class RoleService {
 	private final RoleConverter converter;
 
 	public PageData<RoleListVO> listPage(RoleListForm form) {
-		LambdaQueryWrapper<RoleEntity> qw = new LambdaQueryWrapper<RoleEntity>()
-				.orderByAsc(RoleEntity::getId);
+		LambdaQueryWrapper<RoleEntity> qw = new LambdaQueryWrapper<RoleEntity>();
 		if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
 			String kw = form.getKeyword().trim();
 			qw.and(condition -> condition.like(RoleEntity::getName, kw).or().like(RoleEntity::getNumber, kw));
 		}
+		ListQueryUtil.apply(qw, form, LIST_FIELDS);
+		if (!ListQueryUtil.hasSort(form)) qw.orderByAsc(RoleEntity::getId);
+		else if (!ListQueryUtil.isSortedBy(form, "id")) qw.orderByAsc(RoleEntity::getId);
 		Page<RoleEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<RoleEntity> result = mapper.selectPage(page, qw);
 		var vos = result.getRecords().stream().map(converter::toListVO).collect(Collectors.toList());

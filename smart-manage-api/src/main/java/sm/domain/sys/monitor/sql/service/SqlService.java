@@ -20,9 +20,11 @@ import sm.system.response.ResultEnum;
 import sm.system.web.ClientIpResolver;
 import sm.system.util.StringUtil;
 import sm.domain.sys.monitor.common.util.LogQueryValidator;
+import sm.system.query.ListQueryUtil;
 
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 /** SQL 控制台公开业务入口。 */
 @Service
@@ -32,6 +34,15 @@ public class SqlService {
     static final int DEFAULT_MAX_ROWS = 1000;
     static final int HARD_MAX_ROWS = 5000;
     private static final Set<String> RESULT_TYPES = Set.of("QUERY", "DML", "DDL", "ERROR");
+    private static final Map<String, ListQueryUtil.Field<SqlLogEntity>> LIST_FIELDS = Map.of(
+            "id", ListQueryUtil.number(SqlLogEntity::getId, true),
+            "sqlText", ListQueryUtil.string(SqlLogEntity::getSqlText, false),
+            "resultType", ListQueryUtil.enumeration(SqlLogEntity::getResultType, false),
+            "rowCount", ListQueryUtil.number(SqlLogEntity::getRowCount, true),
+            "executeDuration", ListQueryUtil.number(SqlLogEntity::getExecuteDuration, true),
+            "createName", ListQueryUtil.string(SqlLogEntity::getCreateName, false),
+            "createIp", ListQueryUtil.string(SqlLogEntity::getCreateIp, false),
+            "createTime", ListQueryUtil.dateTime(SqlLogEntity::getCreateTime, true));
 
     private final SqlLogMapper sqlLogMapper;
     private final SqlExecutionTxService executionTxService;
@@ -62,8 +73,10 @@ public class SqlService {
                 .like(StringUtil.isNotBlank(form.getKeyword()), SqlLogEntity::getSqlText, form.getKeyword())
                 .eq(StringUtil.isNotBlank(form.getResultType()), SqlLogEntity::getResultType, form.getResultType())
                 .ge(form.getStartTime() != null, SqlLogEntity::getCreateTime, form.getStartTime())
-                .le(form.getEndTime() != null, SqlLogEntity::getCreateTime, form.getEndTime())
-                .orderByDesc(SqlLogEntity::getId);
+                .le(form.getEndTime() != null, SqlLogEntity::getCreateTime, form.getEndTime());
+        ListQueryUtil.apply(query, form, LIST_FIELDS);
+        if (!ListQueryUtil.hasSort(form)) query.orderByDesc(SqlLogEntity::getId);
+        else if (!ListQueryUtil.isSortedBy(form, "id")) query.orderByDesc(SqlLogEntity::getId);
         Page<SqlLogEntity> page = sqlLogMapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), query);
         List<SqlLogListVO> records = page.getRecords().stream().map(converter::toListVO).toList();
         return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(), records);

@@ -19,9 +19,11 @@ import sm.system.response.ResultEnum;
 import sm.system.web.ClientIpResolver;
 import sm.system.util.StringUtil;
 import sm.domain.sys.monitor.common.util.LogQueryValidator;
+import sm.system.query.ListQueryUtil;
 
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 /** 脚本控制台与脚本管理的唯一公开业务入口。 */
 @Service
@@ -32,6 +34,22 @@ public class ScriptService {
     static final String MAX_OUTPUT_PARAMETER = "SCRIPT_CONSOLE_MAX_OUTPUT_LENGTH";
     private static final Set<String> STATUSES = Set.of("SUCCESS", "ERROR", "TIMEOUT");
     private static final Set<String> TRANSACTION_MODES = Set.of("ATOMIC", "NON_ATOMIC");
+    private static final Map<String, ListQueryUtil.Field<ScriptEntity>> SCRIPT_LIST_FIELDS = Map.of(
+            "number", ListQueryUtil.string(ScriptEntity::getNumber, true),
+            "name", ListQueryUtil.string(ScriptEntity::getName, true),
+            "description", ListQueryUtil.string(ScriptEntity::getDescription, false),
+            "createTime", ListQueryUtil.dateTime(ScriptEntity::getCreateTime, true),
+            "updateTime", ListQueryUtil.dateTime(ScriptEntity::getUpdateTime, true));
+    private static final Map<String, ListQueryUtil.Field<ScriptLogEntity>> LOG_LIST_FIELDS = Map.ofEntries(
+            Map.entry("id", ListQueryUtil.number(ScriptLogEntity::getId, true)),
+            Map.entry("scriptName", ListQueryUtil.string(ScriptLogEntity::getScriptName, false)),
+            Map.entry("executeStatus", ListQueryUtil.enumeration(ScriptLogEntity::getExecuteStatus, false)),
+            Map.entry("transactionMode", ListQueryUtil.enumeration(ScriptLogEntity::getTransactionMode, false)),
+            Map.entry("transactionResult", ListQueryUtil.enumeration(ScriptLogEntity::getTransactionResult, false)),
+            Map.entry("executeDuration", ListQueryUtil.number(ScriptLogEntity::getExecuteDuration, true)),
+            Map.entry("createName", ListQueryUtil.string(ScriptLogEntity::getCreateName, false)),
+            Map.entry("createIp", ListQueryUtil.string(ScriptLogEntity::getCreateIp, false)),
+            Map.entry("createTime", ListQueryUtil.dateTime(ScriptLogEntity::getCreateTime, true)));
 
     private final ScriptMapper scriptMapper;
     private final ScriptLogMapper scriptLogMapper;
@@ -71,8 +89,10 @@ public class ScriptService {
         LambdaQueryWrapper<ScriptEntity> query = new LambdaQueryWrapper<>();
         query.and(StringUtil.isNotBlank(form.getKeyword()), wrapper -> wrapper
                         .like(ScriptEntity::getNumber, form.getKeyword())
-                        .or().like(ScriptEntity::getName, form.getKeyword()))
-                .orderByDesc(ScriptEntity::getUpdateTime).orderByDesc(ScriptEntity::getId);
+                        .or().like(ScriptEntity::getName, form.getKeyword()));
+        ListQueryUtil.apply(query, form, SCRIPT_LIST_FIELDS);
+        if (!ListQueryUtil.hasSort(form)) query.orderByDesc(ScriptEntity::getUpdateTime);
+        if (!ListQueryUtil.isSortedBy(form, "id")) query.orderByDesc(ScriptEntity::getId);
         Page<ScriptEntity> page = scriptMapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), query);
         return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(),
                 page.getRecords().stream().map(converter::toListVO).toList());
@@ -124,8 +144,10 @@ public class ScriptService {
                 .eq(StringUtil.isNotBlank(form.getTransactionMode()), ScriptLogEntity::getTransactionMode,
                         form.getTransactionMode())
                 .ge(form.getStartTime() != null, ScriptLogEntity::getCreateTime, form.getStartTime())
-                .le(form.getEndTime() != null, ScriptLogEntity::getCreateTime, form.getEndTime())
-                .orderByDesc(ScriptLogEntity::getId);
+                .le(form.getEndTime() != null, ScriptLogEntity::getCreateTime, form.getEndTime());
+        ListQueryUtil.apply(query, form, LOG_LIST_FIELDS);
+        if (!ListQueryUtil.hasSort(form)) query.orderByDesc(ScriptLogEntity::getId);
+        else if (!ListQueryUtil.isSortedBy(form, "id")) query.orderByDesc(ScriptLogEntity::getId);
         Page<ScriptLogEntity> page = scriptLogMapper.selectPage(
                 new Page<>(form.getPageNum(), form.getPageSize()), query);
         List<ScriptLogListVO> records = page.getRecords().stream().map(converter::toLogListVO).toList();

@@ -25,6 +25,7 @@ import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
 import sm.system.response.ResultEnum;
 import sm.system.response.PageData;
+import sm.system.query.ListSqlQuery;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -34,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Set;
+import java.math.BigDecimal;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -43,6 +45,13 @@ import tools.jackson.databind.json.JsonMapper;
 public class CacheService {
     private static final Map<String, CacheDefinition> MANAGED_CACHES = managedCaches();
     private static final Set<String> SCOPE_TYPES = Set.of("ALL", "CLOUD", "APP", "OTHER");
+    private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
+            "key", ListSqlQuery.string("key", true),
+            "cacheDisplayName", ListSqlQuery.string("cacheDisplayName", false),
+            "storage", ListSqlQuery.enumeration("storage", false),
+            "type", ListSqlQuery.string("type", false),
+            "ttl", ListSqlQuery.number("ttl", true),
+            "memoryBytes", ListSqlQuery.number("memoryBytes", true));
 
     private final CacheHelper cacheHelper;
     private final CurrentUserContext currentUserContext;
@@ -87,17 +96,74 @@ public class CacheService {
         appendLocalEntries(entries);
         appendRedisEntries(entries);
         String keyword = normalize(form.getKeyword());
+        ListSqlQuery listQuery = ListSqlQuery.of(form, LIST_FIELDS);
         List<CacheEntryVO> filtered = entries.stream()
                 .filter(entry -> matchesScope(entry, form, scopeType, applicationScopes))
                 .filter(entry -> keyword == null
                         || entry.getKey().toLowerCase(Locale.ROOT).contains(keyword)
                         || normalize(entry.getCacheDisplayName()) != null
                         && normalize(entry.getCacheDisplayName()).contains(keyword))
-                .sorted(Comparator.comparing(CacheEntryVO::getStorage).thenComparing(CacheEntryVO::getKey))
+                .filter(entry -> listQuery.conditions().stream().allMatch(condition -> matches(entry, condition)))
+                .sorted(cacheComparator(listQuery))
                 .toList();
         int fromIndex = Math.min((form.getPageNum() - 1) * form.getPageSize(), filtered.size());
         int toIndex = Math.min(fromIndex + form.getPageSize(), filtered.size());
         return PageData.of(filtered.size(), form.getPageNum(), form.getPageSize(), filtered.subList(fromIndex, toIndex));
+    }
+
+    private boolean matches(CacheEntryVO entry, ListSqlQuery.Condition condition) {
+        Object rawValue = switch (condition.column()) {
+            case "key" -> entry.getKey();
+            case "cacheDisplayName" -> entry.getCacheDisplayName();
+            case "storage" -> entry.getStorage();
+            case "type" -> entry.getType();
+            case "ttl" -> entry.getTtl();
+            case "memoryBytes" -> entry.getMemoryBytes();
+            default -> null;
+        };
+        return switch (condition.operator()) {
+            case EMPTY -> rawValue == null || String.valueOf(rawValue).isEmpty();
+            case NOT_EMPTY -> rawValue != null && !String.valueOf(rawValue).isEmpty();
+            case IN -> rawValue != null && condition.values().stream()
+                    .anyMatch(value -> String.valueOf(value).equals(String.valueOf(rawValue)));
+            case CONTAINS -> text(rawValue).contains(text(condition.value()));
+            case NOT_CONTAINS -> !text(rawValue).contains(text(condition.value()));
+            case STARTS_WITH -> text(rawValue).startsWith(text(condition.value()));
+            case ENDS_WITH -> text(rawValue).endsWith(text(condition.value()));
+            case EQ -> compare(rawValue, condition.value()) == 0;
+            case NE -> compare(rawValue, condition.value()) != 0;
+            case GT -> compare(rawValue, condition.value()) > 0;
+            case GE -> compare(rawValue, condition.value()) >= 0;
+            case LT -> compare(rawValue, condition.value()) < 0;
+            case LE -> compare(rawValue, condition.value()) <= 0;
+            default -> false;
+        };
+    }
+
+    private Comparator<CacheEntryVO> cacheComparator(ListSqlQuery query) {
+        Comparator<CacheEntryVO> fallback = Comparator.comparing(CacheEntryVO::getStorage)
+                .thenComparing(CacheEntryVO::getKey);
+        if (query.sortColumn() == null) return fallback;
+        Comparator<CacheEntryVO> comparator = switch (query.sortColumn()) {
+            case "key" -> Comparator.comparing(CacheEntryVO::getKey, Comparator.nullsLast(String::compareTo));
+            case "ttl" -> Comparator.comparing(CacheEntryVO::getTtl, Comparator.nullsLast(Long::compareTo));
+            case "memoryBytes" -> Comparator.comparing(CacheEntryVO::getMemoryBytes, Comparator.nullsLast(Long::compareTo));
+            default -> fallback;
+        };
+        return "DESC".equals(query.sortOrder()) ? comparator.reversed().thenComparing(fallback)
+                : comparator.thenComparing(fallback);
+    }
+
+    private int compare(Object left, Object right) {
+        if (left == null) return -1;
+        if (left instanceof Number) {
+            return new BigDecimal(String.valueOf(left)).compareTo(new BigDecimal(String.valueOf(right)));
+        }
+        return String.valueOf(left).compareTo(String.valueOf(right));
+    }
+
+    private String text(Object value) {
+        return value == null ? "" : String.valueOf(value);
     }
 
     private List<AppScope> applicationScopes(List<CloudAppsVO> cloudApps) {

@@ -17,6 +17,28 @@ import { numberRuleApi } from './api';
 import { numberRuleAccess } from './permissions';
 import { numberRuleQueryKeys } from './queryKeys';
 import type { NumberReference, NumberRuleVO } from './types';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+
+const columnFeatures: ListColumnFeatures = {
+  ruleKey: { label: '规则键', filter: { type: 'string' }, sorter: true },
+  name: { label: '名称', filter: { type: 'string' }, sorter: true },
+  featureName: { label: '功能', filter: { type: 'string' } },
+  pattern: { label: '编号格式', filter: { type: 'string' } },
+  scopeType: {
+    label: '作用域',
+    filter: {
+      type: 'enum',
+      options: [
+        { label: '全局', value: 'GLOBAL' },
+        { label: '组织', value: 'ORG' },
+        { label: '分类', value: 'CATEGORY' },
+      ],
+    },
+  },
+  usageCount: { label: '引用数', filter: { type: 'number' }, sorter: true },
+  defaultRule: { label: '默认规则', filter: { type: 'boolean' } },
+  enabled: { label: '状态', filter: { type: 'boolean' } },
+};
 
 type Scope =
   | { type: 'all' }
@@ -79,6 +101,7 @@ const NumberRuleListPage = (props: PageComponentProps) => {
     onPageChange,
     onRefresh,
     resetPage,
+    columnQueryProps,
   } = useListPageQuery({
     queryKey: numberRuleQueryKeys.list(scopeParams),
     queryFn: (params) => numberRuleApi.listPage({ ...params, ...scopeParams }),
@@ -232,6 +255,8 @@ const NumberRuleListPage = (props: PageComponentProps) => {
       onPageChange={onPageChange}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      {...columnQueryProps}
       dataSource={records}
       selectMode="checkbox"
       selectedRowKeys={selectedRowKeys}

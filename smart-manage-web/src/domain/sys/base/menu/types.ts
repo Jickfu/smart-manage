@@ -43,6 +43,7 @@ export interface MenuTreeListForm {
   cloudId?: string;
   appId?: string;
   keyword?: string;
+  filters?: string;
 }
 
 /** 菜单详情 */

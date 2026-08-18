@@ -18,6 +18,9 @@ export interface PageData<T> {
 export interface PageForm {
   pageNum: number;
   pageSize: number;
+  filters?: string;
+  sortField?: string;
+  sortOrder?: 'ASC' | 'DESC';
 }
 
 /** ID 入参 */

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
+import java.util.Map;
 import sm.domain.sys.monitor.common.util.LogQueryValidator;
 import sm.domain.sys.monitor.loginlog.model.entity.LoginLogEntity;
 import sm.domain.sys.monitor.loginlog.model.form.LoginLogListForm;
@@ -15,10 +16,26 @@ import sm.domain.sys.monitor.loginlog.mapper.LoginLogMapper;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListQueryUtil;
+
+import static sm.system.query.ListQueryUtil.bool;
+import static sm.system.query.ListQueryUtil.dateTime;
+import static sm.system.query.ListQueryUtil.enumeration;
+import static sm.system.query.ListQueryUtil.number;
+import static sm.system.query.ListQueryUtil.string;
 
 @Service
 @RequiredArgsConstructor
 public class LoginLogService {
+	private static final Map<String, ListQueryUtil.Field<LoginLogEntity>> LIST_FIELDS = Map.of(
+			"id", number(LoginLogEntity::getId, true),
+			"username", string(LoginLogEntity::getUsername, false),
+			"nickname", string(LoginLogEntity::getNickname, false),
+			"eventType", enumeration(LoginLogEntity::getEventType, false),
+			"success", bool(LoginLogEntity::getSuccess, false),
+			"ip", string(LoginLogEntity::getIp, false),
+			"createTime", dateTime(LoginLogEntity::getCreateTime, true),
+			"traceId", string(LoginLogEntity::getTraceId, false));
 	private final LoginLogMapper loginLogMapper;
 	private final LoginLogConverter converter;
 
@@ -73,7 +90,13 @@ public class LoginLogService {
 		if (form.getEndTime() != null) {
 			qw.le(LoginLogEntity::getCreateTime, form.getEndTime());
 		}
-		qw.orderByDesc(LoginLogEntity::getCreateTime);
+		ListQueryUtil.apply(qw, form, LIST_FIELDS);
+		if (!ListQueryUtil.hasSort(form)) {
+			qw.orderByDesc(LoginLogEntity::getCreateTime);
+		}
+		if (!ListQueryUtil.isSortedBy(form, "id")) {
+			qw.orderByDesc(LoginLogEntity::getId);
+		}
 		Page<LoginLogEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<LoginLogEntity> result = loginLogMapper.selectPage(page, qw);
 		var records = result.getRecords().stream().map(converter::toListVO).toList();

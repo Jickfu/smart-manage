@@ -10,14 +10,34 @@ import type { CloudListVO } from './types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import CloudEditPage from './CloudEditPage';
 import { cloudAccess } from './permissions';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+
+const columnFeatures: ListColumnFeatures = {
+  number: { label: '编码', filter: { type: 'string' }, sorter: true },
+  name: { label: '名称', filter: { type: 'string' }, sorter: true },
+  seq: { label: '排序', filter: { type: 'number' }, sorter: true },
+  enabled: { label: '状态', filter: { type: 'boolean' } },
+  createTime: { label: '创建时间', filter: { type: 'date' }, sorter: true },
+  updateTime: { label: '更新时间', filter: { type: 'date' }, sorter: true },
+};
 
 /** 云管理列表页 */
 const CloudListPage = (props: PageComponentProps) => {
-  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
-    useListPageQuery({
-      queryKey: cloudQueryKeys.lists(),
-      queryFn: (params) => cloudApi.listPage(params),
-    });
+  const {
+    records,
+    total,
+    pageNum,
+    pageSize,
+    keyword,
+    query,
+    onSearch,
+    onPageChange,
+    onRefresh,
+    columnQueryProps,
+  } = useListPageQuery({
+    queryKey: cloudQueryKeys.lists(),
+    queryFn: (params) => cloudApi.listPage(params),
+  });
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [editId, setEditId] = useState<string | null>(null); // null = 新增
@@ -93,6 +113,8 @@ const CloudListPage = (props: PageComponentProps) => {
         onPageChange={onPageChange}
         rowKey="id"
         columns={columns}
+        columnFeatures={columnFeatures}
+        {...columnQueryProps}
         dataSource={records}
         selectMode="checkbox"
         selectedRowKeys={selectedRowKeys}

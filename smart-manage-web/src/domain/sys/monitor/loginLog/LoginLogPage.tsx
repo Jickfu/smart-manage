@@ -1,6 +1,8 @@
 import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ListPage from '@/domain/common/page/ListPage';
+import ListFilterSummary from '@/domain/common/page/ListFilterSummary';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import AuditLogFilter from '@/domain/sys/monitor/common/AuditLogFilter';
@@ -28,6 +30,22 @@ const eventTypeLabels: Record<LoginEventType, string> = {
   PASSWORD_RESET_TERMINATED: '重置密码下线',
   TEMPORARY_LOGIN_GRANT_CREATED: '生成代登录密码',
   TEMPORARY_LOGIN_SUCCESS: '代登录成功',
+};
+
+const eventTypeOptions = Object.entries(eventTypeLabels).map(([value, label]) => ({
+  value,
+  label,
+}));
+
+const columnFeatures: ListColumnFeatures = {
+  id: { label: '日志 ID', filter: { type: 'number' }, sorter: true },
+  username: { label: '用户名', filter: { type: 'string' } },
+  nickname: { label: '昵称', filter: { type: 'string' } },
+  eventType: { label: '事件', filter: { type: 'enum', options: eventTypeOptions } },
+  success: { label: '结果', filter: { type: 'boolean' } },
+  ip: { label: 'IP 地址', filter: { type: 'string' } },
+  createTime: { label: '发生时间', filter: { type: 'date' }, sorter: true },
+  traceId: { label: 'Trace ID', filter: { type: 'string' } },
 };
 
 const LoginLogPage = (props: PageComponentProps) => {
@@ -86,17 +104,52 @@ const LoginLogPage = (props: PageComponentProps) => {
       pageNum={list.pageNum}
       pageSize={list.pageSize}
       quickSearchPlaceholder="搜索用户名、昵称或 IP"
-      filterSummary={list.keyword ? `关键字：${list.keyword}` : undefined}
+      filterSummary={
+        <ListFilterSummary
+          items={[
+            ...(list.filters.success === undefined
+              ? []
+              : [
+                  {
+                    key: 'success',
+                    label: `结果：${list.filters.success ? '成功' : '失败'}`,
+                    onRemove: () => list.onFilter({ ...list.filters, success: undefined }),
+                  },
+                ]),
+            ...(list.filters.eventType
+              ? [
+                  {
+                    key: 'eventType',
+                    label: `事件：${eventTypeLabels[list.filters.eventType]}`,
+                    onRemove: () => list.onFilter({ ...list.filters, eventType: undefined }),
+                  },
+                ]
+              : []),
+            ...(list.filters.timeRange
+              ? [
+                  {
+                    key: 'timeRange',
+                    label: '发生时间：已设置',
+                    onRemove: () => list.onFilter({ ...list.filters, timeRange: undefined }),
+                  },
+                ]
+              : []),
+            ...(list.filters.traceId
+              ? [
+                  {
+                    key: 'traceId',
+                    label: `Trace ID：${list.filters.traceId}`,
+                    onRemove: () => list.onFilter({ ...list.filters, traceId: undefined }),
+                  },
+                ]
+              : []),
+          ]}
+        />
+      }
       filterContent={
         <AuditLogFilter
           values={list.filters}
-          eventTypeOptions={[
-            { label: '登录成功', value: 'LOGIN_SUCCESS' },
-            { label: '登录失败', value: 'LOGIN_FAILURE' },
-            { label: '生成代登录密码', value: 'TEMPORARY_LOGIN_GRANT_CREATED' },
-            { label: '代登录成功', value: 'TEMPORARY_LOGIN_SUCCESS' },
-            { label: '退出', value: 'LOGOUT' },
-          ]}
+          eventTypeOptions={eventTypeOptions}
           onFilter={list.onFilter}
         />
       }
@@ -105,6 +158,11 @@ const LoginLogPage = (props: PageComponentProps) => {
       onRefresh={list.onRefresh}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      columnFilters={list.columnFilters}
+      columnSort={list.columnSort}
+      onColumnFiltersChange={list.onColumnFiltersChange}
+      onColumnSortChange={list.onColumnSortChange}
       dataSource={list.records}
     />
   );

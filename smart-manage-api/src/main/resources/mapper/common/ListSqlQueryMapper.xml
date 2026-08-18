@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.system.query.ListSqlQueryMapper">
+    <!-- column/sortColumn 均来自服务端常量白名单，禁止改为客户端原始字段。 -->
+    <sql id="conditions">
+        <foreach collection="listQuery.conditions" item="condition">
+            <choose>
+                <when test="condition.operator.name() == 'CONTAINS'">AND ${condition.column} LIKE CONCAT('%', #{condition.value}, '%')</when>
+                <when test="condition.operator.name() == 'NOT_CONTAINS'">AND ${condition.column} NOT LIKE CONCAT('%', #{condition.value}, '%')</when>
+                <when test="condition.operator.name() == 'STARTS_WITH'">AND ${condition.column} LIKE CONCAT(#{condition.value}, '%')</when>
+                <when test="condition.operator.name() == 'ENDS_WITH'">AND ${condition.column} LIKE CONCAT('%', #{condition.value})</when>
+                <when test="condition.operator.name() == 'EMPTY'">AND (${condition.column} IS NULL OR ${condition.column} = '')</when>
+                <when test="condition.operator.name() == 'NOT_EMPTY'">AND ${condition.column} IS NOT NULL AND ${condition.column} != ''</when>
+                <when test="condition.operator.name() == 'EQ'">AND ${condition.column} = #{condition.value}</when>
+                <when test="condition.operator.name() == 'NE'">AND ${condition.column} != #{condition.value}</when>
+                <when test="condition.operator.name() == 'GT'">AND ${condition.column} &gt; #{condition.value}</when>
+                <when test="condition.operator.name() == 'GE'">AND ${condition.column} &gt;= #{condition.value}</when>
+                <when test="condition.operator.name() == 'LT'">AND ${condition.column} &lt; #{condition.value}</when>
+                <when test="condition.operator.name() == 'LE'">AND ${condition.column} &lt;= #{condition.value}</when>
+                <when test="condition.operator.name() == 'IN'">
+                    AND ${condition.column} IN
+                    <foreach collection="condition.values" item="value" open="(" separator="," close=")">#{value}</foreach>
+                </when>
+                <when test="condition.operator.name() == 'BETWEEN'">
+                    AND ${condition.column} &gt;= #{condition.begin}
+                    AND ${condition.column} &lt; #{condition.endExclusive}
+                </when>
+            </choose>
+        </foreach>
+    </sql>
+</mapper>

@@ -15,6 +15,8 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListSqlQuery;
+import java.util.Map;
 
 /**
  * 系统参数服务
@@ -25,6 +27,13 @@ import sm.system.response.ResultEnum;
 @Slf4j
 @RequiredArgsConstructor
 public class SysParamService {
+    private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
+            "number", ListSqlQuery.string("a.number", true),
+            "name", ListSqlQuery.string("a.name", true),
+            "appName", ListSqlQuery.string("b.name", false),
+            "value", ListSqlQuery.string("a.value", false),
+            "description", ListSqlQuery.string("a.description", false),
+            "isSystem", ListSqlQuery.bool("a.is_system", false));
     private final SysParamMapper mapper;
     private final SysParamTxService txService;
     private final SysParamCacheAccessor cacheAccessor;
@@ -32,7 +41,7 @@ public class SysParamService {
     /** 管理端分页列表 */
     public PageData<SysParamVO> listPage(SysParamListForm form) {
         Page<SysParamVO> result = mapper.selectListPage(
-                new Page<>(form.getPageNum(), form.getPageSize()), form);
+                new Page<>(form.getPageNum(), form.getPageSize()), form, ListSqlQuery.of(form, LIST_FIELDS));
         return PageData.of(result.getTotal(), form.getPageNum(), form.getPageSize(), result.getRecords());
     }
 

@@ -50,6 +50,7 @@ import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListSqlQuery;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -70,6 +71,11 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class UserService {
+	private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
+			"name", ListSqlQuery.string("a.name", true),
+			"number", ListSqlQuery.string("a.number", true),
+			"username", ListSqlQuery.string("a.username", true),
+			"enabled", ListSqlQuery.bool("a.enabled", true));
 	private final UserMapper mapper;
 	private final UserRoleMapper userRoleMapper;
 	private final UserAssignmentMapper userAssignmentMapper;
@@ -90,7 +96,7 @@ public class UserService {
 		Page<UserEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		String keyword = form.getKeyword() == null ? null : form.getKeyword().trim();
 		Page<UserEntity> result = mapper.selectScopedPage(page, keyword, scopedOrgIds,
-				Boolean.TRUE.equals(form.getUnassigned()));
+				Boolean.TRUE.equals(form.getUnassigned()), ListSqlQuery.of(form, LIST_FIELDS));
 		var vos = result.getRecords().stream().map(converter::toListVO).collect(Collectors.toList());
 		for (UserListVO vo : vos) vo.setAvatar(avatarUrl(vo.getId(), vo.getAvatarAttachmentId()));
 		assembleAssignments(vos, result.getRecords().stream().map(UserEntity::getId).toList(), scopedOrgIds);

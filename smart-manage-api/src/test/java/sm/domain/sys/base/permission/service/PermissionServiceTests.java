@@ -6,6 +6,7 @@ import sm.domain.sys.base.permission.mapper.PermissionMapper;
 import sm.domain.sys.base.permission.model.form.PermissionListForm;
 import sm.domain.sys.base.permission.model.vo.PermissionListVO;
 import sm.system.response.PageData;
+import sm.system.query.ListSqlQuery;
 
 import java.util.List;
 
@@ -34,7 +35,7 @@ class PermissionServiceTests {
         record.setName("权限列表");
         Page<PermissionListVO> mapperPage = new Page<>(2, 20, 21);
         mapperPage.setRecords(List.of(record));
-        when(mapper.selectListPage(any(Page.class), same(form))).thenReturn(mapperPage);
+        when(mapper.selectListPage(any(Page.class), same(form), any(ListSqlQuery.class))).thenReturn(mapperPage);
 
         PermissionService service = new PermissionService(mapper, mock(PermissionTxService.class));
 
@@ -44,6 +45,6 @@ class PermissionServiceTests {
         assertEquals(2, result.getPageNum());
         assertEquals(20, result.getPageSize());
         assertEquals("系统管理", result.getRecords().getFirst().getAppName());
-        verify(mapper).selectListPage(any(Page.class), same(form));
+        verify(mapper).selectListPage(any(Page.class), same(form), any(ListSqlQuery.class));
     }
 }

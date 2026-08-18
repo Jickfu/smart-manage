@@ -14,8 +14,10 @@ import sm.domain.sys.scheduler.constant.JobExecutionStatus;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListQueryUtil;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 执行实例/执行日志 Service
@@ -26,6 +28,16 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class JobLogService {
+    private static final Map<String, ListQueryUtil.Field<JobLogEntity>> LIST_FIELDS = Map.ofEntries(
+            Map.entry("id", ListQueryUtil.number(JobLogEntity::getId, false)),
+            Map.entry("jobName", ListQueryUtil.string(JobLogEntity::getJobName, false)),
+            Map.entry("jobGroup", ListQueryUtil.string(JobLogEntity::getJobGroup, false)),
+            Map.entry("status", ListQueryUtil.enumeration(JobLogEntity::getStatus, true)),
+            Map.entry("startTime", ListQueryUtil.dateTime(JobLogEntity::getStartTime, true)),
+            Map.entry("endTime", ListQueryUtil.dateTime(JobLogEntity::getEndTime, true)),
+            Map.entry("durationMs", ListQueryUtil.number(JobLogEntity::getDurationMs, true)),
+            Map.entry("traceId", ListQueryUtil.string(JobLogEntity::getTraceId, false)),
+            Map.entry("errorMessage", ListQueryUtil.string(JobLogEntity::getErrorMessage, false)));
 
     private final JobLogMapper mapper;
     private final JobLogConverter converter;
@@ -47,7 +59,9 @@ public class JobLogService {
         if (form.getJobId() != null) {
             qw.eq(JobLogEntity::getJobId, form.getJobId());
         }
-        qw.orderByDesc(JobLogEntity::getStartTime);
+        ListQueryUtil.apply(qw, form, LIST_FIELDS);
+        if (!ListQueryUtil.hasSort(form)) qw.orderByDesc(JobLogEntity::getStartTime);
+        if (!ListQueryUtil.isSortedBy(form, "id")) qw.orderByDesc(JobLogEntity::getId);
 
         Page<JobLogEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
         Page<JobLogEntity> result = mapper.selectPage(page, qw);

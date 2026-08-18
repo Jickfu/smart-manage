@@ -17,6 +17,25 @@ import { cacheAccess } from './permissions';
 import { cacheQueryKeys } from './queryKeys';
 import { scopeNodeKey, scopeNodeKeyFromFilter, toTreeNode } from './scopeTree';
 import type { CacheEntry, CacheEntryKey, CacheScopeFilter } from './types';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+
+const columnFeatures: ListColumnFeatures = {
+  key: { label: 'Key', filter: { type: 'string' }, sorter: true },
+  cacheDisplayName: { label: '缓存', filter: { type: 'string' } },
+  storage: {
+    label: '存储位置',
+    filter: {
+      type: 'enum',
+      options: [
+        { label: '本地', value: 'LOCAL' },
+        { label: 'Redis', value: 'REDIS' },
+      ],
+    },
+  },
+  type: { label: '类型', filter: { type: 'string' } },
+  ttl: { label: 'TTL', filter: { type: 'number' }, sorter: true },
+  memoryBytes: { label: '内存', filter: { type: 'number' }, sorter: true },
+};
 
 function entryKey(entry: CacheEntry): CacheEntryKey {
   return { storage: entry.storage, cacheName: entry.cacheName, key: entry.key };
@@ -204,6 +223,8 @@ export default function CacheManagementPage(props: PageComponentProps) {
         onPageChange={list.onPageChange}
         rowKey="identity"
         columns={columns}
+        columnFeatures={columnFeatures}
+        {...list.columnQueryProps}
         dataSource={list.records}
         selectMode="checkbox"
         selectedRowKeys={selectedRowKeys}

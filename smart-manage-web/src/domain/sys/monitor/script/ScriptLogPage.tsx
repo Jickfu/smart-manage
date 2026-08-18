@@ -17,9 +17,51 @@ import type {
   ScriptTransactionMode,
 } from './types';
 import './scriptConsole.css';
+import {
+  serializeListFilters,
+  type ListColumnFeatures,
+  type ListFilterCondition,
+  type ListSortCondition,
+} from '@/domain/common/page/listQuery';
 
 const DETAIL_KEY = componentKeys.scriptLogDetail;
 const statusColor = { SUCCESS: 'success', ERROR: 'error', TIMEOUT: 'warning' } as const;
+const columnFeatures: ListColumnFeatures = {
+  id: { label: '日志 ID', filter: { type: 'number' }, sorter: true },
+  scriptName: { label: '脚本', filter: { type: 'string' } },
+  executeStatus: {
+    label: '状态',
+    filter: {
+      type: 'enum',
+      options: ['SUCCESS', 'ERROR', 'TIMEOUT'].map((value) => ({ label: value, value })),
+    },
+  },
+  transactionMode: {
+    label: '执行模式',
+    filter: {
+      type: 'enum',
+      options: [
+        { label: '原子事务', value: 'ATOMIC' },
+        { label: '非事务', value: 'NON_ATOMIC' },
+      ],
+    },
+  },
+  transactionResult: {
+    label: '事务结果',
+    filter: {
+      type: 'enum',
+      options: [
+        { label: '已提交', value: 'COMMITTED' },
+        { label: '已回滚', value: 'ROLLED_BACK' },
+        { label: '不适用', value: 'NOT_APPLICABLE' },
+      ],
+    },
+  },
+  executeDuration: { label: '耗时', filter: { type: 'number' }, sorter: true },
+  createName: { label: '执行人', filter: { type: 'string' } },
+  createIp: { label: 'IP', filter: { type: 'string' } },
+  createTime: { label: '执行时间', filter: { type: 'date' }, sorter: true },
+};
 
 export default function ScriptLogPage(props: PageComponentProps) {
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
@@ -29,6 +71,8 @@ export default function ScriptLogPage(props: PageComponentProps) {
   const [status, setStatus] = useState<ScriptStatus>();
   const [transactionMode, setTransactionMode] = useState<ScriptTransactionMode>();
   const [timeRange, setTimeRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [columnFilters, setColumnFilters] = useState<ListFilterCondition[]>([]);
+  const [columnSort, setColumnSort] = useState<ListSortCondition>();
   const params: ScriptLogListForm = {
     pageNum,
     pageSize,
@@ -37,6 +81,9 @@ export default function ScriptLogPage(props: PageComponentProps) {
     transactionMode,
     startTime: timeRange?.[0].format('YYYY-MM-DDTHH:mm:ss'),
     endTime: timeRange?.[1].format('YYYY-MM-DDTHH:mm:ss'),
+    filters: serializeListFilters(columnFilters),
+    sortField: columnSort?.field,
+    sortOrder: columnSort?.order,
   };
   const query = useQuery({
     queryKey: scriptQueryKeys.logList(params),
@@ -136,6 +183,17 @@ export default function ScriptLogPage(props: PageComponentProps) {
       }}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      columnFilters={columnFilters}
+      columnSort={columnSort}
+      onColumnFiltersChange={(filters) => {
+        setColumnFilters(filters);
+        setPageNum(1);
+      }}
+      onColumnSortChange={(sort) => {
+        setColumnSort(sort);
+        setPageNum(1);
+      }}
       dataSource={query.data?.records ?? []}
     />
   );

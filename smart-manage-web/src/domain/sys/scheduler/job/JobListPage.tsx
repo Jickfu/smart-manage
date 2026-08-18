@@ -14,8 +14,28 @@ import { jobApi } from './api';
 import { jobAccess } from './permissions';
 import { jobQueryKeys } from './queryKeys';
 import type { JobStatus, JobVO } from './types';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 
 const EDIT_KEY = componentKeys.schedulerJobEdit;
+
+const columnFeatures: ListColumnFeatures = {
+  number: { label: '任务编码', filter: { type: 'string' }, sorter: true },
+  jobName: { label: '任务名称', filter: { type: 'string' }, sorter: true },
+  jobGroup: { label: '分组', filter: { type: 'string' }, sorter: true },
+  cronExpression: { label: 'Cron 表达式', filter: { type: 'string' } },
+  status: {
+    label: '状态',
+    filter: {
+      type: 'enum',
+      options: [
+        { label: '已启用', value: 'ENABLED' },
+        { label: '已暂停', value: 'PAUSED' },
+      ],
+    },
+    sorter: true,
+  },
+  jobClassName: { label: '执行类', filter: { type: 'string' } },
+};
 
 const JobListPage = (props: PageComponentProps) => {
   const { modal, message } = App.useApp();
@@ -179,6 +199,8 @@ const JobListPage = (props: PageComponentProps) => {
       onPageChange={list.onPageChange}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      {...list.columnQueryProps}
       dataSource={list.records}
       selectMode="checkbox"
       selectedRowKeys={selectedRowKeys}

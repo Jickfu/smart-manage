@@ -18,13 +18,22 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListQueryUtil;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class CloudService {
+	private static final Map<String, ListQueryUtil.Field<CloudEntity>> LIST_FIELDS = Map.of(
+			"number", ListQueryUtil.string(CloudEntity::getNumber, true),
+			"name", ListQueryUtil.string(CloudEntity::getName, true),
+			"seq", ListQueryUtil.number(CloudEntity::getSeq, true),
+			"enabled", ListQueryUtil.bool(CloudEntity::getEnabled, false),
+			"createTime", ListQueryUtil.dateTime(CloudEntity::getCreateTime, true),
+			"updateTime", ListQueryUtil.dateTime(CloudEntity::getUpdateTime, true));
 	private final CloudMapper mapper;
 	private final CloudTxService txService;
 	private final CloudConverter converter;
@@ -38,7 +47,9 @@ public class CloudService {
 		if (form.getEnabled() != null) {
 			qw.eq(CloudEntity::getEnabled, form.getEnabled());
 		}
-		qw.orderByAsc(CloudEntity::getSeq).orderByAsc(CloudEntity::getId);
+		ListQueryUtil.apply(qw, form, LIST_FIELDS);
+		if (!ListQueryUtil.hasSort(form)) qw.orderByAsc(CloudEntity::getSeq);
+		if (!ListQueryUtil.isSortedBy(form, "id")) qw.orderByAsc(CloudEntity::getId);
 		Page<CloudEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<CloudEntity> result = mapper.selectPage(page, qw);
 		List<CloudListVO> vos = result.getRecords().stream().map(converter::toListVO).toList();

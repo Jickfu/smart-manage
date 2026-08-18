@@ -10,8 +10,27 @@ import { useWorkbenchStore } from '@/stores/workbench';
 import { operateLogApi } from './api';
 import { operateLogQueryKeys } from './queryKeys';
 import type { OperateLogListForm, OperateLogListVO } from './types';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 
 const OPERATE_LOG_DETAIL_KEY = 'sys/monitor/operate-log/detail';
+
+const columnFeatures: ListColumnFeatures = {
+  id: { label: '日志 ID', filter: { type: 'number' }, sorter: true },
+  bizName: { label: '业务名称', filter: { type: 'string' } },
+  username: { label: '操作人', filter: { type: 'string' } },
+  requestMethod: {
+    label: '请求方式',
+    filter: {
+      type: 'enum',
+      options: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map((value) => ({ value, label: value })),
+    },
+  },
+  requestUri: { label: '请求 URI', filter: { type: 'string' } },
+  success: { label: '结果', filter: { type: 'boolean' } },
+  durationMs: { label: '耗时', filter: { type: 'number' }, sorter: true },
+  createTime: { label: '发生时间', filter: { type: 'date' }, sorter: true },
+  traceId: { label: 'Trace ID', filter: { type: 'string' } },
+};
 
 const OperateLogPage = (props: PageComponentProps) => {
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
@@ -77,6 +96,8 @@ const OperateLogPage = (props: PageComponentProps) => {
       onRefresh={list.onRefresh}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      {...list.columnQueryProps}
       dataSource={list.records}
     />
   );

@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import type { QueryKey } from '@tanstack/react-query';
 import type { PageData } from '@/types/api';
 import type { AuditLogFilters, AuditLogListParams } from './types';
+import type { ListFilterCondition, ListSortCondition } from '@/domain/common/page/listQuery';
+import { serializeListFilters } from '@/domain/common/page/listQuery';
 
 interface Options<T, TFilters extends AuditLogFilters> {
   queryKey: (params: AuditLogListParams & Omit<TFilters, 'timeRange'>) => QueryKey;
@@ -17,6 +19,8 @@ export function useAuditLogListQuery<T, TFilters extends AuditLogFilters>({
   const [pageSize, setPageSize] = useState(20);
   const [keyword, setKeyword] = useState('');
   const [filters, setFilters] = useState<TFilters>({} as TFilters);
+  const [columnFilters, setColumnFilters] = useState<ListFilterCondition[]>([]);
+  const [columnSort, setColumnSort] = useState<ListSortCondition>();
 
   const { timeRange, ...filterValues } = filters;
   const params = {
@@ -27,6 +31,9 @@ export function useAuditLogListQuery<T, TFilters extends AuditLogFilters>({
     traceId: filters.traceId?.trim() || undefined,
     beginTime: timeRange?.[0].format('YYYY-MM-DDTHH:mm:ss'),
     endTime: timeRange?.[1].format('YYYY-MM-DDTHH:mm:ss'),
+    filters: serializeListFilters(columnFilters),
+    sortField: columnSort?.field,
+    sortOrder: columnSort?.order,
   };
 
   const query = useQuery({
@@ -49,6 +56,16 @@ export function useAuditLogListQuery<T, TFilters extends AuditLogFilters>({
     setPageSize(nextPageSize);
   }, []);
 
+  const onColumnFiltersChange = useCallback((values: ListFilterCondition[]) => {
+    setColumnFilters(values);
+    setPageNum(1);
+  }, []);
+
+  const onColumnSortChange = useCallback((value?: ListSortCondition) => {
+    setColumnSort(value);
+    setPageNum(1);
+  }, []);
+
   return {
     query,
     records: query.data?.records ?? [],
@@ -57,9 +74,19 @@ export function useAuditLogListQuery<T, TFilters extends AuditLogFilters>({
     pageSize,
     keyword,
     filters,
+    columnFilters,
+    columnSort,
     onQuickSearch,
     onFilter,
     onPageChange,
+    onColumnFiltersChange,
+    onColumnSortChange,
+    columnQueryProps: {
+      columnFilters,
+      columnSort,
+      onColumnFiltersChange,
+      onColumnSortChange,
+    },
     onRefresh: () => query.refetch(),
   };
 }

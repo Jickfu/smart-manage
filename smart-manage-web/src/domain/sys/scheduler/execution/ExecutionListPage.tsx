@@ -11,8 +11,32 @@ import { useWorkbenchStore } from '@/stores/workbench';
 import { executionApi } from './api';
 import { executionQueryKeys } from './queryKeys';
 import type { ExecutionStatus, ExecutionVO } from './types';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 
 const DETAIL_KEY = componentKeys.schedulerExecutionDetail;
+
+const executionStatusOptions = [
+  { label: '运行中', value: 'RUNNING' },
+  { label: '成功', value: 'SUCCESS' },
+  { label: '失败', value: 'FAILED' },
+  { label: '互斥跳过', value: 'SKIPPED' },
+];
+
+const columnFeatures: ListColumnFeatures = {
+  id: { label: '实例 ID', filter: { type: 'number' } },
+  jobName: { label: '任务名称', filter: { type: 'string' } },
+  jobGroup: { label: '任务分组', filter: { type: 'string' } },
+  status: {
+    label: '状态',
+    filter: { type: 'enum', options: executionStatusOptions },
+    sorter: true,
+  },
+  startTime: { label: '开始时间', filter: { type: 'date' }, sorter: true },
+  endTime: { label: '结束时间', filter: { type: 'date' }, sorter: true },
+  durationMs: { label: '耗时', filter: { type: 'number' }, sorter: true },
+  traceId: { label: 'Trace ID', filter: { type: 'string' } },
+  errorMessage: { label: '错误信息', filter: { type: 'string' } },
+};
 
 const ExecutionListPage = (props: PageComponentProps) => {
   const [status, setStatus] = useState<ExecutionStatus>();
@@ -78,12 +102,7 @@ const ExecutionListPage = (props: PageComponentProps) => {
           allowClear
           placeholder="全部状态"
           value={status}
-          options={[
-            { label: '运行中', value: 'RUNNING' },
-            { label: '成功', value: 'SUCCESS' },
-            { label: '失败', value: 'FAILED' },
-            { label: '互斥跳过', value: 'SKIPPED' },
-          ]}
+          options={executionStatusOptions}
           className="sm-execution-status-filter"
           onChange={(value) => setStatus(value)}
         />
@@ -93,6 +112,8 @@ const ExecutionListPage = (props: PageComponentProps) => {
       onPageChange={list.onPageChange}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      {...list.columnQueryProps}
       dataSource={list.records}
     />
   );

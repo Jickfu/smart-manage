@@ -17,6 +17,7 @@ import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListQueryUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,6 +27,15 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class OrgService {
+    private static final Map<String, ListQueryUtil.Field<OrgEntity>> LIST_FIELDS = Map.of(
+            "number", ListQueryUtil.string(OrgEntity::getNumber, false),
+            "name", ListQueryUtil.string(OrgEntity::getName, false),
+            "namePath", ListQueryUtil.string(OrgEntity::getNamePath, false),
+            "orgType", ListQueryUtil.enumeration(OrgEntity::getOrgType, false),
+            "enabled", ListQueryUtil.bool(OrgEntity::getEnabled, false),
+            "archived", ListQueryUtil.bool(OrgEntity::getArchived, false),
+            "archivedAt", ListQueryUtil.dateTime(OrgEntity::getArchivedAt, false),
+            "description", ListQueryUtil.string(OrgEntity::getDescription, false));
     private final OrgMapper mapper;
     private final OrgTxService txService;
     private final OrgConverter converter;
@@ -50,6 +60,7 @@ public class OrgService {
         } else {
             query.isNull(OrgEntity::getParentId);
         }
+        ListQueryUtil.apply(query, form, LIST_FIELDS);
         query.orderByAsc(OrgEntity::getSort).orderByAsc(OrgEntity::getNumber).orderByAsc(OrgEntity::getId);
         Page<OrgEntity> page = mapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), query);
         List<OrgListVO> records = page.getRecords().stream().map(converter::toListVO).toList();

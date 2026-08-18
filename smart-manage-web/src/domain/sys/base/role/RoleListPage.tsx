@@ -13,19 +13,36 @@ import type { RoleListVO } from './types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { roleAccess } from './permissions';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 
 /** 角色编辑页 componentKey */
 const ROLE_EDIT_KEY = componentKeys.roleEdit;
 const ROLE_PERMISSION_ASSIGNMENT_KEY = componentKeys.rolePermissionAssignment;
 
+const columnFeatures: ListColumnFeatures = {
+  number: { label: '编码', filter: { type: 'string' }, sorter: true },
+  name: { label: '名称', filter: { type: 'string' }, sorter: true },
+  description: { label: '描述', filter: { type: 'string' } },
+};
+
 /** 角色管理列表页 */
 const RoleListPage = (props: PageComponentProps) => {
   const { modal } = App.useApp();
-  const { records, total, pageNum, pageSize, keyword, query, onSearch, onPageChange, onRefresh } =
-    useListPageQuery({
-      queryKey: roleQueryKeys.lists(),
-      queryFn: (params) => roleApi.listPage(params),
-    });
+  const {
+    records,
+    total,
+    pageNum,
+    pageSize,
+    keyword,
+    query,
+    onSearch,
+    onPageChange,
+    onRefresh,
+    columnQueryProps,
+  } = useListPageQuery({
+    queryKey: roleQueryKeys.lists(),
+    queryFn: (params) => roleApi.listPage(params),
+  });
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((s) => s.openBillTab);
@@ -116,6 +133,8 @@ const RoleListPage = (props: PageComponentProps) => {
       onPageChange={onPageChange}
       rowKey="id"
       columns={columns}
+      columnFeatures={columnFeatures}
+      {...columnQueryProps}
       dataSource={records}
       selectMode="checkbox"
       selectedRowKeys={selectedRowKeys}

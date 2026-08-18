@@ -15,10 +15,22 @@ import sm.domain.sys.monitor.operatelog.mapper.OperateLogMapper;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.query.ListQueryUtil;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class OperateLogService {
+	private static final Map<String, ListQueryUtil.Field<OperateLogEntity>> LIST_FIELDS = Map.ofEntries(
+			Map.entry("id", ListQueryUtil.number(OperateLogEntity::getId, true)),
+			Map.entry("bizName", ListQueryUtil.string(OperateLogEntity::getBizName, false)),
+			Map.entry("username", ListQueryUtil.string(OperateLogEntity::getUsername, false)),
+			Map.entry("requestMethod", ListQueryUtil.enumeration(OperateLogEntity::getRequestMethod, false)),
+			Map.entry("requestUri", ListQueryUtil.string(OperateLogEntity::getRequestUri, false)),
+			Map.entry("success", ListQueryUtil.bool(OperateLogEntity::getSuccess, false)),
+			Map.entry("durationMs", ListQueryUtil.number(OperateLogEntity::getDurationMs, true)),
+			Map.entry("createTime", ListQueryUtil.dateTime(OperateLogEntity::getCreateTime, true)),
+			Map.entry("traceId", ListQueryUtil.string(OperateLogEntity::getTraceId, false)));
 	private final OperateLogMapper mapper;
 	private final OperateLogConverter converter;
 
@@ -72,7 +84,9 @@ public class OperateLogService {
 		if (form.getEndTime() != null) {
 			qw.le(OperateLogEntity::getCreateTime, form.getEndTime());
 		}
-		qw.orderByDesc(OperateLogEntity::getCreateTime);
+		ListQueryUtil.apply(qw, form, LIST_FIELDS);
+		if (!ListQueryUtil.hasSort(form)) qw.orderByDesc(OperateLogEntity::getCreateTime);
+		if (!ListQueryUtil.isSortedBy(form, "id")) qw.orderByDesc(OperateLogEntity::getId);
 		Page<OperateLogEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<OperateLogEntity> result = mapper.selectPage(page, qw);
 		var records = result.getRecords().stream().map(converter::toListVO).toList();

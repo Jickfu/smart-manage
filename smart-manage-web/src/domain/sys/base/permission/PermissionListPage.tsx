@@ -20,6 +20,14 @@ import { permissionAccess } from './permissions';
 import { permissionQueryKeys } from './queryKeys';
 import type { PermissionListVO } from './types';
 import { usePermissionDeleteMutation } from './usePermissionDeleteMutation';
+import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+
+const columnFeatures: ListColumnFeatures = {
+  number: { label: '编码', filter: { type: 'string' }, sorter: true },
+  name: { label: '名称', filter: { type: 'string' }, sorter: true },
+  featureName: { label: '所属功能', filter: { type: 'string' } },
+  appName: { label: '所属应用', filter: { type: 'string' } },
+};
 
 type PermissionScope =
   | { type: 'all' }
@@ -52,6 +60,7 @@ const PermissionListPage = (props: PageComponentProps) => {
     onPageChange,
     onRefresh,
     resetPage,
+    columnQueryProps,
   } = useListPageQuery({
     queryKey: permissionQueryKeys.list(scopeParams),
     queryFn: (params) => permissionApi.listPage({ ...params, ...scopeParams }),
@@ -169,6 +178,8 @@ const PermissionListPage = (props: PageComponentProps) => {
         onPageChange={onPageChange}
         rowKey="id"
         columns={columns}
+        columnFeatures={columnFeatures}
+        {...columnQueryProps}
         dataSource={records}
         selectMode="checkbox"
         selectedRowKeys={selectedRowKeys}
