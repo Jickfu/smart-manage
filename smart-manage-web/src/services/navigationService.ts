@@ -59,6 +59,8 @@ export async function openApp(appNumber: string): Promise<void> {
  * 返回 true 表示已关闭。
  */
 export async function closeAppAndRemove(appNumber: string): Promise<boolean> {
+  const target = useHeaderTabsStore.getState().tabs.find((tab) => tab.key === appNumber);
+  if (target?.pinned) return false;
   const allowed = await useWorkbenchStore.getState().closeWorkspace(appNumber);
   if (!allowed) return false;
 

@@ -8,6 +8,8 @@ import { useHeaderTabsStore } from '@/stores/headerTabs';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { useUserStore } from '@/stores/user';
 import { openApp, closeAppAndRemove } from '@/services/navigationService';
+import { pinApp, unpinApp } from '@/domain/sys/base/user/appPinApi';
+import type { HeaderTabItem } from '@/stores/headerTabs';
 import {
   logoutCurrentUser,
   switchCurrentUserOrganization,
@@ -40,6 +42,7 @@ const Header = () => {
   const [selectedOrgPath, setSelectedOrgPath] = useState<string>();
   const [organizationKeyword, setOrganizationKeyword] = useState('');
   const [organizationSaving, setOrganizationSaving] = useState(false);
+  const [pinSavingKeys, setPinSavingKeys] = useState<ReadonlySet<string>>(new Set());
   const tabs = useHeaderTabsStore((s) => s.tabs);
   const activeKey = useHeaderTabsStore((s) => s.activeKey);
   const userInfo = useUserStore((s) => s.userInfo);
@@ -64,6 +67,28 @@ const Header = () => {
   const handleRemove = async (event: React.MouseEvent, key: string) => {
     event.stopPropagation();
     await closeAppAndRemove(key);
+  };
+
+  const handlePinToggle = async (event: React.MouseEvent, tab: HeaderTabItem) => {
+    event.stopPropagation();
+    if (pinSavingKeys.has(tab.key)) return;
+    setPinSavingKeys((keys) => new Set(keys).add(tab.key));
+    try {
+      if (tab.pinned) {
+        await unpinApp(tab.key);
+      } else {
+        await pinApp(tab.key);
+      }
+      useHeaderTabsStore.getState().setAppPinned(tab.key, !tab.pinned);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '应用固定状态更新失败');
+    } finally {
+      setPinSavingKeys((keys) => {
+        const nextKeys = new Set(keys);
+        nextKeys.delete(tab.key);
+        return nextKeys;
+      });
+    }
   };
 
   const handleLogout = async () => {
@@ -201,6 +226,8 @@ const Header = () => {
         activeKey={activeKey}
         onActivate={handleTabClick}
         onRemove={(event, key) => void handleRemove(event, key)}
+        onPinToggle={(event, tab) => void handlePinToggle(event, tab)}
+        pinSavingKeys={pinSavingKeys}
       />
       {/* 右侧操作区 */}
       <div className="sm-header-actions">

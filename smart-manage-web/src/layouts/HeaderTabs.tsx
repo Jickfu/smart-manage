@@ -1,23 +1,33 @@
 import { useHorizontalTabScroll } from '@/hooks/useHorizontalTabScroll';
 import type { HeaderTabItem } from '@/stores/headerTabs';
+import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
 
 interface Props {
   tabs: HeaderTabItem[];
   activeKey: string;
   onActivate: (key: string) => void;
   onRemove: (event: React.MouseEvent, key: string) => void;
+  onPinToggle: (event: React.MouseEvent, tab: HeaderTabItem) => void;
+  pinSavingKeys: ReadonlySet<string>;
 }
 
-const HeaderTabs = ({ tabs, activeKey, onActivate, onRemove }: Props) => {
-  const fixedTabs = tabs.filter((tab) => !tab.closable);
-  const appTabs = tabs.filter((tab) => tab.closable);
+const HeaderTabs = ({
+  tabs,
+  activeKey,
+  onActivate,
+  onRemove,
+  onPinToggle,
+  pinSavingKeys,
+}: Props) => {
+  const fixedTabs = tabs.filter((tab) => tab.type === 'system');
+  const appTabs = tabs.filter((tab) => tab.type === 'app');
   const { viewportRef, activeTabRef, overflowing, canScrollLeft, canScrollRight, scroll } =
     useHorizontalTabScroll(activeKey, appTabs.length);
 
   const renderTab = (tab: HeaderTabItem, activeTab: boolean) => (
     <div
       key={tab.key}
-      ref={activeTab && tab.closable ? activeTabRef : undefined}
+      ref={activeTab && tab.type === 'app' ? activeTabRef : undefined}
       role="tab"
       tabIndex={0}
       aria-selected={activeTab}
@@ -31,15 +41,27 @@ const HeaderTabs = ({ tabs, activeKey, onActivate, onRemove }: Props) => {
       }}
     >
       <span>{tab.label}</span>
-      {tab.closable && (
+      {tab.type === 'app' && (
         <div className="sm-header-tab-operate">
+          {!tab.pinned && (
+            <button
+              type="button"
+              className="sm-header-tab-operate-close"
+              onClick={(event) => onRemove(event, tab.key)}
+              aria-label={`关闭 ${tab.label}`}
+            >
+              ×
+            </button>
+          )}
           <button
             type="button"
-            className="sm-header-tab-operate-close"
-            onClick={(event) => onRemove(event, tab.key)}
-            aria-label={`关闭 ${tab.label}`}
+            className="sm-header-tab-operate-pin"
+            disabled={pinSavingKeys.has(tab.key)}
+            onClick={(event) => onPinToggle(event, tab)}
+            aria-label={`${tab.pinned ? '取消固定' : '固定'} ${tab.label}`}
+            aria-pressed={tab.pinned}
           >
-            ×
+            {tab.pinned ? <LockOutlined /> : <UnlockOutlined />}
           </button>
         </div>
       )}

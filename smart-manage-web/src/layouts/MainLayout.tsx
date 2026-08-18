@@ -4,6 +4,7 @@ import { Layout, Spin } from 'antd';
 import Header from './Header';
 import { useHeaderTabsStore } from '@/stores/headerTabs';
 import { openApp } from '@/services/navigationService';
+import { fetchPinnedApps } from '@/domain/sys/base/user/appPinApi';
 import './MainLayout.css';
 
 const { Content } = Layout;
@@ -33,13 +34,22 @@ const PersistentView = ({ appKey, children }: { appKey: string; children: ReactN
 const MainLayout = () => {
   const initialAppOpened = useRef(false);
   const tabs = useHeaderTabsStore((s) => s.tabs);
-  const appTabs = tabs.filter((tab) => tab.closable);
+  const loadedAppTabs = tabs.filter((tab) => tab.type === 'app' && tab.loaded);
 
   useEffect(() => {
     if (initialAppOpened.current) return;
     initialAppOpened.current = true;
-    const appNumber = new URLSearchParams(window.location.search).get('app')?.trim() || 'home';
-    void openApp(appNumber);
+    const initialize = async () => {
+      try {
+        const pinnedApps = await fetchPinnedApps();
+        useHeaderTabsStore.getState().initializePinnedApps(pinnedApps);
+      } catch {
+        // 固定配置加载失败不能阻断 URL 指定应用及基础页面启动。
+      }
+      const appNumber = new URLSearchParams(window.location.search).get('app')?.trim() || 'home';
+      await openApp(appNumber);
+    };
+    void initialize();
   }, []);
 
   return (
@@ -54,7 +64,7 @@ const MainLayout = () => {
           <PersistentView appKey="apps">{renderLazyPage(<AppsView />)}</PersistentView>
 
           {/* 动态应用工作台 — 每个已打开的应用一个 li */}
-          {appTabs.map((tab) => (
+          {loadedAppTabs.map((tab) => (
             <PersistentView key={tab.key} appKey={tab.key}>
               {renderLazyPage(<Workbench appNumber={tab.key} />)}
             </PersistentView>
