@@ -81,5 +81,4 @@ export interface BasicDataSaveForm {
   name: string;
   description?: string;
   sort: number;
-  enabled: boolean;
 }

@@ -20,5 +20,4 @@ public class BasicDataItemSaveForm {
     @Size(max = 255, message = "描述不能超过255个字符")
     private String description;
     private Integer sort;
-    private Boolean enabled;
 }

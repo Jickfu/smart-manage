@@ -10,34 +10,8 @@ import { useWorkbenchStore } from '@/stores/workbench';
 import { basicDataApi } from './api';
 import { basicDataAccess } from './permissions';
 import { basicDataQueryKeys } from './queryKeys';
-import type { BasicDataOption, BasicDataSaveForm } from './types';
-
-interface ParentTreeNode {
-  value: string;
-  title: string;
-  children: ParentTreeNode[];
-}
-
-function buildParentTree(options: BasicDataOption[]): ParentTreeNode[] {
-  const nodes = new Map(
-    options.map((option) => [
-      option.id,
-      {
-        value: option.id,
-        title: `${option.number} - ${option.name}`,
-        children: [] as ParentTreeNode[],
-      },
-    ]),
-  );
-  const roots: ParentTreeNode[] = [];
-  for (const option of options) {
-    const node = nodes.get(option.id)!;
-    const parent = option.parentId ? nodes.get(option.parentId) : undefined;
-    if (parent) parent.children.push(node);
-    else roots.push(node);
-  }
-  return roots;
-}
+import type { BasicDataSaveForm } from './types';
+import { useBasicDataRefSelector } from './refSelector';
 
 const BasicDataEditPage = (props: PageComponentProps) => {
   const { appNumber, tabKey, billId, operationType, context } = props;
@@ -62,18 +36,11 @@ const BasicDataEditPage = (props: PageComponentProps) => {
     queryFn: () => basicDataApi.parentOptions(categoryId!, billId),
     enabled: Boolean(categoryId),
   });
+  const parentRefSelector = useBasicDataRefSelector(categoryQuery.data, billId);
   const detail = detailQuery.data;
   const numberMode = categoryQuery.data?.numberMode ?? 'AUTO_DEFAULT';
   const fields = useMemo<EditField[]>(
     () => [
-      { label: '所属分类', dataIndex: 'categoryName', type: 'readonly' },
-      {
-        label: '上级基础资料',
-        dataIndex: 'parentId',
-        type: 'tree-select',
-        treeData: buildParentTree(parentsQuery.data ?? []),
-        placeholder: '不选择则为一级资料',
-      },
       {
         label: '编码',
         dataIndex: 'number',
@@ -103,23 +70,49 @@ const BasicDataEditPage = (props: PageComponentProps) => {
           { max: 128, message: '名称不能超过128个字符' },
         ],
       },
+      {
+        label: '所属分类',
+        dataIndex: 'category',
+        type: 'ref-selector',
+        disabled: true,
+        refSelector: {
+          selectorKey: ['sys-base-basic-data-category', categoryId],
+          modalTitle: '所属分类',
+          fetchFn: async () => ({ records: [], total: 0 }),
+          displayRender: (record) => String(record.name ?? ''),
+          fieldNames: { key: 'id', label: 'name' },
+          columns: [
+            { title: '编码', dataIndex: 'number', width: 160 },
+            { title: '名称', dataIndex: 'name' },
+          ],
+        },
+      },
+      {
+        label: '上级基础资料',
+        dataIndex: 'parent',
+        type: 'ref-selector',
+        refSelector: parentRefSelector,
+        placeholder: '不选择则为一级资料',
+      },
       { label: '排序', dataIndex: 'sort', type: 'number' },
-      { label: '可用状态', dataIndex: 'enabled', type: 'switch' },
       { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
     ],
-    [isAddNew, numberMode, parentsQuery.data],
+    [categoryId, isAddNew, numberMode, parentRefSelector],
   );
   const initialValues = useMemo(
     () => ({
-      categoryName: detail?.categoryName ?? categoryQuery.data?.name ?? '',
-      parentId: detail?.parentId,
       number: detail?.number ?? '',
       name: detail?.name ?? '',
+      category: categoryQuery.data ?? null,
+      parent:
+        parentsQuery.data?.find((option) => option.id === detail?.parentId) ??
+        (detail?.parentId
+          ? { id: detail.parentId, namePath: detail.namePath.split('/').slice(0, -1).join('/') }
+          : null),
       sort: detail?.sort ?? 0,
-      enabled: detail?.enabled ?? true,
       description: detail?.description ?? '',
     }),
-    [categoryQuery.data, detail],
+    [categoryQuery.data, detail, parentsQuery.data],
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
@@ -128,12 +121,11 @@ const BasicDataEditPage = (props: PageComponentProps) => {
         id: billId,
         version: detail?.version,
         categoryId,
-        parentId: values.parentId ? String(values.parentId) : undefined,
+        parentId: (values.parent as { id?: string } | null)?.id,
         number: values.number ? String(values.number).trim() : undefined,
         name: String(values.name).trim(),
         description: values.description ? String(values.description).trim() : undefined,
         sort: Number(values.sort ?? 0),
-        enabled: Boolean(values.enabled),
       };
       const savedId = await basicDataApi.save(form);
       await queryClient.invalidateQueries({ queryKey: basicDataQueryKeys.all });

@@ -19,6 +19,7 @@ import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
@@ -112,13 +113,63 @@ class BasicDataTxServiceTests {
         verify(numberGeneratorAccessor).nextNumber(any(), any(), any());
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void savingDisabledItemKeepsEnabledState() {
+        BasicDataCategoryEntity category = new BasicDataCategoryEntity();
+        category.setId(1L);
+        category.setNumber("industry");
+        category.setNumberMode(BasicDataNumberMode.MANUAL.name());
+        BasicDataItemEntity existing = item(10L, null, true);
+        existing.setEnabled(false);
+        existing.setVersion(2);
+        existing.setNumber("A01");
+        existing.setName("原名称");
+        existing.setNumberPath("A01");
+        existing.setNamePath("原名称");
+        existing.setLevel(1);
+        when(categoryMapper.selectById(1L)).thenReturn(category);
+        when(itemMapper.selectById(10L)).thenReturn(existing);
+        when(itemMapper.selectCount(any())).thenReturn(0L);
+        when(itemMapper.updateById(existing)).thenReturn(1);
+        when(cacheHelper.getCache(any(), any())).thenReturn(mock(Cache.class));
+        BasicDataItemSaveForm form = saveForm(null);
+        form.setId(10L);
+        form.setVersion(2);
+
+        txService.saveItem(form);
+
+        assertFalse(existing.getEnabled());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void creatingItemDefaultsToEnabled() {
+        BasicDataCategoryEntity category = new BasicDataCategoryEntity();
+        category.setId(1L);
+        category.setNumber("industry");
+        category.setNumberMode(BasicDataNumberMode.MANUAL.name());
+        when(categoryMapper.selectById(1L)).thenReturn(category);
+        when(itemMapper.selectCount(any())).thenReturn(0L);
+        when(itemMapper.insert(isA(BasicDataItemEntity.class))).thenAnswer(invocation -> {
+            BasicDataItemEntity inserted = invocation.getArgument(0);
+            inserted.setId(13L);
+            assertTrue(inserted.getEnabled());
+            return 1;
+        });
+        when(cacheHelper.getCache(any(), any())).thenReturn(mock(Cache.class));
+
+        txService.saveItem(saveForm(null));
+
+        verify(itemMapper).insert(isA(BasicDataItemEntity.class));
+    }
+
     private BasicDataItemSaveForm saveForm(Long parentId) {
         BasicDataItemSaveForm form = new BasicDataItemSaveForm();
         form.setCategoryId(1L);
         form.setParentId(parentId);
         form.setNumber("A01");
         form.setName("谷物种植");
-        form.setEnabled(true);
         return form;
     }
 

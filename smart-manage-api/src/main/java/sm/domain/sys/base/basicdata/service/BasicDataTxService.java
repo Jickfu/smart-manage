@@ -125,7 +125,8 @@ class BasicDataTxService {
         entity.setName(form.getName());
         entity.setDescription(form.getDescription());
         entity.setSort(form.getSort() == null ? 0 : form.getSort());
-        entity.setEnabled(form.getEnabled() == null || form.getEnabled());
+        // 可用状态只允许通过独立启停命令修改；普通保存不得重新启用已禁用资料。
+        if (oldEntity == null) entity.setEnabled(true);
         entity.setSystemPreset(oldEntity != null && Boolean.TRUE.equals(oldEntity.getSystemPreset()));
         entity.setLevel(parent == null ? 1 : parent.getLevel() + 1);
         entity.setNumberPath(joinPath(parent == null ? null : parent.getNumberPath(), entity.getNumber()));
