@@ -5,7 +5,7 @@ export default definePageRegistrations([
   {
     componentKey: 'sys/monitor/slow-sql',
     featureKey: 'sys/monitor/slow-sql',
-    title: '慢 SQL 监控',
+    title: '慢 SQL 分析',
     pageType: 'CUSTOM',
     component: lazy(() => import('./SlowSqlMonitorPage')),
   },

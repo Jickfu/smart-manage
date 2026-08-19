@@ -31,7 +31,7 @@ import java.util.Map;
  * @author Chekfu
  */
 @RestController
-@Tag(name = "系统监控-定时任务", description = "定时任务管理接口")
+@Tag(name = "任务调度-定时任务", description = "定时任务管理接口")
 @RequiredArgsConstructor
 public class JobController {
 

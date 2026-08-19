@@ -22,7 +22,7 @@ import sm.system.response.Result;
  * @author Chekfu
  */
 @RestController
-@Tag(name = "系统建模-文件配置", description = "文件配置管理接口")
+@Tag(name = "系统管理-存储配置", description = "文件存储配置管理接口")
 @RequiredArgsConstructor
 public class FileConfigController {
     private final FileConfigService service;

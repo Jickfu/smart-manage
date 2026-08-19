@@ -80,7 +80,7 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
 
   return (
     <EditPageShell
-      title="慢 SQL 监控"
+      title="慢 SQL 分析"
       loading={instancesQuery.isLoading || snapshotQuery.isLoading}
       error={instancesQuery.error ?? snapshotQuery.error}
       onRetry={() => void Promise.all([instancesQuery.refetch(), snapshotQuery.refetch()])}

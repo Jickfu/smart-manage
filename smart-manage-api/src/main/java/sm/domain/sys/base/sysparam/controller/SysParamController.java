@@ -26,7 +26,7 @@ import sm.system.response.Result;
  * @author Chekfu
  */
 @RestController
-@Tag(name = "系统建模-系统参数", description = "系统参数管理接口")
+@Tag(name = "系统管理-系统参数", description = "系统参数管理接口")
 @RequiredArgsConstructor
 @Slf4j
 public class SysParamController {

@@ -18,7 +18,7 @@ interface PersonalInfoValues {
   birthday?: dayjs.Dayjs;
 }
 
-/** 本人资料使用独立登录态接口，不依赖系统建模应用、菜单或用户管理权限。 */
+/** 本人资料使用独立登录态接口，不依赖系统管理应用、菜单或用户管理权限。 */
 export default function PersonalInfoModal({
   open,
   userInfo,

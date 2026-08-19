@@ -89,7 +89,7 @@ const ExecutionListPage = (props: PageComponentProps) => {
   return (
     <ListPage<ExecutionVO>
       {...props}
-      title="执行实例"
+      title="执行记录"
       loading={list.query.isLoading}
       error={list.query.error as Error | null}
       onRetry={() => list.query.refetch()}

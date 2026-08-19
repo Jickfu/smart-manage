@@ -5,7 +5,7 @@ export default definePageRegistrations([
   {
     componentKey: 'sys/monitor/node',
     featureKey: 'sys/monitor/node',
-    title: '运行监控',
+    title: '服务状态',
     pageType: 'CUSTOM',
     component: lazy(() => import('./NodeMonitorPage')),
   },

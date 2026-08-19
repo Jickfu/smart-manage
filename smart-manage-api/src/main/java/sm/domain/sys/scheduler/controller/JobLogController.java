@@ -25,7 +25,7 @@ import java.util.List;
  * @author Chekfu
  */
 @RestController
-@Tag(name = "系统监控-执行实例", description = "执行实例查询接口")
+@Tag(name = "任务调度-执行记录", description = "执行实例查询接口")
 @RequiredArgsConstructor
 public class JobLogController {
 

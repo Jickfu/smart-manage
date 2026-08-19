@@ -24,7 +24,7 @@ import sm.system.response.PageData;
 import sm.system.response.Result;
 
 @RestController
-@Tag(name = "系统建模-云管理", description = "云信息管理接口")
+@Tag(name = "系统管理-云管理", description = "云信息管理接口")
 @RequiredArgsConstructor
 public class CloudController {
 	private final CloudService service;

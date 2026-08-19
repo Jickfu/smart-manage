@@ -14,7 +14,7 @@
 
 ## 缓存命名与归属
 
-- 业务应用创建的 JetCache 缓存名和自有 Redis Key 必须使用 `{cloudNumber}:{appNumber}:{resource}` 前缀，例如系统服务云下系统建模应用的系统参数缓存使用 `sys:base:sys-param`；
+- 业务应用创建的 JetCache 缓存名和自有 Redis Key 必须使用 `{cloudNumber}:{appNumber}:{resource}` 前缀，例如系统服务云下系统管理应用的系统参数缓存使用 `sys:base:sys-param`；
 - Redis 条目按物理 Key 识别归属；LOCAL 条目按已登记的 `cacheName` 识别归属，逻辑 Key 不承担云和应用分类语义；
 - 云编码和应用编码来自 `t_sys_cloud.number`、`t_sys_app.number`，禁止为缓存管理另建硬编码映射；
 - 框架、安全组件或第三方缓存不强制伪装成业务应用缓存，不能匹配已登记应用时统一进入“其他缓存”；

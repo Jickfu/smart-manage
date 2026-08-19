@@ -27,7 +27,9 @@ import sm.system.response.ResultEnum;
 import sm.system.query.ListSqlQuery;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -150,7 +152,8 @@ public class MenuService {
 					|| name.contains(normalizedKeyword) || path.contains(normalizedKeyword);
 			if (keywordMatches && listQuery.conditions().stream().allMatch(condition -> matches(menu, condition))) {
 				includedIds.add(menu.getId());
-				if (MenuLevelEnum.PAGE.equals(menu.getLevel()) && menu.getParentId() != null) {
+				if (MenuLevelEnum.PAGE.equals(menu.getLevel())
+						&& menu.getParentId() != null && menu.getParentId() > 0) {
 					includedIds.add(menu.getParentId());
 				}
 			}
@@ -218,12 +221,19 @@ public class MenuService {
 		}
 
 		for (MenuTreeVO page : pages) {
+			if (page.getParentId() == null || page.getParentId() == 0) {
+				roots.add(page);
+				continue;
+			}
 			MenuTreeVO parent = groups.get(page.getParentId());
 			if (parent == null) {
 				throw new BizException(ResultEnum.CONFIG_ERROR, "页面菜单缺少父分组：" + page.getId());
 			}
 			parent.getChildren().add(page);
 		}
+		// 查询为保证父分组先于子页面按层级排序，组装完成后再统一恢复根节点业务排序。
+		roots.sort(Comparator.comparing(MenuTreeVO::getSort, Comparator.nullsLast(Integer::compareTo))
+				.thenComparing(MenuTreeVO::getId));
 		return roots;
 	}
 
@@ -274,6 +284,7 @@ public class MenuService {
 		List<MenuEntity> entityList = mapper.selectUserMenus(
 				userId, currentUserContext.getOrgId(), appId, currentUserContext.isAdministrator());
 		Map<Long, MenuVO> categories = new HashMap<>();
+		Map<MenuVO, Integer> rootSorts = new IdentityHashMap<>();
 		for (MenuEntity menuEntity : entityList) {
 			MenuVO menu = new MenuVO();
 			menu.setName(menuEntity.getName());
@@ -283,8 +294,14 @@ public class MenuService {
 			menu.setLevel(menuEntity.getLevel());
 			if (MenuLevelEnum.CATEGORY.equals(menuEntity.getLevel())) {
 				root.getRoutes().add(menu);
+				rootSorts.put(menu, menuEntity.getSort());
 				categories.put(menuEntity.getId(), menu);
 			} else if (MenuLevelEnum.PAGE.equals(menuEntity.getLevel())) {
+				if (menuEntity.getParentId() == null || menuEntity.getParentId() == 0) {
+					root.getRoutes().add(menu);
+					rootSorts.put(menu, menuEntity.getSort());
+					continue;
+				}
 				MenuVO parent = categories.get(menuEntity.getParentId());
 				if (parent != null) {
 					if (parent.getRoutes() == null) {
@@ -294,6 +311,8 @@ public class MenuService {
 				}
 			}
 		}
+		root.getRoutes().sort(Comparator.comparing(
+				rootSorts::get, Comparator.nullsLast(Integer::compareTo)));
 		return root;
 	}
 

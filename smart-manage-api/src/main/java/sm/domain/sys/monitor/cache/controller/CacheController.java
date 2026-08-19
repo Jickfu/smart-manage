@@ -25,7 +25,7 @@ import sm.system.response.PageData;
 import java.util.List;
 
 @RestController
-@Tag(name = "系统监控-缓存监控")
+@Tag(name = "运维中心-缓存")
 @RequiredArgsConstructor
 public class CacheController {
     private final CacheService service;

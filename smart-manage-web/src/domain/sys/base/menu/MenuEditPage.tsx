@@ -116,14 +116,14 @@ const MenuEditPage = (props: PageComponentProps) => {
       refSelector: featureRefSelector,
     },
     {
-      label: '父菜单',
+      label: '父分组（可选）',
       dataIndex: 'parent',
       type: 'ref-selector',
       disabled: !selectedAppId,
-      placeholder: selectedAppId ? '请选择父菜单' : '请先选择所属应用',
+      placeholder: selectedAppId ? '留空则显示在应用根级' : '请先选择所属应用',
       refSelector: defineRefSelector<MenuSelectVO>({
         selectorKey: ['sys-menu-parent', selectedAppId],
-        modalTitle: '选择父菜单',
+        modalTitle: '选择父分组',
         fetchFn: (params) =>
           menuApi.select({
             pageNum: params.pageNum,
@@ -250,7 +250,7 @@ const MenuEditPage = (props: PageComponentProps) => {
         const nextApp = changedValues.app as { id?: string } | null;
         const nextAppId = nextApp?.id;
         if (nextAppId !== selectedAppId) {
-          // 父菜单必须属于当前应用，应用变化后原引用不再有效。
+          // 父分组必须属于当前应用，应用变化后原引用不再有效。
           form.setFieldValue('parent', null);
           form.setFieldValue('feature', null);
           form.setFieldValue('permission', null);

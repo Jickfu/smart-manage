@@ -6,14 +6,14 @@ export default definePageRegistrations([
   {
     componentKey: componentKeys.schedulerExecution,
     featureKey: 'sys/scheduler/execution',
-    title: '执行实例',
+    title: '执行记录',
     pageType: 'LIST',
     component: lazy(() => import('./ExecutionListPage')),
   },
   {
     componentKey: componentKeys.schedulerExecutionDetail,
     featureKey: 'sys/scheduler/execution',
-    title: '执行实例',
+    title: '执行记录',
     pageType: 'EDIT',
     component: lazy(() => import('./ExecutionDetailPage')),
   },

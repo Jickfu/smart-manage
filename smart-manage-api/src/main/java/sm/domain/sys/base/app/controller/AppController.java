@@ -27,7 +27,7 @@ import java.util.List;
  * @author Chekfu
  */
 @RestController
-@Tag(name = "系统建模-应用管理", description = "应用信息管理接口")
+@Tag(name = "系统管理-应用管理", description = "应用信息管理接口")
 @RequiredArgsConstructor
 public class AppController {
 	private final CurrentUserContext currentUserContext;

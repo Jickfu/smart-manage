@@ -52,7 +52,7 @@ const ExecutionDetailPage = (props: PageComponentProps) => {
 
   return (
     <EditPage
-      title="执行实例"
+      title="执行记录"
       fields={fields}
       initialValues={initialValues}
       operationType={OperationType.VIEW}

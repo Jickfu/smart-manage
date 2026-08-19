@@ -19,7 +19,7 @@ import java.util.List;
  * 节点监控接口
  */
 @RestController
-@Tag(name = "系统监控-节点监控", description = "服务器节点状态监控")
+@Tag(name = "运维中心-服务状态", description = "服务器节点状态监控")
 @RequiredArgsConstructor
 public class NodeController {
 

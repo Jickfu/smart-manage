@@ -5,7 +5,7 @@ export default definePageRegistrations([
   {
     componentKey: 'sys/base/file-config',
     featureKey: 'sys/base/file-config',
-    title: '文件配置',
+    title: '存储配置',
     pageType: 'CUSTOM',
     component: lazy(() => import('./FileConfigPage')),
   },

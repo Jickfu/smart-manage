@@ -62,6 +62,7 @@ import {
   NodeIndexOutlined,
   DeploymentUnitOutlined,
   ClusterOutlined,
+  FieldNumberOutlined,
 } from '@ant-design/icons';
 import type { ComponentType, ReactNode } from 'react';
 
@@ -130,6 +131,7 @@ const iconMap: Record<string, ComponentType> = {
   NodeIndexOutlined,
   DeploymentUnitOutlined,
   ClusterOutlined,
+  FieldNumberOutlined,
 };
 
 /** Ant Design 对外暴露的图标组件命名规则。 */

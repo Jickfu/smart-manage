@@ -95,6 +95,54 @@ class MenuTxServiceTests {
         assertEquals(1, MenuLevelEnum.PAGE.getCode());
     }
 
+    @Test
+    void rootPageMenuCanBeSavedWithoutAGroup() {
+        MenuSaveForm form = new MenuSaveForm();
+        form.setNumber("user_management");
+        form.setName("用户管理");
+        form.setLevel(MenuLevelEnum.PAGE);
+        form.setParentId(0L);
+        form.setAppId(31L);
+        form.setFeatureId(100L);
+        form.setPermissionId(200L);
+        form.setPath("/sys/base/user");
+
+        FeatureEntity feature = new FeatureEntity();
+        feature.setId(100L);
+        feature.setAppId(31L);
+        PermissionEntity permission = new PermissionEntity();
+        permission.setId(200L);
+        permission.setFeatureId(100L);
+        when(featureMapper.selectById(100L)).thenReturn(feature);
+        when(permissionMapper.selectById(200L)).thenReturn(permission);
+        when(mapper.insert(any(MenuEntity.class))).thenReturn(1);
+
+        txService.save(form);
+
+        verify(mapper).insert(any(MenuEntity.class));
+    }
+
+    @Test
+    void pageMenuParentMustBeAGroupInTheSameApplication() {
+        MenuSaveForm form = new MenuSaveForm();
+        form.setNumber("user_management");
+        form.setName("用户管理");
+        form.setLevel(MenuLevelEnum.PAGE);
+        form.setParentId(300L);
+        form.setAppId(31L);
+        form.setFeatureId(100L);
+        form.setPermissionId(200L);
+        form.setPath("/sys/base/user");
+        MenuEntity otherApplicationGroup = new MenuEntity();
+        otherApplicationGroup.setId(300L);
+        otherApplicationGroup.setAppId(32L);
+        otherApplicationGroup.setLevel(MenuLevelEnum.CATEGORY);
+        when(mapper.selectById(300L)).thenReturn(otherApplicationGroup);
+
+        assertThrows(BizException.class, () -> txService.save(form));
+        verify(mapper, never()).insert(any(MenuEntity.class));
+    }
+
     private MenuSaveForm validEditForm() {
         MenuSaveForm form = new MenuSaveForm();
         form.setId(1L);

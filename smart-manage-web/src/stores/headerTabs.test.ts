@@ -15,21 +15,21 @@ describe('header tabs store', () => {
 
   it('登录初始化固定标签但不标记为已加载', () => {
     useHeaderTabsStore.getState().initializePinnedApps([
-      { number: 'base', name: '系统建模' },
-      { number: 'monitor', name: '系统监控' },
+      { number: 'base', name: '系统管理' },
+      { number: 'monitor', name: '运维中心' },
     ]);
 
     expect(useHeaderTabsStore.getState().tabs.slice(2)).toEqual([
       {
         key: 'base',
-        label: '系统建模',
+        label: '系统管理',
         type: 'app',
         pinned: true,
         loaded: false,
       },
       {
         key: 'monitor',
-        label: '系统监控',
+        label: '运维中心',
         type: 'app',
         pinned: true,
         loaded: false,
@@ -40,10 +40,10 @@ describe('header tabs store', () => {
   it('点击固定应用完成加载后保留固定状态和原顺序', () => {
     const store = useHeaderTabsStore.getState();
     store.initializePinnedApps([
-      { number: 'base', name: '系统建模' },
-      { number: 'monitor', name: '系统监控' },
+      { number: 'base', name: '系统管理' },
+      { number: 'monitor', name: '运维中心' },
     ]);
-    store.addAppTab('base', '系统建模');
+    store.addAppTab('base', '系统管理');
 
     const appTabs = useHeaderTabsStore.getState().tabs.slice(2);
     expect(appTabs.map((tab) => tab.key)).toEqual(['base', 'monitor']);
@@ -52,9 +52,9 @@ describe('header tabs store', () => {
 
   it('加锁和解锁只改变固定状态且保持标签位置不变', () => {
     const store = useHeaderTabsStore.getState();
-    store.initializePinnedApps([{ number: 'base', name: '系统建模' }]);
+    store.initializePinnedApps([{ number: 'base', name: '系统管理' }]);
     store.addAppTab('procurement', '采购管理');
-    store.addAppTab('monitor', '系统监控');
+    store.addAppTab('monitor', '运维中心');
 
     store.setAppPinned('monitor', true);
     expect(
@@ -81,7 +81,7 @@ describe('header tabs store', () => {
 
   it('状态层拒绝关闭固定应用', () => {
     const store = useHeaderTabsStore.getState();
-    store.initializePinnedApps([{ number: 'base', name: '系统建模' }]);
+    store.initializePinnedApps([{ number: 'base', name: '系统管理' }]);
 
     store.removeAppTab('base');
 

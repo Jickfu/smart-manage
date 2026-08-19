@@ -9,7 +9,7 @@ import lombok.EqualsAndHashCode;
 import sm.system.entity.BaseEntity;
 
 /**
- * 系统建模-应用（映射 t_sys_app）
+ * 系统管理-应用（映射 t_sys_app）
  *
  * @author Chekfu
  */

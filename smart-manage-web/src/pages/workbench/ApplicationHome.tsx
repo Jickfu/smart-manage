@@ -96,35 +96,37 @@ const ProcurementHome = () => (
   />
 );
 
-const ModelingHome = () => (
+const SystemManagementHome = () => (
   <DemoHome
-    title="系统建模首页"
-    description="基础资料、组织、用户与权限模型入口"
-    chartTitle="基础模型构成"
+    title="系统管理首页"
+    description="组织、权限、资料、平台结构与系统配置入口"
+    chartTitle="系统管理构成"
     chartOption={demoPieOption([
-      { name: '组织与用户', value: 35 },
-      { name: '应用与菜单', value: 25 },
-      { name: '角色与权限', value: 25 },
-      { name: '基础资料', value: 15 },
+      { name: '组织与用户', value: 25 },
+      { name: '角色与权限', value: 20 },
+      { name: '资料与编号', value: 20 },
+      { name: '平台结构', value: 20 },
+      { name: '系统配置', value: 15 },
     ])}
     capabilities={[
       { title: '组织与用户', description: '维护组织结构、用户和组织内角色关系。' },
-      { title: '应用与菜单', description: '维护应用入口、页面注册和菜单树。' },
       { title: '角色与权限', description: '通过权限目录配置功能访问能力。' },
+      { title: '平台与配置', description: '维护应用结构、菜单和系统级配置。' },
     ]}
   />
 );
 
-const MonitorHome = () => (
+const OperationsHome = () => (
   <DemoHome
-    title="系统监控首页"
-    description="运行诊断能力入口；实时健康数据尚未汇总"
-    chartTitle="监控能力构成"
+    title="运维中心首页"
+    description="运行监控、审计日志、诊断与高风险运维能力入口"
+    chartTitle="运维能力构成"
     chartOption={demoPieOption([
-      { name: '日志', value: 30 },
-      { name: '缓存', value: 25 },
-      { name: 'SQL', value: 20 },
-      { name: '脚本与诊断', value: 25 },
+      { name: '运行监控', value: 20 },
+      { name: '审计日志', value: 20 },
+      { name: '诊断分析', value: 20 },
+      { name: '数据运维', value: 20 },
+      { name: '脚本运维', value: 20 },
     ])}
     capabilities={[
       { title: '日志查询', description: '查看登录日志和操作日志。' },
@@ -137,8 +139,8 @@ const MonitorHome = () => (
 /** 应用首页按应用编码显式分派，避免平台首页或其他应用首页被错误复用。 */
 const ApplicationHome = ({ appNumber, appName }: ApplicationHomeProps) => {
   if (appNumber === 'procurement') return <ProcurementHome />;
-  if (appNumber === 'monitor') return <MonitorHome />;
-  if (appNumber === 'base') return <ModelingHome />;
+  if (appNumber === 'monitor') return <OperationsHome />;
+  if (appNumber === 'base') return <SystemManagementHome />;
   if (appNumber === 'scheduler') return <SchedulerHome />;
   return (
     <div className="sm-app-home">

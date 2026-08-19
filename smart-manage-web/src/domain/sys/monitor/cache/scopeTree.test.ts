@@ -11,7 +11,7 @@ describe('cache scope tree', () => {
       children: [
         {
           type: 'APP',
-          name: '系统建模',
+          name: '系统管理',
           cloudNumber: 'sys',
           appNumber: 'base',
           children: [],

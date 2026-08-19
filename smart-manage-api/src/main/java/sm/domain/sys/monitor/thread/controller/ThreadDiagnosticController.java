@@ -19,7 +19,7 @@ import sm.system.response.Result;
 
 /** 指定应用实例的 JDK 原生线程诊断接口。 */
 @RestController
-@Tag(name = "系统监控-线程诊断", description = "线程列表、热点、堆栈和死锁诊断")
+@Tag(name = "运维中心-线程诊断", description = "线程列表、热点、堆栈和死锁诊断")
 @RequiredArgsConstructor
 public class ThreadDiagnosticController {
     private final ThreadDiagnosticService service;

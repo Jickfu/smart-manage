@@ -65,8 +65,18 @@ class MenuTxService {
         if (!(form.getLevel().equals(MenuLevelEnum.CATEGORY) || form.getLevel().equals(MenuLevelEnum.PAGE))) {
             throw new BizException(ResultEnum.PARAM_ERROR, "菜单层级只能是分组或页面");
         }
-        // 页面层级必须指定权限和路径；分组层级不需要路径和组件，但保留权限用于菜单可见性控制
+        // 页面可以位于应用根级，也可以归入同应用分组；页面始终必须关联功能、权限和路径。
         if (form.getLevel().equals(MenuLevelEnum.PAGE)) {
+            if (form.getParentId() != null && form.getParentId() > 0) {
+                if (java.util.Objects.equals(form.getId(), form.getParentId())) {
+                    throw new BizException(ResultEnum.PARAM_ERROR, "页面菜单不能选择自身作为父分组");
+                }
+                MenuEntity parent = mapper.selectById(form.getParentId());
+                if (parent == null || !MenuLevelEnum.CATEGORY.equals(parent.getLevel())
+                        || !java.util.Objects.equals(parent.getAppId(), form.getAppId())) {
+                    throw new BizException(ResultEnum.PARAM_ERROR, "页面菜单父级必须是同一应用下的分组");
+                }
+            }
             if (form.getFeatureId() == null) {
                 throw new BizException(ResultEnum.PARAM_ERROR, "页面层级菜单必须选择所属功能");
             }
@@ -79,6 +89,9 @@ class MenuTxService {
             entity.setPath(form.getPath());
             entity.setComponent(form.getComponent());
         } else {
+            if (form.getParentId() != null && form.getParentId() > 0) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "分组菜单必须位于应用根级");
+            }
             entity.setPath(null);
             entity.setComponent(null);
         }

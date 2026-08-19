@@ -18,7 +18,7 @@ import sm.domain.sys.monitor.slowsql.service.SlowSqlService;
 import sm.system.response.Result;
 
 @RestController
-@Tag(name = "系统监控-慢 SQL", description = "指定实例的 Druid SQL 内存聚合统计")
+@Tag(name = "运维中心-慢 SQL 分析", description = "指定实例的 Druid SQL 内存聚合统计")
 @RequiredArgsConstructor
 public class SlowSqlController {
     private final SlowSqlService service;

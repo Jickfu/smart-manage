@@ -28,7 +28,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@Tag(name = "系统建模-编号规则", description = "编号规则管理接口")
+@Tag(name = "系统管理-编号规则", description = "编号规则管理接口")
 public class NumberRuleController {
     private final NumberRuleService service;
 

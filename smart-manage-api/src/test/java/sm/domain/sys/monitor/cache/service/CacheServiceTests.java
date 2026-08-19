@@ -128,7 +128,7 @@ class CacheServiceTests {
         var tree = service.scopeTree();
 
         assertEquals(List.of("系统服务", "其他缓存"), tree.stream().map(item -> item.getName()).toList());
-        assertEquals(List.of("系统建模"), tree.getFirst().getChildren().stream()
+        assertEquals(List.of("系统管理"), tree.getFirst().getChildren().stream()
                 .map(item -> item.getName()).toList());
     }
 
@@ -180,7 +180,7 @@ class CacheServiceTests {
     private CloudAppsVO systemCloud() {
         AppVO application = new AppVO();
         application.setNumber("base");
-        application.setName("系统建模");
+        application.setName("系统管理");
         CloudAppsVO cloud = new CloudAppsVO();
         cloud.setNumber("sys");
         cloud.setName("系统服务");

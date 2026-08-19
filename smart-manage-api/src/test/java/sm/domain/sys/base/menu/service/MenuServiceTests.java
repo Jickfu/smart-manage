@@ -9,8 +9,10 @@ import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.menu.mapper.MenuMapper;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuTreeListForm;
+import sm.domain.sys.base.menu.model.vo.MenuAppInfoVO;
 import sm.domain.sys.base.menu.model.vo.MenuTreeVO;
 import sm.domain.sys.base.menu.model.vo.MenuDetailVO;
+import sm.domain.sys.base.menu.model.vo.MenuVO;
 import sm.domain.sys.base.permission.mapper.PermissionMapper;
 import sm.domain.sys.base.permission.model.entity.PermissionEntity;
 
@@ -18,6 +20,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -41,7 +44,7 @@ class MenuServiceTests {
         AppEntity app = new AppEntity();
         app.setId(20L);
         app.setNumber("sys");
-        app.setName("系统建模");
+        app.setName("系统管理");
         PermissionEntity permission = new PermissionEntity();
         permission.setId(30L);
         permission.setNumber("sys:user:view");
@@ -55,7 +58,7 @@ class MenuServiceTests {
 
         MenuDetailVO result = service.detail(101L);
 
-        assertEquals("系统建模", result.getApp().getName());
+        assertEquals("系统管理", result.getApp().getName());
         assertEquals("基础设置", result.getParent().getName());
         assertEquals("查看用户", result.getPermission().getName());
     }
@@ -64,7 +67,7 @@ class MenuServiceTests {
     void treeListReturnsMatchedPageWithParentGroupAndAppName() {
         AppEntity app = new AppEntity();
         app.setId(20L);
-        app.setName("系统建模");
+        app.setName("系统管理");
         when(appMapper.selectList(any())).thenReturn(List.of(app));
 
         MenuEntity group = menu(100L, 20L, 0L, MenuLevelEnum.CATEGORY, "基础设置", null);
@@ -79,9 +82,45 @@ class MenuServiceTests {
         List<MenuTreeVO> result = service.listTree(form);
 
         assertEquals(1, result.size());
-        assertEquals("系统建模", result.getFirst().getAppName());
+        assertEquals("系统管理", result.getFirst().getAppName());
         assertEquals(1, result.getFirst().getChildren().size());
         assertEquals("用户", result.getFirst().getChildren().getFirst().getName());
+    }
+
+    @Test
+    void treeListReturnsRootPageWithoutSyntheticGroup() {
+        AppEntity app = new AppEntity();
+        app.setId(32L);
+        app.setName("任务调度");
+        when(appMapper.selectList(any())).thenReturn(List.of(app));
+
+        MenuEntity page = menu(201L, 32L, 0L, MenuLevelEnum.PAGE, "定时任务", "/sys/scheduler/job");
+        when(mapper.selectList(any())).thenReturn(List.of(page));
+        when(converter.toTreeVO(page)).thenReturn(toTreeVO(page));
+
+        List<MenuTreeVO> result = service.listTree(new MenuTreeListForm());
+
+        assertEquals(1, result.size());
+        assertEquals("定时任务", result.getFirst().getName());
+        assertEquals("任务调度", result.getFirst().getAppName());
+    }
+
+    @Test
+    void userMenuReturnsRootPageWithoutSyntheticGroup() {
+        MenuAppInfoVO appInfo = new MenuAppInfoVO();
+        appInfo.setAppName("采购管理");
+        appInfo.setAppNumber("procurement");
+        appInfo.setCloudNumber("scm");
+        MenuEntity page = menu(
+                301L, 430000000000000002L, 0L, MenuLevelEnum.PAGE, "采购申请",
+                "/scm/procurement/purchase-requisition");
+        when(mapper.selectAppInfo(430000000000000002L)).thenReturn(appInfo);
+        when(mapper.selectUserMenus(any(), any(), any(), anyBoolean())).thenReturn(List.of(page));
+
+        MenuVO result = service.getUserMenusByAppId(1L, 430000000000000002L);
+
+        assertEquals(1, result.getRoutes().size());
+        assertEquals("采购申请", result.getRoutes().getFirst().getName());
     }
 
     private MenuEntity menu(

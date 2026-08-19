@@ -51,7 +51,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       });
       await query.refetch();
       setDirty(false);
-      message.success('文件配置保存成功');
+      message.success('存储配置保存成功');
     },
   });
   const testMutation = useMutation({
@@ -106,7 +106,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
   };
   return (
     <EditPageShell
-      title="文件配置"
+      title="存储配置"
       loading={query.isLoading}
       error={query.error as Error | null}
       onRetry={() => query.refetch()}

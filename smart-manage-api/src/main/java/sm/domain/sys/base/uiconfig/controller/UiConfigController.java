@@ -31,7 +31,7 @@ import sm.system.response.Result;
  * @author Chekfu
  */
 @RestController
-@Tag(name = "系统建模-界面配置", description = "界面配置管理接口")
+@Tag(name = "系统管理-界面配置", description = "界面配置管理接口")
 @RequiredArgsConstructor
 @Slf4j
 public class UiConfigController {

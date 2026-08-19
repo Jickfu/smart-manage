@@ -134,7 +134,7 @@ export default function NodeMonitorPage({ active }: PageComponentProps) {
 
   return (
     <EditPageShell
-      title="运行监控"
+      title="服务状态"
       loading={snapshotQuery.isLoading}
       error={snapshotQuery.error}
       onRetry={() => void snapshotQuery.refetch()}
