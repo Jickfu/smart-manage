@@ -39,6 +39,7 @@ export interface RoleListAllVO {
   id: string;
   number: string;
   name: string;
+  description?: string;
 }
 
 /** 角色选择器列表项 */

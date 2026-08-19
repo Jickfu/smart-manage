@@ -14,4 +14,5 @@ public class RoleSelectVO {
 	private Long id;
 	private String number;
 	private String name;
+	private String description;
 }
