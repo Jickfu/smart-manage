@@ -108,15 +108,9 @@ export const useHeaderTabsStore = create<HeaderTabsState>((set, get) => ({
     set((state) => {
       const target = state.tabs.find((tab) => tab.key === key);
       if (target?.type !== 'app' || target.pinned === pinned) return state;
-      const systemTabs = state.tabs.filter((tab) => tab.type === 'system');
-      const otherApps = state.tabs.filter((tab) => tab.type === 'app' && tab.key !== key);
-      const nextTarget = { ...target, pinned };
-      const pinnedTabs = otherApps.filter((tab) => tab.pinned);
-      const ordinaryTabs = otherApps.filter((tab) => !tab.pinned);
       return {
-        tabs: pinned
-          ? [...systemTabs, ...pinnedTabs, nextTarget, ...ordinaryTabs]
-          : [...systemTabs, ...pinnedTabs, ...ordinaryTabs, nextTarget],
+        // 固定状态只影响按钮和关闭能力，不能打断用户当前的应用标签排列。
+        tabs: state.tabs.map((tab) => (tab.key === key ? { ...tab, pinned } : tab)),
       };
     }),
 }));

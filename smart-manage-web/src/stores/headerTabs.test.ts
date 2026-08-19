@@ -50,7 +50,7 @@ describe('header tabs store', () => {
     expect(appTabs[0]).toMatchObject({ pinned: true, loaded: true });
   });
 
-  it('新固定应用追加到固定区末尾且解锁后移动到普通区末尾', () => {
+  it('加锁和解锁只改变固定状态且保持标签位置不变', () => {
     const store = useHeaderTabsStore.getState();
     store.initializePinnedApps([{ number: 'base', name: '系统建模' }]);
     store.addAppTab('procurement', '采购管理');
@@ -62,7 +62,10 @@ describe('header tabs store', () => {
         .getState()
         .tabs.slice(2)
         .map((tab) => tab.key),
-    ).toEqual(['base', 'monitor', 'procurement']);
+    ).toEqual(['base', 'procurement', 'monitor']);
+    expect(useHeaderTabsStore.getState().tabs.find((tab) => tab.key === 'monitor')?.pinned).toBe(
+      true,
+    );
 
     store.setAppPinned('base', false);
     expect(
@@ -70,7 +73,10 @@ describe('header tabs store', () => {
         .getState()
         .tabs.slice(2)
         .map((tab) => tab.key),
-    ).toEqual(['monitor', 'procurement', 'base']);
+    ).toEqual(['base', 'procurement', 'monitor']);
+    expect(useHeaderTabsStore.getState().tabs.find((tab) => tab.key === 'base')?.pinned).toBe(
+      false,
+    );
   });
 
   it('状态层拒绝关闭固定应用', () => {
