@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
+import sm.domain.sys.base.menu.model.enums.MenuTargetTypeEnum;
 import sm.domain.sys.base.menu.model.form.MenuSaveForm;
 import sm.domain.sys.base.menu.mapper.MenuMapper;
 import sm.domain.sys.base.permission.mapper.PermissionMapper;
@@ -16,6 +17,8 @@ import sm.domain.sys.base.feature.model.entity.FeatureEntity;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -65,7 +68,7 @@ class MenuTxService {
         if (!(form.getLevel().equals(MenuLevelEnum.CATEGORY) || form.getLevel().equals(MenuLevelEnum.PAGE))) {
             throw new BizException(ResultEnum.PARAM_ERROR, "菜单层级只能是分组或页面");
         }
-        // 页面可以位于应用根级，也可以归入同应用分组；页面始终必须关联功能、权限和路径。
+        // 页面可以位于应用根级，也可以归入同应用分组；页面始终必须关联功能和权限。
         if (form.getLevel().equals(MenuLevelEnum.PAGE)) {
             if (form.getParentId() != null && form.getParentId() > 0) {
                 if (java.util.Objects.equals(form.getId(), form.getParentId())) {
@@ -83,17 +86,42 @@ class MenuTxService {
             if (form.getPermissionId() == null) {
                 throw new BizException(ResultEnum.PARAM_ERROR, "页面层级菜单必须选择权限");
             }
-            if (form.getPath() == null || form.getPath().isBlank()) {
-                throw new BizException(ResultEnum.PARAM_ERROR, "页面层级菜单必须填写路径");
+            if (form.getTargetType() == null) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "页面层级菜单必须选择目标类型");
             }
-            entity.setPath(form.getPath());
-            entity.setComponent(form.getComponent());
+            entity.setTargetType(form.getTargetType());
+            if (MenuTargetTypeEnum.INTERNAL_PAGE.equals(form.getTargetType())) {
+                if (form.getPath() == null || form.getPath().isBlank()) {
+                    throw new BizException(ResultEnum.PARAM_ERROR, "内部页面菜单必须填写路径");
+                }
+                if (form.getComponent() == null || form.getComponent().isBlank()) {
+                    throw new BizException(ResultEnum.PARAM_ERROR, "内部页面菜单必须填写组件");
+                }
+                entity.setPath(form.getPath().trim());
+                entity.setComponent(form.getComponent().trim());
+                entity.setExternalUrl(null);
+                entity.setExternalOpenMode(null);
+            } else if (MenuTargetTypeEnum.EXTERNAL_LINK.equals(form.getTargetType())) {
+                String externalUrl = validateExternalUrl(form.getExternalUrl());
+                if (form.getExternalOpenMode() == null) {
+                    throw new BizException(ResultEnum.PARAM_ERROR, "外部链接菜单必须选择打开方式");
+                }
+                entity.setPath(null);
+                entity.setComponent(null);
+                entity.setExternalUrl(externalUrl);
+                entity.setExternalOpenMode(form.getExternalOpenMode());
+            } else {
+                throw new BizException(ResultEnum.PARAM_ERROR, "页面目标类型无效");
+            }
         } else {
             if (form.getParentId() != null && form.getParentId() > 0) {
                 throw new BizException(ResultEnum.PARAM_ERROR, "分组菜单必须位于应用根级");
             }
             entity.setPath(null);
             entity.setComponent(null);
+            entity.setTargetType(null);
+            entity.setExternalUrl(null);
+            entity.setExternalOpenMode(null);
         }
         entity.setPermissionId(form.getPermissionId());
         FeatureEntity feature = form.getFeatureId() == null ? null : featureMapper.selectById(form.getFeatureId());
@@ -134,6 +162,29 @@ class MenuTxService {
             }
         }
         return entity.getId();
+    }
+
+    /** 外链只允许浏览器可导航的绝对 HTTP(S) 地址，禁止可执行协议和内嵌凭据。 */
+    private String validateExternalUrl(String rawExternalUrl) {
+        if (rawExternalUrl == null || rawExternalUrl.isBlank()) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "外部链接菜单必须填写链接地址");
+        }
+        String externalUrl = rawExternalUrl.trim();
+        try {
+            URI uri = new URI(externalUrl);
+            String scheme = uri.getScheme();
+            boolean supportedScheme = "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
+            if (!uri.isAbsolute() || !supportedScheme || uri.getRawAuthority() == null
+                    || uri.getRawAuthority().isBlank()) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "外部链接必须是绝对 HTTP 或 HTTPS 地址");
+            }
+            if (uri.getUserInfo() != null) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "外部链接不能包含账号密码");
+            }
+            return externalUrl;
+        } catch (URISyntaxException exception) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "外部链接格式无效");
+        }
     }
 
     public void deleteById(Long id) {

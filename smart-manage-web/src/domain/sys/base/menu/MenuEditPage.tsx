@@ -15,8 +15,31 @@ import { useAppRefSelector } from '@/domain/sys/base/app/refSelector';
 import { useFeatureRefSelector } from '@/domain/sys/base/feature/refSelector/index';
 import { permissionApi } from '@/domain/sys/base/permission/api';
 import type { PermissionSelectVO } from '@/domain/sys/base/permission/types';
-import type { MenuSelectVO } from './types';
+import type { ExternalOpenMode, MenuSelectVO, MenuTargetType } from './types';
 import type { PageComponentProps } from '@/domain/common/page/types';
+
+const MENU_LEVEL_CATEGORY = 0;
+const MENU_LEVEL_PAGE = 1;
+const INTERNAL_PAGE: MenuTargetType = 'INTERNAL_PAGE';
+const EXTERNAL_LINK: MenuTargetType = 'EXTERNAL_LINK';
+
+/** 前端提供即时反馈，后端仍负责最终 URL 安全校验。 */
+function validateExternalUrl(_: unknown, rawValue: unknown) {
+  const value = typeof rawValue === 'string' ? rawValue.trim() : '';
+  if (!value) return Promise.reject(new Error('外部链接不能为空'));
+  try {
+    const url = new URL(value);
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      return Promise.reject(new Error('外部链接必须使用 HTTP 或 HTTPS 协议'));
+    }
+    if (url.username || url.password) {
+      return Promise.reject(new Error('外部链接不能包含账号密码'));
+    }
+    return Promise.resolve();
+  } catch {
+    return Promise.reject(new Error('请输入完整有效的外部链接'));
+  }
+}
 
 /** 菜单编辑页 — 全页 Tab，3 个 RefSelector + 层级联动 */
 const MenuEditPage = (props: PageComponentProps) => {
@@ -43,6 +66,11 @@ const MenuEditPage = (props: PageComponentProps) => {
     billId?: string;
     featureId?: string;
   }>();
+  const [menuShapeSelection, setMenuShapeSelection] = useState<{
+    billId?: string;
+    level?: number;
+    targetType?: MenuTargetType;
+  }>();
   const selectedAppId =
     appSelection && appSelection.billId === billId ? appSelection.appId : detail?.app?.id;
   const featureRefSelector = useFeatureRefSelector(selectedAppId);
@@ -50,8 +78,18 @@ const MenuEditPage = (props: PageComponentProps) => {
     featureSelection && featureSelection.billId === billId
       ? featureSelection.featureId
       : detail?.feature?.id;
+  const selectedLevel =
+    menuShapeSelection && menuShapeSelection.billId === billId
+      ? menuShapeSelection.level
+      : detail?.level;
+  const selectedTargetType =
+    menuShapeSelection && menuShapeSelection.billId === billId
+      ? menuShapeSelection.targetType
+      : detail?.targetType;
   const initialValues = useMemo(() => {
-    if (!detail) return {};
+    if (!detail) {
+      return { sort: 99 };
+    }
     return {
       number: detail.number ?? '',
       name: detail.name ?? '',
@@ -62,6 +100,9 @@ const MenuEditPage = (props: PageComponentProps) => {
       permission: detail.permission ?? null,
       path: detail.path ?? '',
       component: detail.component ?? '',
+      targetType: detail.targetType ?? undefined,
+      externalUrl: detail.externalUrl ?? '',
+      externalOpenMode: detail.externalOpenMode ?? undefined,
       icon: detail.icon ?? '',
       description: detail.description ?? '',
       sort: detail.sort ?? undefined,
@@ -95,8 +136,8 @@ const MenuEditPage = (props: PageComponentProps) => {
       dataIndex: 'level',
       type: 'select',
       options: [
-        { label: '分组', value: 0 },
-        { label: '页面', value: 1 },
+        { label: '分组', value: MENU_LEVEL_CATEGORY },
+        { label: '页面', value: MENU_LEVEL_PAGE },
       ],
       rules: [{ required: true, message: '层级不能为空' }],
     },
@@ -113,6 +154,10 @@ const MenuEditPage = (props: PageComponentProps) => {
       type: 'ref-selector',
       disabled: !selectedAppId,
       placeholder: selectedAppId ? '请选择所属功能' : '请先选择所属应用',
+      rules:
+        selectedLevel === MENU_LEVEL_PAGE
+          ? [{ required: true, message: '页面菜单的所属功能不能为空' }]
+          : undefined,
       refSelector: featureRefSelector,
     },
     {
@@ -153,6 +198,7 @@ const MenuEditPage = (props: PageComponentProps) => {
       type: 'ref-selector',
       disabled: !selectedAppId,
       placeholder: selectedFeatureId ? '请选择功能权限' : '请选择应用级权限',
+      rules: [{ required: true, message: '权限不能为空' }],
       refSelector: defineRefSelector<PermissionSelectVO>({
         selectorKey: ['sys-perm-menu', selectedAppId, selectedFeatureId],
         modalTitle: '选择权限',
@@ -173,8 +219,58 @@ const MenuEditPage = (props: PageComponentProps) => {
         ],
       }),
     },
-    { label: '路径', dataIndex: 'path', type: 'text' },
-    { label: '组件', dataIndex: 'component', type: 'text' },
+    ...(selectedLevel === MENU_LEVEL_PAGE
+      ? [
+          {
+            label: '页面目标',
+            dataIndex: 'targetType',
+            type: 'select' as const,
+            options: [
+              { label: '内部页面', value: INTERNAL_PAGE },
+              { label: '外部链接', value: EXTERNAL_LINK },
+            ],
+            rules: [{ required: true, message: '页面目标不能为空' }],
+          },
+        ]
+      : []),
+    ...(selectedLevel === MENU_LEVEL_PAGE && selectedTargetType === INTERNAL_PAGE
+      ? [
+          {
+            label: '路径',
+            dataIndex: 'path',
+            type: 'text' as const,
+            rules: [{ required: true, message: '路径不能为空' }],
+          },
+          {
+            label: '组件',
+            dataIndex: 'component',
+            type: 'text' as const,
+            rules: [{ required: true, message: '组件不能为空' }],
+          },
+        ]
+      : []),
+    ...(selectedLevel === MENU_LEVEL_PAGE && selectedTargetType === EXTERNAL_LINK
+      ? [
+          {
+            label: '外部链接',
+            dataIndex: 'externalUrl',
+            type: 'text' as const,
+            placeholder: '例如：https://x.com/home',
+            fullWidth: true,
+            rules: [{ required: true, validator: validateExternalUrl }],
+          },
+          {
+            label: '打开方式',
+            dataIndex: 'externalOpenMode',
+            type: 'select' as const,
+            options: [
+              { label: '新浏览器标签页', value: 'NEW_TAB' },
+              { label: '工作台内嵌页（iframe）', value: 'IFRAME' },
+            ],
+            rules: [{ required: true, message: '打开方式不能为空' }],
+          },
+        ]
+      : []),
     { label: '图标', dataIndex: 'icon', type: 'icon-selector' },
     { label: '排序', dataIndex: 'sort', type: 'number' },
     { label: '创建时间', dataIndex: 'createTime', type: 'datetime', disabled: true },
@@ -201,8 +297,11 @@ const MenuEditPage = (props: PageComponentProps) => {
       featureId: feature?.id,
       parentId: parent?.id ?? undefined,
       permissionId: permission?.id ?? undefined,
-      path: (values.path as string) ?? undefined,
-      component: (values.component as string) ?? undefined,
+      path: (values.path as string | undefined)?.trim() || undefined,
+      component: (values.component as string | undefined)?.trim() || undefined,
+      targetType: values.targetType as MenuTargetType | undefined,
+      externalUrl: (values.externalUrl as string | undefined)?.trim() || undefined,
+      externalOpenMode: values.externalOpenMode as ExternalOpenMode | undefined,
       icon: (values.icon as string) ?? undefined,
       description: (values.description as string) ?? undefined,
       sort: (values.sort as number) ?? undefined,
@@ -240,6 +339,25 @@ const MenuEditPage = (props: PageComponentProps) => {
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
       onValuesChange={(changedValues, _allValues, form) => {
+        if (Object.hasOwn(changedValues, 'level')) {
+          const nextLevel = changedValues.level as number | undefined;
+          const nextTargetType = nextLevel === MENU_LEVEL_PAGE ? INTERNAL_PAGE : undefined;
+          form.setFieldValue('targetType', nextTargetType);
+          form.setFieldValue('path', undefined);
+          form.setFieldValue('component', undefined);
+          form.setFieldValue('externalUrl', undefined);
+          form.setFieldValue('externalOpenMode', undefined);
+          if (nextLevel === MENU_LEVEL_CATEGORY) form.setFieldValue('parent', null);
+          setMenuShapeSelection({ billId, level: nextLevel, targetType: nextTargetType });
+        }
+        if (Object.hasOwn(changedValues, 'targetType')) {
+          const nextTargetType = changedValues.targetType as MenuTargetType | undefined;
+          form.setFieldValue('path', undefined);
+          form.setFieldValue('component', undefined);
+          form.setFieldValue('externalUrl', undefined);
+          form.setFieldValue('externalOpenMode', undefined);
+          setMenuShapeSelection({ billId, level: MENU_LEVEL_PAGE, targetType: nextTargetType });
+        }
         if (Object.hasOwn(changedValues, 'feature')) {
           // 权限必须属于当前功能，功能变化后原权限引用不再有效。
           form.setFieldValue('permission', null);

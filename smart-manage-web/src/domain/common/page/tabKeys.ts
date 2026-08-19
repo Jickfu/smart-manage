@@ -14,3 +14,8 @@ export function createBillTabKey(componentKey: string, billId: string) {
 export function createAddNewTabKey(componentKey: string) {
   return ['addnew', componentKey, crypto.randomUUID()].join(TAB_KEY_SEPARATOR);
 }
+
+/** 外部链接 iframe 页签：同一菜单只保留一个工作台实例。 */
+export function createExternalLinkTabKey(menuId: string) {
+  return ['external', menuId].join(TAB_KEY_SEPARATOR);
+}

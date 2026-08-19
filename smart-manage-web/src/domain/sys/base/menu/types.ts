@@ -1,5 +1,8 @@
 import type { PageForm } from '@/types/api';
 
+export type MenuTargetType = 'INTERNAL_PAGE' | 'EXTERNAL_LINK';
+export type ExternalOpenMode = 'NEW_TAB' | 'IFRAME';
+
 /** 菜单列表查询 */
 export interface MenuListForm extends PageForm {
   appId?: string;
@@ -14,8 +17,11 @@ export interface MenuListVO {
   level: number;
   parentId: string;
   name: string;
-  path: string;
-  component: string;
+  path?: string;
+  component?: string;
+  targetType?: MenuTargetType;
+  externalUrl?: string;
+  externalOpenMode?: ExternalOpenMode;
   sort: number;
   icon: string;
 }
@@ -30,8 +36,11 @@ export interface MenuTreeVO {
   appId: string;
   featureId?: string;
   appName: string;
-  path: string;
-  component: string;
+  path?: string;
+  component?: string;
+  targetType?: MenuTargetType;
+  externalUrl?: string;
+  externalOpenMode?: ExternalOpenMode;
   sort: number;
   icon: string;
   enabled: boolean;
@@ -56,8 +65,11 @@ export interface MenuDetailVO {
   app?: MenuReferenceVO;
   feature?: MenuReferenceVO;
   permission?: MenuReferenceVO;
-  path: string;
-  component: string;
+  path?: string;
+  component?: string;
+  targetType?: MenuTargetType;
+  externalUrl?: string;
+  externalOpenMode?: ExternalOpenMode;
   icon: string;
   description: string;
   sort: number;
@@ -86,6 +98,9 @@ export interface MenuSaveForm {
   permissionId?: string;
   path?: string;
   component?: string;
+  targetType?: MenuTargetType;
+  externalUrl?: string;
+  externalOpenMode?: ExternalOpenMode;
   icon?: string;
   description?: string;
   sort?: number;

@@ -13,6 +13,8 @@ import sm.domain.sys.base.menu.model.vo.MenuAppInfoVO;
 import sm.domain.sys.base.menu.model.vo.MenuTreeVO;
 import sm.domain.sys.base.menu.model.vo.MenuDetailVO;
 import sm.domain.sys.base.menu.model.vo.MenuVO;
+import sm.domain.sys.base.menu.model.enums.ExternalOpenModeEnum;
+import sm.domain.sys.base.menu.model.enums.MenuTargetTypeEnum;
 import sm.domain.sys.base.permission.mapper.PermissionMapper;
 import sm.domain.sys.base.permission.model.entity.PermissionEntity;
 
@@ -121,6 +123,24 @@ class MenuServiceTests {
 
         assertEquals(1, result.getRoutes().size());
         assertEquals("采购申请", result.getRoutes().getFirst().getName());
+    }
+
+    @Test
+    void userMenuReturnsExternalLinkNavigationFields() {
+        MenuEntity page = menu(
+                401L, 31L, 0L, MenuLevelEnum.PAGE, "外部首页", null);
+        page.setTargetType(MenuTargetTypeEnum.EXTERNAL_LINK);
+        page.setExternalUrl("https://x.com/home");
+        page.setExternalOpenMode(ExternalOpenModeEnum.NEW_TAB);
+        when(mapper.selectUserMenus(any(), any(), any(), anyBoolean())).thenReturn(List.of(page));
+
+        MenuVO result = service.getUserMenusByAppId(1L, 31L);
+
+        MenuVO externalMenu = result.getRoutes().getFirst();
+        assertEquals(401L, externalMenu.getId());
+        assertEquals(MenuTargetTypeEnum.EXTERNAL_LINK, externalMenu.getTargetType());
+        assertEquals("https://x.com/home", externalMenu.getExternalUrl());
+        assertEquals(ExternalOpenModeEnum.NEW_TAB, externalMenu.getExternalOpenMode());
     }
 
     private MenuEntity menu(

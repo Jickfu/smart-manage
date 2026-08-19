@@ -10,9 +10,14 @@ import sm.domain.sys.base.feature.model.entity.FeatureEntity;
 import sm.domain.sys.base.permission.model.entity.PermissionEntity;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuSaveForm;
+import sm.domain.sys.base.menu.model.enums.ExternalOpenModeEnum;
+import sm.domain.sys.base.menu.model.enums.MenuTargetTypeEnum;
 import sm.system.exception.BizException;
 
+import org.mockito.ArgumentCaptor;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -106,6 +111,8 @@ class MenuTxServiceTests {
         form.setFeatureId(100L);
         form.setPermissionId(200L);
         form.setPath("/sys/base/user");
+        form.setComponent("sys/base/user");
+        form.setTargetType(MenuTargetTypeEnum.INTERNAL_PAGE);
 
         FeatureEntity feature = new FeatureEntity();
         feature.setId(100L);
@@ -120,6 +127,42 @@ class MenuTxServiceTests {
         txService.save(form);
 
         verify(mapper).insert(any(MenuEntity.class));
+    }
+
+    @Test
+    void externalLinkMenuSupportsHttpAndIframe() {
+        MenuSaveForm form = validExternalLinkForm("http://internal.example.test/home");
+        when(mapper.insert(any(MenuEntity.class))).thenReturn(1);
+
+        txService.save(form);
+
+        ArgumentCaptor<MenuEntity> entityCaptor = ArgumentCaptor.forClass(MenuEntity.class);
+        verify(mapper).insert(entityCaptor.capture());
+        MenuEntity saved = entityCaptor.getValue();
+        assertEquals(MenuTargetTypeEnum.EXTERNAL_LINK, saved.getTargetType());
+        assertEquals("http://internal.example.test/home", saved.getExternalUrl());
+        assertEquals(ExternalOpenModeEnum.IFRAME, saved.getExternalOpenMode());
+        assertNull(saved.getPath());
+        assertNull(saved.getComponent());
+    }
+
+    @Test
+    void externalLinkMenuRejectsExecutableProtocol() {
+        MenuSaveForm form = validExternalLinkForm("javascript:alert(1)");
+
+        assertThrows(BizException.class, () -> txService.save(form));
+        verify(mapper, never()).insert(any(MenuEntity.class));
+    }
+
+    @Test
+    void internalPageMenuRequiresComponent() {
+        MenuSaveForm form = validExternalLinkForm("https://example.test");
+        form.setTargetType(MenuTargetTypeEnum.INTERNAL_PAGE);
+        form.setPath("/sys/base/menu");
+        form.setComponent(null);
+
+        assertThrows(BizException.class, () -> txService.save(form));
+        verify(mapper, never()).insert(any(MenuEntity.class));
     }
 
     @Test
@@ -155,6 +198,29 @@ class MenuTxServiceTests {
         feature.setId(100L);
         feature.setAppId(31L);
         when(featureMapper.selectById(100L)).thenReturn(feature);
+        return form;
+    }
+
+    private MenuSaveForm validExternalLinkForm(String externalUrl) {
+        MenuSaveForm form = new MenuSaveForm();
+        form.setNumber("external_home");
+        form.setName("外部首页");
+        form.setLevel(MenuLevelEnum.PAGE);
+        form.setParentId(0L);
+        form.setAppId(31L);
+        form.setFeatureId(100L);
+        form.setPermissionId(200L);
+        form.setTargetType(MenuTargetTypeEnum.EXTERNAL_LINK);
+        form.setExternalUrl(externalUrl);
+        form.setExternalOpenMode(ExternalOpenModeEnum.IFRAME);
+        FeatureEntity feature = new FeatureEntity();
+        feature.setId(100L);
+        feature.setAppId(31L);
+        PermissionEntity permission = new PermissionEntity();
+        permission.setId(200L);
+        permission.setFeatureId(100L);
+        when(featureMapper.selectById(100L)).thenReturn(feature);
+        when(permissionMapper.selectById(200L)).thenReturn(permission);
         return form;
     }
 }

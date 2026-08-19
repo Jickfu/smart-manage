@@ -59,9 +59,13 @@ export interface UserAssignmentVO {
 
 /** 菜单节点 */
 export interface MenuVO {
+  id: string;
   name: string;
-  path: string;
-  component: string;
+  path?: string;
+  component?: string;
+  targetType?: 'INTERNAL_PAGE' | 'EXTERNAL_LINK';
+  externalUrl?: string;
+  externalOpenMode?: 'NEW_TAB' | 'IFRAME';
   icon: string;
   level: number;
   routes: MenuVO[];

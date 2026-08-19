@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
+import sm.domain.sys.base.menu.model.enums.ExternalOpenModeEnum;
+import sm.domain.sys.base.menu.model.enums.MenuTargetTypeEnum;
 import sm.system.entity.BaseEntity;
 
 /**
@@ -53,6 +55,18 @@ public class MenuEntity extends BaseEntity {
 	 * 组件路径
 	 */
 	private String component;
+	/**
+	 * 页面目标类型；分组菜单为空。
+	 */
+	private MenuTargetTypeEnum targetType;
+	/**
+	 * 外部链接地址；仅外部链接菜单使用。
+	 */
+	private String externalUrl;
+	/**
+	 * 外部链接打开方式；仅外部链接菜单使用。
+	 */
+	private ExternalOpenModeEnum externalOpenMode;
 	/**
 	 * 图标
 	 */

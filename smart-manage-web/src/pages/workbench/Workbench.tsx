@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { Spin } from 'antd';
+import { App, Spin } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { menuQueryKeys } from '@/domain/sys/base/menu/queryKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
@@ -9,6 +9,9 @@ import ContentTabsBar from './ContentTabsBar';
 import PageRenderer from './PageRenderer';
 import ApplicationHome from './ApplicationHome';
 import { componentRegistry } from '@/domain/common/registry/componentRegistry';
+import type { MenuVO } from '@/types/api';
+import ExternalLinkFrame from './ExternalLinkFrame';
+import { resolveMenuAction } from './menuNavigation';
 import './Workbench.css';
 
 interface Props {
@@ -16,9 +19,11 @@ interface Props {
 }
 
 const Workbench = ({ appNumber }: Props) => {
+  const { message } = App.useApp();
   const ws = useWorkbenchStore((s) => s.workspaces[appNumber]);
   const openListTab = useWorkbenchStore((s) => s.openListTab);
   const openCustomTab = useWorkbenchStore((s) => s.openCustomTab);
+  const openExternalLinkTab = useWorkbenchStore((s) => s.openExternalLinkTab);
 
   const menuQuery = useQuery({
     queryKey: menuQueryKeys.userByApp(appNumber),
@@ -27,15 +32,27 @@ const Workbench = ({ appNumber }: Props) => {
   });
 
   const handleMenuItemClick = useCallback(
-    (item: { component?: string; path?: string; name: string }) => {
-      const componentKey = item.component?.trim() || item.path?.trim() || item.name;
-      if (componentRegistry[componentKey]?.pageType === 'CUSTOM') {
-        openCustomTab(appNumber, componentKey);
-      } else {
-        openListTab(appNumber, componentKey);
+    (item: MenuVO) => {
+      try {
+        const action = resolveMenuAction(item);
+        if (action.type === 'EXTERNAL_NEW_TAB') {
+          window.open(action.externalUrl, '_blank', 'noopener,noreferrer');
+          return;
+        }
+        if (action.type === 'EXTERNAL_IFRAME') {
+          openExternalLinkTab(appNumber, action.menuId, action.title, action.externalUrl);
+          return;
+        }
+        if (componentRegistry[action.componentKey]?.pageType === 'CUSTOM') {
+          openCustomTab(appNumber, action.componentKey);
+        } else {
+          openListTab(appNumber, action.componentKey);
+        }
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : '菜单配置无效');
       }
     },
-    [appNumber, openCustomTab, openListTab],
+    [appNumber, message, openCustomTab, openExternalLinkTab, openListTab],
   );
 
   if (!ws) return null;
@@ -60,6 +77,8 @@ const Workbench = ({ appNumber }: Props) => {
                 >
                   {tab.key === '__home__' ? (
                     <ApplicationHome appNumber={appNumber} appName={ws.appInfo.name} />
+                  ) : tab.externalUrl ? (
+                    <ExternalLinkFrame title={tab.label} externalUrl={tab.externalUrl} />
                   ) : (
                     <PageRenderer
                       appNumber={appNumber}

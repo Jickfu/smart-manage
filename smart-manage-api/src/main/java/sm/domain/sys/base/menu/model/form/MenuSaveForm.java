@@ -4,8 +4,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
+import sm.domain.sys.base.menu.model.enums.ExternalOpenModeEnum;
+import sm.domain.sys.base.menu.model.enums.MenuTargetTypeEnum;
 
 /**
  * @author Chekfu
@@ -50,6 +53,16 @@ public class MenuSaveForm {
 
 	@Schema(description = "组件")
 	private String component;
+
+	@Schema(description = "页面目标类型：INTERNAL_PAGE=内部页面，EXTERNAL_LINK=外部链接")
+	private MenuTargetTypeEnum targetType;
+
+	@Schema(description = "外部链接地址，仅支持绝对 HTTP/HTTPS URL")
+	@Size(max = 2048, message = "外部链接长度不能超过2048个字符")
+	private String externalUrl;
+
+	@Schema(description = "外链打开方式：NEW_TAB=新浏览器标签页，IFRAME=工作台内嵌页")
+	private ExternalOpenModeEnum externalOpenMode;
 
 	@Schema(description = "图标")
 	private String icon;

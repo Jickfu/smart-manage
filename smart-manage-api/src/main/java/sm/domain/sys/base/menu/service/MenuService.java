@@ -50,6 +50,9 @@ public class MenuService {
 			"level", ListSqlQuery.enumeration("level", false),
 			"path", ListSqlQuery.string("path", false),
 			"component", ListSqlQuery.string("component", false),
+			"targetType", ListSqlQuery.enumeration("targetType", false),
+			"externalUrl", ListSqlQuery.string("externalUrl", false),
+			"externalOpenMode", ListSqlQuery.enumeration("externalOpenMode", false),
 			"sort", ListSqlQuery.number("sort", false),
 			"enabled", ListSqlQuery.bool("enabled", false));
 	private final CurrentUserContext currentUserContext;
@@ -86,7 +89,8 @@ public class MenuService {
 		if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
 			String keyword = form.getKeyword().trim();
 			qw.and(condition -> condition.like(MenuEntity::getName, keyword)
-					.or().like(MenuEntity::getPath, keyword));
+					.or().like(MenuEntity::getPath, keyword)
+					.or().like(MenuEntity::getExternalUrl, keyword));
 		}
 		qw.orderByAsc(MenuEntity::getSort).orderByAsc(MenuEntity::getId);
 		Page<MenuEntity> result = mapper.selectPage(new Page<>(form.getPageNum(), form.getPageSize()), qw);
@@ -148,8 +152,11 @@ public class MenuService {
 		for (MenuEntity menu : menus) {
 			String name = menu.getName() == null ? "" : menu.getName().toLowerCase(Locale.ROOT);
 			String path = menu.getPath() == null ? "" : menu.getPath().toLowerCase(Locale.ROOT);
+			String externalUrl = menu.getExternalUrl() == null
+					? "" : menu.getExternalUrl().toLowerCase(Locale.ROOT);
 			boolean keywordMatches = normalizedKeyword.isEmpty()
-					|| name.contains(normalizedKeyword) || path.contains(normalizedKeyword);
+					|| name.contains(normalizedKeyword) || path.contains(normalizedKeyword)
+					|| externalUrl.contains(normalizedKeyword);
 			if (keywordMatches && listQuery.conditions().stream().allMatch(condition -> matches(menu, condition))) {
 				includedIds.add(menu.getId());
 				if (MenuLevelEnum.PAGE.equals(menu.getLevel())
@@ -174,6 +181,9 @@ public class MenuService {
 			case "level" -> menu.getLevel();
 			case "path" -> menu.getPath();
 			case "component" -> menu.getComponent();
+			case "targetType" -> menu.getTargetType();
+			case "externalUrl" -> menu.getExternalUrl();
+			case "externalOpenMode" -> menu.getExternalOpenMode();
 			case "sort" -> menu.getSort();
 			case "enabled" -> menu.getEnabled();
 			default -> null;
@@ -287,9 +297,13 @@ public class MenuService {
 		Map<MenuVO, Integer> rootSorts = new IdentityHashMap<>();
 		for (MenuEntity menuEntity : entityList) {
 			MenuVO menu = new MenuVO();
+			menu.setId(menuEntity.getId());
 			menu.setName(menuEntity.getName());
 			menu.setPath(menuEntity.getPath());
 			menu.setComponent(menuEntity.getComponent());
+			menu.setTargetType(menuEntity.getTargetType());
+			menu.setExternalUrl(menuEntity.getExternalUrl());
+			menu.setExternalOpenMode(menuEntity.getExternalOpenMode());
 			menu.setIcon(menuEntity.getIcon());
 			menu.setLevel(menuEntity.getLevel());
 			if (MenuLevelEnum.CATEGORY.equals(menuEntity.getLevel())) {

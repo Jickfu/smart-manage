@@ -15,7 +15,7 @@ interface Props {
 /** 在菜单树中递归查找 */
 function findMenuItem(items: MenuVO[], key: string): MenuVO | null {
   for (const item of items) {
-    if ((item.path || item.name) === key) return item;
+    if (item.id === key) return item;
     if (item.routes?.length) {
       const found = findMenuItem(item.routes, key);
       if (found) return found;
@@ -27,7 +27,7 @@ function findMenuItem(items: MenuVO[], key: string): MenuVO | null {
 /** 递归渲染菜单项 */
 function renderMenuTree(items: MenuVO[]): Required<MenuProps>['items'] {
   return items.map((item) => {
-    const key = item.path || item.name;
+    const key = item.id;
     if (item.routes?.length) {
       return {
         key,
@@ -51,8 +51,8 @@ const AppSidebar = ({ menuTree, loading, onItemClick }: Props) => {
   const handleClick: MenuProps['onClick'] = (info) => {
     if (!menuTree?.routes) return;
     const item = findMenuItem(menuTree.routes, info.key);
-    // 只有叶子节点（有 component 的）才触发页面打开，父节点仅展开/折叠
-    if (item?.component) onItemClick(item);
+    // 页面节点统一交给导航解析器校验；配置错误需要明确提示，不能静默变成不可点击菜单。
+    if (item?.level === 1) onItemClick(item);
   };
 
   return (

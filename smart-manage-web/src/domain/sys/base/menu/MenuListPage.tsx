@@ -38,6 +38,27 @@ const columnFeatures: ListColumnFeatures = {
   },
   path: { label: '路径', filter: { type: 'string' } },
   component: { label: '组件', filter: { type: 'string' } },
+  targetType: {
+    label: '页面目标',
+    filter: {
+      type: 'enum',
+      options: [
+        { label: '内部页面', value: 'INTERNAL_PAGE' },
+        { label: '外部链接', value: 'EXTERNAL_LINK' },
+      ],
+    },
+  },
+  externalUrl: { label: '外部链接', filter: { type: 'string' } },
+  externalOpenMode: {
+    label: '打开方式',
+    filter: {
+      type: 'enum',
+      options: [
+        { label: '新浏览器标签页', value: 'NEW_TAB' },
+        { label: '工作台内嵌页', value: 'IFRAME' },
+      ],
+    },
+  },
   sort: { label: '排序', filter: { type: 'number' } },
   enabled: { label: '状态', filter: { type: 'boolean' } },
 };
@@ -192,6 +213,27 @@ const MenuListPage = (props: PageComponentProps) => {
         value === 0 ? <Tag color="blue">分组</Tag> : <Tag color="green">页面</Tag>,
     },
     { title: '路径', dataIndex: 'path', width: 180, ellipsis: true },
+    {
+      title: '页面目标',
+      dataIndex: 'targetType',
+      width: 100,
+      render: (value) =>
+        value === 'EXTERNAL_LINK' ? (
+          <Tag color="orange">外部链接</Tag>
+        ) : value === 'INTERNAL_PAGE' ? (
+          <Tag color="blue">内部页面</Tag>
+        ) : (
+          '-'
+        ),
+    },
+    { title: '外部链接', dataIndex: 'externalUrl', width: 220, ellipsis: true },
+    {
+      title: '打开方式',
+      dataIndex: 'externalOpenMode',
+      width: 130,
+      render: (value) =>
+        value === 'NEW_TAB' ? '新浏览器标签页' : value === 'IFRAME' ? '工作台内嵌页' : '-',
+    },
     { title: '组件', dataIndex: 'component', ellipsis: true },
     { title: '排序', dataIndex: 'sort', width: 60 },
     {
@@ -233,7 +275,7 @@ const MenuListPage = (props: PageComponentProps) => {
       total={records.length}
       pageNum={pageNum}
       pageSize={pageSize}
-      quickSearchPlaceholder="搜索名称/路径"
+      quickSearchPlaceholder="搜索名称/路径/外部链接"
       filterSummary={keyword ? `关键字：${keyword}` : undefined}
       treePanel={treePanel}
       onAddNew={handleOpenAdd}

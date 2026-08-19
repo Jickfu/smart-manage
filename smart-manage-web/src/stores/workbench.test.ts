@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OperationType } from '@/domain/common/page/types';
-import { createBillTabKey } from '@/domain/common/page/tabKeys';
+import { createBillTabKey, createExternalLinkTabKey } from '@/domain/common/page/tabKeys';
 import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import type { AppVO } from '@/domain/sys/base/app/types';
 import { useWorkbenchStore } from './workbench';
@@ -175,6 +175,25 @@ describe('workbench store', () => {
       .workspaces[APP_NUMBER]!.contentTabs.filter((tab) => tab.componentKey === componentKey);
     expect(tabs).toHaveLength(1);
     expect(tabs[0]?.pageType).toBe('CUSTOM');
+  });
+
+  it('iframe 外链按菜单身份打开且保持单实例', () => {
+    const store = useWorkbenchStore.getState();
+
+    expect(store.openExternalLinkTab(APP_NUMBER, 'menu-1', '外部首页', 'https://x.com/home')).toBe(
+      'opened',
+    );
+    expect(store.openExternalLinkTab(APP_NUMBER, 'menu-1', '外部首页', 'https://x.com/home')).toBe(
+      'activated',
+    );
+
+    const tabKey = createExternalLinkTabKey('menu-1');
+    const tabs = useWorkbenchStore
+      .getState()
+      .workspaces[APP_NUMBER]!.contentTabs.filter((tab) => tab.key === tabKey);
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0]?.label).toBe('外部首页');
+    expect(tabs[0]?.externalUrl).toBe('https://x.com/home');
   });
 
   it('页面可以强制覆盖页签标题且不改变页签身份', () => {

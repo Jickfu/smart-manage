@@ -32,4 +32,24 @@ class MenuMapperXmlTests {
         assertTrue(normalizedSql.contains("a.level IN (0, 1)"));
         assertFalse(normalizedSql.contains("a.level IN (2, 3)"));
     }
+
+    @Test
+    void fullColumnUpdateIncludesFeatureAndExternalNavigationFields() {
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        InputStream mapperInput = getClass().getClassLoader().getResourceAsStream(MAPPER_RESOURCE);
+        assertNotNull(mapperInput, "菜单 Mapper XML 不存在");
+        new XMLMapperBuilder(
+                mapperInput, configuration, MAPPER_RESOURCE, configuration.getSqlFragments())
+                .parse();
+
+        BoundSql boundSql = configuration
+                .getMappedStatement(MenuMapper.class.getName() + ".updateAllColumns")
+                .getBoundSql(new sm.domain.sys.base.menu.model.entity.MenuEntity());
+        String normalizedSql = boundSql.getSql().replaceAll("\\s+", " ");
+
+        assertTrue(normalizedSql.contains("feature_id = ?"));
+        assertTrue(normalizedSql.contains("target_type = ?"));
+        assertTrue(normalizedSql.contains("external_url = ?"));
+        assertTrue(normalizedSql.contains("external_open_mode = ?"));
+    }
 }

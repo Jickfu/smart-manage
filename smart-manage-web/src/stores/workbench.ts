@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   createAddNewTabKey,
   createBillTabKey,
+  createExternalLinkTabKey,
   createListTabKey,
 } from '@/domain/common/page/tabKeys';
 import { OperationType } from '@/domain/common/page/types';
@@ -24,6 +25,8 @@ export interface ContentTabItem {
   context?: Record<string, string>;
   /** 新增页临时标记 — 保存后替换为真实单据 tab */
   temporary?: boolean;
+  /** iframe 外链不经过前端组件注册表，直接由工作台受控渲染。 */
+  externalUrl?: string;
 }
 
 type ReplaceContentTabItem = Omit<ContentTabItem, 'label' | 'componentKey' | 'pageType'> & {
@@ -69,6 +72,12 @@ interface WorkbenchState {
   addContentTab: (appNumber: string, tab: ContentTabItem) => AddTabResult;
   openListTab: (appNumber: string, componentKey: string) => AddTabResult;
   openCustomTab: (appNumber: string, componentKey: string) => AddTabResult;
+  openExternalLinkTab: (
+    appNumber: string,
+    menuId: string,
+    title: string,
+    externalUrl: string,
+  ) => AddTabResult;
   openAddNewTab: (
     appNumber: string,
     componentKey: string,
@@ -298,6 +307,15 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       closable: true,
       componentKey,
       pageType: 'CUSTOM',
+    });
+  },
+
+  openExternalLinkTab: (appNumber, menuId, title, externalUrl) => {
+    return get().addContentTab(appNumber, {
+      key: createExternalLinkTabKey(menuId),
+      label: title,
+      closable: true,
+      externalUrl,
     });
   },
 
