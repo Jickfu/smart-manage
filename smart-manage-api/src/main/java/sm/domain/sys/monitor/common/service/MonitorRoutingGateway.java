@@ -6,14 +6,14 @@ import org.springframework.stereotype.Component;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.monitor.common.config.MonitorClusterProperties;
 import sm.system.exception.BizException;
+import sm.system.http.HttpClientHelper;
+import sm.system.http.HttpRequestSpec;
+import sm.system.http.HttpResponseData;
 import sm.system.response.ResultEnum;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 
 /** 将已鉴权请求定向到注册表中的目标实例，目标节点仍会再次执行登录和权限校验。 */
@@ -23,22 +23,20 @@ public class MonitorRoutingGateway {
     private final JsonMapper jsonMapper;
     private final MonitorClusterProperties properties;
     private final CurrentUserContext currentUserContext;
+    private final HttpClientHelper httpClientHelper;
 
     @Value("${sa-token.token-name:smtoken}")
     private String tokenName;
 
     public <T> T get(MonitorInstanceRegistry.RegisteredInstance instance, String path, Class<T> responseType) {
-        HttpRequest request = requestBuilder(instance, path).GET().build();
+        HttpRequestSpec request = requestBuilder(instance, path, "GET").build();
         return execute(request, responseType);
     }
 
     public <T> T post(MonitorInstanceRegistry.RegisteredInstance instance, String path,
                       Object body, Class<T> responseType) {
         try {
-            HttpRequest request = requestBuilder(instance, path)
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(body)))
-                    .build();
+            HttpRequestSpec request = requestBuilder(instance, path, "POST").body(body).build();
             return execute(request, responseType);
         } catch (BizException exception) {
             throw exception;
@@ -47,19 +45,16 @@ public class MonitorRoutingGateway {
         }
     }
 
-    private HttpRequest.Builder requestBuilder(MonitorInstanceRegistry.RegisteredInstance instance, String path) {
-        return HttpRequest.newBuilder()
-                .uri(URI.create(instance.getInternalBaseUrl() + path))
+    private HttpRequestSpec.Builder requestBuilder(MonitorInstanceRegistry.RegisteredInstance instance,
+                                                   String path, String method) {
+        return HttpRequestSpec.builder(method, URI.create(instance.getInternalBaseUrl() + path))
                 .timeout(Duration.ofMillis(properties.getRequestTimeoutMs()))
                 .header(tokenName, currentUserContext.getToken());
     }
 
-    private <T> T execute(HttpRequest request, Class<T> responseType) {
+    private <T> T execute(HttpRequestSpec request, Class<T> responseType) {
         try {
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofMillis(properties.getConnectTimeoutMs()))
-                    .build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponseData<String> response = httpClientHelper.execute(request, String.class);
             if (response.statusCode() != 200) {
                 throw new BizException(ResultEnum.EXTERNAL_SERVICE_ERROR, "目标实例返回异常状态");
             }
@@ -71,9 +66,6 @@ public class MonitorRoutingGateway {
             return jsonMapper.treeToValue(root.get("data"), responseType);
         } catch (BizException exception) {
             throw exception;
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            throw new BizException(ResultEnum.EXTERNAL_SERVICE_ERROR, "实例诊断请求被中断");
         } catch (Exception exception) {
             throw new BizException(ResultEnum.EXTERNAL_SERVICE_ERROR, "目标实例不可访问");
         }

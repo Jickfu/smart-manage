@@ -13,6 +13,5 @@ public class MonitorClusterProperties {
     private boolean requireHttps;
     private long heartbeatIntervalMs = 10000;
     private long instanceTtlMs = 30000;
-    private long connectTimeoutMs = 2000;
     private long requestTimeoutMs = 10000;
 }

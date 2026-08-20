@@ -101,7 +101,6 @@ smart-manage:
       require-https: true
       heartbeat-interval-ms: 10000
       instance-ttl-ms: 30000
-      connect-timeout-ms: 2000
       request-timeout-ms: 10000
   sm2:
     js:

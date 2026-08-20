@@ -129,6 +129,9 @@ smart-manage:
     length: 5
     expire: 300
   system:
+    http:
+      connect-timeout: 3s
+      request-timeout: 10s
     log:
       core-pool-size: 10
       max-pool-size: 20

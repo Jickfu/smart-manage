@@ -43,6 +43,22 @@ pnpm build
 
 仅修改文档时，不要求运行代码构建，但必须检查文档链接、标题结构和事实一致性。
 
+## 提交规范
+
+提交信息和 Pull Request 标题遵循 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/)：
+
+```text
+<type>(<scope>): <description>
+```
+
+常用 `type` 包括 `feat`、`fix`、`refactor`、`docs`、`test`、`style`、`build`、`ci` 和 `chore`。`scope` 使用稳定、简短的模块或领域名称；`description` 使用简体中文准确描述改动，不以句号结尾。
+
+不兼容变更使用 `!` 标记，并在正文中说明影响和迁移方式：
+
+```text
+feat(api)!: 调整统一响应结构
+```
+
 ## 提交说明
 
 提交或 Pull Request 应说明：

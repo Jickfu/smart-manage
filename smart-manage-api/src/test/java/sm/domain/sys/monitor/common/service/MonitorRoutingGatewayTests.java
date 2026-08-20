@@ -7,9 +7,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.monitor.common.config.MonitorClusterProperties;
 import sm.domain.sys.monitor.common.model.vo.MonitorInstanceVO;
+import sm.system.http.HttpClientHelper;
+import sm.system.http.HttpClientProperties;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.net.InetSocketAddress;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -45,8 +48,12 @@ class MonitorRoutingGatewayTests {
         CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
         when(currentUserContext.getToken()).thenReturn("test-token");
         MonitorClusterProperties properties = new MonitorClusterProperties();
+        HttpClientProperties httpClientProperties = new HttpClientProperties();
+        JsonMapper jsonMapper = JsonMapper.builder().build();
+        HttpClientHelper httpClientHelper = new HttpClientHelper(
+                HttpClient.newHttpClient(), jsonMapper, httpClientProperties);
         MonitorRoutingGateway gateway = new MonitorRoutingGateway(
-                JsonMapper.builder().build(), properties, currentUserContext);
+                jsonMapper, properties, currentUserContext, httpClientHelper);
         ReflectionTestUtils.setField(gateway, "tokenName", "smtoken");
         MonitorInstanceRegistry.RegisteredInstance instance = new MonitorInstanceRegistry.RegisteredInstance();
         instance.setInternalBaseUrl("http://127.0.0.1:" + server.getAddress().getPort());
