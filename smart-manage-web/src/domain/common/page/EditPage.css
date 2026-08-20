@@ -169,6 +169,25 @@
   line-height: 17px;
 }
 
+/* 垂直编辑表单的必填标记紧跟在标签文字右侧。 */
+.sm-edit-form
+  .ant-form-item-label
+  > label.ant-form-item-required:not(.ant-form-item-required-mark-optional)::before {
+  display: none;
+}
+
+.sm-edit-form
+  .ant-form-item-label
+  > label.ant-form-item-required:not(.ant-form-item-required-mark-optional)::after {
+  content: '*';
+  visibility: visible;
+  margin-inline: 2px 0;
+  color: var(--ant-color-error);
+  font-family: sans-serif;
+  font-size: 14px;
+  line-height: 14px;
+}
+
 /* 字段辅助说明弱于标签和正文，避免与校验信息或业务内容混淆。 */
 .sm-edit-form .ant-form-item-extra {
   margin-top: 4px;
