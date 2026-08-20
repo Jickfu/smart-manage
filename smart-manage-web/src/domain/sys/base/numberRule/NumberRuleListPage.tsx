@@ -16,6 +16,8 @@ import { useWorkbenchStore } from '@/stores/workbench';
 import { numberRuleApi } from './api';
 import { numberRuleAccess } from './permissions';
 import { numberRuleQueryKeys } from './queryKeys';
+import { parseNumberRuleScopeKey } from './scopeTree';
+import type { NumberRuleScope } from './scopeTree';
 import type { NumberReference, NumberRuleVO } from './types';
 import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 
@@ -39,12 +41,6 @@ const columnFeatures: ListColumnFeatures = {
   defaultRule: { label: '默认规则', filter: { type: 'boolean' } },
   enabled: { label: '状态', filter: { type: 'boolean' } },
 };
-
-type Scope =
-  | { type: 'all' }
-  | { type: 'domain'; id: string }
-  | { type: 'app'; id: string }
-  | { type: 'feature'; id: string };
 
 const buildTree = (references: NumberReference[]): DataNode[] => {
   const domains = new Map<string, DataNode & { children: DataNode[] }>();
@@ -76,7 +72,7 @@ const buildTree = (references: NumberReference[]): DataNode[] => {
 
 const NumberRuleListPage = (props: PageComponentProps) => {
   const { modal, message } = App.useApp();
-  const [scope, setScope] = useState<Scope>({ type: 'all' });
+  const [scope, setScope] = useState<NumberRuleScope>({ type: 'all' });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
@@ -190,12 +186,8 @@ const NumberRuleListPage = (props: PageComponentProps) => {
             defaultExpandedKeys={['all']}
             selectedKeys={[scope.type === 'all' ? 'all' : `${scope.type}:${scope.id}`]}
             onSelect={(keys) => {
-              const key = String(keys[0] ?? 'all');
               resetPage();
-              if (key.startsWith('domain:')) setScope({ type: 'domain', id: key.slice(6) });
-              else if (key.startsWith('app:')) setScope({ type: 'app', id: key.slice(4) });
-              else if (key.startsWith('feature:')) setScope({ type: 'feature', id: key.slice(8) });
-              else setScope({ type: 'all' });
+              setScope(parseNumberRuleScopeKey(keys[0]));
             }}
           />
         </ListTreePanel>

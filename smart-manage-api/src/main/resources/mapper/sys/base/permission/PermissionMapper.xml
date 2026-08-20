@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="sm.domain.sys.base.permission.mapper.PermissionMapper">
+    <resultMap id="permissionDetailResult" type="sm.domain.sys.base.permission.model.vo.PermissionDetailVO">
+        <id property="id" column="id"/>
+        <result property="version" column="version"/>
+        <result property="name" column="name"/>
+        <result property="number" column="number"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="createUser" column="create_user"/>
+        <result property="updateUser" column="update_user"/>
+        <association property="feature" javaType="sm.domain.sys.base.common.model.vo.ReferenceVO"
+                     notNullColumn="feature_id">
+            <id property="id" column="feature_id"/>
+            <result property="number" column="feature_key"/>
+            <result property="name" column="feature_name"/>
+        </association>
+    </resultMap>
     <sql id="permissionProjection">
         a.id, a.version, a.name, a.number, a.feature_id, b.feature_key,
         COALESCE(b.custom_name, b.default_name) AS feature_name,
@@ -54,7 +70,7 @@
         ORDER BY a.number
     </select>
 
-    <select id="selectDetailById" resultType="sm.domain.sys.base.permission.model.vo.PermissionDetailVO">
+    <select id="selectDetailById" resultMap="permissionDetailResult">
         SELECT <include refid="permissionProjection"/>, a.create_time, a.update_time, a.create_user, a.update_user
         FROM t_sys_permission a
         LEFT JOIN t_sys_feature b ON b.id = a.feature_id

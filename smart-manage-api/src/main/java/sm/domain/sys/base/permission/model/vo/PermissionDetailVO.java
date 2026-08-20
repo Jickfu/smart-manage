@@ -2,6 +2,7 @@ package sm.domain.sys.base.permission.model.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import sm.domain.sys.base.common.model.vo.ReferenceVO;
 
 import java.time.LocalDateTime;
 
@@ -26,12 +27,7 @@ public class PermissionDetailVO {
 	@Schema(description = "编码")
 	private String number;
 
-	@Schema(description = "应用ID")
-	private Long appId;
-	private String appName;
-	private Long featureId;
-	private String featureKey;
-	private String featureName;
+	private ReferenceVO feature;
 
 	@Schema(description = "创建时间")
 	private LocalDateTime createTime;

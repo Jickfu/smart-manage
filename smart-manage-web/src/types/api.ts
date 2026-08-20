@@ -49,8 +49,11 @@ export interface UserInfoVO {
 
 export interface UserAssignmentVO {
   id: string;
-  orgId: string;
-  orgName: string;
+  org: {
+    id: string;
+    number: string;
+    name: string;
+  };
   orgNamePath: string;
   position?: string;
   isOrgLeader: boolean;

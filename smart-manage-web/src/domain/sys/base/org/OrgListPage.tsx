@@ -303,7 +303,15 @@ const OrgListPage = (props: PageComponentProps) => {
       <OrgEditModal
         open={modalOpen}
         orgId={editingId}
-        defaultParentId={selectedTreeOrg?.archived ? undefined : selectedTreeOrg?.id}
+        defaultParent={
+          selectedTreeOrg?.archived
+            ? undefined
+            : selectedTreeOrg && {
+                id: selectedTreeOrg.id,
+                number: selectedTreeOrg.number,
+                name: selectedTreeOrg.name,
+              }
+        }
         onClose={() => setModalOpen(false)}
         onSaved={async () => {
           setModalOpen(false);

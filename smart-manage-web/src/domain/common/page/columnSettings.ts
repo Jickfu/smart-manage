@@ -86,6 +86,14 @@ export const mergeColumnSettings = (
   return [...merged, ...defaultByKey.values()];
 };
 
+/** `null` 表示显式恢复出厂设置，此时完全跟随当前代码默认值。 */
+export const resolveColumnSettings = (
+  defaults: ColumnSetting[],
+  stored: ColumnSetting[] | undefined,
+  override: ColumnSetting[] | null | undefined,
+): ColumnSetting[] =>
+  override === null ? defaults : mergeColumnSettings(defaults, override ?? stored);
+
 export const normalizeFixedColumnOrder = (settings: ColumnSetting[]): ColumnSetting[] => [
   ...settings.filter((setting) => setting.fixed === 'left'),
   ...settings.filter((setting) => setting.fixed === 'none'),

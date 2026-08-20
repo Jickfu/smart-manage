@@ -8,8 +8,6 @@ import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import EditPage from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
-import { orgApi } from '@/domain/sys/base/org/api';
-import { orgQueryKeys } from '@/domain/sys/base/org/queryKeys';
 import { userApi } from './api';
 import { userAccess } from './permissions';
 import { userQueryKeys } from './queryKeys';
@@ -42,11 +40,6 @@ const UserEditPage = (props: PageComponentProps) => {
     queryFn: () => userApi.detail(billId!),
     enabled: Boolean(billId) && !selfMode,
   });
-  const orgQuery = useQuery({
-    queryKey: [...orgQueryKeys.all, 'options'],
-    queryFn: orgApi.options,
-    enabled: !selfMode,
-  });
   const detail = detailQuery.data;
   const initialValues = useMemo(
     () =>
@@ -77,20 +70,10 @@ const UserEditPage = (props: PageComponentProps) => {
               avatar: detail.avatar ?? '',
               avatarAttachmentId: detail.avatarAttachmentId,
               avatarUploadSessionId: undefined,
-              assignments: (detail.assignments ?? []).map((assignment) => {
-                const organization = orgQuery.data?.find((item) => item.id === assignment.orgId);
-                return {
-                  ...assignment,
-                  org: {
-                    id: assignment.orgId,
-                    number: organization?.number ?? '',
-                    name: organization?.name ?? assignment.orgName ?? assignment.orgNamePath ?? '',
-                  } satisfies OrgRefRecord,
-                };
-              }),
+              assignments: detail.assignments ?? [],
             }
           : { assignments: [] },
-    [currentUser, detail, orgQuery.data, selfMode],
+    [currentUser, detail, selfMode],
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
@@ -167,9 +150,9 @@ const UserEditPage = (props: PageComponentProps) => {
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
-      loading={selfMode ? false : detailQuery.isLoading || orgQuery.isLoading}
-      error={selfMode ? null : ((detailQuery.error ?? orgQuery.error) as Error | null)}
-      onRetry={() => Promise.all([detailQuery.refetch(), orgQuery.refetch()])}
+      loading={selfMode ? false : detailQuery.isLoading}
+      error={selfMode ? null : (detailQuery.error as Error | null)}
+      onRetry={() => detailQuery.refetch()}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
       basicContent={(editable) =>
@@ -231,7 +214,7 @@ const UserEditPage = (props: PageComponentProps) => {
             rowKey="id"
             dataSource={currentUser?.assignments ?? []}
             columns={[
-              { title: '部门', dataIndex: 'orgName' },
+              { title: '部门', render: (_, assignment) => assignment.org.name },
               { title: '部门长名称', dataIndex: 'orgNamePath' },
               { title: '岗位', dataIndex: 'position', width: 160, render: (value) => value || '-' },
               {
@@ -246,7 +229,6 @@ const UserEditPage = (props: PageComponentProps) => {
           <UserAssignmentTable
             ref={assignmentTableRef}
             editable={editable}
-            organizations={orgQuery.data ?? []}
             onSelectionChange={setHasSelectedAssignments}
           />
         )

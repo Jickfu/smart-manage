@@ -193,7 +193,7 @@ const Header = () => {
       (assignment) =>
         (!selectedOrgPath || assignment.orgNamePath.startsWith(selectedOrgPath)) &&
         (!keyword ||
-          assignment.orgName.toLowerCase().includes(keyword) ||
+          assignment.org.name.toLowerCase().includes(keyword) ||
           assignment.orgNamePath.toLowerCase().includes(keyword)),
     );
   }, [organizationKeyword, selectedOrgPath, userInfo?.assignments]);
@@ -336,7 +336,7 @@ const Header = () => {
           total={visibleOrganizations.length}
           selectedCount={
             selectedOrgId &&
-            visibleOrganizations.some((organization) => organization.orgId === selectedOrgId)
+            visibleOrganizations.some((organization) => organization.org.id === selectedOrgId)
               ? 1
               : 0
           }
@@ -356,7 +356,7 @@ const Header = () => {
             <Table
               className="sm-list-table sm-organization-table"
               size="small"
-              rowKey="orgId"
+              rowKey={(record) => record.org.id}
               pagination={false}
               dataSource={visibleOrganizations}
               rowSelection={{
@@ -365,7 +365,7 @@ const Header = () => {
                 onChange: (keys) => setSelectedOrgId(keys[0] ? String(keys[0]) : undefined),
               }}
               columns={[
-                { title: '组织名称', dataIndex: 'orgName', width: 180 },
+                { title: '组织名称', render: (_, record) => record.org.name, width: 180 },
                 { title: '组织长名称', dataIndex: 'orgNamePath' },
                 {
                   title: '岗位',
@@ -375,10 +375,10 @@ const Header = () => {
                 },
               ]}
               onRow={(record) => ({
-                onClick: () => setSelectedOrgId(record.orgId),
+                onClick: () => setSelectedOrgId(record.org.id),
                 onDoubleClick: () => {
-                  setSelectedOrgId(record.orgId);
-                  void handleOrganizationSwitch(record.orgId);
+                  setSelectedOrgId(record.org.id);
+                  void handleOrganizationSwitch(record.org.id);
                 },
               })}
               sticky

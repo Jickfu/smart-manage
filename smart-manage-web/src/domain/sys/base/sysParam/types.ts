@@ -1,4 +1,5 @@
 import type { PageForm } from '@/types/api';
+import type { ReferenceVO } from '@/domain/sys/base/common/types';
 
 export interface SysParamListForm extends PageForm {
   appId?: string;
@@ -17,6 +18,10 @@ export interface SysParamVO {
   isSystem: boolean;
   appId?: string;
   appName?: string;
+}
+
+export interface SysParamDetailVO extends Omit<SysParamVO, 'appId' | 'appName'> {
+  application?: ReferenceVO;
 }
 
 export interface SysParamSaveForm {

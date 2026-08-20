@@ -6,11 +6,9 @@ import type { ColumnsType } from 'antd/es/table';
 import RefSelector from '@/domain/common/component/RefSelector';
 import { useOrgRefSelector } from '@/domain/sys/base/org/refSelector/useOrgRefSelector';
 import type { OrgRefRecord } from '@/domain/sys/base/org/refSelector/useOrgRefSelector';
-import type { OrgOptionVO } from '@/domain/sys/base/org/types';
 
 interface UserAssignmentTableProps {
   editable: boolean;
-  organizations: OrgOptionVO[];
   onSelectionChange?: (hasSelection: boolean) => void;
 }
 
@@ -33,20 +31,15 @@ function RequiredTitle({ children }: { children: ReactNode }) {
   );
 }
 
-function OrganizationLongName({
-  fieldName,
-  organizations,
-}: {
-  fieldName: number;
-  organizations: OrgOptionVO[];
-}) {
+function OrganizationLongName({ fieldName }: { fieldName: number }) {
   const form = Form.useFormInstance();
   const org = Form.useWatch(['assignments', fieldName, 'org'], form) as OrgRefRecord | undefined;
-  return org ? organizations.find((organization) => organization.id === org.id)?.namePath : '';
+  const assignments = form.getFieldValue('assignments') as Array<{ orgNamePath?: string }>;
+  return org ? (org.namePath ?? assignments[fieldName]?.orgNamePath ?? '') : '';
 }
 
 export const UserAssignmentTable = forwardRef<UserAssignmentTableRef, UserAssignmentTableProps>(
-  function UserAssignmentTable({ editable, organizations, onSelectionChange }, ref) {
+  function UserAssignmentTable({ editable, onSelectionChange }, ref) {
     const { message } = App.useApp();
     const form = Form.useFormInstance();
     const orgRefSelector = useOrgRefSelector();
@@ -107,9 +100,7 @@ export const UserAssignmentTable = forwardRef<UserAssignmentTableRef, UserAssign
             },
             {
               title: '部门长名称',
-              render: (_, row) => (
-                <OrganizationLongName fieldName={row.name} organizations={organizations} />
-              ),
+              render: (_, row) => <OrganizationLongName fieldName={row.name} />,
             },
             {
               title: <RequiredTitle>职位</RequiredTitle>,

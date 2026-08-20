@@ -17,5 +17,4 @@ public interface SysParamMapper extends BaseMapper<SysParamEntity> {
     Page<SysParamVO> selectListPage(Page<SysParamVO> page, @Param("form") SysParamListForm form,
                                     @Param("listQuery") ListSqlQuery listQuery);
 
-    SysParamVO selectDetailById(@Param("id") Long id);
 }

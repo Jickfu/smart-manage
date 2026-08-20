@@ -53,7 +53,7 @@ export default function App() {
         assignments: info.assignments.map((assignment) => ({
           ...assignment,
           id: String(assignment.id),
-          orgId: String(assignment.orgId),
+          org: { ...assignment.org, id: String(assignment.org.id) },
         })),
       });
       setAuthState('authenticated');

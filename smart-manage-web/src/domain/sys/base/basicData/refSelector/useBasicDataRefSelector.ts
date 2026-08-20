@@ -89,7 +89,7 @@ export function useBasicDataRefSelector(
             total: filtered.length,
           };
         },
-        displayRender: (record) => record.namePath,
+        displayRender: (record) => record.namePath || record.name,
         fieldNames: { key: 'id', label: 'namePath' },
         treeData,
         columns: [

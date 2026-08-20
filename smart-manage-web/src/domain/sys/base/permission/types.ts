@@ -1,4 +1,5 @@
 import type { PageForm } from '@/types/api';
+import type { ReferenceVO } from '@/domain/sys/base/common/types';
 
 export interface PermissionListForm extends PageForm {
   keyword?: string;
@@ -20,8 +21,12 @@ export interface PermissionListVO {
 
 export type PermissionListAllVO = PermissionSelectVO;
 
-export interface PermissionDetailVO extends PermissionListVO {
+export interface PermissionDetailVO {
+  id: string;
+  name: string;
+  number: string;
   version: number;
+  feature: ReferenceVO;
   createTime?: string;
   updateTime?: string;
 }

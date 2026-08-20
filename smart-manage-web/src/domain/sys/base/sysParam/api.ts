@@ -1,6 +1,6 @@
 import request from '@/api/request';
 import type { PageData, Result } from '@/types/api';
-import type { SysParamListForm, SysParamSaveForm, SysParamVO } from './types';
+import type { SysParamDetailVO, SysParamListForm, SysParamSaveForm, SysParamVO } from './types';
 
 export const sysParamApi = {
   listPage: (form: SysParamListForm) =>
@@ -9,7 +9,7 @@ export const sysParamApi = {
       .then((response) => response.data.data),
   detail: (id: string) =>
     request
-      .post<Result<SysParamVO>>('/sys/base/param/detail', { id })
+      .post<Result<SysParamDetailVO>>('/sys/base/param/detail', { id })
       .then((response) => response.data.data),
   save: (form: SysParamSaveForm) =>
     request

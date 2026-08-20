@@ -43,6 +43,7 @@ import sm.domain.sys.base.org.model.entity.OrgEntity;
 import sm.domain.sys.base.org.model.OrgType;
 import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
 import sm.domain.sys.base.user.model.vo.UserAssignmentVO;
+import sm.domain.sys.base.common.model.vo.ReferenceVO;
 import sm.domain.sys.base.user.model.entity.UserRoleEntity;
 import sm.system.helper.Argon2Helper;
 import sm.system.auth.SessionTerminationReason;
@@ -318,8 +319,7 @@ public class UserService {
 			if (org == null) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "用户任职关联了无效组织");
 			UserAssignmentVO vo = new UserAssignmentVO();
 			vo.setId(assignment.getId());
-			vo.setOrgId(assignment.getOrgId());
-			vo.setOrgName(org.getName());
+			vo.setOrg(new ReferenceVO(org.getId(), org.getNumber(), org.getName()));
 			vo.setOrgNamePath(org.getNamePath());
 			vo.setPosition(assignment.getPosition());
 			vo.setIsOrgLeader(assignment.getIsOrgLeader());
@@ -504,8 +504,8 @@ public class UserService {
 			availableOrganizations.put(organization.getId(), organization);
 			UserAssignmentVO assignmentVO = new UserAssignmentVO();
 			assignmentVO.setId(assignment.getId());
-			assignmentVO.setOrgId(organization.getId());
-			assignmentVO.setOrgName(organization.getName());
+			assignmentVO.setOrg(new ReferenceVO(
+					organization.getId(), organization.getNumber(), organization.getName()));
 			assignmentVO.setOrgNamePath(organization.getNamePath());
 			assignmentVO.setPosition(assignment.getPosition());
 			assignmentVO.setIsOrgLeader(assignment.getIsOrgLeader());

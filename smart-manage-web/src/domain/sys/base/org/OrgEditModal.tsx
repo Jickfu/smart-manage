@@ -8,42 +8,24 @@ import { orgAccess } from './permissions';
 import { orgQueryKeys } from './queryKeys';
 import { useOrgRefSelector } from './refSelector/useOrgRefSelector';
 import type { OrgRefRecord } from './refSelector/useOrgRefSelector';
-import type { OrgSaveForm, OrgTreeNode, OrgType } from './types';
+import type { OrgSaveForm, OrgType } from './types';
 
 interface Props {
   open: boolean;
   orgId: string | null;
-  defaultParentId?: string;
+  defaultParent?: OrgRefRecord;
   onClose: () => void;
   onSaved: () => void;
 }
 
-const flattenTree = (nodes: OrgTreeNode[]): OrgTreeNode[] => {
-  const result: OrgTreeNode[] = [];
-  const visit = (items: OrgTreeNode[]) => {
-    for (const item of items) {
-      result.push(item);
-      visit(item.children);
-    }
-  };
-  visit(nodes);
-  return result;
-};
-
-const OrgEditModal = ({ open, orgId, defaultParentId, onClose, onSaved }: Props) => {
+const OrgEditModal = ({ open, orgId, defaultParent, onClose, onSaved }: Props) => {
   const detailQuery = useQuery({
     queryKey: orgQueryKeys.detail(orgId),
     queryFn: () => orgApi.detail(orgId!),
     enabled: Boolean(open && orgId),
     staleTime: 0,
   });
-  const treeQuery = useQuery({
-    queryKey: orgQueryKeys.tree(),
-    queryFn: () => orgApi.tree(false),
-    enabled: open,
-  });
   const parentRefSelector = useOrgRefSelector(orgId ?? undefined);
-  const flatTreeNodes = useMemo(() => flattenTree(treeQuery.data ?? []), [treeQuery.data]);
   const fields = useMemo<EditField[]>(
     () => [
       {
@@ -105,19 +87,15 @@ const OrgEditModal = ({ open, orgId, defaultParentId, onClose, onSaved }: Props)
   );
   const detail = detailQuery.data;
   const initialValues = useMemo(() => {
-    const parentId = detail?.parentId ?? defaultParentId;
-    const parent = flatTreeNodes.find((node) => node.id === parentId);
     return {
       number: detail?.number ?? '',
       name: detail?.name ?? '',
-      parentOrg: parent
-        ? ({ id: parent.id, number: parent.number, name: parent.name } satisfies OrgRefRecord)
-        : null,
+      parentOrg: detail?.parent ?? defaultParent ?? null,
       orgType: detail?.orgType ?? ('DEPARTMENT' as OrgType),
       sort: detail?.sort ?? 99,
       description: detail?.description ?? '',
     };
-  }, [defaultParentId, detail, flatTreeNodes]);
+  }, [defaultParent, detail]);
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
       const form: OrgSaveForm = {
@@ -145,9 +123,9 @@ const OrgEditModal = ({ open, orgId, defaultParentId, onClose, onSaved }: Props)
       initialValues={initialValues}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
-      loading={detailQuery.isLoading || treeQuery.isLoading}
-      error={(detailQuery.error ?? treeQuery.error) as Error | null}
-      onRetry={() => Promise.all([detailQuery.refetch(), treeQuery.refetch()])}
+      loading={detailQuery.isLoading}
+      error={detailQuery.error as Error | null}
+      onRetry={() => detailQuery.refetch()}
       access={orgAccess}
     />
   );

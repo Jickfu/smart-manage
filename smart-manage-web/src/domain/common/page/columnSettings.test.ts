@@ -6,6 +6,7 @@ import {
   mergeColumnSettings,
   moveColumnSetting,
   normalizeFixedColumnOrder,
+  resolveColumnSettings,
   validateColumnSettings,
 } from './columnSettings';
 
@@ -39,6 +40,18 @@ describe('columnSettings', () => {
       { key: 'name', hidden: true },
       { key: 'id', hidden: false },
     ]);
+  });
+
+  it('恢复出厂设置后不保留覆盖，并跟随后续代码默认宽度', () => {
+    const defaults = createDefaultColumnSettings(columns);
+    const stored = [{ ...defaults[0]!, width: 180 }, defaults[1]!];
+    expect(resolveColumnSettings(defaults, stored, null)[0]!.width).toBe(120);
+
+    const changedDefaults = createDefaultColumnSettings([
+      { key: 'id', title: '编码', dataIndex: 'id', width: 90 },
+      { key: 'name', title: '名称', dataIndex: 'name' },
+    ]);
+    expect(resolveColumnSettings(changedDefaults, stored, null)[0]!.width).toBe(90);
   });
 
   it('应用顺序、对齐、冻结、显隐和自动宽度', () => {

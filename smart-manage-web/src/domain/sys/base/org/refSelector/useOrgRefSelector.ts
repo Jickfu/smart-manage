@@ -10,6 +10,7 @@ export interface OrgRefRecord {
   id: string;
   number: string;
   name: string;
+  namePath?: string;
 }
 
 const ORG_TYPE_LABELS: Record<OrgType, string> = {

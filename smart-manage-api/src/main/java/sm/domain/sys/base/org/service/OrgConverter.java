@@ -11,6 +11,7 @@ import sm.domain.sys.base.org.model.vo.OrgTreeVO;
 @Mapper(componentModel = "spring")
 public interface OrgConverter {
     OrgListVO toListVO(OrgEntity entity);
+    @Mapping(target = "parent", ignore = true)
     OrgDetailVO toDetailVO(OrgEntity entity);
     @Mapping(target = "children", ignore = true)
     OrgTreeVO toTreeVO(OrgEntity entity);

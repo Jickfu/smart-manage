@@ -70,9 +70,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
             name: detail.name,
             value: detail.value ?? '',
             description: detail.description ?? '',
-            application: detail.appId
-              ? { id: detail.appId, name: detail.appName ?? detail.appId }
-              : null,
+            application: detail.application ?? null,
           }
         : {},
     [detail],

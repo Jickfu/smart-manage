@@ -15,6 +15,7 @@ interface BasicDataConverter {
     BasicDataCategoryVO toCategoryVO(BasicDataCategoryEntity entity);
     @Mapping(target = "categoryName", ignore = true)
     BasicDataListVO toListVO(BasicDataItemEntity entity);
-    @Mapping(target = "categoryName", ignore = true)
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "parent", ignore = true)
     BasicDataItemDetailVO toDetailVO(BasicDataItemEntity entity);
 }

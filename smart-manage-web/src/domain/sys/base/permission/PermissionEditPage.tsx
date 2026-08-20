@@ -59,7 +59,7 @@ const PermissionEditPage = ({ open, permissionId, onClose, onSaved }: Props) => 
         ? {
             number: detail.number ?? '',
             name: detail.name ?? '',
-            feature: { id: detail.featureId, name: detail.featureName },
+            feature: detail.feature,
           }
         : {},
     [detail],

@@ -25,15 +25,10 @@ const BasicDataEditPage = (props: PageComponentProps) => {
     queryFn: () => basicDataApi.detail(billId!),
     enabled: Boolean(!isAddNew && billId),
   });
-  const categoryId = detailQuery.data?.categoryId ?? context?.categoryId;
+  const categoryId = detailQuery.data?.category.id ?? context?.categoryId;
   const categoryQuery = useQuery({
     queryKey: basicDataQueryKeys.category(categoryId),
     queryFn: () => basicDataApi.categoryDetail(categoryId!),
-    enabled: Boolean(categoryId),
-  });
-  const parentsQuery = useQuery({
-    queryKey: basicDataQueryKeys.parentOptions(categoryId, billId),
-    queryFn: () => basicDataApi.parentOptions(categoryId!, billId),
     enabled: Boolean(categoryId),
   });
   const parentRefSelector = useBasicDataRefSelector(categoryQuery.data, billId);
@@ -104,15 +99,11 @@ const BasicDataEditPage = (props: PageComponentProps) => {
       number: detail?.number ?? '',
       name: detail?.name ?? '',
       category: categoryQuery.data ?? null,
-      parent:
-        parentsQuery.data?.find((option) => option.id === detail?.parentId) ??
-        (detail?.parentId
-          ? { id: detail.parentId, namePath: detail.namePath.split('/').slice(0, -1).join('/') }
-          : null),
+      parent: detail?.parent ?? null,
       sort: detail?.sort ?? 0,
       description: detail?.description ?? '',
     }),
-    [categoryQuery.data, detail, parentsQuery.data],
+    [categoryQuery.data, detail],
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
@@ -153,16 +144,12 @@ const BasicDataEditPage = (props: PageComponentProps) => {
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
-      loading={detailQuery.isLoading || categoryQuery.isLoading || parentsQuery.isLoading}
-      error={
-        ((!isAddNew ? detailQuery.error : null) ??
-          categoryQuery.error ??
-          parentsQuery.error) as Error | null
-      }
+      loading={detailQuery.isLoading || categoryQuery.isLoading}
+      error={((!isAddNew ? detailQuery.error : null) ?? categoryQuery.error) as Error | null}
       onRetry={() =>
         Promise.all([
           ...(!isAddNew && billId ? [detailQuery.refetch()] : []),
-          ...(categoryId ? [categoryQuery.refetch(), parentsQuery.refetch()] : []),
+          ...(categoryId ? [categoryQuery.refetch()] : []),
         ])
       }
       onSave={saveMutation.mutateAsync}

@@ -22,11 +22,4 @@
         </choose>
     </select>
 
-    <select id="selectDetailById" resultType="sm.domain.sys.base.sysparam.model.vo.SysParamVO">
-        SELECT a.id, a.version, a.number, a.name, a.value, a.description, a.is_system,
-               a.app_id, b.name AS app_name
-        FROM t_sys_param a
-        LEFT JOIN t_sys_app b ON b.id = a.app_id
-        WHERE a.id = #{id}
-    </select>
 </mapper>

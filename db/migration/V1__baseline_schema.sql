@@ -447,7 +447,7 @@ CREATE TABLE public.t_sys_app (
     icon character varying(255) NOT NULL,
     seq integer DEFAULT 99,
     description character varying(255),
-    cloud_id bigint NOT NULL,
+    domain_id bigint NOT NULL,
     enabled boolean DEFAULT true NOT NULL,
     create_time timestamp without time zone DEFAULT now(),
     update_time timestamp without time zone DEFAULT now(),
@@ -508,10 +508,10 @@ COMMENT ON COLUMN public.t_sys_app.description IS '描述';
 
 
 --
--- Name: COLUMN t_sys_app.cloud_id; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_app.domain_id; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_app.cloud_id IS '所属云ID';
+COMMENT ON COLUMN public.t_sys_app.domain_id IS '所属领域ID';
 
 
 --
@@ -804,15 +804,18 @@ CREATE TABLE public.t_sys_basic_data_category (
     id bigint NOT NULL,
     number character varying(64) NOT NULL,
     name character varying(128) NOT NULL,
-    remark character varying(255),
+    description character varying(255),
     enabled boolean DEFAULT true NOT NULL,
     create_time timestamp without time zone,
     update_time timestamp without time zone,
     create_user bigint,
     update_user bigint,
     version integer DEFAULT 0 NOT NULL,
-    cloud_id bigint NOT NULL,
-    system_preset boolean DEFAULT false NOT NULL
+    domain_id bigint NOT NULL,
+    system_preset boolean DEFAULT false NOT NULL,
+    number_mode character varying(20) DEFAULT 'AUTO_DEFAULT'::character varying NOT NULL,
+    number_rule_key character varying(200) DEFAULT 'sys/base/basic-data-item'::character varying NOT NULL,
+    CONSTRAINT ck_basic_data_category_number_mode CHECK (((number_mode)::text = ANY ((ARRAY['MANUAL'::character varying, 'AUTO_LOCKED'::character varying, 'AUTO_DEFAULT'::character varying])::text[])))
 );
 
 
@@ -845,10 +848,10 @@ COMMENT ON COLUMN public.t_sys_basic_data_category.name IS '名称';
 
 
 --
--- Name: COLUMN t_sys_basic_data_category.remark; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_basic_data_category.description; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_basic_data_category.remark IS '备注';
+COMMENT ON COLUMN public.t_sys_basic_data_category.description IS '描述';
 
 
 --
@@ -894,10 +897,10 @@ COMMENT ON COLUMN public.t_sys_basic_data_category.version IS '乐观锁版本�
 
 
 --
--- Name: COLUMN t_sys_basic_data_category.cloud_id; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_basic_data_category.domain_id; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_basic_data_category.cloud_id IS '所属云ID';
+COMMENT ON COLUMN public.t_sys_basic_data_category.domain_id IS '所属领域ID';
 
 
 --
@@ -905,6 +908,20 @@ COMMENT ON COLUMN public.t_sys_basic_data_category.cloud_id IS '所属云ID';
 --
 
 COMMENT ON COLUMN public.t_sys_basic_data_category.system_preset IS '是否系统预置';
+
+
+--
+-- Name: COLUMN t_sys_basic_data_category.number_mode; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_basic_data_category.number_mode IS '节点编号模式：MANUAL人工、AUTO_LOCKED自动锁定、AUTO_DEFAULT留空自动';
+
+
+--
+-- Name: COLUMN t_sys_basic_data_category.number_rule_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_basic_data_category.number_rule_key IS '节点编号规则键';
 
 
 --
@@ -923,13 +940,14 @@ CREATE TABLE public.t_sys_basic_data_item (
     create_user bigint,
     update_user bigint,
     parent_id bigint,
-    remark character varying(255),
+    description character varying(255),
     system_preset boolean DEFAULT false NOT NULL,
     level integer DEFAULT 1 NOT NULL,
     number_path character varying(1000) NOT NULL,
     name_path character varying(2000) NOT NULL,
     is_leaf boolean DEFAULT true NOT NULL,
     mutex integer DEFAULT 0 NOT NULL,
+    version integer DEFAULT 0 NOT NULL,
     CONSTRAINT ck_basic_data_item_level CHECK ((level >= 1))
 );
 
@@ -1019,10 +1037,10 @@ COMMENT ON COLUMN public.t_sys_basic_data_item.parent_id IS '上级基础资料I
 
 
 --
--- Name: COLUMN t_sys_basic_data_item.remark; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_basic_data_item.description; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_basic_data_item.remark IS '备注';
+COMMENT ON COLUMN public.t_sys_basic_data_item.description IS '描述';
 
 
 --
@@ -1068,6 +1086,13 @@ COMMENT ON COLUMN public.t_sys_basic_data_item.mutex IS '乐观锁版本号';
 
 
 --
+-- Name: COLUMN t_sys_basic_data_item.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_basic_data_item.version IS '乐观锁版本号';
+
+
+--
 -- Name: t_sys_biz_attachment; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1080,7 +1105,8 @@ CREATE TABLE public.t_sys_biz_attachment (
     create_time timestamp without time zone,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    remark character varying(500)
 );
 
 
@@ -1155,10 +1181,17 @@ COMMENT ON COLUMN public.t_sys_biz_attachment.update_user IS '修改人';
 
 
 --
--- Name: t_sys_cloud; Type: TABLE; Schema: public; Owner: -
+-- Name: COLUMN t_sys_biz_attachment.remark; Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE TABLE public.t_sys_cloud (
+COMMENT ON COLUMN public.t_sys_biz_attachment.remark IS '附件备注';
+
+
+--
+-- Name: t_sys_domain; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_domain (
     id bigint NOT NULL,
     name character varying(255) NOT NULL,
     number character varying(255) NOT NULL,
@@ -1173,80 +1206,216 @@ CREATE TABLE public.t_sys_cloud (
 
 
 --
--- Name: TABLE t_sys_cloud; Type: COMMENT; Schema: public; Owner: -
+-- Name: TABLE t_sys_domain; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.t_sys_cloud IS '云（应用分组）';
-
-
---
--- Name: COLUMN t_sys_cloud.id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_cloud.id IS 'ID';
+COMMENT ON TABLE public.t_sys_domain IS '领域目录';
 
 
 --
--- Name: COLUMN t_sys_cloud.name; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_domain.id; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_cloud.name IS '名称';
-
-
---
--- Name: COLUMN t_sys_cloud.number; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_cloud.number IS '编码';
+COMMENT ON COLUMN public.t_sys_domain.id IS 'ID';
 
 
 --
--- Name: COLUMN t_sys_cloud.seq; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_domain.name; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_cloud.seq IS '排序';
-
-
---
--- Name: COLUMN t_sys_cloud.enabled; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_cloud.enabled IS '启用状态';
+COMMENT ON COLUMN public.t_sys_domain.name IS '名称';
 
 
 --
--- Name: COLUMN t_sys_cloud.create_time; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_domain.number; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_cloud.create_time IS '创建时间';
-
-
---
--- Name: COLUMN t_sys_cloud.update_time; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_cloud.update_time IS '更新时间';
+COMMENT ON COLUMN public.t_sys_domain.number IS '编码';
 
 
 --
--- Name: COLUMN t_sys_cloud.create_user; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_domain.seq; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_cloud.create_user IS '创建人';
-
-
---
--- Name: COLUMN t_sys_cloud.update_user; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_cloud.update_user IS '修改人';
+COMMENT ON COLUMN public.t_sys_domain.seq IS '排序';
 
 
 --
--- Name: COLUMN t_sys_cloud.version; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_domain.enabled; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_cloud.version IS '乐观锁版本号';
+COMMENT ON COLUMN public.t_sys_domain.enabled IS '启用状态';
+
+
+--
+-- Name: COLUMN t_sys_domain.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_domain.create_time IS '创建时间';
+
+
+--
+-- Name: COLUMN t_sys_domain.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_domain.update_time IS '更新时间';
+
+
+--
+-- Name: COLUMN t_sys_domain.create_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_domain.create_user IS '创建人';
+
+
+--
+-- Name: COLUMN t_sys_domain.update_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_domain.update_user IS '修改人';
+
+
+--
+-- Name: COLUMN t_sys_domain.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_domain.version IS '乐观锁版本号';
+
+
+--
+-- Name: t_sys_feature; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_feature (
+    id bigint NOT NULL,
+    feature_key character varying(200) NOT NULL,
+    app_id bigint NOT NULL,
+    default_name character varying(100) NOT NULL,
+    custom_name character varying(100),
+    default_seq integer DEFAULT 99 NOT NULL,
+    custom_seq integer,
+    description character varying(500),
+    visible boolean DEFAULT true NOT NULL,
+    source character varying(20) DEFAULT 'SYSTEM'::character varying NOT NULL,
+    create_time timestamp without time zone,
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    version integer DEFAULT 0 NOT NULL,
+    CONSTRAINT ck_sys_feature_source CHECK (((source)::text = ANY ((ARRAY['SYSTEM'::character varying, 'PLUGIN'::character varying, 'EXTERNAL'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_feature; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_feature IS '系统功能目录';
+
+
+--
+-- Name: COLUMN t_sys_feature.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_feature.feature_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.feature_key IS '稳定功能键';
+
+
+--
+-- Name: COLUMN t_sys_feature.app_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.app_id IS '所属应用ID';
+
+
+--
+-- Name: COLUMN t_sys_feature.default_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.default_name IS '系统默认名称';
+
+
+--
+-- Name: COLUMN t_sys_feature.custom_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.custom_name IS '管理员自定义名称';
+
+
+--
+-- Name: COLUMN t_sys_feature.default_seq; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.default_seq IS '系统默认排序';
+
+
+--
+-- Name: COLUMN t_sys_feature.custom_seq; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.custom_seq IS '管理员自定义排序';
+
+
+--
+-- Name: COLUMN t_sys_feature.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.description IS '描述';
+
+
+--
+-- Name: COLUMN t_sys_feature.visible; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.visible IS '是否在功能目录中可见';
+
+
+--
+-- Name: COLUMN t_sys_feature.source; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.source IS '来源';
+
+
+--
+-- Name: COLUMN t_sys_feature.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.create_time IS '创建时间';
+
+
+--
+-- Name: COLUMN t_sys_feature.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.update_time IS '更新时间';
+
+
+--
+-- Name: COLUMN t_sys_feature.create_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.create_user IS '创建人';
+
+
+--
+-- Name: COLUMN t_sys_feature.update_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.update_user IS '修改人';
+
+
+--
+-- Name: COLUMN t_sys_feature.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_feature.version IS '乐观锁版本号';
 
 
 --
@@ -1437,7 +1606,6 @@ CREATE TABLE public.t_sys_job (
     cron_expression character varying(100) NOT NULL,
     job_data text,
     status character varying(20) DEFAULT 'ENABLED'::character varying NOT NULL,
-    remark character varying(500),
     create_time timestamp without time zone,
     update_time timestamp without time zone,
     create_user bigint,
@@ -1510,13 +1678,6 @@ COMMENT ON COLUMN public.t_sys_job.job_data IS '任务参数';
 --
 
 COMMENT ON COLUMN public.t_sys_job.status IS '状态';
-
-
---
--- Name: COLUMN t_sys_job.remark; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_job.remark IS '备注';
 
 
 --
@@ -2862,7 +3023,11 @@ CREATE TABLE public.t_sys_login_log (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 )
 PARTITION BY RANGE (create_time);
 
@@ -2973,6 +3138,34 @@ COMMENT ON COLUMN public.t_sys_login_log.update_user IS '修改人';
 
 
 --
+-- Name: COLUMN t_sys_login_log.issuer_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_login_log.issuer_user_id IS '代登录凭证签发管理员ID';
+
+
+--
+-- Name: COLUMN t_sys_login_log.grant_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_login_log.grant_id IS '代登录授权编号';
+
+
+--
+-- Name: COLUMN t_sys_login_log.grant_reason; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_login_log.grant_reason IS '代登录原因';
+
+
+--
+-- Name: COLUMN t_sys_login_log.grant_expires_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_login_log.grant_expires_at IS '代登录凭证计划失效时间';
+
+
+--
 -- Name: t_sys_login_log_default; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2990,7 +3183,11 @@ CREATE TABLE public.t_sys_login_log_default (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3012,7 +3209,11 @@ CREATE TABLE public.t_sys_login_log_history (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 )
 PARTITION BY RANGE (create_time);
 
@@ -3123,6 +3324,34 @@ COMMENT ON COLUMN public.t_sys_login_log_history.update_user IS '修改人';
 
 
 --
+-- Name: COLUMN t_sys_login_log_history.issuer_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_login_log_history.issuer_user_id IS '代登录凭证签发管理员ID';
+
+
+--
+-- Name: COLUMN t_sys_login_log_history.grant_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_login_log_history.grant_id IS '代登录授权编号';
+
+
+--
+-- Name: COLUMN t_sys_login_log_history.grant_reason; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_login_log_history.grant_reason IS '代登录原因';
+
+
+--
+-- Name: COLUMN t_sys_login_log_history.grant_expires_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_login_log_history.grant_expires_at IS '代登录凭证计划失效时间';
+
+
+--
 -- Name: t_sys_login_log_p202601; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3140,7 +3369,11 @@ CREATE TABLE public.t_sys_login_log_p202601 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3162,7 +3395,11 @@ CREATE TABLE public.t_sys_login_log_p202602 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3184,7 +3421,11 @@ CREATE TABLE public.t_sys_login_log_p202603 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3206,7 +3447,11 @@ CREATE TABLE public.t_sys_login_log_p202604 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3228,7 +3473,11 @@ CREATE TABLE public.t_sys_login_log_p202605 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3250,7 +3499,11 @@ CREATE TABLE public.t_sys_login_log_p202606 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3272,7 +3525,11 @@ CREATE TABLE public.t_sys_login_log_p202607 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3294,7 +3551,11 @@ CREATE TABLE public.t_sys_login_log_p202608 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3316,7 +3577,11 @@ CREATE TABLE public.t_sys_login_log_p202609 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3338,7 +3603,11 @@ CREATE TABLE public.t_sys_login_log_p202610 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3360,7 +3629,11 @@ CREATE TABLE public.t_sys_login_log_p202611 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3382,7 +3655,11 @@ CREATE TABLE public.t_sys_login_log_p202612 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3404,7 +3681,11 @@ CREATE TABLE public.t_sys_login_log_p202701 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3426,7 +3707,11 @@ CREATE TABLE public.t_sys_login_log_p202702 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3448,7 +3733,11 @@ CREATE TABLE public.t_sys_login_log_p202703 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3470,7 +3759,11 @@ CREATE TABLE public.t_sys_login_log_p202704 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3492,7 +3785,11 @@ CREATE TABLE public.t_sys_login_log_p202705 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3514,7 +3811,11 @@ CREATE TABLE public.t_sys_login_log_p202706 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3536,7 +3837,11 @@ CREATE TABLE public.t_sys_login_log_p202707 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3558,7 +3863,11 @@ CREATE TABLE public.t_sys_login_log_p202708 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3580,7 +3889,11 @@ CREATE TABLE public.t_sys_login_log_p202709 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3602,7 +3915,11 @@ CREATE TABLE public.t_sys_login_log_p202710 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3624,7 +3941,11 @@ CREATE TABLE public.t_sys_login_log_p202711 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3646,7 +3967,11 @@ CREATE TABLE public.t_sys_login_log_p202712 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3668,7 +3993,11 @@ CREATE TABLE public.t_sys_login_log_p202801 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3690,7 +4019,11 @@ CREATE TABLE public.t_sys_login_log_p202802 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3712,7 +4045,11 @@ CREATE TABLE public.t_sys_login_log_p202803 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3734,7 +4071,11 @@ CREATE TABLE public.t_sys_login_log_p202804 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3756,7 +4097,11 @@ CREATE TABLE public.t_sys_login_log_p202805 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3778,7 +4123,11 @@ CREATE TABLE public.t_sys_login_log_p202806 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3800,7 +4149,11 @@ CREATE TABLE public.t_sys_login_log_p202807 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3822,7 +4175,11 @@ CREATE TABLE public.t_sys_login_log_p202808 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3844,7 +4201,11 @@ CREATE TABLE public.t_sys_login_log_p202809 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3866,7 +4227,11 @@ CREATE TABLE public.t_sys_login_log_p202810 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3888,7 +4253,11 @@ CREATE TABLE public.t_sys_login_log_p202811 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3910,7 +4279,11 @@ CREATE TABLE public.t_sys_login_log_p202812 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3932,7 +4305,11 @@ CREATE TABLE public.t_sys_login_log_p202901 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3954,7 +4331,11 @@ CREATE TABLE public.t_sys_login_log_p202902 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3976,7 +4357,11 @@ CREATE TABLE public.t_sys_login_log_p202903 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -3998,7 +4383,11 @@ CREATE TABLE public.t_sys_login_log_p202904 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -4020,7 +4409,11 @@ CREATE TABLE public.t_sys_login_log_p202905 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -4042,7 +4435,11 @@ CREATE TABLE public.t_sys_login_log_p202906 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -4064,7 +4461,11 @@ CREATE TABLE public.t_sys_login_log_p202907 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -4086,7 +4487,11 @@ CREATE TABLE public.t_sys_login_log_p202908 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -4108,7 +4513,11 @@ CREATE TABLE public.t_sys_login_log_p202909 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -4130,7 +4539,11 @@ CREATE TABLE public.t_sys_login_log_p202910 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -4152,7 +4565,11 @@ CREATE TABLE public.t_sys_login_log_p202911 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -4174,7 +4591,11 @@ CREATE TABLE public.t_sys_login_log_p202912 (
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     update_time timestamp without time zone,
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    issuer_user_id bigint,
+    grant_id character varying(64),
+    grant_reason character varying(500),
+    grant_expires_at timestamp without time zone
 );
 
 
@@ -4200,7 +4621,13 @@ CREATE TABLE public.t_sys_menu (
     update_time timestamp without time zone DEFAULT now(),
     create_user bigint,
     update_user bigint,
-    version integer DEFAULT 0 NOT NULL
+    version integer DEFAULT 0 NOT NULL,
+    feature_id bigint,
+    target_type character varying(20),
+    external_url character varying(2048),
+    external_open_mode character varying(20),
+    CONSTRAINT ck_sys_menu_page_feature CHECK (((level <> 1) OR (feature_id IS NOT NULL))),
+    CONSTRAINT ck_sys_menu_page_target CHECK ((((level = 0) AND (target_type IS NULL) AND (path IS NULL) AND (component IS NULL) AND (external_url IS NULL) AND (external_open_mode IS NULL)) OR ((level = 1) AND ((target_type)::text = 'INTERNAL_PAGE'::text) AND (NULLIF(btrim((path)::text), ''::text) IS NOT NULL) AND (NULLIF(btrim((component)::text), ''::text) IS NOT NULL) AND (external_url IS NULL) AND (external_open_mode IS NULL)) OR ((level = 1) AND ((target_type)::text = 'EXTERNAL_LINK'::text) AND (path IS NULL) AND (component IS NULL) AND (NULLIF(btrim((external_url)::text), ''::text) IS NOT NULL) AND ((external_open_mode)::text = ANY ((ARRAY['NEW_TAB'::character varying, 'IFRAME'::character varying])::text[])))))
 );
 
 
@@ -4335,6 +4762,429 @@ COMMENT ON COLUMN public.t_sys_menu.update_user IS '修改人';
 --
 
 COMMENT ON COLUMN public.t_sys_menu.version IS '乐观锁版本';
+
+
+--
+-- Name: COLUMN t_sys_menu.feature_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_menu.feature_id IS '所属功能ID';
+
+
+--
+-- Name: COLUMN t_sys_menu.target_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_menu.target_type IS '页面目标类型：INTERNAL_PAGE、EXTERNAL_LINK';
+
+
+--
+-- Name: COLUMN t_sys_menu.external_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_menu.external_url IS '外部链接地址';
+
+
+--
+-- Name: COLUMN t_sys_menu.external_open_mode; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_menu.external_open_mode IS '外链打开方式：NEW_TAB、IFRAME';
+
+
+--
+-- Name: t_sys_number_counter; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_number_counter (
+    rule_key character varying(200) NOT NULL,
+    scope_key character varying(100) NOT NULL,
+    period_key character varying(20) NOT NULL,
+    current_value bigint NOT NULL,
+    update_time timestamp without time zone DEFAULT now() NOT NULL,
+    CONSTRAINT ck_sys_number_counter_value CHECK ((current_value >= 1))
+);
+
+
+--
+-- Name: TABLE t_sys_number_counter; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_number_counter IS '编号流水计数器';
+
+
+--
+-- Name: COLUMN t_sys_number_counter.rule_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_counter.rule_key IS '稳定规则键';
+
+
+--
+-- Name: COLUMN t_sys_number_counter.scope_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_counter.scope_key IS '流水作用域键';
+
+
+--
+-- Name: COLUMN t_sys_number_counter.period_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_counter.period_key IS '重置周期键';
+
+
+--
+-- Name: COLUMN t_sys_number_counter.current_value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_counter.current_value IS '当前流水值';
+
+
+--
+-- Name: COLUMN t_sys_number_counter.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_counter.update_time IS '更新时间';
+
+
+--
+-- Name: t_sys_number_reference; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_number_reference (
+    id bigint NOT NULL,
+    reference_key character varying(200) NOT NULL,
+    feature_id bigint NOT NULL,
+    name character varying(100) NOT NULL,
+    default_rule_key character varying(200),
+    system_preset boolean DEFAULT false NOT NULL,
+    description character varying(500),
+    create_time timestamp without time zone,
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    version integer DEFAULT 0 NOT NULL
+);
+
+
+--
+-- Name: TABLE t_sys_number_reference; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_number_reference IS '编号引用';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.reference_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.reference_key IS '稳定编号引用键';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.feature_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.feature_id IS '所属功能ID';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.name IS '名称';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.default_rule_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.default_rule_key IS '默认编号规则键';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.system_preset; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.system_preset IS '是否系统预置';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.description IS '描述';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.create_time IS '创建时间';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.update_time IS '更新时间';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.create_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.create_user IS '创建人';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.update_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.update_user IS '修改人';
+
+
+--
+-- Name: COLUMN t_sys_number_reference.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_reference.version IS '乐观锁版本号';
+
+
+--
+-- Name: t_sys_number_rule; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_number_rule (
+    id bigint NOT NULL,
+    rule_key character varying(200) NOT NULL,
+    name character varying(100) NOT NULL,
+    pattern character varying(200) NOT NULL,
+    scope_type character varying(20) NOT NULL,
+    reset_period character varying(20) NOT NULL,
+    start_value bigint DEFAULT 1 NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    system_preset boolean DEFAULT false NOT NULL,
+    description character varying(500),
+    create_time timestamp without time zone,
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    version integer DEFAULT 0 NOT NULL,
+    reference_key character varying(200) NOT NULL,
+    CONSTRAINT ck_sys_number_rule_reset CHECK (((reset_period)::text = ANY ((ARRAY['NEVER'::character varying, 'YEAR'::character varying, 'MONTH'::character varying, 'DAY'::character varying])::text[]))),
+    CONSTRAINT ck_sys_number_rule_scope CHECK (((scope_type)::text = ANY ((ARRAY['GLOBAL'::character varying, 'ORG'::character varying, 'CATEGORY'::character varying])::text[]))),
+    CONSTRAINT ck_sys_number_rule_start CHECK (((start_value >= 1) AND (start_value <= 2147483647)))
+);
+
+
+--
+-- Name: TABLE t_sys_number_rule; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_number_rule IS '编号规则';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.rule_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.rule_key IS '稳定规则键';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.name IS '名称';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.pattern; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.pattern IS '编号模板';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.scope_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.scope_type IS '流水作用域：GLOBAL全局、ORG组织、CATEGORY分类';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.reset_period; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.reset_period IS '重置周期：NEVER不重置、YEAR按年、MONTH按月、DAY按日';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.start_value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.start_value IS '新分段起始流水值';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.enabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.enabled IS '启用状态';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.system_preset; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.system_preset IS '是否系统预置';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.description IS '描述';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.create_time IS '创建时间';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.update_time IS '更新时间';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.create_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.create_user IS '创建人';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.update_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.update_user IS '修改人';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.version IS '乐观锁版本号';
+
+
+--
+-- Name: COLUMN t_sys_number_rule.reference_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule.reference_key IS '所属编号引用键';
+
+
+--
+-- Name: t_sys_number_rule_segment; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_number_rule_segment (
+    id bigint NOT NULL,
+    rule_key character varying(200) NOT NULL,
+    sort integer NOT NULL,
+    segment_type character varying(20) NOT NULL,
+    value character varying(200),
+    format character varying(20),
+    length integer,
+    separator character varying(10) DEFAULT ''::character varying NOT NULL,
+    CONSTRAINT ck_sys_number_rule_segment_length CHECK (((length IS NULL) OR ((length >= 1) AND (length <= 18)))),
+    CONSTRAINT ck_sys_number_rule_segment_sort CHECK ((sort > 0)),
+    CONSTRAINT ck_sys_number_rule_segment_type CHECK (((segment_type)::text = ANY ((ARRAY['FIXED'::character varying, 'VARIABLE'::character varying, 'DATE'::character varying, 'SEQUENCE'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_number_rule_segment; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_number_rule_segment IS '编号规则格式段';
+
+
+--
+-- Name: COLUMN t_sys_number_rule_segment.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule_segment.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_number_rule_segment.rule_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule_segment.rule_key IS '编号规则键';
+
+
+--
+-- Name: COLUMN t_sys_number_rule_segment.sort; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule_segment.sort IS '顺序';
+
+
+--
+-- Name: COLUMN t_sys_number_rule_segment.segment_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule_segment.segment_type IS '段类型';
+
+
+--
+-- Name: COLUMN t_sys_number_rule_segment.value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule_segment.value IS '固定值或受控变量键';
+
+
+--
+-- Name: COLUMN t_sys_number_rule_segment.format; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule_segment.format IS '日期格式';
+
+
+--
+-- Name: COLUMN t_sys_number_rule_segment.length; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule_segment.length IS '流水位数';
+
+
+--
+-- Name: COLUMN t_sys_number_rule_segment.separator; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_number_rule_segment.separator IS '段后分隔符';
 
 
 --
@@ -6069,12 +6919,24 @@ CREATE TABLE public.t_sys_org (
     id bigint NOT NULL,
     name character varying(255) NOT NULL,
     number character varying(255) NOT NULL,
-    parent_id bigint DEFAULT 0 NOT NULL,
+    parent_id bigint,
     sort integer DEFAULT 99,
     create_time timestamp without time zone DEFAULT now(),
     update_time timestamp without time zone DEFAULT now(),
     create_user bigint,
-    update_user bigint
+    update_user bigint,
+    number_path character varying(2000) NOT NULL,
+    name_path character varying(2000) NOT NULL,
+    org_type character varying(20) DEFAULT 'COMPANY'::character varying NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    archived boolean DEFAULT false NOT NULL,
+    archived_at timestamp without time zone,
+    description character varying(500),
+    version integer DEFAULT 0 NOT NULL,
+    CONSTRAINT ck_sys_org_archive_state CHECK (((NOT archived) OR (NOT enabled))),
+    CONSTRAINT ck_sys_org_archive_time CHECK (((archived AND (archived_at IS NOT NULL)) OR ((NOT archived) AND (archived_at IS NULL)))),
+    CONSTRAINT ck_sys_org_parent_self CHECK (((parent_id IS NULL) OR (parent_id <> id))),
+    CONSTRAINT ck_sys_org_type CHECK (((org_type)::text = ANY ((ARRAY['GROUP'::character varying, 'COMPANY'::character varying, 'DEPARTMENT'::character varying])::text[])))
 );
 
 
@@ -6149,6 +7011,62 @@ COMMENT ON COLUMN public.t_sys_org.update_user IS '修改人';
 
 
 --
+-- Name: COLUMN t_sys_org.number_path; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_org.number_path IS '长编码';
+
+
+--
+-- Name: COLUMN t_sys_org.name_path; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_org.name_path IS '长名称';
+
+
+--
+-- Name: COLUMN t_sys_org.org_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_org.org_type IS '组织类型';
+
+
+--
+-- Name: COLUMN t_sys_org.enabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_org.enabled IS '使用状态';
+
+
+--
+-- Name: COLUMN t_sys_org.archived; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_org.archived IS '封存状态';
+
+
+--
+-- Name: COLUMN t_sys_org.archived_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_org.archived_at IS '封存时间';
+
+
+--
+-- Name: COLUMN t_sys_org.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_org.description IS '描述';
+
+
+--
+-- Name: COLUMN t_sys_org.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_org.version IS '乐观锁版本号';
+
+
+--
 -- Name: t_sys_param; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6157,7 +7075,7 @@ CREATE TABLE public.t_sys_param (
     number character varying(100) NOT NULL,
     name character varying(200) NOT NULL,
     value text,
-    remark character varying(500),
+    description character varying(500),
     create_time timestamp without time zone,
     update_time timestamp without time zone,
     create_user bigint,
@@ -6204,10 +7122,10 @@ COMMENT ON COLUMN public.t_sys_param.value IS '参数值';
 
 
 --
--- Name: COLUMN t_sys_param.remark; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_param.description; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_param.remark IS '备注';
+COMMENT ON COLUMN public.t_sys_param.description IS '描述';
 
 
 --
@@ -6267,12 +7185,14 @@ CREATE TABLE public.t_sys_permission (
     id bigint NOT NULL,
     name character varying(255) NOT NULL,
     number character varying(255) NOT NULL,
-    app_id bigint NOT NULL,
     create_time timestamp without time zone,
     update_time timestamp without time zone,
     create_user bigint,
     update_user bigint,
-    version integer DEFAULT 0 NOT NULL
+    version integer DEFAULT 0 NOT NULL,
+    feature_id bigint,
+    app_id bigint,
+    CONSTRAINT ck_sys_permission_owner CHECK ((((feature_id IS NOT NULL) AND (app_id IS NULL)) OR ((feature_id IS NULL) AND (app_id IS NOT NULL))))
 );
 
 
@@ -6302,13 +7222,6 @@ COMMENT ON COLUMN public.t_sys_permission.name IS '名称';
 --
 
 COMMENT ON COLUMN public.t_sys_permission.number IS '编码';
-
-
---
--- Name: COLUMN t_sys_permission.app_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_permission.app_id IS '所属应用ID';
 
 
 --
@@ -6347,6 +7260,20 @@ COMMENT ON COLUMN public.t_sys_permission.version IS '乐观锁版本号';
 
 
 --
+-- Name: COLUMN t_sys_permission.feature_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_permission.feature_id IS '所属功能ID';
+
+
+--
+-- Name: COLUMN t_sys_permission.app_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_permission.app_id IS '所属应用ID，仅应用级权限使用';
+
+
+--
 -- Name: t_sys_role; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6358,7 +7285,8 @@ CREATE TABLE public.t_sys_role (
     update_time timestamp without time zone,
     create_user bigint,
     update_user bigint,
-    version integer DEFAULT 0 NOT NULL
+    version integer DEFAULT 0 NOT NULL,
+    description character varying(500)
 );
 
 
@@ -6423,6 +7351,13 @@ COMMENT ON COLUMN public.t_sys_role.update_user IS '修改人';
 --
 
 COMMENT ON COLUMN public.t_sys_role.version IS '乐观锁版本号';
+
+
+--
+-- Name: COLUMN t_sys_role.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_role.description IS '描述';
 
 
 --
@@ -6505,7 +7440,7 @@ CREATE TABLE public.t_sys_script (
     number character varying(100) NOT NULL,
     name character varying(200) NOT NULL,
     content text NOT NULL,
-    remark character varying(500),
+    description character varying(500),
     create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     update_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     create_user bigint,
@@ -6550,10 +7485,10 @@ COMMENT ON COLUMN public.t_sys_script.content IS '脚本内容';
 
 
 --
--- Name: COLUMN t_sys_script.remark; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_script.description; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_script.remark IS '备注';
+COMMENT ON COLUMN public.t_sys_script.description IS '描述';
 
 
 --
@@ -9264,8 +10199,6 @@ CREATE TABLE public.t_sys_user (
     id bigint NOT NULL,
     username character varying(255) NOT NULL,
     password character varying(255) NOT NULL,
-    nickname character varying(255),
-    avatar character varying(255),
     email character varying(255),
     phone character varying(255),
     theme_color character varying(255),
@@ -9275,7 +10208,13 @@ CREATE TABLE public.t_sys_user (
     update_time timestamp without time zone DEFAULT now(),
     update_user bigint,
     version integer DEFAULT 0 NOT NULL,
-    password_reset boolean DEFAULT true NOT NULL
+    password_reset boolean DEFAULT true NOT NULL,
+    name character varying(255) NOT NULL,
+    number character varying(100) NOT NULL,
+    gender character varying(10),
+    birthday date,
+    avatar_attachment_id bigint,
+    CONSTRAINT ck_sys_user_gender CHECK (((gender IS NULL) OR ((gender)::text = ANY ((ARRAY['MALE'::character varying, 'FEMALE'::character varying])::text[]))))
 );
 
 
@@ -9305,20 +10244,6 @@ COMMENT ON COLUMN public.t_sys_user.username IS '用户名';
 --
 
 COMMENT ON COLUMN public.t_sys_user.password IS '密码';
-
-
---
--- Name: COLUMN t_sys_user.nickname; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_user.nickname IS '昵称';
-
-
---
--- Name: COLUMN t_sys_user.avatar; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_user.avatar IS '头像';
 
 
 --
@@ -9389,6 +10314,215 @@ COMMENT ON COLUMN public.t_sys_user.version IS '乐观锁版本号';
 --
 
 COMMENT ON COLUMN public.t_sys_user.password_reset IS '是否必须修改密码';
+
+
+--
+-- Name: COLUMN t_sys_user.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user.name IS '姓名';
+
+
+--
+-- Name: COLUMN t_sys_user.number; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user.number IS '工号';
+
+
+--
+-- Name: COLUMN t_sys_user.gender; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user.gender IS '性别';
+
+
+--
+-- Name: COLUMN t_sys_user.birthday; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user.birthday IS '生日';
+
+
+--
+-- Name: COLUMN t_sys_user.avatar_attachment_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user.avatar_attachment_id IS '头像附件ID';
+
+
+--
+-- Name: t_sys_user_app_pin; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_user_app_pin (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    app_id bigint NOT NULL,
+    seq integer NOT NULL,
+    create_time timestamp without time zone NOT NULL,
+    create_user bigint,
+    update_time timestamp without time zone,
+    update_user bigint
+);
+
+
+--
+-- Name: TABLE t_sys_user_app_pin; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_user_app_pin IS '用户固定应用';
+
+
+--
+-- Name: COLUMN t_sys_user_app_pin.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_app_pin.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_user_app_pin.user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_app_pin.user_id IS '用户ID';
+
+
+--
+-- Name: COLUMN t_sys_user_app_pin.app_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_app_pin.app_id IS '应用ID';
+
+
+--
+-- Name: COLUMN t_sys_user_app_pin.seq; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_app_pin.seq IS '排序号';
+
+
+--
+-- Name: COLUMN t_sys_user_app_pin.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_app_pin.create_time IS '创建时间';
+
+
+--
+-- Name: COLUMN t_sys_user_app_pin.create_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_app_pin.create_user IS '创建人';
+
+
+--
+-- Name: COLUMN t_sys_user_app_pin.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_app_pin.update_time IS '更新时间';
+
+
+--
+-- Name: COLUMN t_sys_user_app_pin.update_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_app_pin.update_user IS '修改人';
+
+
+--
+-- Name: t_sys_user_assignment; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_user_assignment (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    org_id bigint NOT NULL,
+    "position" character varying(200) NOT NULL,
+    is_org_leader boolean DEFAULT false NOT NULL,
+    is_primary boolean DEFAULT false NOT NULL,
+    create_time timestamp without time zone DEFAULT now(),
+    create_user bigint,
+    update_time timestamp without time zone DEFAULT now(),
+    update_user bigint
+);
+
+
+--
+-- Name: TABLE t_sys_user_assignment; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_user_assignment IS '用户部门任职';
+
+
+--
+-- Name: COLUMN t_sys_user_assignment.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_assignment.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_user_assignment.user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_assignment.user_id IS '用户ID';
+
+
+--
+-- Name: COLUMN t_sys_user_assignment.org_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_assignment.org_id IS '组织ID';
+
+
+--
+-- Name: COLUMN t_sys_user_assignment."position"; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_assignment."position" IS '职位';
+
+
+--
+-- Name: COLUMN t_sys_user_assignment.is_org_leader; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_assignment.is_org_leader IS '是否为部门负责人';
+
+
+--
+-- Name: COLUMN t_sys_user_assignment.is_primary; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_assignment.is_primary IS '是否为主职';
+
+
+--
+-- Name: COLUMN t_sys_user_assignment.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_assignment.create_time IS '创建时间';
+
+
+--
+-- Name: COLUMN t_sys_user_assignment.create_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_assignment.create_user IS '创建人';
+
+
+--
+-- Name: COLUMN t_sys_user_assignment.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_assignment.update_time IS '更新时间';
+
+
+--
+-- Name: COLUMN t_sys_user_assignment.update_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_assignment.update_user IS '修改人';
 
 
 --
@@ -11242,6 +12376,38 @@ ALTER TABLE ONLY public.t_sys_login_log_history
 
 
 --
+-- Name: t_sys_number_counter pk_sys_number_counter; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_number_counter
+    ADD CONSTRAINT pk_sys_number_counter PRIMARY KEY (rule_key, scope_key, period_key);
+
+
+--
+-- Name: t_sys_number_reference pk_sys_number_reference; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_number_reference
+    ADD CONSTRAINT pk_sys_number_reference PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_number_rule pk_sys_number_rule; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_number_rule
+    ADD CONSTRAINT pk_sys_number_rule PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_number_rule_segment pk_sys_number_rule_segment; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_number_rule_segment
+    ADD CONSTRAINT pk_sys_number_rule_segment PRIMARY KEY (id);
+
+
+--
 -- Name: t_sys_operate_log pk_sys_operate_log; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11287,6 +12453,22 @@ ALTER TABLE ONLY public.t_sys_sql_log
 
 ALTER TABLE ONLY public.t_sys_sql_log_history
     ADD CONSTRAINT pk_sys_sql_log_history PRIMARY KEY (create_time, id);
+
+
+--
+-- Name: t_sys_user_app_pin pk_sys_user_app_pin; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_app_pin
+    ADD CONSTRAINT pk_sys_user_app_pin PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_user_assignment pk_sys_user_assignment; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_assignment
+    ADD CONSTRAINT pk_sys_user_assignment PRIMARY KEY (id);
 
 
 --
@@ -11418,11 +12600,19 @@ ALTER TABLE ONLY public.t_sys_biz_attachment
 
 
 --
--- Name: t_sys_cloud t_sys_cloud_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: t_sys_domain t_sys_domain_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.t_sys_cloud
-    ADD CONSTRAINT t_sys_cloud_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.t_sys_domain
+    ADD CONSTRAINT t_sys_domain_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_feature t_sys_feature_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_feature
+    ADD CONSTRAINT t_sys_feature_pkey PRIMARY KEY (id);
 
 
 --
@@ -13490,11 +14680,11 @@ ALTER TABLE ONLY public.t_sys_basic_data_category
 
 
 --
--- Name: t_scm_purchase_requisition uk_scm_purchase_requisition_number; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: t_scm_purchase_requisition uk_scm_purchase_requisition_org_number; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.t_scm_purchase_requisition
-    ADD CONSTRAINT uk_scm_purchase_requisition_number UNIQUE (number);
+    ADD CONSTRAINT uk_scm_purchase_requisition_org_number UNIQUE (org_id, number);
 
 
 --
@@ -13506,11 +14696,43 @@ ALTER TABLE ONLY public.t_sys_app
 
 
 --
--- Name: t_sys_cloud uk_sys_cloud_number; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: t_sys_domain uk_sys_domain_number; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.t_sys_cloud
-    ADD CONSTRAINT uk_sys_cloud_number UNIQUE (number);
+ALTER TABLE ONLY public.t_sys_domain
+    ADD CONSTRAINT uk_sys_domain_number UNIQUE (number);
+
+
+--
+-- Name: t_sys_feature uk_sys_feature_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_feature
+    ADD CONSTRAINT uk_sys_feature_key UNIQUE (feature_key);
+
+
+--
+-- Name: t_sys_number_reference uk_sys_number_reference_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_number_reference
+    ADD CONSTRAINT uk_sys_number_reference_key UNIQUE (reference_key);
+
+
+--
+-- Name: t_sys_number_rule uk_sys_number_rule_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_number_rule
+    ADD CONSTRAINT uk_sys_number_rule_key UNIQUE (rule_key);
+
+
+--
+-- Name: t_sys_number_rule_segment uk_sys_number_rule_segment_sort; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_number_rule_segment
+    ADD CONSTRAINT uk_sys_number_rule_segment_sort UNIQUE (rule_key, sort);
 
 
 --
@@ -13538,6 +14760,22 @@ ALTER TABLE ONLY public.t_sys_user_role
 
 
 --
+-- Name: t_sys_user_app_pin uk_sys_user_app_pin; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_app_pin
+    ADD CONSTRAINT uk_sys_user_app_pin UNIQUE (user_id, app_id);
+
+
+--
+-- Name: t_sys_user_assignment uk_sys_user_assignment_user_org; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_assignment
+    ADD CONSTRAINT uk_sys_user_assignment_user_org UNIQUE (user_id, org_id);
+
+
+--
 -- Name: t_sys_user uk_sys_user_username; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13546,10 +14784,17 @@ ALTER TABLE ONLY public.t_sys_user
 
 
 --
--- Name: idx_basic_data_category_cloud_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_basic_data_category_domain_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_basic_data_category_cloud_id ON public.t_sys_basic_data_category USING btree (cloud_id);
+CREATE INDEX idx_basic_data_category_domain_id ON public.t_sys_basic_data_category USING btree (domain_id);
+
+
+--
+-- Name: idx_basic_data_category_number_rule; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_basic_data_category_number_rule ON public.t_sys_basic_data_category USING btree (number_rule_key);
 
 
 --
@@ -13728,10 +14973,10 @@ CREATE INDEX idx_scm_purchase_requisition_entry_parent_id ON public.t_scm_purcha
 
 
 --
--- Name: idx_sys_app_cloud; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_sys_app_domain; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_sys_app_cloud ON public.t_sys_app USING btree (cloud_id);
+CREATE INDEX idx_sys_app_domain ON public.t_sys_app USING btree (domain_id);
 
 
 --
@@ -13749,10 +14994,17 @@ CREATE INDEX idx_sys_attachment_cleanup ON public.t_sys_attachment USING btree (
 
 
 --
--- Name: idx_sys_cloud_num; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_sys_domain_num; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_sys_cloud_num ON public.t_sys_cloud USING btree (number);
+CREATE INDEX idx_sys_domain_num ON public.t_sys_domain USING btree (number);
+
+
+--
+-- Name: idx_sys_feature_app; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_feature_app ON public.t_sys_feature USING btree (app_id);
 
 
 --
@@ -13882,10 +15134,24 @@ CREATE INDEX idx_sys_menu_app ON public.t_sys_menu USING btree (app_id);
 
 
 --
+-- Name: idx_sys_menu_feature; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_menu_feature ON public.t_sys_menu USING btree (feature_id);
+
+
+--
 -- Name: idx_sys_menu_perm; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_sys_menu_perm ON public.t_sys_menu USING btree (permission_id);
+
+
+--
+-- Name: idx_sys_number_rule_reference; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_number_rule_reference ON public.t_sys_number_rule USING btree (reference_key);
 
 
 --
@@ -13938,6 +15204,13 @@ CREATE INDEX idx_sys_org_parent ON public.t_sys_org USING btree (parent_id);
 
 
 --
+-- Name: idx_sys_org_parent_sort; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_org_parent_sort ON public.t_sys_org USING btree (parent_id, sort, number);
+
+
+--
 -- Name: idx_sys_param_app_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -13952,17 +15225,24 @@ CREATE UNIQUE INDEX idx_sys_param_number ON public.t_sys_param USING btree (numb
 
 
 --
--- Name: idx_sys_perm_app; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_sys_perm_app ON public.t_sys_permission USING btree (app_id);
-
-
---
 -- Name: idx_sys_perm_number; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_sys_perm_number ON public.t_sys_permission USING btree (number);
+
+
+--
+-- Name: idx_sys_permission_app; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_permission_app ON public.t_sys_permission USING btree (app_id);
+
+
+--
+-- Name: idx_sys_permission_feature; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_permission_feature ON public.t_sys_permission USING btree (feature_id);
 
 
 --
@@ -14040,6 +15320,20 @@ CREATE INDEX idx_sys_ur_org ON public.t_sys_user_role USING btree (org_id);
 --
 
 CREATE INDEX idx_sys_ur_user ON public.t_sys_user_role USING btree (user_id);
+
+
+--
+-- Name: idx_sys_user_app_pin_user_seq; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_user_app_pin_user_seq ON public.t_sys_user_app_pin USING btree (user_id, seq, id);
+
+
+--
+-- Name: idx_sys_user_assignment_org_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_user_assignment_org_user ON public.t_sys_user_assignment USING btree (org_id, user_id);
 
 
 --
@@ -20245,6 +21539,13 @@ CREATE UNIQUE INDEX uk_sys_file_config_singleton ON public.t_sys_file_config USI
 
 
 --
+-- Name: uk_sys_org_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_org_number ON public.t_sys_org USING btree (number);
+
+
+--
 -- Name: uk_sys_param_number; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -20256,6 +21557,20 @@ CREATE UNIQUE INDEX uk_sys_param_number ON public.t_sys_param USING btree (numbe
 --
 
 CREATE UNIQUE INDEX uk_sys_ui_config_singleton ON public.t_sys_ui_config USING btree ((true));
+
+
+--
+-- Name: uk_sys_user_assignment_primary; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_user_assignment_primary ON public.t_sys_user_assignment USING btree (user_id) WHERE is_primary;
+
+
+--
+-- Name: uk_sys_user_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_user_number ON public.t_sys_user USING btree (number);
 
 
 --
@@ -28148,11 +29463,19 @@ ALTER INDEX public.idx_sys_sql_log_result_time ATTACH PARTITION public.t_sys_sql
 
 
 --
--- Name: t_sys_basic_data_category fk_basic_data_category_cloud; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: t_sys_basic_data_category fk_basic_data_category_domain; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.t_sys_basic_data_category
-    ADD CONSTRAINT fk_basic_data_category_cloud FOREIGN KEY (cloud_id) REFERENCES public.t_sys_cloud(id);
+    ADD CONSTRAINT fk_basic_data_category_domain FOREIGN KEY (domain_id) REFERENCES public.t_sys_domain(id);
+
+
+--
+-- Name: t_sys_basic_data_category fk_basic_data_category_number_rule; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_basic_data_category
+    ADD CONSTRAINT fk_basic_data_category_number_rule FOREIGN KEY (number_rule_key) REFERENCES public.t_sys_number_rule(rule_key);
 
 
 --
@@ -28161,14 +29484,6 @@ ALTER TABLE ONLY public.t_sys_basic_data_category
 
 ALTER TABLE ONLY public.t_sys_basic_data_item
     ADD CONSTRAINT fk_basic_data_item_category FOREIGN KEY (category_id) REFERENCES public.t_sys_basic_data_category(id);
-
-
---
--- Name: t_sys_basic_data_item fk_basic_data_item_parent; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.t_sys_basic_data_item
-    ADD CONSTRAINT fk_basic_data_item_parent FOREIGN KEY (parent_id) REFERENCES public.t_sys_basic_data_item(id);
 
 
 --
@@ -28196,11 +29511,19 @@ ALTER TABLE ONLY public.t_scm_purchase_requisition
 
 
 --
--- Name: t_sys_app fk_sys_app_cloud; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: t_sys_app fk_sys_app_domain; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.t_sys_app
-    ADD CONSTRAINT fk_sys_app_cloud FOREIGN KEY (cloud_id) REFERENCES public.t_sys_cloud(id);
+    ADD CONSTRAINT fk_sys_app_domain FOREIGN KEY (domain_id) REFERENCES public.t_sys_domain(id);
+
+
+--
+-- Name: t_sys_feature fk_sys_feature_app; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_feature
+    ADD CONSTRAINT fk_sys_feature_app FOREIGN KEY (app_id) REFERENCES public.t_sys_app(id);
 
 
 --
@@ -28212,11 +29535,51 @@ ALTER TABLE ONLY public.t_sys_menu
 
 
 --
+-- Name: t_sys_menu fk_sys_menu_feature; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_menu
+    ADD CONSTRAINT fk_sys_menu_feature FOREIGN KEY (feature_id) REFERENCES public.t_sys_feature(id);
+
+
+--
 -- Name: t_sys_menu fk_sys_menu_perm; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.t_sys_menu
     ADD CONSTRAINT fk_sys_menu_perm FOREIGN KEY (permission_id) REFERENCES public.t_sys_permission(id);
+
+
+--
+-- Name: t_sys_number_counter fk_sys_number_counter_rule; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_number_counter
+    ADD CONSTRAINT fk_sys_number_counter_rule FOREIGN KEY (rule_key) REFERENCES public.t_sys_number_rule(rule_key);
+
+
+--
+-- Name: t_sys_number_reference fk_sys_number_reference_feature; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_number_reference
+    ADD CONSTRAINT fk_sys_number_reference_feature FOREIGN KEY (feature_id) REFERENCES public.t_sys_feature(id);
+
+
+--
+-- Name: t_sys_number_rule_segment fk_sys_number_rule_segment_rule; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_number_rule_segment
+    ADD CONSTRAINT fk_sys_number_rule_segment_rule FOREIGN KEY (rule_key) REFERENCES public.t_sys_number_rule(rule_key);
+
+
+--
+-- Name: t_sys_org fk_sys_org_parent; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_org
+    ADD CONSTRAINT fk_sys_org_parent FOREIGN KEY (parent_id) REFERENCES public.t_sys_org(id);
 
 
 --
@@ -28228,11 +29591,19 @@ ALTER TABLE ONLY public.t_sys_param
 
 
 --
--- Name: t_sys_permission fk_sys_perm_app; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: t_sys_permission fk_sys_permission_app; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.t_sys_permission
-    ADD CONSTRAINT fk_sys_perm_app FOREIGN KEY (app_id) REFERENCES public.t_sys_app(id);
+    ADD CONSTRAINT fk_sys_permission_app FOREIGN KEY (app_id) REFERENCES public.t_sys_app(id);
+
+
+--
+-- Name: t_sys_permission fk_sys_permission_feature; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_permission
+    ADD CONSTRAINT fk_sys_permission_feature FOREIGN KEY (feature_id) REFERENCES public.t_sys_feature(id);
 
 
 --
@@ -28273,6 +29644,46 @@ ALTER TABLE ONLY public.t_sys_user_role
 
 ALTER TABLE ONLY public.t_sys_user_role
     ADD CONSTRAINT fk_sys_ur_user FOREIGN KEY (user_id) REFERENCES public.t_sys_user(id);
+
+
+--
+-- Name: t_sys_user_app_pin fk_sys_user_app_pin_app; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_app_pin
+    ADD CONSTRAINT fk_sys_user_app_pin_app FOREIGN KEY (app_id) REFERENCES public.t_sys_app(id) ON DELETE CASCADE;
+
+
+--
+-- Name: t_sys_user_app_pin fk_sys_user_app_pin_user; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_app_pin
+    ADD CONSTRAINT fk_sys_user_app_pin_user FOREIGN KEY (user_id) REFERENCES public.t_sys_user(id) ON DELETE CASCADE;
+
+
+--
+-- Name: t_sys_user_assignment fk_sys_user_assignment_org; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_assignment
+    ADD CONSTRAINT fk_sys_user_assignment_org FOREIGN KEY (org_id) REFERENCES public.t_sys_org(id);
+
+
+--
+-- Name: t_sys_user_assignment fk_sys_user_assignment_user; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_assignment
+    ADD CONSTRAINT fk_sys_user_assignment_user FOREIGN KEY (user_id) REFERENCES public.t_sys_user(id);
+
+
+--
+-- Name: t_sys_user fk_sys_user_avatar_attachment; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user
+    ADD CONSTRAINT fk_sys_user_avatar_attachment FOREIGN KEY (avatar_attachment_id) REFERENCES public.t_sys_attachment(id);
 
 
 --

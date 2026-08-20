@@ -10,6 +10,11 @@ import sm.domain.sys.base.sysparam.model.form.SysParamListForm;
 import sm.domain.sys.base.sysparam.model.form.SysParamSaveForm;
 import sm.domain.sys.base.sysparam.model.vo.SysParamCreateNewDataVO;
 import sm.domain.sys.base.sysparam.model.vo.SysParamVO;
+import sm.domain.sys.base.sysparam.model.vo.SysParamDetailVO;
+import sm.domain.sys.base.sysparam.model.entity.SysParamEntity;
+import sm.domain.sys.base.app.mapper.AppMapper;
+import sm.domain.sys.base.app.model.entity.AppEntity;
+import sm.domain.sys.base.common.model.vo.ReferenceVO;
 import sm.domain.sys.base.sysparam.mapper.SysParamMapper;
 import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
@@ -37,6 +42,7 @@ public class SysParamService {
     private final SysParamMapper mapper;
     private final SysParamTxService txService;
     private final SysParamCacheAccessor cacheAccessor;
+    private final AppMapper appMapper;
 
     /** 管理端分页列表 */
     public PageData<SysParamVO> listPage(SysParamListForm form) {
@@ -46,13 +52,27 @@ public class SysParamService {
     }
 
     /** 详情 */
-    public SysParamVO detail(Long id) {
+    public SysParamDetailVO detail(Long id) {
         if (id == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "系统参数ID不能为空");
         }
-        SysParamVO detail = mapper.selectDetailById(id);
-        if (detail == null) {
+        SysParamEntity entity = mapper.selectById(id);
+        if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "系统参数不存在");
+        }
+        SysParamDetailVO detail = new SysParamDetailVO();
+        detail.setId(entity.getId());
+        detail.setVersion(entity.getVersion());
+        detail.setNumber(entity.getNumber());
+        detail.setName(entity.getName());
+        detail.setValue(entity.getValue());
+        detail.setDescription(entity.getDescription());
+        detail.setIsSystem(entity.getIsSystem());
+        if (entity.getAppId() != null) {
+            AppEntity application = appMapper.selectById(entity.getAppId());
+            if (application == null) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "系统参数关联了无效应用");
+            detail.setApplication(new ReferenceVO(
+                    application.getId(), application.getNumber(), application.getName()));
         }
         return detail;
     }

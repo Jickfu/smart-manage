@@ -1,4 +1,5 @@
 import type { PageForm } from '@/types/api';
+import type { ReferenceVO } from '@/domain/sys/base/common/types';
 
 /** 用户列表查询 */
 export interface UserListForm extends PageForm {
@@ -12,8 +13,7 @@ export type Gender = 'MALE' | 'FEMALE';
 
 export interface UserAssignmentVO {
   id?: string;
-  orgId: string;
-  orgName?: string;
+  org: ReferenceVO;
   orgNamePath?: string;
   position: string;
   isOrgLeader: boolean;
@@ -68,7 +68,7 @@ export interface UserSaveForm {
   phone?: string;
   avatarAttachmentId?: string;
   attachmentUploadSessions?: Record<string, string>;
-  assignments: UserAssignmentVO[];
+  assignments: Array<Omit<UserAssignmentVO, 'org'> & { orgId: string }>;
 }
 
 export interface ResetPasswordVO {

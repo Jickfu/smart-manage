@@ -26,7 +26,9 @@ export interface OrgListVO {
   version: number;
 }
 
-export type OrgDetailVO = OrgListVO;
+export interface OrgDetailVO extends Omit<OrgListVO, 'parentId'> {
+  parent?: ReferenceVO;
+}
 
 export interface OrgOptionVO {
   id: string;
@@ -59,3 +61,4 @@ export interface OrgSaveForm {
   sort: number;
   description?: string;
 }
+import type { ReferenceVO } from '@/domain/sys/base/common/types';

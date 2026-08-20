@@ -15,6 +15,7 @@ import sm.domain.sys.base.sysparam.model.form.SysParamListForm;
 import sm.domain.sys.base.sysparam.model.form.SysParamSaveForm;
 import sm.domain.sys.base.sysparam.model.vo.SysParamCreateNewDataVO;
 import sm.domain.sys.base.sysparam.model.vo.SysParamVO;
+import sm.domain.sys.base.sysparam.model.vo.SysParamDetailVO;
 import sm.domain.sys.base.sysparam.service.SysParamService;
 import sm.system.form.IdForm;
 import sm.system.response.PageData;
@@ -42,7 +43,7 @@ public class SysParamController {
     @PostMapping("/sys/base/param/detail")
     @Operation(summary = "系统参数详情")
     @SaCheckPermission(SysParamPermission.DETAIL)
-    public Result<SysParamVO> detail(@RequestBody @Valid IdForm form) {
+    public Result<SysParamDetailVO> detail(@RequestBody @Valid IdForm form) {
         return Result.success(service.detail(form.getId()));
     }
 

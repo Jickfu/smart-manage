@@ -14,6 +14,7 @@ import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { useUserDeleteMutation } from './useUserDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { getRegisteredTabTitle } from '@/domain/common/registry/componentRegistry';
+import type { PageComponentProps } from '@/domain/common/page/types';
 import { OperationType } from '@/domain/common/page/types';
 import { orgApi } from '@/domain/sys/base/org/api';
 import { orgQueryKeys } from '@/domain/sys/base/org/queryKeys';
@@ -21,7 +22,6 @@ import type { OrgTreeNode } from '@/domain/sys/base/org/types';
 import { userApi } from './api';
 import { userQueryKeys } from './queryKeys';
 import type { UserAssignmentVO, UserListVO } from './types';
-import type { PageComponentProps } from '@/domain/common/page/types';
 import { userAccess } from './permissions';
 import { UserAvatar } from './UserAvatar';
 import AppModal from '@/domain/common/component/AppModal';
@@ -71,7 +71,7 @@ const AssignmentCells = ({
 }) => (
   <div className="sm-user-assignment-cells">
     {assignments.map((assignment) => (
-      <div key={assignment.id ?? assignment.orgId} className="sm-user-assignment-cell">
+      <div key={assignment.id ?? assignment.org.id} className="sm-user-assignment-cell">
         {render(assignment)}
       </div>
     ))}
@@ -176,7 +176,7 @@ const UserListPage = (props: PageComponentProps) => {
         key: 'name',
         title: '姓名',
         dataIndex: 'name',
-        width: 120,
+        width: 150,
         render: (text, record) => (
           <button type="button" className="sm-table-link" onClick={() => handleOpenEdit(record.id)}>
             {text}
@@ -197,7 +197,7 @@ const UserListPage = (props: PageComponentProps) => {
         render: (_, record) => (
           <AssignmentCells
             assignments={record.assignments}
-            render={(assignment) => assignment.orgName}
+            render={(assignment) => assignment.org.name}
           />
         ),
       },
@@ -258,7 +258,7 @@ const UserListPage = (props: PageComponentProps) => {
         key: 'enabled',
         title: '账号状态',
         dataIndex: 'enabled',
-        width: 90,
+        width: 100,
         render: (value) => (value ? <Tag color="green">可用</Tag> : <Tag>禁用</Tag>),
       },
     ],

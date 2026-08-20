@@ -13,6 +13,7 @@ import sm.domain.sys.base.org.model.vo.OrgDetailVO;
 import sm.domain.sys.base.org.model.vo.OrgListVO;
 import sm.domain.sys.base.org.model.vo.OrgOptionVO;
 import sm.domain.sys.base.org.model.vo.OrgTreeVO;
+import sm.domain.sys.base.common.model.vo.ReferenceVO;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
@@ -93,7 +94,12 @@ public class OrgService {
 
     public OrgDetailVO detail(Long id) {
         OrgEntity entity = requireOrg(id);
-        return converter.toDetailVO(entity);
+        OrgDetailVO detail = converter.toDetailVO(entity);
+        if (entity.getParentId() != null) {
+            OrgEntity parent = requireOrg(entity.getParentId());
+            detail.setParent(new ReferenceVO(parent.getId(), parent.getNumber(), parent.getName()));
+        }
+        return detail;
     }
 
     public List<OrgTreeVO> tree(boolean showArchived) {

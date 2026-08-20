@@ -22,6 +22,7 @@ import sm.domain.sys.base.basicdata.model.vo.BasicDataTreeVO;
 import sm.domain.sys.base.domain.mapper.DomainMapper;
 import sm.domain.sys.base.domain.model.entity.DomainEntity;
 import sm.domain.sys.base.common.constant.BaseCacheName;
+import sm.domain.sys.base.common.model.vo.ReferenceVO;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
@@ -128,7 +129,12 @@ public class BasicDataService {
     public BasicDataItemDetailVO detail(Long id) {
         BasicDataItemEntity entity = requireItem(id);
         BasicDataItemDetailVO result = converter.toDetailVO(entity);
-        result.setCategoryName(requireCategory(entity.getCategoryId()).getName());
+        BasicDataCategoryEntity category = requireCategory(entity.getCategoryId());
+        result.setCategory(new ReferenceVO(category.getId(), category.getNumber(), category.getName()));
+        if (entity.getParentId() != null) {
+            BasicDataItemEntity parent = requireItem(entity.getParentId());
+            result.setParent(new ReferenceVO(parent.getId(), parent.getNumber(), parent.getName()));
+        }
         return result;
     }
 

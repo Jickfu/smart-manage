@@ -1,13 +1,13 @@
 package sm.domain.sys.base.basicdata.model.vo;
 
 import lombok.Data;
+import sm.domain.sys.base.common.model.vo.ReferenceVO;
 
 @Data
 public class BasicDataItemDetailVO {
     private Long id;
-    private Long categoryId;
-    private String categoryName;
-    private Long parentId;
+    private ReferenceVO category;
+    private ReferenceVO parent;
     private String number;
     private String name;
     private String description;

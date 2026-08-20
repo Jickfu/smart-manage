@@ -1,4 +1,5 @@
 import type { PageForm } from '@/types/api';
+import type { ReferenceVO } from '@/domain/sys/base/common/types';
 
 export type BasicDataNumberMode = 'MANUAL' | 'AUTO_LOCKED' | 'AUTO_DEFAULT';
 
@@ -61,7 +62,13 @@ export interface BasicDataListVO {
   updateTime?: string;
 }
 
-export type BasicDataItemDetailVO = BasicDataListVO;
+export interface BasicDataItemDetailVO extends Omit<
+  BasicDataListVO,
+  'categoryId' | 'categoryName' | 'parentId'
+> {
+  category: ReferenceVO;
+  parent?: ReferenceVO;
+}
 
 export interface BasicDataOption {
   id: string;

@@ -22,6 +22,7 @@ import {
   createColumnSettingsStorageKey,
   createDefaultColumnSettings,
   mergeColumnSettings,
+  resolveColumnSettings,
   readStoredColumnSettings,
   removeStoredColumnSettings,
   writeStoredColumnSettings,
@@ -217,11 +218,11 @@ function ListPage<T>({
   );
   const [columnSettingsOverride, setColumnSettingsOverride] = useState<{
     storageKey?: string;
-    settings: ColumnSetting[];
+    settings: ColumnSetting[] | null;
   }>();
   const columnSettings =
     columnSettingsOverride && columnSettingsOverride.storageKey === storageKey
-      ? mergeColumnSettings(defaultColumnSettings, columnSettingsOverride.settings)
+      ? resolveColumnSettings(defaultColumnSettings, undefined, columnSettingsOverride.settings)
       : loadedColumnSettings;
 
   const configuredColumns = useMemo(
@@ -548,9 +549,15 @@ function ListPage<T>({
           defaults={defaultColumnSettings}
           onCancel={() => setColumnSettingsOpen(false)}
           onConfirm={(nextSettings) => {
-            setColumnSettingsOverride({ storageKey, settings: nextSettings });
+            const restoredToDefaults =
+              JSON.stringify(nextSettings) === JSON.stringify(defaultColumnSettings);
+            // 恢复出厂设置代表不存在用户覆盖，后续代码默认值变化必须立即生效。
+            setColumnSettingsOverride({
+              storageKey,
+              settings: restoredToDefaults ? null : nextSettings,
+            });
             if (storageKey) {
-              if (JSON.stringify(nextSettings) === JSON.stringify(defaultColumnSettings)) {
+              if (restoredToDefaults) {
                 removeStoredColumnSettings(storageKey);
               } else {
                 writeStoredColumnSettings(storageKey, nextSettings);
