@@ -280,24 +280,23 @@ class UserTxService {
         }
     }
 
-    /** 当前组织下的角色关系通过独立命令整体替换。 */
+    /** 指定任职组织下的角色关系通过独立命令整体替换。 */
     public void assignRoles(UserRoleAssignForm form) {
         if (mapper.selectById(form.getUserId()) == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
         }
-        Long orgId = currentUserContext.getOrgId();
         if (userAssignmentMapper.selectCount(new LambdaQueryWrapper<UserAssignmentEntity>()
                 .eq(UserAssignmentEntity::getUserId, form.getUserId())
-                .eq(UserAssignmentEntity::getOrgId, orgId)) == 0) {
+                .eq(UserAssignmentEntity::getOrgId, form.getOrgId())) == 0) {
             throw new BizException(ResultEnum.PARAM_ERROR, "只能为用户任职组织分配角色");
         }
         userRoleMapper.delete(new LambdaQueryWrapper<UserRoleEntity>()
                 .eq(UserRoleEntity::getUserId, form.getUserId())
-                .eq(UserRoleEntity::getOrgId, orgId));
+                .eq(UserRoleEntity::getOrgId, form.getOrgId()));
         for (Long roleId : form.getRoleIds()) {
             UserRoleEntity userRoleEntity = new UserRoleEntity();
             userRoleEntity.setUserId(form.getUserId());
-            userRoleEntity.setOrgId(orgId);
+            userRoleEntity.setOrgId(form.getOrgId());
             userRoleEntity.setRoleId(roleId);
             if (userRoleMapper.insert(userRoleEntity) != 1) {
                 throw new BizException(sm.system.response.ResultEnum.PERSISTENCE_ERROR, "聚合明细写入失败");

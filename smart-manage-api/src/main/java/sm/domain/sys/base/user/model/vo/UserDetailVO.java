@@ -35,6 +35,5 @@ public class UserDetailVO {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private Integer version;
-    private List<Long> roleIds;
     private List<UserAssignmentVO> assignments;
 }

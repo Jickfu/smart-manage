@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { App, Button, Checkbox, Table } from 'antd';
+import { App, Button, Checkbox, Menu, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AssignmentPage } from '@/domain/common/page/AssignmentPage';
@@ -17,7 +17,7 @@ import type { PageComponentProps } from '@/domain/common/page/types';
 import { userApi } from './api';
 import { userAccess } from './permissions';
 import { userQueryKeys } from './queryKeys';
-import type { UserDetailVO } from './types';
+import './UserRoleAssignmentPage.css';
 
 const EMPTY_IDS: string[] = [];
 const EMPTY_ROLES: RoleListAllVO[] = [];
@@ -36,19 +36,33 @@ const roleColumns: ColumnsType<RoleListAllVO> = [
 ];
 
 /** 用户角色分配专用页面。 */
-const UserRoleAssignmentPage = ({ appNumber, tabKey, billId }: PageComponentProps) => {
+const UserRoleAssignmentPage = ({ appNumber, tabKey, billId, context }: PageComponentProps) => {
   const { modal } = App.useApp();
   const queryClient = useQueryClient();
   const [localIds, setLocalIds] = useState<string[] | null>(null);
   const [keyword, setKeyword] = useState('');
   const [onlySelected, setOnlySelected] = useState(false);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(context?.orgId);
   const detailQuery = useQuery({
     queryKey: userQueryKeys.detail(billId),
     queryFn: () => userApi.detail(billId!),
     enabled: Boolean(billId),
   });
+  const assignments = detailQuery.data?.assignments ?? [];
+  const effectiveOrgId =
+    (selectedOrgId && assignments.some((assignment) => assignment.org.id === selectedOrgId)
+      ? selectedOrgId
+      : undefined) ??
+    assignments.find((assignment) => assignment.isPrimary)?.org.id ??
+    assignments[0]?.org.id;
+  const selectedAssignment = assignments.find((assignment) => assignment.org.id === effectiveOrgId);
+  const roleIdsQuery = useQuery({
+    queryKey: userQueryKeys.roleIds(billId, effectiveOrgId),
+    queryFn: () => userApi.roleIds(billId!, effectiveOrgId!),
+    enabled: Boolean(billId && effectiveOrgId),
+  });
   const rolesQuery = useQuery({ queryKey: roleQueryKeys.listAll(), queryFn: roleApi.listAll });
-  const initialIds = detailQuery.data?.roleIds ?? EMPTY_IDS;
+  const initialIds = roleIdsQuery.data ?? EMPTY_IDS;
   const checkedIds = localIds ?? initialIds;
   const checkedIdSet = useMemo(() => new Set(checkedIds), [checkedIds]);
   const selectionDiff = useMemo(
@@ -71,14 +85,16 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId }: PageComponentProp
   const visibleSelectedCount = visibleIds.filter((id) => checkedIdSet.has(id)).length;
   const allVisibleSelected = visibleIds.length > 0 && visibleSelectedCount === visibleIds.length;
   const mutation = useCommandMutation({
-    mutationFn: () => userApi.assignRoles(billId!, checkedIds),
+    mutationFn: () => userApi.assignRoles(billId!, effectiveOrgId!, checkedIds),
     successMessage: '角色分配成功',
     onSuccess: async () => {
-      queryClient.setQueryData<UserDetailVO>(userQueryKeys.detail(billId), (detail) =>
-        detail ? { ...detail, roleIds: [...checkedIds] } : detail,
-      );
+      queryClient.setQueryData<string[]>(userQueryKeys.roleIds(billId, effectiveOrgId), [
+        ...checkedIds,
+      ]);
       setLocalIds(null);
-      await queryClient.invalidateQueries({ queryKey: userQueryKeys.detail(billId) });
+      await queryClient.invalidateQueries({
+        queryKey: userQueryKeys.roleIds(billId, effectiveOrgId),
+      });
     },
   });
 
@@ -87,13 +103,31 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId }: PageComponentProp
   };
 
   const confirmSave = () => {
-    if (!dirty || !detailQuery.data) return;
+    if (!dirty || !detailQuery.data || !selectedAssignment) return;
     modal.confirm({
       title: '确认分配角色',
-      content: `将为用户“${detailQuery.data.name}”新增 ${selectionDiff.addedIds.length} 个角色、移除 ${selectionDiff.removedIds.length} 个角色，是否保存？`,
+      content: `将为用户“${detailQuery.data.name}”在组织“${selectedAssignment.org.name}”下新增 ${selectionDiff.addedIds.length} 个角色、移除 ${selectionDiff.removedIds.length} 个角色，是否保存？`,
       okText: '保存',
       cancelText: '取消',
       onOk: () => mutation.mutateAsync(),
+    });
+  };
+
+  const changeOrganization = (orgId: string) => {
+    const applyChange = () => {
+      setSelectedOrgId(orgId);
+      setLocalIds(null);
+    };
+    if (!dirty) {
+      applyChange();
+      return;
+    }
+    modal.confirm({
+      title: '切换任职组织',
+      content: '切换后将放弃当前组织尚未保存的角色修改，是否继续？',
+      okText: '放弃并切换',
+      cancelText: '取消',
+      onOk: applyChange,
     });
   };
 
@@ -103,9 +137,9 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId }: PageComponentProp
         prefix: userAccess.prefix,
         permissions: { save: userAccess.permissions.assignRoles },
       }}
-      loading={detailQuery.isLoading || rolesQuery.isLoading}
+      loading={detailQuery.isLoading || roleIdsQuery.isLoading || rolesQuery.isLoading}
       saving={mutation.isPending}
-      error={(detailQuery.error || rolesQuery.error) as Error | null}
+      error={(detailQuery.error || roleIdsQuery.error || rolesQuery.error) as Error | null}
       subject={
         detailQuery.data
           ? `用户：${detailQuery.data.name}（${detailQuery.data.username} / ${detailQuery.data.number}）`
@@ -114,14 +148,16 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId }: PageComponentProp
       selectedCount={checkedIds.length}
       totalCount={roles.length}
       dirty={dirty}
-      saveDisabled={!dirty || mutation.isPending}
+      saveDisabled={!dirty || !effectiveOrgId || mutation.isPending}
       closeGuard={{ appNumber, tabKey }}
-      onRetry={() => void Promise.all([detailQuery.refetch(), rolesQuery.refetch()])}
+      onRetry={() =>
+        void Promise.all([detailQuery.refetch(), roleIdsQuery.refetch(), rolesQuery.refetch()])
+      }
       onSave={confirmSave}
       onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
     >
       <AssignmentSelectionPanel
-        title="角色选择"
+        title={selectedAssignment ? `${selectedAssignment.org.name} — 角色选择` : '角色选择'}
         keyword={keyword}
         keywordPlaceholder="搜索角色编码/名称/说明"
         onlySelected={onlySelected}
@@ -145,6 +181,33 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId }: PageComponentProp
               清空当前结果
             </Button>
           </>
+        }
+        treePanel={
+          <div className="sm-user-role-organization-panel">
+            <div className="sm-user-role-organization-title">任职组织</div>
+            <Menu
+              className="sm-user-role-organization-menu"
+              mode="inline"
+              selectedKeys={effectiveOrgId ? [effectiveOrgId] : []}
+              items={assignments.map((assignment) => ({
+                key: assignment.org.id,
+                label: (
+                  <div className="sm-user-role-organization-item">
+                    <div className="sm-user-role-organization-name">
+                      <span>{assignment.org.name}</span>
+                      {assignment.isPrimary && (
+                        <span className="sm-user-role-primary-badge">主职</span>
+                      )}
+                    </div>
+                    <div className="sm-user-role-organization-meta">
+                      {[assignment.position, assignment.orgNamePath].filter(Boolean).join(' · ')}
+                    </div>
+                  </div>
+                ),
+              }))}
+              onClick={({ key }) => changeOrganization(key)}
+            />
+          </div>
         }
         onKeywordChange={setKeyword}
         onOnlySelectedChange={setOnlySelected}

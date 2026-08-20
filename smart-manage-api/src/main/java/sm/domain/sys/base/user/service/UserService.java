@@ -20,6 +20,7 @@ import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.form.UserListForm;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
+import sm.domain.sys.base.user.model.form.UserRoleScopeForm;
 import sm.domain.sys.base.user.model.form.CurrentUserPasswordForm;
 import sm.domain.sys.base.user.model.form.CurrentUserProfileForm;
 import sm.domain.sys.base.user.model.form.CurrentUserContactForm;
@@ -147,10 +148,10 @@ public class UserService {
 	@BizLog("分配用户角色")
 	public void assignRoles(UserRoleAssignForm form) {
 		txService.assignRoles(form);
-		authorizationStateHelper.refreshUserAuthorization(form.getUserId(), currentUserContext.getOrgId());
+		authorizationStateHelper.refreshUserAuthorization(form.getUserId(), form.getOrgId());
 	}
 
-	/** 查询用户及当前组织下的角色明细。 */
+	/** 查询用户基础详情和全部任职；角色关系必须通过带组织上下文的独立查询获取。 */
 	public UserDetailVO detail(Long id) {
 		UserEntity userEntity = mapper.selectById(id);
 		if (userEntity == null) {
@@ -159,14 +160,30 @@ public class UserService {
 		UserDetailVO userInfoVO = converter.toDetailVO(userEntity);
 		userInfoVO.setAvatar(avatarUrl(id, userEntity.getAvatarAttachmentId()));
 		userInfoVO.setAssignments(loadAssignments(List.of(id), null).getOrDefault(id, List.of()));
-		userInfoVO.setRoleIds(userRoleMapper.selectList(new LambdaQueryWrapper<UserRoleEntity>()
+		return userInfoVO;
+	}
+
+	/** 角色关系始终按用户和任职组织两个维度查询，禁止隐式使用操作者当前组织。 */
+	public List<Long> roleIds(UserRoleScopeForm form) {
+		requireUserAssignment(form.getUserId(), form.getOrgId());
+		return userRoleMapper.selectList(new LambdaQueryWrapper<UserRoleEntity>()
 					.select(UserRoleEntity::getRoleId)
-					.eq(UserRoleEntity::getUserId, id)
-					.eq(UserRoleEntity::getOrgId, currentUserContext.getOrgId()))
+					.eq(UserRoleEntity::getUserId, form.getUserId())
+					.eq(UserRoleEntity::getOrgId, form.getOrgId()))
 				.stream()
 				.map(UserRoleEntity::getRoleId)
-				.toList());
-		return userInfoVO;
+				.toList();
+	}
+
+	private void requireUserAssignment(Long userId, Long orgId) {
+		if (mapper.selectById(userId) == null) {
+			throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+		}
+		if (userAssignmentMapper.selectCount(new LambdaQueryWrapper<UserAssignmentEntity>()
+				.eq(UserAssignmentEntity::getUserId, userId)
+				.eq(UserAssignmentEntity::getOrgId, orgId)) == 0) {
+			throw new BizException(ResultEnum.PARAM_ERROR, "只能查询用户任职组织的角色");
+		}
 	}
 
 	public UserAuthentication authenticate(String username, String password) {

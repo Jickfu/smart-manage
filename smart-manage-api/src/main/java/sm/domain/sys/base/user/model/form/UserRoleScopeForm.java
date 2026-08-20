@@ -3,17 +3,12 @@ package sm.domain.sys.base.user.model.form;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.util.List;
-
-/** 用户角色分配命令。 */
+/** 查询用户在指定任职组织下的角色关系。 */
 @Data
-public class UserRoleAssignForm {
+public class UserRoleScopeForm {
 	@NotNull(message = "用户ID不能为空")
 	private Long userId;
 
 	@NotNull(message = "组织ID不能为空")
 	private Long orgId;
-
-	@NotNull(message = "角色列表不能为空")
-	private List<Long> roleIds;
 }

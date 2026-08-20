@@ -50,7 +50,6 @@ export interface UserDetailVO {
   createTime?: string;
   updateTime?: string;
   version: number;
-  roleIds: string[];
   assignments: UserAssignmentVO[];
 }
 

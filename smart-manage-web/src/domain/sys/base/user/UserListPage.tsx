@@ -374,9 +374,16 @@ const UserListPage = (props: PageComponentProps) => {
             key: 'assignRoles',
             label: '分配角色',
             permission: userAccess.permissions.assignRoles,
-            disabled: selectedRowKeys.length !== 1,
+            disabled: selectedRowKeys.length !== 1 || !selectedUser?.assignments.length,
             onClick: () => {
               if (!selectedUser) return;
+              const selectedOrganization =
+                selectedUser.assignments.find(
+                  (assignment) => !unassigned && assignment.org.id === effectiveTreeKey,
+                ) ??
+                selectedUser.assignments.find((assignment) => assignment.isPrimary) ??
+                selectedUser.assignments[0];
+              if (!selectedOrganization) return;
               addContentTab(props.appNumber, {
                 key: `assignment:${USER_ROLE_ASSIGNMENT_KEY}:${selectedUser.id}`,
                 label: getRegisteredTabTitle(USER_ROLE_ASSIGNMENT_KEY, 'CUSTOM'),
@@ -384,6 +391,7 @@ const UserListPage = (props: PageComponentProps) => {
                 componentKey: USER_ROLE_ASSIGNMENT_KEY,
                 pageType: 'CUSTOM',
                 billId: selectedUser.id,
+                context: { orgId: selectedOrganization.org.id },
               });
             },
           },

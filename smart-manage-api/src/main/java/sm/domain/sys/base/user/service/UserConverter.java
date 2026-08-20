@@ -16,8 +16,8 @@ interface UserConverter {
     @Mapping(target = "avatar", ignore = true)
     UserListVO toListVO(UserEntity entity);
 
-    @Mapping(target = "roleIds", ignore = true)
     @Mapping(target = "assignments", ignore = true)
+    @Mapping(target = "roleIds", ignore = true)
     @Mapping(target = "menus", ignore = true)
     @Mapping(target = "avatar", ignore = true)
     @Mapping(target = "currentOrgId", ignore = true)
@@ -25,7 +25,6 @@ interface UserConverter {
     @Mapping(target = "companyName", ignore = true)
     UserInfoVO toInfoVO(UserEntity entity);
 
-    @Mapping(target = "roleIds", ignore = true)
     @Mapping(target = "assignments", ignore = true)
     @Mapping(target = "avatar", ignore = true)
     UserDetailVO toDetailVO(UserEntity entity);

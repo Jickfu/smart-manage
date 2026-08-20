@@ -14,6 +14,7 @@ import sm.domain.sys.base.user.model.form.UserListForm;
 import sm.domain.sys.base.user.model.form.UserPermissionsForm;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
+import sm.domain.sys.base.user.model.form.UserRoleScopeForm;
 import sm.domain.sys.base.user.model.form.CurrentUserThemeForm;
 import sm.domain.sys.base.user.model.form.CurrentOrganizationForm;
 import sm.domain.sys.base.user.model.form.CurrentUserPasswordForm;
@@ -144,7 +145,14 @@ public class UserController {
 		return Result.success(service.createNewData());
 	}
 
-	@Operation(summary = "分配用户角色", description = "整体替换指定用户在当前组织下的角色关系")
+	@Operation(summary = "查询用户角色", description = "查询指定用户在指定任职组织下的角色关系")
+	@PostMapping("/sys/base/user/roleIds")
+	@SaCheckPermission(UserPermission.ASSIGN_ROLES)
+	public Result<List<Long>> roleIds(@RequestBody @Valid UserRoleScopeForm form) {
+		return Result.success(service.roleIds(form));
+	}
+
+	@Operation(summary = "分配用户角色", description = "整体替换指定用户在指定任职组织下的角色关系")
 	@PostMapping("/sys/base/user/assignRoles")
 	@SaCheckPermission(UserPermission.ASSIGN_ROLES)
 	public Result<String> assignRoles(@RequestBody @Valid UserRoleAssignForm form) {

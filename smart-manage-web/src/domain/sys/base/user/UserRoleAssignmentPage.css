@@ -1,0 +1,67 @@
+.sm-user-role-organization-panel {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-user-role-organization-title {
+  flex-shrink: 0;
+  padding: 4px 12px 10px;
+  color: var(--ant-color-text-heading);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sm-user-role-organization-menu {
+  flex: 1;
+  min-width: 0;
+  border-inline-end: 0 !important;
+  background: transparent;
+}
+
+.sm-user-role-organization-menu .ant-menu-item {
+  height: auto;
+  min-height: 58px;
+  margin-inline: 4px;
+  padding-block: 8px;
+  line-height: normal;
+}
+
+.sm-user-role-organization-item,
+.sm-user-role-organization-name {
+  min-width: 0;
+  display: flex;
+}
+
+.sm-user-role-organization-item {
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sm-user-role-organization-name {
+  align-items: center;
+  gap: 6px;
+  color: var(--ant-color-text);
+  font-size: 13px;
+}
+
+.sm-user-role-organization-name > span:first-child,
+.sm-user-role-organization-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-user-role-primary-badge {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border-radius: var(--ant-border-radius-sm);
+  color: var(--ant-color-primary);
+  font-size: 11px;
+  background: var(--ant-color-primary-bg);
+}
+
+.sm-user-role-organization-meta {
+  color: var(--ant-color-text-secondary);
+  font-size: 11px;
+}

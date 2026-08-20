@@ -11,6 +11,8 @@ import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserAssignmentForm;
+import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
+import sm.domain.sys.base.user.model.entity.UserRoleEntity;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.system.helper.Argon2Helper;
 
@@ -24,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 
 class UserTxServiceTests {
 
@@ -167,6 +170,51 @@ class UserTxServiceTests {
 
 		assertThrows(sm.system.exception.BizException.class,
 				() -> service.updateEnabled(List.of(10L), true));
+	}
+
+	@Test
+	void roleAssignmentUsesExplicitTargetOrganization() {
+		UserMapper userMapper = mock(UserMapper.class);
+		UserRoleMapper userRoleMapper = mock(UserRoleMapper.class);
+		UserAssignmentMapper userAssignmentMapper = mock(UserAssignmentMapper.class);
+		CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
+		when(userMapper.selectById(10L)).thenReturn(new UserEntity());
+		when(userAssignmentMapper.selectCount(any())).thenReturn(1L);
+		when(userRoleMapper.insert(any(UserRoleEntity.class))).thenReturn(1);
+		UserTxService service = new UserTxService(
+				userMapper, userRoleMapper, userAssignmentMapper,
+				mock(OrgMapper.class), currentUserContext);
+		UserRoleAssignForm form = new UserRoleAssignForm();
+		form.setUserId(10L);
+		form.setOrgId(20L);
+		form.setRoleIds(List.of(30L, 31L));
+
+		service.assignRoles(form);
+
+		ArgumentCaptor<UserRoleEntity> relationCaptor = ArgumentCaptor.forClass(UserRoleEntity.class);
+		verify(userRoleMapper, org.mockito.Mockito.times(2)).insert(relationCaptor.capture());
+		assertTrue(relationCaptor.getAllValues().stream()
+				.allMatch(relation -> relation.getUserId().equals(10L) && relation.getOrgId().equals(20L)));
+		verify(currentUserContext, never()).getOrgId();
+	}
+
+	@Test
+	void roleAssignmentRejectsOrganizationWithoutUserAssignment() {
+		UserMapper userMapper = mock(UserMapper.class);
+		UserRoleMapper userRoleMapper = mock(UserRoleMapper.class);
+		UserAssignmentMapper userAssignmentMapper = mock(UserAssignmentMapper.class);
+		when(userMapper.selectById(10L)).thenReturn(new UserEntity());
+		when(userAssignmentMapper.selectCount(any())).thenReturn(0L);
+		UserTxService service = new UserTxService(
+				userMapper, userRoleMapper, userAssignmentMapper,
+				mock(OrgMapper.class), mock(CurrentUserContext.class));
+		UserRoleAssignForm form = new UserRoleAssignForm();
+		form.setUserId(10L);
+		form.setOrgId(99L);
+		form.setRoleIds(List.of(30L));
+
+		assertThrows(sm.system.exception.BizException.class, () -> service.assignRoles(form));
+		verify(userRoleMapper, never()).insert(any(UserRoleEntity.class));
 	}
 
 	private static UserSaveForm newUserForm() {

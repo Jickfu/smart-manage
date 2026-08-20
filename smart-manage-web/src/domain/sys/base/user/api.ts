@@ -35,9 +35,14 @@ export const userApi = {
       .post<Result<string>>(enabled ? '/sys/base/user/enable' : '/sys/base/user/disable', { ids })
       .then((response) => response.data.data),
 
-  assignRoles: (userId: string, roleIds: string[]) =>
+  roleIds: (userId: string, orgId: string) =>
     request
-      .post<Result<string>>('/sys/base/user/assignRoles', { userId, roleIds })
+      .post<Result<string[]>>('/sys/base/user/roleIds', { userId, orgId })
+      .then((response) => response.data.data),
+
+  assignRoles: (userId: string, orgId: string, roleIds: string[]) =>
+    request
+      .post<Result<string>>('/sys/base/user/assignRoles', { userId, orgId, roleIds })
       .then((response) => response.data.data),
 
   resetPassword: (id: string) =>
