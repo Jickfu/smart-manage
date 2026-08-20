@@ -146,6 +146,8 @@ interface ListPageProps<T> {
   selectedRowKeys?: React.Key[];
   /** 选中变更 */
   onSelectChange?: (keys: React.Key[]) => void;
+  /** 返回 false 的行只读展示，不允许进入批量命令选择集。 */
+  isRowSelectable?: (record: T) => boolean;
 }
 
 /**
@@ -199,6 +201,7 @@ function ListPage<T>({
   selectMode,
   selectedRowKeys,
   onSelectChange,
+  isRowSelectable,
 }: ListPageProps<T>) {
   usePageTabTitle(title);
   const userId = useUserStore((state) => state.userInfo?.id);
@@ -296,9 +299,12 @@ function ListPage<T>({
             onChange: (keys) => onSelectChange?.(keys),
             columnWidth: 36,
             fixed: true,
+            getCheckboxProps: isRowSelectable
+              ? (record) => ({ disabled: !isRowSelectable(record) })
+              : undefined,
           }
         : undefined,
-    [selectMode, selectedRowKeys, onSelectChange],
+    [isRowSelectable, selectMode, selectedRowKeys, onSelectChange],
   );
 
   /** 点击行选中/取消选中 */
@@ -307,6 +313,7 @@ function ListPage<T>({
       selectMode && onSelectChange
         ? (record: T) => ({
             onClick: () => {
+              if (isRowSelectable && !isRowSelectable(record)) return;
               const key =
                 typeof rowKey === 'function' ? rowKey(record) : String(record[rowKey as keyof T]);
               const prevKeys = selectedRowKeys ?? [];
@@ -325,7 +332,7 @@ function ListPage<T>({
             },
           })
         : undefined,
-    [selectMode, rowKey, onSelectChange, selectedRowKeys],
+    [isRowSelectable, selectMode, rowKey, onSelectChange, selectedRowKeys],
   );
 
   // 注入序号列 + 业务列（pageNum/pageSize 变化时更新序号公式）

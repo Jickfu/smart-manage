@@ -11,6 +11,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -25,7 +26,7 @@ class AuthorizationStateHelperTests {
 
     @Test
     void refreshUsersDoesNotTerminateSessions() {
-        when(cacheHelper.<Long, Object>getCache(anyString(), any())).thenReturn(cache);
+        when(cacheHelper.<Long, Object>getCache(anyString(), any(), anyLong())).thenReturn(cache);
         try (MockedStatic<StpUtil> stpUtil = mockStatic(StpUtil.class)) {
             helper.refreshUsers(List.of(1L, 1L));
 
@@ -36,7 +37,7 @@ class AuthorizationStateHelperTests {
 
     @Test
     void terminateUsersRefreshesCacheAndLogsOutEveryDistinctUser() {
-        when(cacheHelper.<Long, Object>getCache(anyString(), any())).thenReturn(cache);
+        when(cacheHelper.<Long, Object>getCache(anyString(), any(), anyLong())).thenReturn(cache);
         try (MockedStatic<StpUtil> stpUtil = mockStatic(StpUtil.class)) {
             helper.terminateUsers(List.of(1L, 1L, 2L));
 

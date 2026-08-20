@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.sys.base.user.mapper.UserRoleMapper">
+    <select id="selectByPermissionId" resultType="sm.domain.sys.base.user.model.entity.UserRoleEntity">
+        SELECT DISTINCT a.user_id, a.org_id
+        FROM t_sys_user_role a
+        INNER JOIN t_sys_role_perms b ON b.role_id = a.role_id
+        WHERE b.permission_id = #{permissionId}
+    </select>
+    <select id="selectOrgIdsByUserId" resultType="java.lang.Long">
+        SELECT DISTINCT org_id FROM t_sys_user_role WHERE user_id = #{userId}
+    </select>
+</mapper>

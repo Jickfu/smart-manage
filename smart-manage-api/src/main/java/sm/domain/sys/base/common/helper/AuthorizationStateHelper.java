@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.List;
 import sm.system.auth.SessionTerminationContext;
 import sm.system.auth.SessionTerminationReason;
 
@@ -27,8 +28,16 @@ public class AuthorizationStateHelper {
 	/** 只刷新共享授权缓存，保留现有登录会话。 */
 	public void refreshUsers(Collection<Long> userIds) {
 		for (Long userId : new LinkedHashSet<>(userIds)) {
-			cacheHelper.<Long, Object>getCache(BaseCacheName.USER_INFO, CacheType.REMOTE).remove(userId);
+			cacheHelper.<Long, Object>getCache(BaseCacheName.USER_INFO, CacheType.REMOTE, 3600).remove(userId);
+			userRoleMapper.selectOrgIdsByUserId(userId).stream()
+					.forEach(orgId -> refreshUserAuthorization(userId, orgId));
 		}
+	}
+
+	/** 精确刷新用户在指定组织下的角色与权限快照。 */
+	public void refreshUserAuthorization(Long userId, Long orgId) {
+		cacheHelper.<String, Object>getCache(BaseCacheName.USER_AUTHORIZATION, CacheType.REMOTE, 1800)
+				.remove(userId + ":" + orgId);
 	}
 
 	/** 安全事件先刷新授权缓存，再终止用户的全部会话。 */
@@ -45,11 +54,22 @@ public class AuthorizationStateHelper {
 	}
 
 	public void refreshRoleUsers(Long roleId) {
-		refreshUsers(userRoleMapper.selectList(new LambdaQueryWrapper<UserRoleEntity>()
-				.select(UserRoleEntity::getUserId)
-				.eq(UserRoleEntity::getRoleId, roleId))
-				.stream()
-				.map(UserRoleEntity::getUserId)
-				.toList());
+		refreshScopes(roleUserScopes(roleId));
+	}
+
+	public List<UserRoleEntity> roleUserScopes(Long roleId) {
+		return userRoleMapper.selectList(new LambdaQueryWrapper<UserRoleEntity>()
+				.select(UserRoleEntity::getUserId, UserRoleEntity::getOrgId)
+				.eq(UserRoleEntity::getRoleId, roleId));
+	}
+
+	public List<UserRoleEntity> permissionUserScopes(Long permissionId) {
+		return userRoleMapper.selectByPermissionId(permissionId);
+	}
+
+	public void refreshScopes(Collection<UserRoleEntity> relations) {
+		for (UserRoleEntity relation : relations) {
+			refreshUserAuthorization(relation.getUserId(), relation.getOrgId());
+		}
 	}
 }

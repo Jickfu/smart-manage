@@ -119,12 +119,16 @@ public class RoleService {
 
 	@BizLog("保存角色")
 	public Long save(RoleSaveForm form) {
-		return txService.save(form);
+		Long roleId = txService.save(form);
+		if (form.getId() != null) authorizationStateHelper.refreshRoleUsers(roleId);
+		return roleId;
 	}
 
 	@BizLog("删除角色")
 	public void deleteById(Long id) {
+		var affectedUsers = authorizationStateHelper.roleUserScopes(id);
 		txService.deleteById(id);
+		authorizationStateHelper.refreshScopes(affectedUsers);
 	}
 
 	@BizLog("分配角色权限")

@@ -25,9 +25,9 @@ class CacheHelperTests {
 		when(cacheManager.getOrCreateCache(any(QuickConfig.class))).thenReturn(localCache, remoteCache);
 		CacheHelper cacheHelper = new CacheHelper(cacheManager);
 
-		Cache<Object, Object> firstLocal = cacheHelper.getCache("same-name", CacheType.LOCAL);
-		Cache<Object, Object> secondLocal = cacheHelper.getCache("same-name", CacheType.LOCAL);
-		Cache<Object, Object> remote = cacheHelper.getCache("same-name", CacheType.REMOTE);
+		Cache<Object, Object> firstLocal = cacheHelper.getCache("same-name", CacheType.LOCAL, 60);
+		Cache<Object, Object> secondLocal = cacheHelper.getCache("same-name", CacheType.LOCAL, 60);
+		Cache<Object, Object> remote = cacheHelper.getCache("same-name", CacheType.REMOTE, 60);
 
 		assertSame(firstLocal, secondLocal);
 		assertNotSame(firstLocal, remote);

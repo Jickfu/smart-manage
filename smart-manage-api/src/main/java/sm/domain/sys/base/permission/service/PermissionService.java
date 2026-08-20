@@ -22,6 +22,7 @@ import sm.system.response.ResultEnum;
 import java.util.List;
 import java.util.Map;
 import sm.system.query.ListSqlQuery;
+import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 
 /**
  * @author Chekfu
@@ -37,6 +38,7 @@ public class PermissionService {
 			"appName", ListSqlQuery.string("c.name", false));
 	private final PermissionMapper mapper;
 	private final PermissionTxService txService;
+	private final AuthorizationStateHelper authorizationStateHelper;
 
 	public PageData<PermissionListVO> listPage(PermissionListForm form) {
 		Page<PermissionListVO> result = mapper.selectListPage(
@@ -98,11 +100,17 @@ public class PermissionService {
 
 	@BizLog("保存权限")
 	public Long save(PermissionSaveForm form) {
-		return txService.save(form);
+		var affectedUsers = form.getId() == null ? List.<sm.domain.sys.base.user.model.entity.UserRoleEntity>of()
+				: authorizationStateHelper.permissionUserScopes(form.getId());
+		Long permissionId = txService.save(form);
+		authorizationStateHelper.refreshScopes(affectedUsers);
+		return permissionId;
 	}
 
 	@BizLog("删除权限")
 	public void deleteById(Long id) {
+		var affectedUsers = authorizationStateHelper.permissionUserScopes(id);
 		txService.deleteById(id);
+		authorizationStateHelper.refreshScopes(affectedUsers);
 	}
 }

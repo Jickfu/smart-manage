@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -80,7 +81,7 @@ class BasicDataTxServiceTests {
             return 1;
         });
         when(itemMapper.updateById(isA(BasicDataItemEntity.class))).thenReturn(1);
-        when(cacheHelper.getCache(any(), any())).thenReturn(mock(Cache.class));
+        when(cacheHelper.getCache(any(), any(), anyLong())).thenReturn(mock(Cache.class));
 
         txService.saveItem(saveForm(10L));
 
@@ -104,7 +105,7 @@ class BasicDataTxServiceTests {
             inserted.setId(12L);
             return 1;
         });
-        when(cacheHelper.getCache(any(), any())).thenReturn(mock(Cache.class));
+        when(cacheHelper.getCache(any(), any(), anyLong())).thenReturn(mock(Cache.class));
         BasicDataItemSaveForm form = saveForm(null);
         form.setNumber(null);
 
@@ -132,7 +133,7 @@ class BasicDataTxServiceTests {
         when(itemMapper.selectById(10L)).thenReturn(existing);
         when(itemMapper.selectCount(any())).thenReturn(0L);
         when(itemMapper.updateById(existing)).thenReturn(1);
-        when(cacheHelper.getCache(any(), any())).thenReturn(mock(Cache.class));
+        when(cacheHelper.getCache(any(), any(), anyLong())).thenReturn(mock(Cache.class));
         BasicDataItemSaveForm form = saveForm(null);
         form.setId(10L);
         form.setVersion(2);
@@ -157,7 +158,7 @@ class BasicDataTxServiceTests {
             assertTrue(inserted.getEnabled());
             return 1;
         });
-        when(cacheHelper.getCache(any(), any())).thenReturn(mock(Cache.class));
+        when(cacheHelper.getCache(any(), any(), anyLong())).thenReturn(mock(Cache.class));
 
         txService.saveItem(saveForm(null));
 

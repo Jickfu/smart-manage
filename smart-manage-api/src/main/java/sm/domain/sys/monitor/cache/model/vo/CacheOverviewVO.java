@@ -11,6 +11,7 @@ import java.util.List;
 @Builder
 @Schema(description = "应用缓存概览")
 public class CacheOverviewVO {
+    private String instanceId;
     private List<ManagedCacheVO> caches;
     private LocalDateTime collectedAt;
 }

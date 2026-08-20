@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Key } from 'react';
-import { App, Button, Tag, Tree } from 'antd';
+import { Alert, App, Button, Tag, Tree } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -17,25 +17,6 @@ import { cacheAccess } from './permissions';
 import { cacheQueryKeys } from './queryKeys';
 import { scopeNodeKey, scopeNodeKeyFromFilter, toTreeNode } from './scopeTree';
 import type { CacheEntry, CacheEntryKey, CacheScopeFilter } from './types';
-import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
-
-const columnFeatures: ListColumnFeatures = {
-  key: { label: 'Key', filter: { type: 'string' }, sorter: true },
-  cacheDisplayName: { label: '缓存', filter: { type: 'string' } },
-  storage: {
-    label: '存储位置',
-    filter: {
-      type: 'enum',
-      options: [
-        { label: '本地', value: 'LOCAL' },
-        { label: 'Redis', value: 'REDIS' },
-      ],
-    },
-  },
-  type: { label: '类型', filter: { type: 'string' } },
-  ttl: { label: 'TTL', filter: { type: 'number' }, sorter: true },
-  memoryBytes: { label: '内存', filter: { type: 'number' }, sorter: true },
-};
 
 function entryKey(entry: CacheEntry): CacheEntryKey {
   return { storage: entry.storage, cacheName: entry.cacheName, key: entry.key };
@@ -83,6 +64,10 @@ export default function CacheManagementPage(props: PageComponentProps) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: cacheQueryKeys.all }),
   });
   const selectedEntries = list.records.filter((entry) => selectedRowKeys.includes(entry.identity));
+  const categoryOnly =
+    scope.scopeType === 'INFRASTRUCTURE' &&
+    scope.resourceKey != null &&
+    scope.resourceKey !== 'monitor-instances';
   const confirmDelete = (entries: CacheEntry[]) =>
     modal.confirm({
       title: `删除 ${entries.length} 个缓存条目？`,
@@ -159,6 +144,15 @@ export default function CacheManagementPage(props: PageComponentProps) {
         pageSize={list.pageSize}
         quickSearchPlaceholder="搜索 Key 或缓存名称"
         filterSummary={scope.scopeType === 'ALL' ? undefined : scopeLabel}
+        toolbarExtra={
+          categoryOnly ? (
+            <Alert
+              type="info"
+              showIcon
+              title="该类别包含安全敏感数据，仅登记 Key 规则，不扫描或展示具体条目。"
+            />
+          ) : undefined
+        }
         treePanel={
           <ListTreePanel>
             <Tree
@@ -166,25 +160,21 @@ export default function CacheManagementPage(props: PageComponentProps) {
               key={scopeTreeQuery.data ? 'scope-tree-loaded' : 'scope-tree-loading'}
               blockNode
               treeData={treeData}
-              defaultExpandedKeys={[
-                'all',
-                ...(scopeTreeQuery.data ?? [])
-                  .filter((item) => item.type === 'DOMAIN')
-                  .map(scopeNodeKey),
-              ]}
+              defaultExpandedKeys={['all', ...(scopeTreeQuery.data ?? []).map(scopeNodeKey)]}
               selectedKeys={[scopeNodeKeyFromFilter(scope)]}
               onSelect={(_, info) => {
                 const selectedKey = String(info.node.key);
-                if (selectedKey.startsWith('app:')) {
-                  const [, domainNumber, appNumber] = selectedKey.split(':');
-                  setScope({ scopeType: 'APP', domainNumber, appNumber });
-                } else if (selectedKey.startsWith('domain:')) {
+                if (selectedKey.startsWith('cache:')) {
+                  setScope({ scopeType: 'CACHE', resourceKey: selectedKey.slice('cache:'.length) });
+                } else if (selectedKey.startsWith('infrastructure:')) {
                   setScope({
-                    scopeType: 'DOMAIN',
-                    domainNumber: selectedKey.slice('domain:'.length),
+                    scopeType: 'INFRASTRUCTURE',
+                    resourceKey: selectedKey.slice('infrastructure:'.length),
                   });
-                } else if (selectedKey === 'other') {
-                  setScope({ scopeType: 'OTHER' });
+                } else if (selectedKey === 'application') {
+                  setScope({ scopeType: 'APPLICATION' });
+                } else if (selectedKey === 'infrastructure') {
+                  setScope({ scopeType: 'INFRASTRUCTURE' });
                 } else {
                   setScope(ALL_SCOPE);
                 }
@@ -226,12 +216,11 @@ export default function CacheManagementPage(props: PageComponentProps) {
         onPageChange={list.onPageChange}
         rowKey="identity"
         columns={columns}
-        columnFeatures={columnFeatures}
-        {...list.columnQueryProps}
         dataSource={list.records}
         selectMode="checkbox"
         selectedRowKeys={selectedRowKeys}
         onSelectChange={setSelectedRowKeys}
+        isRowSelectable={(record) => Boolean(record.cacheName)}
       />
     </>
   );

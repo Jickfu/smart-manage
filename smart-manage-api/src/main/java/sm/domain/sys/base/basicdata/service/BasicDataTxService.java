@@ -337,6 +337,6 @@ class BasicDataTxService {
 
     private void removeOptionsCache(String number) {
         if (number != null) cacheHelper.<String, List<BasicDataOptionVO>>getCache(
-                BaseCacheName.BASIC_DATA_OPTIONS, CacheType.REMOTE).remove(number);
+                BaseCacheName.BASIC_DATA_OPTIONS, CacheType.REMOTE, 1800).remove(number);
     }
 }

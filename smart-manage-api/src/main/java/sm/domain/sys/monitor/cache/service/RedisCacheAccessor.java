@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.regex.Pattern;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 
 /** 缓存模块内部的 Redis 原始访问器，不作为公开业务入口。 */
 @Component
@@ -71,19 +73,49 @@ class RedisCacheAccessor {
         });
     }
 
-    List<RedisEntry> scanEntries() {
+    /** 只扫描缓存目录登记的受控前缀，禁止退化为全库扫描。 */
+    List<RedisEntry> scanEntries(Collection<String> prefixes) {
         return redisTemplate.execute((RedisCallback<List<RedisEntry>>) connection -> {
             List<RedisEntry> records = new ArrayList<>();
-            try (Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().match("*").count(500).build())) {
-                while (cursor.hasNext()) {
-                    byte[] keyBytes = cursor.next();
-                    String key = new String(keyBytes, StandardCharsets.UTF_8);
-                DataType dataType = connection.type(keyBytes);
-                Long ttl = connection.ttl(keyBytes);
-                Long memoryBytes = readMemoryUsage(connection, keyBytes);
+            LinkedHashSet<String> visited = new LinkedHashSet<>();
+            for (String prefix : prefixes) {
+                try (Cursor<byte[]> cursor = connection.scan(
+                        ScanOptions.scanOptions().match(prefix + "*").count(200).build())) {
+                    while (cursor.hasNext()) {
+                        byte[] keyBytes = cursor.next();
+                        String key = new String(keyBytes, StandardCharsets.UTF_8);
+                        if (!visited.add(key)) continue;
+                        DataType dataType = connection.type(keyBytes);
+                        Long ttl = connection.ttl(keyBytes);
+                        Long memoryBytes = readMemoryUsage(connection, keyBytes);
                     records.add(new RedisEntry(key, dataType == null ? "unknown" : dataType.code(),
                             ttl == null ? -2 : ttl, memoryBytes, !isSensitiveKey(key)));
+                    }
                 }
+            }
+            return records;
+        });
+    }
+
+    /** 应用实例注册通过稳定索引派生具体 Key，无需扫描 Redis DB。 */
+    List<RedisEntry> monitorInstanceEntries() {
+        String indexKey = "sm:monitor:instances";
+        return redisTemplate.execute((RedisCallback<List<RedisEntry>>) connection -> {
+            LinkedHashSet<String> keys = new LinkedHashSet<>();
+            keys.add(indexKey);
+            // 该索引由 StringRedisTemplate 写入，必须读取原始字节，不能使用业务 RedisTemplate 的 JSON Value Serializer。
+            var instanceIds = connection.zSetCommands().zRange(bytes(indexKey), 0, -1);
+            if (instanceIds != null) {
+                instanceIds.forEach(instanceId -> keys.add("sm:monitor:instance:" + text(instanceId)));
+            }
+            List<RedisEntry> records = new ArrayList<>();
+            for (String key : keys) {
+                byte[] keyBytes = bytes(key);
+                DataType dataType = connection.type(keyBytes);
+                if (dataType == null || dataType == DataType.NONE) continue;
+                Long ttl = connection.ttl(keyBytes);
+                records.add(new RedisEntry(key, dataType.code(), ttl == null ? -2 : ttl,
+                        readMemoryUsage(connection, keyBytes), true));
             }
             return records;
         });

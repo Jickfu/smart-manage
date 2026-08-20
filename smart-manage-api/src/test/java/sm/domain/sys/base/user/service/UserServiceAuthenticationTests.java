@@ -95,6 +95,7 @@ class UserServiceAuthenticationTests {
 				mock(MenuService.class),
 				mock(PermissionService.class),
 				mock(AuthorizationStateHelper.class),
+				mock(UserCacheAccessor.class),
 				mock(UserConverter.class),
 				mock(CurrentUserContext.class));
 
@@ -121,6 +122,7 @@ class UserServiceAuthenticationTests {
 				mock(MenuService.class),
 				mock(PermissionService.class),
 				mock(AuthorizationStateHelper.class),
+				mock(UserCacheAccessor.class),
 				mock(UserConverter.class),
 				currentUserContext);
 	}

@@ -11,7 +11,6 @@ import java.util.List;
 public class CacheScopeVO {
     private String type;
     private String name;
-    private String domainNumber;
-    private String appNumber;
+    private String resourceKey;
     private List<CacheScopeVO> children;
 }

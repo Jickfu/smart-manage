@@ -17,6 +17,9 @@ public class ManagedCacheVO {
     private Long estimatedSize;
     private boolean statisticsAvailable;
     private boolean currentNodeOnly;
+    private String state;
+    private java.time.LocalDateTime statStartedAt;
+    private java.time.LocalDateTime statEndedAt;
     private long getCount;
     private long hitCount;
     private long missCount;

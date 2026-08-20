@@ -7,6 +7,9 @@ export interface ManagedCache {
   estimatedSize?: number;
   statisticsAvailable: boolean;
   currentNodeOnly: boolean;
+  state: 'NOT_CREATED' | 'UNAVAILABLE' | 'IDLE' | 'ACTIVE';
+  statStartedAt?: string;
+  statEndedAt?: string;
   getCount: number;
   hitCount: number;
   missCount: number;
@@ -36,22 +39,21 @@ export interface CacheEntryKey {
 }
 
 export interface CacheOverview {
+  instanceId: string;
   caches: ManagedCache[];
   collectedAt: string;
 }
 
 export interface CacheScope {
-  type: 'DOMAIN' | 'APP' | 'OTHER';
+  type: 'APPLICATION' | 'CACHE' | 'INFRASTRUCTURE';
   name: string;
-  domainNumber?: string;
-  appNumber?: string;
+  resourceKey?: string;
   children: CacheScope[];
 }
 
 export interface CacheScopeFilter {
-  scopeType: 'ALL' | 'DOMAIN' | 'APP' | 'OTHER';
-  domainNumber?: string;
-  appNumber?: string;
+  scopeType: 'ALL' | 'APPLICATION' | 'CACHE' | 'INFRASTRUCTURE';
+  resourceKey?: string;
 }
 
 export interface CacheRuntime {

@@ -10,6 +10,5 @@ import sm.system.form.PageForm;
 public class CacheEntryListForm extends PageForm {
     private String keyword;
     private String scopeType;
-    private String domainNumber;
-    private String appNumber;
+    private String resourceKey;
 }

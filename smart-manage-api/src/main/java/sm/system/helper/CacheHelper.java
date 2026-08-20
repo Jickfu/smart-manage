@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.time.Duration;
+import com.alicp.jetcache.anno.CacheConsts;
 
 /**
  * 统一缓存助手 —— 封装 JetCache CacheManager，提供懒加载的缓存获取。
@@ -31,13 +33,20 @@ public class CacheHelper {
      * @param cacheType 缓存类型，需与 {@code @Cached(cacheType = ...)} 一致
      */
     @SuppressWarnings("unchecked")
-    public <K, V> Cache<K, V> getCache(String name, CacheType cacheType) {
-        CacheIdentity identity = new CacheIdentity(name, cacheType);
+    public <K, V> Cache<K, V> getCache(String name, CacheType cacheType, long expireSeconds) {
+        CacheIdentity identity = new CacheIdentity(name, cacheType, expireSeconds);
         return (Cache<K, V>) map.computeIfAbsent(identity,
                 ignored -> cacheManager.getOrCreateCache(
-                        QuickConfig.newBuilder(name).cacheType(cacheType).build()));
+                        QuickConfig.newBuilder(name).cacheType(cacheType)
+                                .expire(Duration.ofSeconds(expireSeconds)).build()));
     }
 
-    private record CacheIdentity(String name, CacheType cacheType) {
+    /** 只读取已经由业务创建的缓存，监控调用不得改变缓存实例及其 TTL。 */
+    @SuppressWarnings("unchecked")
+    public <K, V> Cache<K, V> findCache(String name) {
+        return (Cache<K, V>) cacheManager.getCache(CacheConsts.DEFAULT_AREA, name);
+    }
+
+    private record CacheIdentity(String name, CacheType cacheType, long expireSeconds) {
     }
 }

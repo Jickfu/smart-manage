@@ -286,6 +286,11 @@ class UserTxService {
             throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
         }
         Long orgId = currentUserContext.getOrgId();
+        if (userAssignmentMapper.selectCount(new LambdaQueryWrapper<UserAssignmentEntity>()
+                .eq(UserAssignmentEntity::getUserId, form.getUserId())
+                .eq(UserAssignmentEntity::getOrgId, orgId)) == 0) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "只能为用户任职组织分配角色");
+        }
         userRoleMapper.delete(new LambdaQueryWrapper<UserRoleEntity>()
                 .eq(UserRoleEntity::getUserId, form.getUserId())
                 .eq(UserRoleEntity::getOrgId, orgId));

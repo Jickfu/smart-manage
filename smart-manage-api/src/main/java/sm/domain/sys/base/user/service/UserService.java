@@ -2,8 +2,6 @@ package sm.domain.sys.base.user.service;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.dev33.satoken.stp.parameter.SaLoginParameter;
-import com.alicp.jetcache.anno.CacheType;
-import com.alicp.jetcache.anno.Cached;
 import com.alicp.jetcache.anno.CacheInvalidate;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -60,7 +58,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Comparator;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -86,6 +83,7 @@ public class UserService {
 	private final MenuService menuService;
 	private final PermissionService permissionService;
 	private final AuthorizationStateHelper authorizationStateHelper;
+	private final UserCacheAccessor userCacheAccessor;
 	private final UserConverter converter;
 	private final CurrentUserContext currentUserContext;
 
@@ -149,7 +147,7 @@ public class UserService {
 	@BizLog("分配用户角色")
 	public void assignRoles(UserRoleAssignForm form) {
 		txService.assignRoles(form);
-		authorizationStateHelper.refreshUsers(List.of(form.getUserId()));
+		authorizationStateHelper.refreshUserAuthorization(form.getUserId(), currentUserContext.getOrgId());
 	}
 
 	/** 查询用户及当前组织下的角色明细。 */
@@ -556,14 +554,8 @@ public class UserService {
 	}
 
 	/** Redis 远程缓存读取；仅供其他 Spring Bean 外部调用，确保缓存代理生效。 */
-	@Cached(cacheType = CacheType.REMOTE, name = BaseCacheName.USER_INFO,
-			key = "#id", expire = 1, timeUnit = TimeUnit.HOURS)
 	public UserEntity requireUser(Long id) {
-		UserEntity entity = mapper.selectById(id);
-		if (entity == null) {
-			throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
-		}
-		return entity;
+		return userCacheAccessor.requireUser(id);
 	}
 
 	/**

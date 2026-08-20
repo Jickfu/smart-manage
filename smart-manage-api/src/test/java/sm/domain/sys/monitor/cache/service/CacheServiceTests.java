@@ -2,189 +2,110 @@ package sm.domain.sys.monitor.cache.service;
 
 import com.alicp.jetcache.Cache;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.redis.RedisSystemException;
-import org.springframework.data.redis.connection.RedisConnection;
+import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
-import sm.domain.sys.base.app.model.vo.AppVO;
-import sm.domain.sys.base.app.model.vo.DomainAppsVO;
-import sm.domain.sys.base.app.service.AppService;
+import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
+import sm.domain.sys.monitor.cache.model.form.CacheEntryListForm;
 import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
 import tools.jackson.databind.json.JsonMapper;
-import sm.domain.sys.base.common.constant.BaseCacheName;
-import sm.domain.sys.base.common.constant.BaseKeyPrefix;
-import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
-import sm.domain.sys.monitor.cache.model.form.CacheEntryListForm;
-import sm.domain.sys.monitor.cache.model.vo.CacheRuntimeVO;
-import sm.system.response.ResultEnum;
 
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.when;
-
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 class CacheServiceTests {
-
     private final CacheHelper cacheHelper = mock(CacheHelper.class);
     private final CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
     private final RedisCacheAccessor redisCacheAccessor = mock(RedisCacheAccessor.class);
-    private final AppService appService = mock(AppService.class);
     private final CacheService service = new CacheService(
-            cacheHelper, currentUserContext, redisCacheAccessor, JsonMapper.builder().build(), appService);
+            cacheHelper, currentUserContext, redisCacheAccessor, JsonMapper.builder().build());
 
     @Test
-    void clearMustRejectCachesOutsideManagedCatalog() {
-        assertThrows(BizException.class, () -> service.clear("unmanaged-cache"));
-        verify(currentUserContext).checkAdministrator();
+    void overviewMustNotCreateCacheInstances() {
+        service.overview();
+
+        verify(cacheHelper, times(4)).findCache(any());
+        verify(cacheHelper, never()).getCache(any(), any(), anyLong());
     }
 
     @Test
-    void credentialBearingFileConfigMustNotBeInManagedCacheCatalog() {
-        CacheEntryKeyForm form = new CacheEntryKeyForm();
-        form.setStorage("LOCAL");
-        form.setCacheName(BaseKeyPrefix.VALUE + "file-config");
-        form.setKey("default");
+    void scopeTreeOnlyContainsRegisteredResources() {
+        var tree = service.scopeTree();
 
-        BizException exception = assertThrows(BizException.class, () -> service.value(form));
-
-        assertEquals(ResultEnum.PARAM_ERROR.getCode(), exception.getCode());
-        verify(currentUserContext).checkAdministrator();
+        assertEquals(List.of("应用缓存", "基础设施缓存"), tree.stream().map(item -> item.getName()).toList());
+        assertEquals(List.of("用户信息", "用户授权", "系统参数", "基础数据选项"),
+                tree.getFirst().getChildren().stream().map(item -> item.getName()).toList());
     }
 
     @Test
-    void runtimeMustCheckAdministratorBeforeDelegating() {
-        CacheRuntimeVO runtime = CacheRuntimeVO.builder().available(true).build();
-        when(redisCacheAccessor.runtime()).thenReturn(runtime);
+    void applicationListScansOnlyRegisteredPrefixes() {
+        when(redisCacheAccessor.scanEntries(any())).thenReturn(List.of(
+                new RedisCacheAccessor.RedisEntry(BaseCacheName.SYS_PARAM + "all", "string", 60, 100L, true)));
+        CacheEntryListForm form = form("APPLICATION");
 
-        assertEquals(runtime, service.runtime());
+        var result = service.listPage(form);
 
-        verify(currentUserContext).checkAdministrator();
-        verify(redisCacheAccessor).runtime();
+        assertEquals(List.of(BaseCacheName.SYS_PARAM + "all"),
+                result.getRecords().stream().map(item -> item.getKey()).toList());
+        verify(redisCacheAccessor).scanEntries(argThat(prefixes -> prefixes.size() == 4 && !prefixes.contains("")));
     }
 
     @Test
-    void unsupportedMemoryCommandMustDegradeWithoutRepeatedExecution() {
-        RedisConnection connection = mock(RedisConnection.class);
-        byte[] keyBytes = "example".getBytes();
-        when(connection.execute(eq("MEMORY"), any(byte[].class), same(keyBytes)))
-                .thenThrow(new RedisSystemException("Error in execution",
-                        new RuntimeException("ERR unknown command 'MEMORY'")));
+    void sensitiveInfrastructureCategoryDoesNotScanRedis() {
+        CacheEntryListForm form = form("INFRASTRUCTURE");
+        form.setResourceKey("login-sessions");
 
-        RedisCacheAccessor accessor = new RedisCacheAccessor(mock(org.springframework.data.redis.core.RedisTemplate.class));
-        assertNull(accessor.readMemoryUsage(connection, keyBytes));
-        assertNull(accessor.readMemoryUsage(connection, keyBytes));
+        assertEquals(0, service.listPage(form).getTotal());
 
-        verify(connection, times(1)).execute(eq("MEMORY"), any(byte[].class), same(keyBytes));
+        verifyNoInteractions(redisCacheAccessor);
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void managedSystemParameterValueMustUseJetCacheDecoding() {
+    void managedValueUsesExistingCacheWithoutCreatingIt() {
         Cache<Object, Object> cache = mock(Cache.class);
-        when(cacheHelper.getCache(BaseCacheName.SYS_PARAM, com.alicp.jetcache.anno.CacheType.REMOTE))
-                .thenReturn(cache);
-        when(cache.get("all")).thenReturn(Map.of("SCRIPT_CONSOLE_TIMEOUT_SECONDS", "30"));
+        when(cacheHelper.findCache(BaseCacheName.SYS_PARAM)).thenReturn(cache);
+        when(cache.get("all")).thenReturn(Map.of("timeout", "30"));
         CacheEntryKeyForm form = new CacheEntryKeyForm();
         form.setStorage("REDIS");
         form.setCacheName(BaseCacheName.SYS_PARAM);
         form.setKey(BaseCacheName.SYS_PARAM + "all");
 
-        var result = service.value(form);
-
-        assertEquals("object", result.getType());
-        assertEquals(false, result.getItems().getFirst().isBase64());
-        assertEquals("{\"SCRIPT_CONSOLE_TIMEOUT_SECONDS\":\"30\"}", result.getItems().getFirst().getValue());
-        verify(cache).get("all");
-        verify(redisCacheAccessor, org.mockito.Mockito.never()).value(any());
+        assertEquals("object", service.value(form).getType());
+        verify(cacheHelper, never()).getCache(any(), any(), anyLong());
     }
 
     @Test
-    void managedSensitiveRemoteCacheMustNotBeDecoded() {
+    void infrastructureValueWithoutCacheNameUsesRawRedisAccessor() {
         CacheEntryKeyForm form = new CacheEntryKeyForm();
         form.setStorage("REDIS");
-        form.setCacheName(BaseCacheName.USER_INFO);
-        form.setKey(BaseCacheName.USER_INFO + "1");
+        form.setKey("sm:monitor:instances");
 
-        BizException exception = assertThrows(BizException.class, () -> service.value(form));
+        service.value(form);
 
-        assertEquals(ResultEnum.PERMISSION_ERROR.getCode(), exception.getCode());
-        verify(redisCacheAccessor, org.mockito.Mockito.never()).value(any());
+        verify(redisCacheAccessor).value("sm:monitor:instances");
     }
 
     @Test
-    void scopeTreeMustUseDomainAndApplicationCatalog() {
-        when(appService.getAllDomainApps()).thenReturn(List.of(systemDomain()));
+    void deletingInfrastructureKeyIsRejected() {
+        CacheEntryKeyForm form = new CacheEntryKeyForm();
+        form.setStorage("REDIS");
+        form.setKey("sm:monitor:instances");
 
-        var tree = service.scopeTree();
-
-        assertEquals(List.of("系统服务", "其他缓存"), tree.stream().map(item -> item.getName()).toList());
-        assertEquals(List.of("系统管理"), tree.getFirst().getChildren().stream()
-                .map(item -> item.getName()).toList());
+        assertThrows(BizException.class, () -> service.delete(List.of(form)));
+        verify(redisCacheAccessor, never()).delete(any());
     }
 
-    @Test
-    void applicationScopeMustFilterRedisKeysByDomainAndApplicationPrefix() {
-        when(appService.getAllDomainApps()).thenReturn(List.of(systemDomain()));
-        when(redisCacheAccessor.scanEntries()).thenReturn(List.of(
-                new RedisCacheAccessor.RedisEntry("sys:base:sys-paramall", "string", 60, 100L, true),
-                new RedisCacheAccessor.RedisEntry("satoken:login:1", "string", 60, 50L, false)));
-        CacheEntryListForm form = listForm("APP");
-        form.setDomainNumber("sys");
-        form.setAppNumber("base");
-
-        var result = service.listPage(form);
-
-        assertEquals(List.of("sys:base:sys-paramall"), result.getRecords().stream()
-                .map(item -> item.getKey()).toList());
-    }
-
-    @Test
-    void otherScopeMustContainKeysOutsideRegisteredApplications() {
-        when(appService.getAllDomainApps()).thenReturn(List.of(systemDomain()));
-        when(redisCacheAccessor.scanEntries()).thenReturn(List.of(
-                new RedisCacheAccessor.RedisEntry("sys:unknown:item", "string", 60, 100L, true),
-                new RedisCacheAccessor.RedisEntry("satoken:login:1", "string", 60, 50L, false)));
-
-        var result = service.listPage(listForm("OTHER"));
-
-        assertEquals(List.of("satoken:login:1", "sys:unknown:item"), result.getRecords().stream()
-                .map(item -> item.getKey()).toList());
-    }
-
-    @Test
-    void managedCacheNamesMustUseDomainAndApplicationPrefix() {
-        assertEquals("sys:base:", BaseKeyPrefix.VALUE);
-        assertEquals(true, BaseCacheName.USER_INFO.startsWith(BaseKeyPrefix.VALUE));
-        assertEquals(true, BaseCacheName.SYS_PARAM.startsWith(BaseKeyPrefix.VALUE));
-        assertEquals(true, BaseCacheName.BASIC_DATA_OPTIONS.startsWith(BaseKeyPrefix.VALUE));
-    }
-
-    private CacheEntryListForm listForm(String scopeType) {
+    private CacheEntryListForm form(String scopeType) {
         CacheEntryListForm form = new CacheEntryListForm();
         form.setPageNum(1);
         form.setPageSize(20);
         form.setScopeType(scopeType);
         return form;
-    }
-
-    private DomainAppsVO systemDomain() {
-        AppVO application = new AppVO();
-        application.setNumber("base");
-        application.setName("系统管理");
-        DomainAppsVO domain = new DomainAppsVO();
-        domain.setNumber("sys");
-        domain.setName("系统服务");
-        domain.setAppList(List.of(application));
-        return domain;
     }
 }

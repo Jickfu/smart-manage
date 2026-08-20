@@ -1,15 +1,22 @@
 package sm.domain.sys.monitor.cache.service;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.connection.DataType;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisZSetCommands;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -56,5 +63,24 @@ class RedisCacheAccessorTests {
 
         assertEquals(2, result.size());
         assertEquals(1, RedisCacheAccessor.asList(result.get(1), "unexpected").size());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void monitorInstanceIndexMustBeReadAsRawStringBytes() {
+        RedisConnection connection = mock(RedisConnection.class);
+        RedisZSetCommands zSetCommands = mock(RedisZSetCommands.class);
+        when(redisTemplate.execute(any(RedisCallback.class))).thenAnswer(invocation ->
+                ((RedisCallback<Object>) invocation.getArgument(0)).doInRedis(connection));
+        when(connection.zSetCommands()).thenReturn(zSetCommands);
+        when(zSetCommands.zRange(any(byte[].class), any(Long.class), any(Long.class)))
+                .thenReturn(Set.of("instance1".getBytes()));
+        when(connection.type(any(byte[].class))).thenReturn(DataType.ZSET);
+        when(connection.ttl(any(byte[].class))).thenReturn(-1L);
+
+        List<RedisCacheAccessor.RedisEntry> entries = accessor.monitorInstanceEntries();
+
+        assertEquals(2, entries.size());
+        assertTrue(entries.stream().anyMatch(entry -> "sm:monitor:instance:instance1".equals(entry.key())));
     }
 }
