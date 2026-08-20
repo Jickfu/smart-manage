@@ -6,13 +6,10 @@
 
 统计只存在于目标实例内存，实例重启或管理员清空后不可恢复。首版不持久化、不关联 Trace ID、不跨实例聚合，也不开放 Druid StatViewServlet。
 
-## 接口和权限
+## 访问边界
 
-- 快照：`GET /sys/monitor/slow-sql/snapshot?instanceId=...`；
-- 调整阈值：`POST /sys/monitor/slow-sql/threshold`；
-- 清空统计：`POST /sys/monitor/slow-sql/clear`；
-- 权限分别为 `sys:monitor:slow-sql:access`、`sys:monitor:slow-sql:config` 和 `sys:monitor:slow-sql:clear`；
-- 三项能力均由公开 Service 复核当前账号为 `administrator`；
+- 快照读取、阈值调整和统计清空使用独立的功能授权；
+- 三项能力均由公开 Service 复核当前账号为 `administrator`，不能只依赖可配置授权；
 - 浏览器只提交实例 ID，目标地址由在线实例注册表解析，目标节点再次执行鉴权。
 
 阈值调整和清空只作用于指定实例。阈值合法范围为 100～60000 毫秒，并通过操作日志审计；SQL 正文和统计结果不进入操作日志。

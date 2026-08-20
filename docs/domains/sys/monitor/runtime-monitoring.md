@@ -4,11 +4,9 @@
 
 运行监控通过 Redis 在线实例注册表选择 Smart Manage 应用实例并获取即时快照，用于快速判断 JVM、主机资源、数据库连接池和依赖健康状态。它不替代 Prometheus、OpenTelemetry 或基础设施告警系统。
 
-## 接口和权限
+## 访问边界
 
-- 实例接口：`GET /sys/monitor/instances`；
-- 快照接口：`GET /sys/monitor/node/snapshot?instanceId=...`；
-- 权限：`sys:monitor:node:view`；
+- 实例列表与快照读取都必须经过后端功能授权；
 - 响应必须携带 `instanceId` 和采样时间；
 - 浏览器只能提交实例 ID；内部地址由服务端注册表解析，禁止接收浏览器提供的目标 URL；
 - 目标节点必须使用共享登录态重新执行权限校验。

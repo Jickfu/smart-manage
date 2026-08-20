@@ -15,7 +15,7 @@
 - `scm/procurement/purchase-requisition.number`；
 - `sys/base/basic-data-item.number`。
 
-编号引用通过 `feature_id` 明确归属于 Feature，所属应用和领域由 Feature 推导。系统内置引用由 Flyway 建立，
+编号引用明确归属于 Feature，所属应用和领域由 Feature 推导。系统内置引用由版本化的系统目录建立，
 业务模块同时实现 `NumberReferenceProvider`，显式声明稳定引用键、Feature、允许的流水作用域和受控变量。
 数据库目录与代码注册不一致时直接失败，不通过规则键、权限前缀、表名或组件路径推断。
 
@@ -77,7 +77,7 @@
 
 新增业务编号需要：
 
-1. 通过 Flyway 建立编号引用和默认规则，并关联真实 Feature；
+1. 建立编号引用和默认规则，并关联真实 Feature；
 2. 在业务模块实现 `NumberReferenceProvider`，注册允许作用域和受控变量；
 3. 如需新变量，实现独立 `NumberVariableResolver`，不得向用户暴露表名或字段名；
 4. 在新增聚合的写事务中，以稳定 `referenceKey` 和业务上下文调用 `NumberGeneratorAccessor`；

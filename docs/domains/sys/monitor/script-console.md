@@ -22,7 +22,7 @@
 - 脚本执行网关与 API 元数据使用同一个 `ScriptServiceCatalog`，不存在两套独立白名单；
 - 不要求其他领域 Service 增加脚本专用注解，也不修改其他领域代码；
 - 元数据自动展示符合现有规则的 Bean 名称、公开方法、参数类型、返回类型、Form 字段、Jakarta Validation 常用约束和调用示例；
-- API 元数据接口与脚本执行使用相同的管理员身份复核和 `sys:monitor:script:execute` 权限；
+- API 元数据与脚本执行使用相同的功能授权和管理员身份复核；
 - 帮助页中的调用示例只用于说明参数形态，执行前必须按实际业务数据和方法语义核对。
 
 示例：
@@ -67,16 +67,4 @@ return result;
 | `SCRIPT_CONSOLE_MAX_SOURCE_LENGTH` | 100000 | 1000～1000000 字符 | 保存和执行源码上限 |
 | `SCRIPT_CONSOLE_MAX_OUTPUT_LENGTH` | 100000 | 1000～1000000 字符 | 输出超过限制时截断 |
 
-## 权限
-
-| 能力 | 权限码 |
-| --- | --- |
-| 执行脚本 | `sys:monitor:script:execute` |
-| 脚本列表 | `sys:monitor:script:listPage` |
-| 脚本详情 | `sys:monitor:script:detail` |
-| 保存脚本 | `sys:monitor:script:save` |
-| 删除脚本 | `sys:monitor:script:delete` |
-| 执行历史列表 | `sys:monitor:script:log:listPage` |
-| 执行历史详情 | `sys:monitor:script:log:detail` |
-
-以上权限只授予 `administrator` 角色，Service 仍执行管理员身份复核。
+脚本执行、脚本维护和执行历史使用分离的功能授权；这些授权只应授予 `administrator` 角色，公开 Service 仍执行管理员身份复核。

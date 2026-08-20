@@ -62,31 +62,6 @@
 - 编辑表单不展示或提交可用状态；资料可用状态只通过列表页的启用、禁用命令修改，新增资料默认启用。
 - 右表遵循通用列表页的查询区、按钮区、分页、勾选和批量启停规范。
 
-## 接口
-
-| 能力 | 接口 | 权限码 |
-| --- | --- | --- |
-| 领域与分类树 | `/sys/base/basic-data/categoryTree` | `sys:base:basic-data:listPage` |
-| 分类详情 | `/sys/base/basic-data/categoryDetail` | `sys:base:basic-data:detail` |
-| 保存分类 | `/sys/base/basic-data/saveCategory` | `sys:base:basic-data:save` |
-| 删除分类 | `/sys/base/basic-data/deleteCategory` | `sys:base:basic-data:delete` |
-| 资料分页 | `/sys/base/basic-data/listPage` | `sys:base:basic-data:listPage` |
-| 资料详情 | `/sys/base/basic-data/detail` | `sys:base:basic-data:detail` |
-| 保存资料 | `/sys/base/basic-data/save` | `sys:base:basic-data:save` |
-| 删除资料 | `/sys/base/basic-data/delete` | `sys:base:basic-data:delete` |
-| 批量启停 | `/sys/base/basic-data/enable`、`disable` | 对应启停权限 |
-| 上级资料选项 | `/sys/base/basic-data/parentOptions` | `sys:base:basic-data:detail` |
-| 有效叶子选项 | `/sys/base/basic-data/options` | 登录用户 |
-| 分类编号规则选项 | `/sys/base/basic-data/numberRuleOptions` | `sys:base:basic-data:detail` |
-
 ## 缓存
 
 业务消费端按分类编码读取有效叶子资料。缓存必须使用 Redis 远程缓存，或具备基于 Redis 广播/版本键的跨节点失效机制；分类或节点保存、删除、启停后，在数据库事务提交后使所有实例读取到新结果。不得依赖请求再次命中原节点。
-
-## 数据库迁移
-
-- 基线表由 `V1__baseline_schema.sql` 建立。
-- `V12__add_numbering_rules.sql` 为分类增加节点编号模式和规则引用，已有分类默认使用 `AUTO_DEFAULT`。
-- `V13__refine_numbering_rules.sql` 增加编号引用和结构化格式段，并将基础资料规则关联到 Feature。
-- `V14__add_basic_data_item_version.sql` 补齐资料节点的乐观锁版本号字段。
-- 已执行迁移不得修改，后续结构和初始化数据继续通过新增 Flyway 迁移维护。

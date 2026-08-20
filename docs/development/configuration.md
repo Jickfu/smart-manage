@@ -52,6 +52,7 @@ Spring Data Redis 与 JetCache 使用两套配置入口，本机文件中的两�
 | `SMART_MANAGE_SM2_PUBLIC_KEY` | SM2 公钥 |
 | `SMART_MANAGE_INSTANCE_ID` | 集群内唯一的应用实例 ID，例如 `instance1`、`instance2` |
 | `SMART_MANAGE_INTERNAL_BASE_URL` | 当前实例供其他应用实例定向调用的内部基础地址 |
+| `SMART_MANAGE_TRUSTED_PROXY_CIDRS` | 允许提供转发头的受信代理网段 |
 
 开发环境还支持 `SMART_MANAGE_DRUID_USERNAME` 和 `SMART_MANAGE_DRUID_PASSWORD` 配置 Druid 监控登录。
 
@@ -69,10 +70,10 @@ smart-manage/
 └─ upload/
 ```
 
-将仓库中的 `config/application.example.yml` 复制为部署目录的 `config/application.yml`，
-将 `config/application-prod.example.yml` 复制为 `config/application-prod.yml` 并填写真实配置。
-启动进程的工作目录必须是 Jar 所在目录。外部 YAML 优先于 Jar 内配置，因此生产部署不需要设置操作系统环境变量；
-Jar 内部 `${...}` 仍作为其他部署方式和配置遗漏检查的支持入口。
+以仓库中的 `smart-manage-api/src/main/resources/application-prod.yml` 为配置项参考，在部署目录创建不纳入版本控制的
+`config/application.yml` 或 `config/application-prod.yml` 并填写真实配置。启动进程的工作目录必须是 Jar 所在目录。
+外部 YAML 优先于 Jar 内配置，因此生产部署可以使用外部 YAML、环境变量或外部密钥管理设施提供配置；
+Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
 
 生产环境使用 `prod` Profile，必须显式配置：
 
@@ -85,6 +86,7 @@ Jar 内部 `${...}` 仍作为其他部署方式和配置遗漏检查的支持入
 - `SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD`，且不能为 `admin`。
 - `SMART_MANAGE_INSTANCE_ID`，且每个应用实例必须唯一。
 - `SMART_MANAGE_INTERNAL_BASE_URL`，且必须是其他应用实例可直接访问的 HTTPS 内部地址。
+- `SMART_MANAGE_TRUSTED_PROXY_CIDRS`，且只能包含实际 Nginx 或负载均衡器网段。
 
 可选的生产调优变量：
 
@@ -93,9 +95,10 @@ Jar 内部 `${...}` 仍作为其他部署方式和配置遗漏检查的支持入
 | `SMART_MANAGE_SERVER_PORT` | `8080` |
 | `SMART_MANAGE_DB_POOL_INITIAL_SIZE` | `5` |
 | `SMART_MANAGE_DB_POOL_MIN_IDLE` | `10` |
-| `SMART_MANAGE_DB_POOL_MAX_ACTIVE` | `100` |
+| `SMART_MANAGE_DB_POOL_MAX_ACTIVE` | `30` |
 | `SMART_MANAGE_REDIS_PORT` | `6379` |
 | `SMART_MANAGE_REDIS_DATABASE` | `1` |
+| `SMART_MANAGE_SLOW_SQL_MILLIS` | `2000` |
 
 敏感配置不得写入代码、文档、镜像、提交记录或日志。外部配置文件必须限制为仅服务运行账号和管理员可读，并纳入受控备份；环境变量或密钥管理设施仍可作为更高优先级的可选覆盖方式。
 
@@ -104,7 +107,5 @@ Jar 内部 `${...}` 仍作为其他部署方式和配置遗漏检查的支持入
 `SMART_MANAGE_SM4_KEY` 用于加密文件存储密码等服务端敏感配置。生产环境缺失、Base64 格式错误或解码后不是 16 字节时，应用必须拒绝启动。轮换该密钥前必须先完成既有密文的重新加密，不能直接替换环境变量。
 
 当前密文格式固定为带 `sm4-gcm:v1:` 版本前缀的 SM4/GCM 认证密文，不兼容旧的无版本 SM4/CBC 密文。项目尚无真实生产密文时应重新保存相关凭据；如果未来存在生产迁移需求，必须先设计离线迁移和回滚方案，不得在运行时代码中长期保留 CBC 兼容分支。
-
-从旧版本升级且系统参数中已经存在 `SM4_KEY` 时，必须在执行 `V23__remove_sm4_key_system_parameter.sql` 前，将原值通过安全渠道配置为 `SMART_MANAGE_SM4_KEY`。迁移只删除数据库中的密钥，不会也不能自动把密钥写入部署环境。
 
 配置的最终权威来源是 `smart-manage-api/src/main/resources/application-*.yml`；新增或删除配置项时必须同步更新本文档。

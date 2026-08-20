@@ -7,7 +7,7 @@
 - 定时任务：编码、名称、描述、分组、Spring Job 实现、Cron、参数、启停状态。
 - 执行实例：任务每次实际执行产生的开始时间、结束时间、结果、错误和 Trace ID。
 
-后端领域位于 `sm.domain.sys.scheduler`，前端领域位于 `src/domain/sys/scheduler`。接口、权限和页面组件键统一使用 `sys/scheduler`，不提供已废弃的 `sys/monitor/job` 兼容入口。
+后端领域位于 `sm.domain.sys.scheduler`，前端领域位于 `src/domain/sys/scheduler`。页面组件键使用 `sys/scheduler`，不提供已废弃的 `sys/monitor/job` 兼容入口。
 
 ## 聚合与状态
 
@@ -28,7 +28,7 @@
 
 ## 安全边界
 
-- 所有写命令同时执行 Controller 权限校验和公开 Service 管理员校验。
+- 所有写命令同时执行 Controller 功能授权和公开 Service 管理员身份复核。
 - 任务执行类必须是 Spring 容器中注册的 `org.quartz.Job` Bean，禁止按请求类名动态加载任意类。
 - 任务参数只接受 JSON 对象。
 - Cron 表达式在写入数据库前校验。
@@ -55,4 +55,4 @@ Quartz 使用共享 PostgreSQL JDBC JobStore 并开启集群模式。数据库�
 - `sys/scheduler/execution`：执行实例列表。
 - `sys/scheduler/execution/detail`：执行实例只读详情。
 
-任务状态统计和近七日执行趋势展示在任务调度应用固有的“应用首页”页签，不占用定时任务列表空间，也不为统计另增菜单。首页查询接口为 `GET /sys/scheduler/home/summary`。新增任务通过引用选择器选择带 `SchedulerJobDefinition` 元数据的执行类，选择后可自动带出用途说明和 JSON 参数模板；Cron 支持常用频率和未来五次服务端时间预览。
+任务状态统计和近七日执行趋势展示在任务调度应用固有的“应用首页”页签，不占用定时任务列表空间，也不为统计另增菜单。新增任务通过引用选择器选择带 `SchedulerJobDefinition` 元数据的执行类，选择后可自动带出用途说明和 JSON 参数模板；Cron 支持常用频率和未来五次服务端时间预览。

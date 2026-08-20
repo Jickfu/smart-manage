@@ -10,7 +10,7 @@
 
 ## 安全边界
 
-- Controller 必须校验细粒度权限码，公开 Service 必须再次确认当前账号为 `administrator`；
+- Controller 必须校验对应功能授权，公开 Service 必须再次确认当前账号为 `administrator`；
 - DML 和 DDL 由前端显示二次确认，但前端确认不能替代后端鉴权和审计；
 - SQL 正文和执行结果不得写入通用操作日志；
 - SQL 文本最长 100000 个字符，执行超时为 30 秒；
@@ -27,15 +27,7 @@
 - 查询结果通过有序列定义和二维行数组返回，重复列名不会覆盖数据。
 - SQL 执行日志按[日志数据生命周期](../../../architecture/log-lifecycle.md)转入历史和淘汰；管理员可以通过本控制台按明确时间范围查询历史父表。
 
-## 权限
-
-| 能力 | 权限码 |
-| --- | --- |
-| 执行 SQL | `sys:monitor:sql:execute` |
-| 执行历史列表 | `sys:monitor:sql:log:listPage` |
-| 执行历史详情 | `sys:monitor:sql:log:detail` |
-
-上述权限只授予 `administrator` 角色，Service 仍执行管理员身份复核。
+SQL 执行和执行历史使用分离的功能授权；这些授权只应授予 `administrator` 角色，公开 Service 仍执行管理员身份复核。
 
 ## 前端交互
 
