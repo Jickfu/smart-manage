@@ -10,10 +10,20 @@
 /* 两列表单整体居中；奇数项保持在左列，避免末项单独居中。 */
 .sm-modal-edit .sm-edit-fields {
   display: grid;
-  grid-template-columns: repeat(2, 230px);
+  width: 524px;
+  max-width: 100%;
+  grid-template-columns: repeat(2, 262px);
   justify-content: center;
 }
 
+.sm-modal-edit .sm-edit-field {
+  width: 262px;
+  min-width: 0;
+}
+
+.sm-modal-edit .sm-edit-field--span-2,
 .sm-modal-edit .sm-edit-field--full {
+  width: 492px;
+  max-width: 100%;
   grid-column: 1 / -1;
 }

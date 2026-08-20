@@ -25,9 +25,9 @@ export interface EditFieldBase {
   disabled?: boolean;
   /** 占位提示 */
   placeholder?: string;
-  /** 是否占满整行 */
+  /** 是否延伸至第四列标准控件的右边缘 */
   fullWidth?: boolean;
-  /** 横跨的标准字段列数；适用于类名等较长但不需要占满整行的内容。 */
+  /** 延伸至第二列标准控件的右边缘；适用于类名等较长字段。 */
   columnSpan?: 2;
 }
 
