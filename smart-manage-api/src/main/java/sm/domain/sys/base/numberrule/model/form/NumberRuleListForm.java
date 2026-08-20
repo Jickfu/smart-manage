@@ -9,7 +9,7 @@ import sm.system.form.PageForm;
 public class NumberRuleListForm extends PageForm {
     private String keyword;
     private String scopeType;
-    private Long cloudId;
+    private Long domainId;
     private Long appId;
     private Long featureId;
     private String referenceKey;

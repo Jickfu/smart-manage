@@ -18,8 +18,8 @@ public class PermissionListForm extends PageForm {
 	@Schema(description = "按功能筛选")
 	private Long featureId;
 
-	@Schema(description = "按云筛选")
-	private Long cloudId;
+	@Schema(description = "按领域筛选")
+	private Long domainId;
 
 	@Schema(description = "关键词（名称、编码模糊匹配）")
 	private String keyword;

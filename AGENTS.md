@@ -46,7 +46,7 @@
 | 数据权限、组织范围或对象级访问 | `docs/architecture/data-permission.md` |
 | 数据库或迁移 | `docs/development/database.md` |
 | 构建、测试或 CI | `docs/development/verification.md` |
-| 新增业务模块 | `docs/development/business-aggregate-checklist.md`、`docs/modules/` 下对应模块文档 |
-| 具体业务模块 | `docs/modules/` 下对应模块文档 |
+| 新增业务模块 | `docs/development/business-aggregate-checklist.md`、`docs/domains/{领域}/{应用}/` 下对应模块文档 |
+| 具体业务模块 | `docs/domains/{领域}/{应用}/` 下对应模块文档 |
 
 `docs/archive/` 只用于历史追溯，不是当前规则来源；`docs/proposals/` 中的内容尚未生效。

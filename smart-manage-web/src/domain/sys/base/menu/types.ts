@@ -49,10 +49,19 @@ export interface MenuTreeVO {
 
 /** 菜单管理树形列表筛选条件。 */
 export interface MenuTreeListForm {
-  cloudId?: string;
+  domainId?: string;
   appId?: string;
+  featureId?: string;
   keyword?: string;
   filters?: string;
+}
+
+export interface MenuCatalogNodeVO {
+  type: 'DOMAIN' | 'APPLICATION' | 'FEATURE';
+  id: string;
+  number: string;
+  name: string;
+  children: MenuCatalogNodeVO[];
 }
 
 /** 菜单详情 */

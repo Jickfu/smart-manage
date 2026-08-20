@@ -21,7 +21,7 @@ export type ListPageQueryResult<T> = PageData<T>;
 
 /** useListPageQuery 配置 */
 interface UseListPageQueryOptions<T> {
-  /** TanStack Query 的 queryKey 前缀，如 ['cloud-list'] */
+  /** TanStack Query 的 queryKey 前缀，如 ['domain-list'] */
   queryKey: QueryKey;
   /** 查询函数，接收 ListPageQueryParams 返回 ListPageQueryResult */
   queryFn: (params: ListPageQueryParams) => Promise<ListPageQueryResult<T>>;

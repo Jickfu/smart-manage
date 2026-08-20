@@ -5,8 +5,8 @@ import lombok.Data;
 @Data
 public class BasicDataCategoryVO {
     private Long id;
-    private Long cloudId;
-    private String cloudName;
+    private Long domainId;
+    private String domainName;
     private String number;
     private String name;
     private String description;

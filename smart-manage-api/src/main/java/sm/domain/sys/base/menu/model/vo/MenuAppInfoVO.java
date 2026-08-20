@@ -10,5 +10,5 @@ public class MenuAppInfoVO {
     private String appName;
     private String appNumber;
     private String appIcon;
-    private String cloudNumber;
+    private String domainNumber;
 }

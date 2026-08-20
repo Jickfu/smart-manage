@@ -10,12 +10,15 @@ import sm.system.form.PageForm;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "菜单树形列表表单")
 public class MenuTreeListForm extends PageForm {
-    @Schema(description = "按云筛选")
-    private Long cloudId;
+    @Schema(description = "按领域筛选")
+    private Long domainId;
 
     @Schema(description = "按应用筛选")
     private Long appId;
 
-    @Schema(description = "关键词（名称、路径模糊匹配）")
+    @Schema(description = "按功能筛选")
+    private Long featureId;
+
+    @Schema(description = "关键词（名称、路径或外部链接模糊匹配）")
     private String keyword;
 }

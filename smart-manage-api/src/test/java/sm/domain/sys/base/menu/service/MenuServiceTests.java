@@ -3,6 +3,9 @@ package sm.domain.sys.base.menu.service;
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.app.mapper.AppMapper;
 import sm.domain.sys.base.feature.mapper.FeatureMapper;
+import sm.domain.sys.base.feature.model.entity.FeatureEntity;
+import sm.domain.sys.base.domain.mapper.DomainMapper;
+import sm.domain.sys.base.domain.model.entity.DomainEntity;
 import sm.domain.sys.base.app.model.entity.AppEntity;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
@@ -13,6 +16,7 @@ import sm.domain.sys.base.menu.model.vo.MenuAppInfoVO;
 import sm.domain.sys.base.menu.model.vo.MenuTreeVO;
 import sm.domain.sys.base.menu.model.vo.MenuDetailVO;
 import sm.domain.sys.base.menu.model.vo.MenuVO;
+import sm.domain.sys.base.menu.model.vo.MenuCatalogNodeVO;
 import sm.domain.sys.base.menu.model.enums.ExternalOpenModeEnum;
 import sm.domain.sys.base.menu.model.enums.MenuTargetTypeEnum;
 import sm.domain.sys.base.permission.mapper.PermissionMapper;
@@ -30,12 +34,14 @@ class MenuServiceTests {
     private final CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
     private final MenuMapper mapper = mock(MenuMapper.class);
     private final AppMapper appMapper = mock(AppMapper.class);
+    private final DomainMapper domainMapper = mock(DomainMapper.class);
     private final FeatureMapper featureMapper = mock(FeatureMapper.class);
     private final PermissionMapper permissionMapper = mock(PermissionMapper.class);
     private final MenuTxService txService = mock(MenuTxService.class);
     private final MenuConverter converter = mock(MenuConverter.class);
     private final MenuService service =
-            new MenuService(currentUserContext, mapper, appMapper, featureMapper, permissionMapper, txService, converter);
+            new MenuService(currentUserContext, mapper, appMapper, domainMapper, featureMapper,
+                    permissionMapper, txService, converter);
 
     @Test
     void detailAssemblesReferenceObjectsForEditForm() {
@@ -78,7 +84,7 @@ class MenuServiceTests {
         when(converter.toTreeVO(any())).thenAnswer(invocation -> toTreeVO(invocation.getArgument(0)));
 
         MenuTreeListForm form = new MenuTreeListForm();
-        form.setCloudId(10L);
+        form.setDomainId(10L);
         form.setKeyword("用户");
 
         List<MenuTreeVO> result = service.listTree(form);
@@ -108,11 +114,68 @@ class MenuServiceTests {
     }
 
     @Test
+    void featureScopeReturnsOnlyFeaturePagesAndTheirParentGroups() {
+        AppEntity app = new AppEntity();
+        app.setId(31L);
+        app.setName("系统建模");
+        FeatureEntity selectedFeature = new FeatureEntity();
+        selectedFeature.setId(501L);
+        selectedFeature.setAppId(31L);
+        when(featureMapper.selectById(501L)).thenReturn(selectedFeature);
+        when(appMapper.selectList(any())).thenReturn(List.of(app));
+
+        MenuEntity group = menu(100L, 31L, 0L, MenuLevelEnum.CATEGORY, "平台结构", null);
+        MenuEntity selectedPage = menu(101L, 31L, 100L, MenuLevelEnum.PAGE, "菜单管理", "/menu");
+        selectedPage.setFeatureId(501L);
+        MenuEntity unrelatedPage = menu(102L, 31L, 100L, MenuLevelEnum.PAGE, "应用管理", "/app");
+        unrelatedPage.setFeatureId(502L);
+        when(mapper.selectList(any())).thenReturn(List.of(group, selectedPage, unrelatedPage));
+        when(converter.toTreeVO(any())).thenAnswer(invocation -> toTreeVO(invocation.getArgument(0)));
+        MenuTreeListForm form = new MenuTreeListForm();
+        form.setFeatureId(501L);
+
+        List<MenuTreeVO> result = service.listTree(form);
+
+        assertEquals(1, result.size());
+        assertEquals(1, result.getFirst().getChildren().size());
+        assertEquals("菜单管理", result.getFirst().getChildren().getFirst().getName());
+    }
+
+    @Test
+    void catalogReturnsDomainApplicationAndFeatureHierarchy() {
+        DomainEntity domain = new DomainEntity();
+        domain.setId(4L);
+        domain.setNumber("sys");
+        domain.setName("系统服务");
+        AppEntity app = new AppEntity();
+        app.setId(31L);
+        app.setDomainId(4L);
+        app.setNumber("base");
+        app.setName("系统建模");
+        FeatureEntity feature = new FeatureEntity();
+        feature.setId(501L);
+        feature.setAppId(31L);
+        feature.setFeatureKey("sys/base/menu");
+        feature.setDefaultName("菜单管理");
+        feature.setDefaultSeq(10);
+        when(domainMapper.selectList(any())).thenReturn(List.of(domain));
+        when(appMapper.selectList(any())).thenReturn(List.of(app));
+        when(featureMapper.selectList(any())).thenReturn(List.of(feature));
+
+        List<MenuCatalogNodeVO> result = service.catalog();
+
+        assertEquals("DOMAIN", result.getFirst().getType());
+        assertEquals("APPLICATION", result.getFirst().getChildren().getFirst().getType());
+        assertEquals("FEATURE", result.getFirst().getChildren().getFirst().getChildren().getFirst().getType());
+        assertEquals("菜单管理", result.getFirst().getChildren().getFirst().getChildren().getFirst().getName());
+    }
+
+    @Test
     void userMenuReturnsRootPageWithoutSyntheticGroup() {
         MenuAppInfoVO appInfo = new MenuAppInfoVO();
         appInfo.setAppName("采购管理");
         appInfo.setAppNumber("procurement");
-        appInfo.setCloudNumber("scm");
+        appInfo.setDomainNumber("scm");
         MenuEntity page = menu(
                 301L, 430000000000000002L, 0L, MenuLevelEnum.PAGE, "采购申请",
                 "/scm/procurement/purchase-requisition");

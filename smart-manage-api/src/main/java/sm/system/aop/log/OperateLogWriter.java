@@ -1,7 +1,7 @@
 package sm.system.aop.log;
 
 /**
- * 操作日志写入器接口 — 由云端模块实现，sm.system 仅依赖此接口
+ * 操作日志写入器接口 — 由业务领域模块实现，sm.system 仅依赖此接口
  *
  * @author Chekfu
  */

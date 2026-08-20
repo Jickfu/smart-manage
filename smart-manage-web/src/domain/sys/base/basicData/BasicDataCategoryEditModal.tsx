@@ -3,8 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import ModalEditPage from '@/domain/common/page/ModalEditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { cloudApi } from '@/domain/sys/base/cloud/api';
-import { cloudQueryKeys } from '@/domain/sys/base/cloud/queryKeys';
+import { domainApi } from '@/domain/sys/base/domain/api';
+import { domainQueryKeys } from '@/domain/sys/base/domain/queryKeys';
 import { numberRuleQueryKeys } from '@/domain/sys/base/numberRule/queryKeys';
 import { basicDataApi } from './api';
 import { basicDataAccess } from './permissions';
@@ -14,21 +14,21 @@ import type { BasicDataCategorySaveForm } from './types';
 interface Props {
   open: boolean;
   categoryId: string | null;
-  cloudId?: string;
+  domainId?: string;
   onClose: () => void;
   onSaved: () => void;
 }
 
-const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSaved }: Props) => {
+const BasicDataCategoryEditModal = ({ open, categoryId, domainId, onClose, onSaved }: Props) => {
   const detailQuery = useQuery({
     queryKey: basicDataQueryKeys.category(categoryId),
     queryFn: () => basicDataApi.categoryDetail(categoryId!),
     enabled: Boolean(open && categoryId),
     staleTime: 0,
   });
-  const cloudsQuery = useQuery({
-    queryKey: [...cloudQueryKeys.lists(), 'basic-data-category'],
-    queryFn: () => cloudApi.select({ pageNum: 1, pageSize: 1000 }),
+  const domainsQuery = useQuery({
+    queryKey: [...domainQueryKeys.lists(), 'basic-data-category'],
+    queryFn: () => domainApi.select({ pageNum: 1, pageSize: 1000 }),
     enabled: open,
   });
   const numberRulesQuery = useQuery({
@@ -57,15 +57,15 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
         ],
       },
       {
-        label: '所属云',
-        dataIndex: 'cloudId',
+        label: '所属领域',
+        dataIndex: 'domainId',
         type: 'select',
         disabled: true,
-        options: (cloudsQuery.data?.records ?? []).map((cloud) => ({
-          label: cloud.name,
-          value: cloud.id,
+        options: (domainsQuery.data?.records ?? []).map((domain) => ({
+          label: domain.name,
+          value: domain.id,
         })),
-        rules: [{ required: true, message: '所属云不能为空' }],
+        rules: [{ required: true, message: '所属领域不能为空' }],
       },
       {
         label: '节点编号模式',
@@ -91,12 +91,12 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
       { label: '可用状态', dataIndex: 'enabled', type: 'switch' },
       { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
     ],
-    [cloudsQuery.data, numberRulesQuery.data],
+    [domainsQuery.data, numberRulesQuery.data],
   );
   const detail = detailQuery.data;
   const initialValues = useMemo(
     () => ({
-      cloudId: detail?.cloudId ?? cloudId,
+      domainId: detail?.domainId ?? domainId,
       number: detail?.number ?? '',
       name: detail?.name ?? '',
       enabled: detail?.enabled ?? true,
@@ -107,14 +107,14 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
         'sys/base/basic-data-item',
       description: detail?.description ?? '',
     }),
-    [cloudId, detail, numberRulesQuery.data],
+    [domainId, detail, numberRulesQuery.data],
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
       const form: BasicDataCategorySaveForm = {
         id: categoryId ?? undefined,
         version: detail?.version,
-        cloudId: String(values.cloudId),
+        domainId: String(values.domainId),
         number: String(values.number).trim(),
         name: String(values.name).trim(),
         enabled: Boolean(values.enabled),
@@ -137,10 +137,10 @@ const BasicDataCategoryEditModal = ({ open, categoryId, cloudId, onClose, onSave
       initialValues={initialValues}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
-      loading={detailQuery.isLoading || cloudsQuery.isLoading || numberRulesQuery.isLoading}
-      error={(detailQuery.error ?? cloudsQuery.error ?? numberRulesQuery.error) as Error | null}
+      loading={detailQuery.isLoading || domainsQuery.isLoading || numberRulesQuery.isLoading}
+      error={(detailQuery.error ?? domainsQuery.error ?? numberRulesQuery.error) as Error | null}
       onRetry={() =>
-        Promise.all([detailQuery.refetch(), cloudsQuery.refetch(), numberRulesQuery.refetch()])
+        Promise.all([detailQuery.refetch(), domainsQuery.refetch(), numberRulesQuery.refetch()])
       }
       access={basicDataAccess}
     />

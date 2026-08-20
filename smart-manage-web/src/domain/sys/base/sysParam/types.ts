@@ -2,7 +2,7 @@ import type { PageForm } from '@/types/api';
 
 export interface SysParamListForm extends PageForm {
   appId?: string;
-  cloudId?: string;
+  domainId?: string;
   globalOnly?: boolean;
   keyword?: string;
 }

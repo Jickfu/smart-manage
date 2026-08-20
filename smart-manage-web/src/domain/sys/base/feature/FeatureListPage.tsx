@@ -36,14 +36,14 @@ const columnFeatures: ListColumnFeatures = {
   visible: { label: '目录状态', filter: { type: 'boolean' } },
 };
 
-type Scope = { type: 'all' } | { type: 'cloud'; id: string } | { type: 'app'; id: string };
+type Scope = { type: 'all' } | { type: 'domain'; id: string } | { type: 'app'; id: string };
 
 const FeatureListPage = (props: PageComponentProps) => {
   const [scope, setScope] = useState<Scope>({ type: 'all' });
   const [editId, setEditId] = useState<string | null>(null);
-  const treeQuery = useQuery({ queryKey: appQueryKeys.cloudAppsAll(), queryFn: fetchAppsAll });
+  const treeQuery = useQuery({ queryKey: appQueryKeys.domainAppsAll(), queryFn: fetchAppsAll });
   const scopeParams = {
-    cloudId: scope.type === 'cloud' ? scope.id : undefined,
+    domainId: scope.type === 'domain' ? scope.id : undefined,
     appId: scope.type === 'app' ? scope.id : undefined,
   };
   const {
@@ -68,10 +68,10 @@ const FeatureListPage = (props: PageComponentProps) => {
         key: 'all',
         title: '全部应用',
         children:
-          treeQuery.data?.map((cloud) => ({
-            key: `cloud:${cloud.id}`,
-            title: cloud.name,
-            children: cloud.appList.map((application) => ({
+          treeQuery.data?.map((domain) => ({
+            key: `domain:${domain.id}`,
+            title: domain.name,
+            children: domain.appList.map((application) => ({
               key: `app:${application.id}`,
               title: application.name,
               isLeaf: true,
@@ -128,7 +128,7 @@ const FeatureListPage = (props: PageComponentProps) => {
               onSelect={(keys) => {
                 const key = String(keys[0] ?? 'all');
                 resetPage();
-                if (key.startsWith('cloud:')) setScope({ type: 'cloud', id: key.slice(6) });
+                if (key.startsWith('domain:')) setScope({ type: 'domain', id: key.slice(6) });
                 else if (key.startsWith('app:')) setScope({ type: 'app', id: key.slice(4) });
                 else setScope({ type: 'all' });
               }}

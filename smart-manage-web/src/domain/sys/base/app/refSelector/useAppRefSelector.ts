@@ -7,12 +7,12 @@ import { appQueryKeys } from '../queryKeys';
 import type { AppListVO } from '../types';
 
 /**
- * 应用基础资料选择器：左侧按云筛选，右侧分页选择应用。
+ * 应用基础资料选择器：左侧按领域筛选，右侧分页选择应用。
  * 业务页面只负责必填、禁用和字段联动，不再重复维护查询与展示规则。
  */
 export function useAppRefSelector(): RefSelectorFieldConfig {
-  const cloudTreeQuery = useQuery({
-    queryKey: appQueryKeys.cloudAppsAll(),
+  const domainTreeQuery = useQuery({
+    queryKey: appQueryKeys.domainAppsAll(),
     queryFn: fetchAppsAll,
     staleTime: 5 * 60 * 1000,
   });
@@ -23,14 +23,14 @@ export function useAppRefSelector(): RefSelectorFieldConfig {
         key: 'root',
         title: '全部应用',
         children:
-          cloudTreeQuery.data?.map((cloud) => ({
-            key: cloud.id,
-            title: cloud.name,
+          domainTreeQuery.data?.map((domain) => ({
+            key: domain.id,
+            title: domain.name,
             isLeaf: true,
           })) ?? [],
       },
     ],
-    [cloudTreeQuery.data],
+    [domainTreeQuery.data],
   );
 
   return useMemo(
@@ -44,8 +44,8 @@ export function useAppRefSelector(): RefSelectorFieldConfig {
             pageNum: params.pageNum,
             pageSize: params.pageSize,
             keyword: params.keyword,
-            // 根节点表示不限定云，其余节点的 key 均为云 ID。
-            cloudId: params.parentId === 'root' ? undefined : params.parentId,
+            // 根节点表示不限定领域，其余节点的 key 均为领域 ID。
+            domainId: params.parentId === 'root' ? undefined : params.parentId,
           }),
         displayRender: (record) => record.name,
         fieldNames: { key: 'id', label: 'name' },
@@ -53,7 +53,7 @@ export function useAppRefSelector(): RefSelectorFieldConfig {
         columns: [
           { title: '编码', dataIndex: 'number', width: 160 },
           { title: '名称', dataIndex: 'name' },
-          { title: '所属云', dataIndex: 'cloudName', width: 160 },
+          { title: '所属领域', dataIndex: 'domainName', width: 160 },
         ],
       }),
     [treeData],

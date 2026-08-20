@@ -12,8 +12,8 @@ import { useWorkbenchStore } from '@/stores/workbench';
 import { appApi } from './api';
 import { appAccess } from './permissions';
 import { appQueryKeys } from './queryKeys';
-import { cloudApi } from '@/domain/sys/base/cloud/api';
-import type { CloudSelectVO } from '@/domain/sys/base/cloud/types';
+import { domainApi } from '@/domain/sys/base/domain/api';
+import type { DomainSelectVO } from '@/domain/sys/base/domain/types';
 
 /** 应用编辑字段定义 */
 const fields: EditField[] = [
@@ -30,16 +30,16 @@ const fields: EditField[] = [
     rules: [{ required: true, message: '名称不能为空' }],
   },
   {
-    label: '所属云',
-    dataIndex: 'cloud',
+    label: '所属领域',
+    dataIndex: 'domain',
     type: 'ref-selector',
-    rules: [{ required: true, message: '所属云不能为空' }],
-    refSelector: defineRefSelector<CloudSelectVO>({
-      selectorKey: 'sys-cloud',
-      modalTitle: '选择所属云',
+    rules: [{ required: true, message: '所属领域不能为空' }],
+    refSelector: defineRefSelector<DomainSelectVO>({
+      selectorKey: 'sys-domain',
+      modalTitle: '选择所属领域',
       // 使用专用的 select 接口（区别于列表页的 listPage）
       fetchFn: (params) =>
-        cloudApi.select({
+        domainApi.select({
           pageNum: params.pageNum,
           pageSize: params.pageSize,
           keyword: params.keyword,
@@ -84,8 +84,8 @@ const AppEditPage = (props: PageComponentProps) => {
     return {
       number: detail.number ?? '',
       name: detail.name ?? '',
-      // RefSelector 传整个 cloud 对象（包含 id/number/name 供 displayRender 使用）
-      cloud: detail.cloud ?? null,
+      // RefSelector 传整个 domain 对象（包含 id/number/name 供 displayRender 使用）
+      domain: detail.domain ?? null,
       icon: detail.icon ?? '',
       iconColor: detail.iconColor ?? '',
       seq: detail.seq ?? undefined,
@@ -98,9 +98,9 @@ const AppEditPage = (props: PageComponentProps) => {
   const handleSave = async (values: Record<string, unknown>) => {
     const name = (values.name as string).trim();
     const number = (values.number as string).trim();
-    // RefSelector 传整个对象，从中提取 cloud
-    const cloud = values.cloud as { id: string } | null;
-    if (!cloud?.id) throw new Error('所属云不能为空');
+    // RefSelector 传整个对象，从中提取 domain
+    const domain = values.domain as { id: string } | null;
+    if (!domain?.id) throw new Error('所属领域不能为空');
     const savedId = await appApi.save({
       id: billId ?? undefined,
       version: detail?.version,
@@ -111,7 +111,7 @@ const AppEditPage = (props: PageComponentProps) => {
       seq: (values.seq as number) ?? 0,
       description: (values.description as string) ?? '',
       // 雪花 ID 保持字符串，前端不转 Number
-      cloudId: cloud.id,
+      domainId: domain.id,
     });
     // 新增成功后替换临时 tab key
     if (isAddNew && tabKey !== String(savedId)) {

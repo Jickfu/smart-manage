@@ -4,7 +4,7 @@
     <select id="selectListPage" resultType="sm.domain.sys.base.numberrule.model.vo.NumberRuleVO">
         SELECT a.id, a.version, a.rule_key, a.reference_key, b.name AS reference_name,
                c.id AS feature_id, c.feature_key, COALESCE(c.custom_name, c.default_name) AS feature_name,
-               d.id AS app_id, d.name AS app_name, e.id AS cloud_id, e.name AS cloud_name,
+               d.id AS app_id, d.name AS app_name, e.id AS domain_id, e.name AS domain_name,
                a.name, a.pattern, a.scope_type, a.reset_period, a.start_value, a.enabled,
                a.system_preset, (b.default_rule_key = a.rule_key) AS default_rule, a.description,
                ((SELECT count(*) FROM t_sys_number_reference usage_ref
@@ -16,12 +16,12 @@
         INNER JOIN t_sys_number_reference b ON b.reference_key = a.reference_key
         INNER JOIN t_sys_feature c ON c.id = b.feature_id
         INNER JOIN t_sys_app d ON d.id = c.app_id
-        INNER JOIN t_sys_cloud e ON e.id = d.cloud_id
+        INNER JOIN t_sys_domain e ON e.id = d.domain_id
         <where>
             <if test="form.scopeType != null and form.scopeType != ''">
                 a.scope_type = #{form.scopeType}
             </if>
-            <if test="form.cloudId != null">AND e.id = #{form.cloudId}</if>
+            <if test="form.domainId != null">AND e.id = #{form.domainId}</if>
             <if test="form.appId != null">AND d.id = #{form.appId}</if>
             <if test="form.featureId != null">AND c.id = #{form.featureId}</if>
             <if test="form.referenceKey != null and form.referenceKey != ''">
@@ -43,7 +43,7 @@
     <select id="selectDetailById" resultType="sm.domain.sys.base.numberrule.model.vo.NumberRuleVO">
         SELECT a.id, a.version, a.rule_key, a.reference_key, b.name AS reference_name,
                c.id AS feature_id, c.feature_key, COALESCE(c.custom_name, c.default_name) AS feature_name,
-               d.id AS app_id, d.name AS app_name, e.id AS cloud_id, e.name AS cloud_name,
+               d.id AS app_id, d.name AS app_name, e.id AS domain_id, e.name AS domain_name,
                a.name, a.pattern, a.scope_type, a.reset_period, a.start_value, a.enabled,
                a.system_preset, (b.default_rule_key = a.rule_key) AS default_rule, a.description,
                ((SELECT count(*) FROM t_sys_number_reference usage_ref
@@ -55,18 +55,18 @@
         INNER JOIN t_sys_number_reference b ON b.reference_key = a.reference_key
         INNER JOIN t_sys_feature c ON c.id = b.feature_id
         INNER JOIN t_sys_app d ON d.id = c.app_id
-        INNER JOIN t_sys_cloud e ON e.id = d.cloud_id
+        INNER JOIN t_sys_domain e ON e.id = d.domain_id
         WHERE a.id = #{id}
     </select>
 
     <select id="selectReferences" resultType="sm.domain.sys.base.numberrule.model.vo.NumberReferenceVO">
         SELECT a.reference_key, a.name, b.id AS feature_id, b.feature_key,
                COALESCE(b.custom_name, b.default_name) AS feature_name,
-               c.id AS app_id, c.name AS app_name, d.id AS cloud_id, d.name AS cloud_name
+               c.id AS app_id, c.name AS app_name, d.id AS domain_id, d.name AS domain_name
         FROM t_sys_number_reference a
         INNER JOIN t_sys_feature b ON b.id = a.feature_id
         INNER JOIN t_sys_app c ON c.id = b.app_id
-        INNER JOIN t_sys_cloud d ON d.id = c.cloud_id
+        INNER JOIN t_sys_domain d ON d.id = c.domain_id
         ORDER BY d.seq, c.seq, COALESCE(b.custom_seq, b.default_seq), a.reference_key
     </select>
 

@@ -14,7 +14,7 @@ import sm.domain.sys.base.numberrule.service.NumberGeneratorAccessor;
 import sm.domain.sys.base.basicdata.model.entity.BasicDataItemEntity;
 import sm.domain.sys.base.basicdata.model.form.BasicDataDeleteForm;
 import sm.domain.sys.base.basicdata.model.form.BasicDataItemSaveForm;
-import sm.domain.sys.base.cloud.mapper.CloudMapper;
+import sm.domain.sys.base.domain.mapper.DomainMapper;
 import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
 
@@ -35,7 +35,7 @@ class BasicDataTxServiceTests {
     private final CacheHelper cacheHelper = mock(CacheHelper.class);
     private final NumberGeneratorAccessor numberGeneratorAccessor = mock(NumberGeneratorAccessor.class);
     private final BasicDataTxService txService = new BasicDataTxService(
-            categoryMapper, itemMapper, mock(CloudMapper.class), cacheHelper,
+            categoryMapper, itemMapper, mock(DomainMapper.class), cacheHelper,
             numberGeneratorAccessor);
 
     @BeforeAll

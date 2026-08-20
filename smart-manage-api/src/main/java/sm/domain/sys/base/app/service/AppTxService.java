@@ -47,7 +47,7 @@ class AppTxService {
         entity.setIconColor(form.getIconColor() == null || form.getIconColor().isBlank() ? AppDefaults.ICON_COLOR : form.getIconColor());
         entity.setSeq(form.getSeq() != null ? form.getSeq() : 99);
         entity.setDescription(form.getDescription());
-        entity.setCloudId(form.getCloudId());
+        entity.setDomainId(form.getDomainId());
         if (form.getId() == null) {
             entity.setEnabled(true);
             if (mapper.insert(entity) != 1) {

@@ -10,14 +10,14 @@
 }
 
 /* 领域分组 */
-.sm-cloud-domain {
+.sm-domain-group {
   display: flex;
   flex-wrap: nowrap;
   width: 100%;
   margin-bottom: 12px;
 }
 
-.sm-cloud-name {
+.sm-domain-name {
   width: 108px;
   flex-grow: 0;
   flex-shrink: 0;
@@ -31,7 +31,7 @@
   overflow: hidden;
 }
 
-.sm-cloud-name-text {
+.sm-domain-name-text {
   color: #bfc4cd;
   font-size: 18px;
   text-align: center;
@@ -39,7 +39,7 @@
   word-break: break-word;
 }
 
-.sm-cloud-apps {
+.sm-domain-apps {
   flex: 1;
   display: flex;
   flex-wrap: wrap;

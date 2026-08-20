@@ -427,7 +427,7 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
         fieldNames: { key: 'referenceKey', label: 'name' },
         displayRender: (reference) => `${reference.featureName} / ${reference.name}`,
         columns: [
-          { title: '所属云', dataIndex: 'cloudName', width: 140 },
+          { title: '所属领域', dataIndex: 'domainName', width: 140 },
           { title: '所属应用', dataIndex: 'appName', width: 160 },
           { title: '功能', dataIndex: 'featureName', width: 180 },
           { title: '编号引用', dataIndex: 'name' },
@@ -441,7 +441,7 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
                   reference.name,
                   reference.featureName,
                   reference.appName,
-                  reference.cloudName,
+                  reference.domainName,
                 ].some((value) => value.toLowerCase().includes(normalizedKeyword)),
               )
             : references;

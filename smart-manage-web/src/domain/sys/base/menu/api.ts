@@ -8,6 +8,7 @@ import type {
   MenuSelectVO,
   MenuTreeVO,
   MenuTreeListForm,
+  MenuCatalogNodeVO,
 } from './types';
 
 /** 根据应用 number 获取当前用户菜单树 */
@@ -25,6 +26,9 @@ export function getUserMenusByAppId(id: string) {
 }
 
 export const menuApi = {
+  catalog: () =>
+    request.get<Result<MenuCatalogNodeVO[]>>('/sys/base/menu/catalog').then((res) => res.data.data),
+
   listPage: (form: MenuListForm) =>
     request
       .post<Result<PageData<MenuListVO>>>('/sys/base/menu/listPage', form)

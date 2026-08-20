@@ -5,7 +5,7 @@
         SELECT a.number, a.name, b.seq
         FROM t_sys_app a
         INNER JOIN t_sys_user_app_pin b ON b.app_id = a.id
-        INNER JOIN t_sys_cloud c ON c.id = a.cloud_id
+        INNER JOIN t_sys_domain c ON c.id = a.domain_id
         WHERE b.user_id = #{userId}
           AND a.enabled = true
           AND c.enabled = true

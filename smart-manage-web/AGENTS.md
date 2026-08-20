@@ -6,7 +6,7 @@
 
 - 使用 pnpm、React、TypeScript 和 Ant Design，不引入其他 UI 组件库。
 - 使用 `@/` 别名引用 `src`。
-- 业务页面按 `src/domain/{领域}/{应用}/{单据}` 组织。
+- 业务页面按 `src/domain/{领域}/{应用}/{模块}` 组织。
 - 页面组件目录使用 PascalCase，工具和 Hook 文件使用 camelCase。
 - 前端 ID 必须使用 `string`，避免雪花 ID 精度丢失。
 

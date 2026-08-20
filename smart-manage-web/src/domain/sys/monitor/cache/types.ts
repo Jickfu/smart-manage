@@ -41,16 +41,16 @@ export interface CacheOverview {
 }
 
 export interface CacheScope {
-  type: 'CLOUD' | 'APP' | 'OTHER';
+  type: 'DOMAIN' | 'APP' | 'OTHER';
   name: string;
-  cloudNumber?: string;
+  domainNumber?: string;
   appNumber?: string;
   children: CacheScope[];
 }
 
 export interface CacheScopeFilter {
-  scopeType: 'ALL' | 'CLOUD' | 'APP' | 'OTHER';
-  cloudNumber?: string;
+  scopeType: 'ALL' | 'DOMAIN' | 'APP' | 'OTHER';
+  domainNumber?: string;
   appNumber?: string;
 }
 

@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
 @Schema(description = "应用管理-详情")
 public class AppDetailVO {
 	@Data
-	@Schema(description = "所属云")
-	public static class CloudRef {
+	@Schema(description = "所属领域")
+	public static class DomainRef {
 		@Schema(description = "id")
 		private Long id;
 		@Schema(description = "编码")
@@ -43,7 +43,7 @@ public class AppDetailVO {
 	@Schema(description = "描述")
 	private String description;
 
-	private CloudRef cloud;
+	private DomainRef domain;
 
 	@Schema(description = "启用")
 	private Boolean enabled;

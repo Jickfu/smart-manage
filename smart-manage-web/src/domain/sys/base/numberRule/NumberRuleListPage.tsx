@@ -42,25 +42,25 @@ const columnFeatures: ListColumnFeatures = {
 
 type Scope =
   | { type: 'all' }
-  | { type: 'cloud'; id: string }
+  | { type: 'domain'; id: string }
   | { type: 'app'; id: string }
   | { type: 'feature'; id: string };
 
 const buildTree = (references: NumberReference[]): DataNode[] => {
-  const clouds = new Map<string, DataNode & { children: DataNode[] }>();
+  const domains = new Map<string, DataNode & { children: DataNode[] }>();
   const apps = new Map<string, DataNode & { children: DataNode[] }>();
   const features = new Set<string>();
   for (const reference of references) {
-    let cloud = clouds.get(reference.cloudId);
-    if (!cloud) {
-      cloud = { key: `cloud:${reference.cloudId}`, title: reference.cloudName, children: [] };
-      clouds.set(reference.cloudId, cloud);
+    let domain = domains.get(reference.domainId);
+    if (!domain) {
+      domain = { key: `domain:${reference.domainId}`, title: reference.domainName, children: [] };
+      domains.set(reference.domainId, domain);
     }
     let application = apps.get(reference.appId);
     if (!application) {
       application = { key: `app:${reference.appId}`, title: reference.appName, children: [] };
       apps.set(reference.appId, application);
-      cloud.children.push(application);
+      domain.children.push(application);
     }
     if (!features.has(reference.featureId)) {
       application.children.push({
@@ -71,7 +71,7 @@ const buildTree = (references: NumberReference[]): DataNode[] => {
       features.add(reference.featureId);
     }
   }
-  return [{ key: 'all', title: '全部功能', children: [...clouds.values()] }];
+  return [{ key: 'all', title: '全部功能', children: [...domains.values()] }];
 };
 
 const NumberRuleListPage = (props: PageComponentProps) => {
@@ -86,7 +86,7 @@ const NumberRuleListPage = (props: PageComponentProps) => {
     queryFn: numberRuleApi.references,
   });
   const scopeParams = {
-    cloudId: scope.type === 'cloud' ? scope.id : undefined,
+    domainId: scope.type === 'domain' ? scope.id : undefined,
     appId: scope.type === 'app' ? scope.id : undefined,
     featureId: scope.type === 'feature' ? scope.id : undefined,
   };
@@ -192,7 +192,7 @@ const NumberRuleListPage = (props: PageComponentProps) => {
             onSelect={(keys) => {
               const key = String(keys[0] ?? 'all');
               resetPage();
-              if (key.startsWith('cloud:')) setScope({ type: 'cloud', id: key.slice(6) });
+              if (key.startsWith('domain:')) setScope({ type: 'domain', id: key.slice(6) });
               else if (key.startsWith('app:')) setScope({ type: 'app', id: key.slice(4) });
               else if (key.startsWith('feature:')) setScope({ type: 'feature', id: key.slice(8) });
               else setScope({ type: 'all' });

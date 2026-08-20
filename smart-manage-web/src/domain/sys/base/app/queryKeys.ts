@@ -6,6 +6,6 @@ export const appQueryKeys = {
   list: (params: Partial<AppListForm>) => [...appQueryKeys.lists(), params] as const,
   details: () => [...appQueryKeys.all, 'detail'] as const,
   detail: (id: string | undefined) => [...appQueryKeys.details(), id] as const,
-  cloudApps: () => [...appQueryKeys.all, 'cloud-apps'] as const,
-  cloudAppsAll: () => [...appQueryKeys.all, 'cloud-apps-all'] as const,
+  domainApps: () => [...appQueryKeys.all, 'domain-apps'] as const,
+  domainAppsAll: () => [...appQueryKeys.all, 'domain-apps-all'] as const,
 };

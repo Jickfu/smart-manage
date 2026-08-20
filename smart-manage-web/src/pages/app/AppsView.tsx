@@ -10,7 +10,7 @@ import './AppsView.css';
 
 const AppsView = () => {
   const { data, isLoading } = useQuery({
-    queryKey: appQueryKeys.cloudApps(),
+    queryKey: appQueryKeys.domainApps(),
     queryFn: fetchApps,
   });
 
@@ -21,13 +21,13 @@ const AppsView = () => {
   return (
     <div className="sm-apps">
       <Spin spinning={isLoading}>
-        {data?.map((cloud) => (
-          <div key={cloud.number} className="sm-cloud-domain">
-            <div className="sm-cloud-name">
-              <div className="sm-cloud-name-text">{cloud.name}</div>
+        {data?.map((domain) => (
+          <div key={domain.number} className="sm-domain-group">
+            <div className="sm-domain-name">
+              <div className="sm-domain-name-text">{domain.name}</div>
             </div>
-            <div className="sm-cloud-apps">
-              {cloud.appList?.map((app) => (
+            <div className="sm-domain-apps">
+              {domain.appList?.map((app) => (
                 <div key={app.number} className="sm-app-card" onClick={() => handleAppClick(app)}>
                   <AppCardIcon icon={app.icon} iconColor={app.iconColor} />
                   <div className="sm-app-card-text">

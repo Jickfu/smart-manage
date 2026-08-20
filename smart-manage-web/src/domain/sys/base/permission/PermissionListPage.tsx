@@ -31,7 +31,7 @@ const columnFeatures: ListColumnFeatures = {
 
 type PermissionScope =
   | { type: 'all' }
-  | { type: 'cloud'; id: string }
+  | { type: 'domain'; id: string }
   | { type: 'app'; id: string }
   | { type: 'feature'; id: string };
 
@@ -39,14 +39,14 @@ const PermissionListPage = (props: PageComponentProps) => {
   const { modal } = App.useApp();
   const { can } = usePermissionAccess(permissionAccess.prefix);
   const [scope, setScope] = useState<PermissionScope>({ type: 'all' });
-  const appsQuery = useQuery({ queryKey: appQueryKeys.cloudAppsAll(), queryFn: fetchAppsAll });
+  const appsQuery = useQuery({ queryKey: appQueryKeys.domainAppsAll(), queryFn: fetchAppsAll });
   const featuresQuery = useQuery({
     queryKey: featureQueryKeys.visible(),
     queryFn: featureApi.listAllVisible,
   });
   const scopeParams = {
     appId: scope.type === 'app' ? scope.id : undefined,
-    cloudId: scope.type === 'cloud' ? scope.id : undefined,
+    domainId: scope.type === 'domain' ? scope.id : undefined,
     featureId: scope.type === 'feature' ? scope.id : undefined,
   };
   const {
@@ -108,10 +108,10 @@ const PermissionListPage = (props: PageComponentProps) => {
       {
         key: 'all',
         title: '全部功能',
-        children: (appsQuery.data ?? []).map((cloud) => ({
-          key: `cloud:${cloud.id}`,
-          title: cloud.name,
-          children: cloud.appList.map((application) => ({
+        children: (appsQuery.data ?? []).map((domain) => ({
+          key: `domain:${domain.id}`,
+          title: domain.name,
+          children: domain.appList.map((application) => ({
             key: `app:${application.id}`,
             title: application.name,
             children: (featuresByApp.get(application.id) ?? []).map((feature) => ({
@@ -151,7 +151,7 @@ const PermissionListPage = (props: PageComponentProps) => {
                 const [type, id] = String(keys[0] ?? 'all').split(':');
                 setSelectedRowKeys([]);
                 resetPage();
-                if (type === 'cloud' && id) setScope({ type: 'cloud', id });
+                if (type === 'domain' && id) setScope({ type: 'domain', id });
                 else if (type === 'app' && id) setScope({ type: 'app', id });
                 else if (type === 'feature' && id) setScope({ type: 'feature', id });
                 else setScope({ type: 'all' });

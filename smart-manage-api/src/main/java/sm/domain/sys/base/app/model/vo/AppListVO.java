@@ -15,8 +15,8 @@ public class AppListVO {
 	private String iconColor;
 	private Integer seq;
 	private String description;
-	private Long cloudId;
-	private String cloudName;
+	private Long domainId;
+	private String domainName;
 	private Boolean enabled;
 	private LocalDateTime createTime;
 	private LocalDateTime updateTime;

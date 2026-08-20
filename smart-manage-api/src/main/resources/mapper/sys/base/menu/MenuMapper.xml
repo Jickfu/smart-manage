@@ -3,9 +3,9 @@
 <mapper namespace="sm.domain.sys.base.menu.mapper.MenuMapper">
     <select id="selectAppInfo" resultType="sm.domain.sys.base.menu.model.vo.MenuAppInfoVO">
         SELECT a.name AS app_name, a.number AS app_number, a.icon AS app_icon,
-               b.number AS cloud_number
+               b.number AS domain_number
         FROM t_sys_app a
-        LEFT JOIN t_sys_cloud b ON b.id = a.cloud_id
+        LEFT JOIN t_sys_domain b ON b.id = a.domain_id
         WHERE a.id = #{appId}
           AND a.enabled = true
           AND b.enabled = true

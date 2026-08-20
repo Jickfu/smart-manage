@@ -15,7 +15,7 @@
         INNER JOIN t_sys_app c ON c.id = COALESCE(b.app_id, a.app_id)
         <where>
             <if test="form.appId != null">COALESCE(b.app_id, a.app_id) = #{form.appId}</if>
-            <if test="form.cloudId != null">c.cloud_id = #{form.cloudId}</if>
+            <if test="form.domainId != null">c.domain_id = #{form.domainId}</if>
             <if test="form.featureId != null">AND a.feature_id = #{form.featureId}</if>
             <if test="form.keyword != null and form.keyword.trim() != ''">
                 AND (a.name LIKE CONCAT('%', #{form.keyword}, '%')

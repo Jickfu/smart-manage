@@ -34,9 +34,9 @@ public class AppSaveForm {
 	@Schema(description = "描述")
 	private String description;
 
-	@NotNull(message = "cloudId 不能为空")
-	@Schema(description = "云 id")
-	private Long cloudId;
+	@NotNull(message = "domainId 不能为空")
+	@Schema(description = "领域 id")
+	private Long domainId;
 
 }
 

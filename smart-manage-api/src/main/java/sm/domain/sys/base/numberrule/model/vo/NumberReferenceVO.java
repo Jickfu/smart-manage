@@ -14,8 +14,8 @@ public class NumberReferenceVO {
     private String featureName;
     private Long appId;
     private String appName;
-    private Long cloudId;
-    private String cloudName;
+    private Long domainId;
+    private String domainName;
     private Set<String> allowedScopes;
     private List<NumberVariableVO> variables;
 }

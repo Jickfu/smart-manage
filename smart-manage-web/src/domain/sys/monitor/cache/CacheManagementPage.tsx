@@ -169,17 +169,20 @@ export default function CacheManagementPage(props: PageComponentProps) {
               defaultExpandedKeys={[
                 'all',
                 ...(scopeTreeQuery.data ?? [])
-                  .filter((item) => item.type === 'CLOUD')
+                  .filter((item) => item.type === 'DOMAIN')
                   .map(scopeNodeKey),
               ]}
               selectedKeys={[scopeNodeKeyFromFilter(scope)]}
               onSelect={(_, info) => {
                 const selectedKey = String(info.node.key);
                 if (selectedKey.startsWith('app:')) {
-                  const [, cloudNumber, appNumber] = selectedKey.split(':');
-                  setScope({ scopeType: 'APP', cloudNumber, appNumber });
-                } else if (selectedKey.startsWith('cloud:')) {
-                  setScope({ scopeType: 'CLOUD', cloudNumber: selectedKey.slice('cloud:'.length) });
+                  const [, domainNumber, appNumber] = selectedKey.split(':');
+                  setScope({ scopeType: 'APP', domainNumber, appNumber });
+                } else if (selectedKey.startsWith('domain:')) {
+                  setScope({
+                    scopeType: 'DOMAIN',
+                    domainNumber: selectedKey.slice('domain:'.length),
+                  });
                 } else if (selectedKey === 'other') {
                   setScope({ scopeType: 'OTHER' });
                 } else {

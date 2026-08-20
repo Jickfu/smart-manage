@@ -13,21 +13,21 @@
         <result property="enabled" column="app_enabled"/>
         <result property="createTime" column="app_create_time"/>
         <result property="updateTime" column="app_update_time"/>
-        <association property="cloud" javaType="sm.domain.sys.base.app.model.vo.AppDetailVO$CloudRef"
-                     notNullColumn="cloud_id">
-            <id property="id" column="cloud_id"/>
-            <result property="number" column="cloud_number"/>
-            <result property="name" column="cloud_name"/>
+        <association property="domain" javaType="sm.domain.sys.base.app.model.vo.AppDetailVO$DomainRef"
+                     notNullColumn="domain_id">
+            <id property="id" column="domain_id"/>
+            <result property="number" column="domain_number"/>
+            <result property="name" column="domain_name"/>
         </association>
     </resultMap>
 
     <select id="selectListPage" resultType="sm.domain.sys.base.app.model.vo.AppListVO">
         SELECT a.id, a.name, a.number, a.icon, a.icon_color, a.seq, a.description,
-               a.cloud_id, b.name AS cloud_name, a.enabled, a.create_time, a.update_time
+               a.domain_id, b.name AS domain_name, a.enabled, a.create_time, a.update_time
         FROM t_sys_app a
-        LEFT JOIN t_sys_cloud b ON b.id = a.cloud_id
+        LEFT JOIN t_sys_domain b ON b.id = a.domain_id
         <where>
-            <if test="form.cloudId != null">a.cloud_id = #{form.cloudId}</if>
+            <if test="form.domainId != null">a.domain_id = #{form.domainId}</if>
             <if test="form.keyword != null and form.keyword.trim() != ''">
                 AND (a.name LIKE CONCAT('%', #{form.keyword}, '%')
                 OR a.number LIKE CONCAT('%', #{form.keyword}, '%'))
@@ -45,19 +45,19 @@
                a.icon AS app_icon, a.icon_color AS app_icon_color, a.seq AS app_seq,
                a.description AS app_description, a.enabled AS app_enabled,
                a.create_time AS app_create_time, a.update_time AS app_update_time,
-               b.id AS cloud_id, b.number AS cloud_number, b.name AS cloud_name
+               b.id AS domain_id, b.number AS domain_number, b.name AS domain_name
         FROM t_sys_app a
-        LEFT JOIN t_sys_cloud b ON b.id = a.cloud_id
+        LEFT JOIN t_sys_domain b ON b.id = a.domain_id
         WHERE a.id = #{id}
     </select>
 
-    <select id="selectUserCloudApps" resultType="sm.domain.sys.base.app.model.vo.CloudAppRowVO">
-        SELECT DISTINCT b.id AS cloud_id, b.name AS cloud_name, b.number AS cloud_number,
-               b.seq AS cloud_seq, a.id AS app_id, a.name AS app_name,
+    <select id="selectUserDomainApps" resultType="sm.domain.sys.base.app.model.vo.DomainAppRowVO">
+        SELECT DISTINCT b.id AS domain_id, b.name AS domain_name, b.number AS domain_number,
+               b.seq AS domain_seq, a.id AS app_id, a.name AS app_name,
                a.number AS app_number, a.icon AS app_icon, a.icon_color AS app_icon_color,
                a.seq AS app_seq, a.description AS app_description
         FROM t_sys_app a
-        LEFT JOIN t_sys_cloud b ON b.id = a.cloud_id
+        LEFT JOIN t_sys_domain b ON b.id = a.domain_id
         INNER JOIN t_sys_menu c ON c.app_id = a.id
         INNER JOIN t_sys_role_perms d ON d.permission_id = c.permission_id
         INNER JOIN t_sys_user_role e ON e.role_id = d.role_id
@@ -69,21 +69,21 @@
         ORDER BY b.seq, a.seq
     </select>
 
-    <select id="selectAllCloudApps" resultType="sm.domain.sys.base.app.model.vo.CloudAppRowVO">
-        SELECT a.id AS cloud_id, a.name AS cloud_name, a.number AS cloud_number,
-               a.seq AS cloud_seq, b.id AS app_id, b.name AS app_name,
+    <select id="selectAllDomainApps" resultType="sm.domain.sys.base.app.model.vo.DomainAppRowVO">
+        SELECT a.id AS domain_id, a.name AS domain_name, a.number AS domain_number,
+               a.seq AS domain_seq, b.id AS app_id, b.name AS app_name,
                b.number AS app_number, b.icon AS app_icon, b.icon_color AS app_icon_color,
                b.seq AS app_seq, b.description AS app_description
-        FROM t_sys_cloud a
-        LEFT JOIN t_sys_app b ON b.cloud_id = a.id
+        FROM t_sys_domain a
+        LEFT JOIN t_sys_app b ON b.domain_id = a.id
         ORDER BY a.seq, b.seq, b.id
     </select>
 
     <select id="selectUserAppByNumber" resultType="sm.domain.sys.base.app.model.vo.AppVO">
-        SELECT DISTINCT a.id, b.number AS cloud_number, a.number, a.name, a.icon,
+        SELECT DISTINCT a.id, b.number AS domain_number, a.number, a.name, a.icon,
                a.icon_color, a.seq, a.description
         FROM t_sys_app a
-        LEFT JOIN t_sys_cloud b ON b.id = a.cloud_id
+        LEFT JOIN t_sys_domain b ON b.id = a.domain_id
         INNER JOIN t_sys_menu c ON c.app_id = a.id
         INNER JOIN t_sys_role_perms d ON d.permission_id = c.permission_id
         INNER JOIN t_sys_user_role e ON e.role_id = d.role_id
@@ -97,10 +97,10 @@
     </select>
 
     <select id="selectAppByNumber" resultType="sm.domain.sys.base.app.model.vo.AppVO">
-        SELECT a.id, b.number AS cloud_number, a.number, a.name, a.icon,
+        SELECT a.id, b.number AS domain_number, a.number, a.name, a.icon,
                a.icon_color, a.seq, a.description
         FROM t_sys_app a
-        LEFT JOIN t_sys_cloud b ON b.id = a.cloud_id
+        LEFT JOIN t_sys_domain b ON b.id = a.domain_id
         WHERE a.number = #{appNumber}
           AND a.enabled = true
           AND b.enabled = true

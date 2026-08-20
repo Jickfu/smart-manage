@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.app.model.vo.AppVO;
-import sm.domain.sys.base.app.model.vo.CloudAppsVO;
+import sm.domain.sys.base.app.model.vo.DomainAppsVO;
 import sm.domain.sys.base.app.service.AppService;
 import sm.domain.sys.monitor.cache.model.vo.CacheOverviewVO;
 import sm.domain.sys.monitor.cache.model.vo.ManagedCacheVO;
@@ -44,7 +44,7 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 public class CacheService {
     private static final Map<String, CacheDefinition> MANAGED_CACHES = managedCaches();
-    private static final Set<String> SCOPE_TYPES = Set.of("ALL", "CLOUD", "APP", "OTHER");
+    private static final Set<String> SCOPE_TYPES = Set.of("ALL", "DOMAIN", "APP", "OTHER");
     private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
             "key", ListSqlQuery.string("key", true),
             "cacheDisplayName", ListSqlQuery.string("cacheDisplayName", false),
@@ -72,26 +72,26 @@ public class CacheService {
 
     public List<CacheScopeVO> scopeTree() {
         currentUserContext.checkAdministrator();
-        List<CacheScopeVO> clouds = new ArrayList<>();
-        for (CloudAppsVO cloud : appService.getAllCloudApps()) {
-            List<CacheScopeVO> applications = cloud.getAppList().stream()
+        List<CacheScopeVO> domains = new ArrayList<>();
+        for (DomainAppsVO domain : appService.getAllDomainApps()) {
+            List<CacheScopeVO> applications = domain.getAppList().stream()
                     .map(application -> CacheScopeVO.builder().type("APP").name(application.getName())
-                            .cloudNumber(cloud.getNumber()).appNumber(application.getNumber()).children(List.of())
+                            .domainNumber(domain.getNumber()).appNumber(application.getNumber()).children(List.of())
                             .build())
                     .toList();
-            clouds.add(CacheScopeVO.builder().type("CLOUD").name(cloud.getName())
-                    .cloudNumber(cloud.getNumber()).children(applications).build());
+            domains.add(CacheScopeVO.builder().type("DOMAIN").name(domain.getName())
+                    .domainNumber(domain.getNumber()).children(applications).build());
         }
-        clouds.add(CacheScopeVO.builder().type("OTHER").name("其他缓存").children(List.of()).build());
-        return clouds;
+        domains.add(CacheScopeVO.builder().type("OTHER").name("其他缓存").children(List.of()).build());
+        return domains;
     }
 
     public PageData<CacheEntryVO> listPage(CacheEntryListForm form) {
         currentUserContext.checkAdministrator();
         String scopeType = normalizeScopeType(form.getScopeType());
-        List<CloudAppsVO> cloudApps = appService.getAllCloudApps();
-        List<AppScope> applicationScopes = applicationScopes(cloudApps);
-        validateScope(form, scopeType, cloudApps, applicationScopes);
+        List<DomainAppsVO> domainApps = appService.getAllDomainApps();
+        List<AppScope> applicationScopes = applicationScopes(domainApps);
+        validateScope(form, scopeType, domainApps, applicationScopes);
         List<CacheEntryVO> entries = new ArrayList<>();
         appendLocalEntries(entries);
         appendRedisEntries(entries);
@@ -166,11 +166,11 @@ public class CacheService {
         return value == null ? "" : String.valueOf(value);
     }
 
-    private List<AppScope> applicationScopes(List<CloudAppsVO> cloudApps) {
+    private List<AppScope> applicationScopes(List<DomainAppsVO> domainApps) {
         List<AppScope> scopes = new ArrayList<>();
-        for (CloudAppsVO cloud : cloudApps) {
-            for (AppVO application : cloud.getAppList()) {
-                scopes.add(new AppScope(cloud.getNumber(), application.getNumber()));
+        for (DomainAppsVO domain : domainApps) {
+            for (AppVO application : domain.getAppList()) {
+                scopes.add(new AppScope(domain.getNumber(), application.getNumber()));
             }
         }
         return scopes;
@@ -185,17 +185,17 @@ public class CacheService {
         return normalized;
     }
 
-    private void validateScope(CacheEntryListForm form, String scopeType, List<CloudAppsVO> cloudApps,
+    private void validateScope(CacheEntryListForm form, String scopeType, List<DomainAppsVO> domainApps,
                                List<AppScope> applicationScopes) {
-        if ("CLOUD".equals(scopeType)) {
-            boolean exists = cloudApps.stream().anyMatch(cloud -> cloud.getNumber().equals(form.getCloudNumber()));
+        if ("DOMAIN".equals(scopeType)) {
+            boolean exists = domainApps.stream().anyMatch(domain -> domain.getNumber().equals(form.getDomainNumber()));
             if (!exists) {
-                throw new BizException(ResultEnum.PARAM_ERROR, "缓存所属云不存在");
+                throw new BizException(ResultEnum.PARAM_ERROR, "缓存所属领域不存在");
             }
         }
         if ("APP".equals(scopeType)) {
             boolean exists = applicationScopes.stream().anyMatch(scope ->
-                    scope.cloudNumber().equals(form.getCloudNumber())
+                    scope.domainNumber().equals(form.getDomainNumber())
                             && scope.appNumber().equals(form.getAppNumber()));
             if (!exists) {
                 throw new BizException(ResultEnum.PARAM_ERROR, "缓存所属应用不存在");
@@ -211,12 +211,12 @@ public class CacheService {
         if ("OTHER".equals(scopeType)) {
             return applicationScopes.stream().noneMatch(scope -> belongsTo(entry, scope));
         }
-        if ("CLOUD".equals(scopeType)) {
+        if ("DOMAIN".equals(scopeType)) {
             return applicationScopes.stream()
-                    .filter(scope -> scope.cloudNumber().equals(form.getCloudNumber()))
+                    .filter(scope -> scope.domainNumber().equals(form.getDomainNumber()))
                     .anyMatch(scope -> belongsTo(entry, scope));
         }
-        AppScope requested = new AppScope(form.getCloudNumber(), form.getAppNumber());
+        AppScope requested = new AppScope(form.getDomainNumber(), form.getAppNumber());
         return belongsTo(entry, requested);
     }
 
@@ -437,9 +437,9 @@ public class CacheService {
                                    long expireSeconds, boolean sensitiveValue) {
     }
 
-    private record AppScope(String cloudNumber, String appNumber) {
+    private record AppScope(String domainNumber, String appNumber) {
         String prefix() {
-            return cloudNumber + ":" + appNumber + ":";
+            return domainNumber + ":" + appNumber + ":";
         }
     }
 }

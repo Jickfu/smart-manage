@@ -9,7 +9,7 @@ import sm.system.form.PageForm;
 @EqualsAndHashCode(callSuper = true)
 public class FeatureListForm extends PageForm {
     private Long appId;
-    private Long cloudId;
+    private Long domainId;
     @Schema(description = "关键词")
     private String keyword;
 }

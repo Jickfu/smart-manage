@@ -3,7 +3,7 @@
 <mapper namespace="sm.domain.sys.base.feature.mapper.FeatureMapper">
     <sql id="featureColumns">
         a.id, a.version, a.feature_key, a.app_id, b.name AS app_name,
-        b.cloud_id, c.name AS cloud_name, a.default_name, a.custom_name,
+        b.domain_id, c.name AS domain_name, a.default_name, a.custom_name,
         COALESCE(a.custom_name, a.default_name) AS name,
         a.default_seq, a.custom_seq, COALESCE(a.custom_seq, a.default_seq) AS seq,
         a.description, a.visible, a.source
@@ -12,10 +12,10 @@
         SELECT <include refid="featureColumns"/>
         FROM t_sys_feature a
         INNER JOIN t_sys_app b ON b.id = a.app_id
-        INNER JOIN t_sys_cloud c ON c.id = b.cloud_id
+        INNER JOIN t_sys_domain c ON c.id = b.domain_id
         <where>
             <if test="form.appId != null">a.app_id = #{form.appId}</if>
-            <if test="form.cloudId != null">b.cloud_id = #{form.cloudId}</if>
+            <if test="form.domainId != null">b.domain_id = #{form.domainId}</if>
             <if test="form.keyword != null and form.keyword.trim() != ''">
                 AND (a.feature_key LIKE CONCAT('%', #{form.keyword}, '%')
                 OR a.default_name LIKE CONCAT('%', #{form.keyword}, '%')
@@ -32,14 +32,14 @@
         SELECT <include refid="featureColumns"/>
         FROM t_sys_feature a
         INNER JOIN t_sys_app b ON b.id = a.app_id
-        INNER JOIN t_sys_cloud c ON c.id = b.cloud_id
+        INNER JOIN t_sys_domain c ON c.id = b.domain_id
         WHERE a.id = #{id}
     </select>
     <select id="selectAllVisible" resultType="sm.domain.sys.base.feature.model.vo.FeatureVO">
         SELECT <include refid="featureColumns"/>
         FROM t_sys_feature a
         INNER JOIN t_sys_app b ON b.id = a.app_id
-        INNER JOIN t_sys_cloud c ON c.id = b.cloud_id
+        INNER JOIN t_sys_domain c ON c.id = b.domain_id
         WHERE a.visible = true
         ORDER BY c.seq, b.seq, COALESCE(a.custom_seq, a.default_seq), a.id
     </select>

@@ -14,7 +14,7 @@ import sm.domain.sys.base.basicdata.model.form.BasicDataCategorySaveForm;
 import sm.domain.sys.base.basicdata.model.form.BasicDataDeleteForm;
 import sm.domain.sys.base.basicdata.model.form.BasicDataItemSaveForm;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataOptionVO;
-import sm.domain.sys.base.cloud.mapper.CloudMapper;
+import sm.domain.sys.base.domain.mapper.DomainMapper;
 import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
@@ -41,14 +41,14 @@ class BasicDataTxService {
 
     private final BasicDataCategoryMapper categoryMapper;
     private final BasicDataItemMapper itemMapper;
-    private final CloudMapper cloudMapper;
+    private final DomainMapper domainMapper;
     private final CacheHelper cacheHelper;
     private final NumberGeneratorAccessor numberGeneratorAccessor;
 
     public Long saveCategory(BasicDataCategorySaveForm form) {
         normalizeCategory(form);
-        if (cloudMapper.selectById(form.getCloudId()) == null) {
-            throw new BizException(ResultEnum.NOT_FOUND, "所属云不存在");
+        if (domainMapper.selectById(form.getDomainId()) == null) {
+            throw new BizException(ResultEnum.NOT_FOUND, "所属领域不存在");
         }
         BasicDataCategoryEntity entity;
         String oldNumber = null;
@@ -65,7 +65,7 @@ class BasicDataTxService {
                 .ne(form.getId() != null, BasicDataCategoryEntity::getId, form.getId()));
         if (duplicateCount > 0) throw new BizException(ResultEnum.DATA_CONFLICT, "基础资料分类编码已存在");
 
-        entity.setCloudId(form.getCloudId());
+        entity.setDomainId(form.getDomainId());
         entity.setNumber(form.getNumber());
         entity.setName(form.getName());
         entity.setDescription(form.getDescription());

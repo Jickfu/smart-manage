@@ -16,8 +16,8 @@ public class NumberRuleVO {
     private String featureName;
     private Long appId;
     private String appName;
-    private Long cloudId;
-    private String cloudName;
+    private Long domainId;
+    private String domainName;
     private String name;
     private String pattern;
     private String scopeType;

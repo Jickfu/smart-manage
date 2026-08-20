@@ -4,7 +4,7 @@ export type BasicDataNumberMode = 'MANUAL' | 'AUTO_LOCKED' | 'AUTO_DEFAULT';
 
 export interface BasicDataTreeNode {
   key: string;
-  type: 'cloud' | 'category';
+  type: 'domain' | 'category';
   id: string;
   name: string;
   enabled: boolean;
@@ -13,8 +13,8 @@ export interface BasicDataTreeNode {
 
 export interface BasicDataCategory {
   id: string;
-  cloudId: string;
-  cloudName?: string;
+  domainId: string;
+  domainName?: string;
   number: string;
   name: string;
   description?: string;
@@ -28,7 +28,7 @@ export interface BasicDataCategory {
 export interface BasicDataCategorySaveForm {
   id?: string;
   version?: number;
-  cloudId: string;
+  domainId: string;
   number: string;
   name: string;
   description?: string;

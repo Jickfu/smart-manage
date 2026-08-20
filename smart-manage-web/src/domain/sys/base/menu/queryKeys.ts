@@ -6,5 +6,6 @@ export const menuQueryKeys = {
   detail: (id: string | undefined) => [...menuQueryKeys.details(), id] as const,
   trees: () => [...menuQueryKeys.all, 'tree'] as const,
   treeList: (params: object) => [...menuQueryKeys.trees(), 'list', params] as const,
+  catalog: () => [...menuQueryKeys.all, 'catalog'] as const,
   userByApp: (appNumber: string) => [...menuQueryKeys.all, 'user-app', appNumber] as const,
 };

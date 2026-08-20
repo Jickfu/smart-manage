@@ -23,7 +23,7 @@ export type RefSelectorFetchFn<T> = (
 
 interface UseRefSelectorQueryOptions<T> {
   fetchFn: RefSelectorFetchFn<T>;
-  /** 选择器标识，用于隔离不同实例的查询缓存。简单场景传 'sys-cloud'，复杂场景传 ['sys-org-user', orgId] */
+  /** 选择器标识，用于隔离不同实例的查询缓存。简单场景传 'sys-domain'，复杂场景传 ['sys-org-user', orgId] */
   selectorKey: string | readonly unknown[];
   initialPageSize?: number;
   /** 控制是否触发请求，通常绑定 modalOpen */

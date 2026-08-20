@@ -12,8 +12,8 @@ public class AppVO {
 	@Schema(description = "id")
 	private Long id;
 
-	@Schema(description = "所属云编号（t_sys_cloud.number）")
-	private String cloudNumber;
+	@Schema(description = "所属领域编号（t_sys_domain.number）")
+	private String domainNumber;
 
 	@Schema(description = "编号")
 	private String number;

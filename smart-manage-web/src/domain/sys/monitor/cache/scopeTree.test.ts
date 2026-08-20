@@ -3,31 +3,31 @@ import { scopeNodeKeyFromFilter, toTreeNode } from './scopeTree';
 import type { CacheScope } from './types';
 
 describe('cache scope tree', () => {
-  it('builds cloud and application hierarchy with stable keys', () => {
-    const cloud: CacheScope = {
-      type: 'CLOUD',
+  it('builds domain and application hierarchy with stable keys', () => {
+    const domain: CacheScope = {
+      type: 'DOMAIN',
       name: '系统服务',
-      cloudNumber: 'sys',
+      domainNumber: 'sys',
       children: [
         {
           type: 'APP',
           name: '系统管理',
-          cloudNumber: 'sys',
+          domainNumber: 'sys',
           appNumber: 'base',
           children: [],
         },
       ],
     };
 
-    expect(toTreeNode(cloud)).toMatchObject({
-      key: 'cloud:sys',
+    expect(toTreeNode(domain)).toMatchObject({
+      key: 'domain:sys',
       children: [{ key: 'app:sys:base', isLeaf: true }],
     });
   });
 
   it('maps filter state back to the selected tree node', () => {
     expect(
-      scopeNodeKeyFromFilter({ scopeType: 'APP', cloudNumber: 'sys', appNumber: 'base' }),
+      scopeNodeKeyFromFilter({ scopeType: 'APP', domainNumber: 'sys', appNumber: 'base' }),
     ).toBe('app:sys:base');
     expect(scopeNodeKeyFromFilter({ scopeType: 'OTHER' })).toBe('other');
   });

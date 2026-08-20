@@ -32,7 +32,7 @@ public class AppEntity extends BaseEntity {
 
 	private String description;
 
-	private Long cloudId;
+	private Long domainId;
 
 	private Boolean enabled;
 

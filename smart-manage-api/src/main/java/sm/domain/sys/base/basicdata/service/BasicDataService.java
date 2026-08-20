@@ -19,8 +19,8 @@ import sm.domain.sys.base.basicdata.model.vo.BasicDataItemDetailVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataListVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataOptionVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataTreeVO;
-import sm.domain.sys.base.cloud.mapper.CloudMapper;
-import sm.domain.sys.base.cloud.model.entity.CloudEntity;
+import sm.domain.sys.base.domain.mapper.DomainMapper;
+import sm.domain.sys.base.domain.model.entity.DomainEntity;
 import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
@@ -54,7 +54,7 @@ public class BasicDataService {
             Map.entry("description", ListQueryUtil.string(BasicDataItemEntity::getDescription, false)));
     private final BasicDataCategoryMapper categoryMapper;
     private final BasicDataItemMapper itemMapper;
-    private final CloudMapper cloudMapper;
+    private final DomainMapper domainMapper;
     private final BasicDataTxService txService;
     private final BasicDataConverter converter;
     private final NumberRuleService numberRuleService;
@@ -66,21 +66,21 @@ public class BasicDataService {
     public List<BasicDataTreeVO> categoryTree() {
         List<BasicDataCategoryEntity> categories = categoryMapper.selectList(
                 new LambdaQueryWrapper<BasicDataCategoryEntity>().orderByAsc(BasicDataCategoryEntity::getNumber));
-        Map<Long, List<BasicDataCategoryEntity>> categoriesByCloud = new LinkedHashMap<>();
+        Map<Long, List<BasicDataCategoryEntity>> categoriesByDomain = new LinkedHashMap<>();
         for (BasicDataCategoryEntity category : categories) {
-            categoriesByCloud.computeIfAbsent(category.getCloudId(), ignored -> new ArrayList<>()).add(category);
+            categoriesByDomain.computeIfAbsent(category.getDomainId(), ignored -> new ArrayList<>()).add(category);
         }
-        List<CloudEntity> clouds = cloudMapper.selectList(new LambdaQueryWrapper<CloudEntity>()
-                .orderByAsc(CloudEntity::getSeq).orderByAsc(CloudEntity::getId));
-        List<BasicDataTreeVO> tree = new ArrayList<>(clouds.size());
-        for (CloudEntity cloud : clouds) {
+        List<DomainEntity> domains = domainMapper.selectList(new LambdaQueryWrapper<DomainEntity>()
+                .orderByAsc(DomainEntity::getSeq).orderByAsc(DomainEntity::getId));
+        List<BasicDataTreeVO> tree = new ArrayList<>(domains.size());
+        for (DomainEntity domain : domains) {
             List<BasicDataTreeVO> children = new ArrayList<>();
-            for (BasicDataCategoryEntity category : categoriesByCloud.getOrDefault(cloud.getId(), List.of())) {
+            for (BasicDataCategoryEntity category : categoriesByDomain.getOrDefault(domain.getId(), List.of())) {
                 children.add(new BasicDataTreeVO("category:" + category.getId(), "category",
                         category.getId(), category.getName(), category.getEnabled(), List.of()));
             }
-            tree.add(new BasicDataTreeVO("cloud:" + cloud.getId(), "cloud", cloud.getId(),
-                    cloud.getName(), cloud.getEnabled(), children));
+            tree.add(new BasicDataTreeVO("domain:" + domain.getId(), "domain", domain.getId(),
+                    domain.getName(), domain.getEnabled(), children));
         }
         return tree;
     }
@@ -88,8 +88,8 @@ public class BasicDataService {
     public BasicDataCategoryVO categoryDetail(Long id) {
         BasicDataCategoryEntity category = requireCategory(id);
         BasicDataCategoryVO result = converter.toCategoryVO(category);
-        CloudEntity cloud = cloudMapper.selectById(category.getCloudId());
-        result.setCloudName(cloud == null ? null : cloud.getName());
+        DomainEntity domain = domainMapper.selectById(category.getDomainId());
+        result.setDomainName(domain == null ? null : domain.getName());
         return result;
     }
 

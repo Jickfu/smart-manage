@@ -9,8 +9,8 @@ import sm.system.form.PageForm;
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "应用管理-分页查询")
 public class AppListForm extends PageForm {
-	@Schema(description = "按云筛选")
-	private Long cloudId;
+	@Schema(description = "按领域筛选")
+	private Long domainId;
 
 	@Schema(description = "关键词（名称、编码模糊匹配）")
 	private String keyword;

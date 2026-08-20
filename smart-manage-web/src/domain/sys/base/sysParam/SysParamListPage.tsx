@@ -35,7 +35,7 @@ const EDIT_KEY = componentKeys.sysParamEdit;
 type Scope =
   | { type: 'all' }
   | { type: 'global' }
-  | { type: 'cloud'; id: string }
+  | { type: 'domain'; id: string }
   | { type: 'app'; id: string };
 
 const SysParamListPage = (props: PageComponentProps) => {
@@ -46,13 +46,13 @@ const SysParamListPage = (props: PageComponentProps) => {
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
   const queryClient = useQueryClient();
   const treeQuery = useQuery({
-    queryKey: appQueryKeys.cloudAppsAll(),
+    queryKey: appQueryKeys.domainAppsAll(),
     queryFn: fetchAppsAll,
     staleTime: 5 * 60 * 1000,
   });
   const scopeParams = {
     appId: scope.type === 'app' ? scope.id : undefined,
-    cloudId: scope.type === 'cloud' ? scope.id : undefined,
+    domainId: scope.type === 'domain' ? scope.id : undefined,
     globalOnly: scope.type === 'global' ? true : undefined,
   };
   const {
@@ -85,10 +85,10 @@ const SysParamListPage = (props: PageComponentProps) => {
         title: '全部参数',
         children: [
           { key: 'global', title: '全局参数', isLeaf: true },
-          ...(treeQuery.data?.map((cloud) => ({
-            key: `cloud:${cloud.id}`,
-            title: cloud.name,
-            children: cloud.appList.map((application) => ({
+          ...(treeQuery.data?.map((domain) => ({
+            key: `domain:${domain.id}`,
+            title: domain.name,
+            children: domain.appList.map((application) => ({
               key: `app:${application.id}`,
               title: application.name,
               isLeaf: true,
@@ -148,7 +148,7 @@ const SysParamListPage = (props: PageComponentProps) => {
             onSelect={(keys) => {
               const key = String(keys[0] ?? 'all');
               if (key === 'global') setScope({ type: 'global' });
-              else if (key.startsWith('cloud:')) setScope({ type: 'cloud', id: key.slice(6) });
+              else if (key.startsWith('domain:')) setScope({ type: 'domain', id: key.slice(6) });
               else if (key.startsWith('app:')) setScope({ type: 'app', id: key.slice(4) });
               else setScope({ type: 'all' });
             }}

@@ -14,7 +14,7 @@ import sm.system.entity.BaseEntity;
 public class BasicDataCategoryEntity extends BaseEntity {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
-    private Long cloudId;
+    private Long domainId;
     private String number;
     private String name;
     private String description;

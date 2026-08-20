@@ -44,7 +44,7 @@ public class CacheController {
         return Result.success(service.runtime());
     }
 
-    @Operation(summary = "缓存所属云与应用树")
+    @Operation(summary = "缓存所属领域与应用树")
     @SaCheckPermission(CachePermission.LIST)
     @PostMapping("/sys/monitor/cache/scopeTree")
     public Result<List<CacheScopeVO>> scopeTree() {

@@ -9,8 +9,8 @@ public class FeatureVO {
     private String featureKey;
     private Long appId;
     private String appName;
-    private Long cloudId;
-    private String cloudName;
+    private Long domainId;
+    private String domainName;
     private String defaultName;
     private String customName;
     private String name;

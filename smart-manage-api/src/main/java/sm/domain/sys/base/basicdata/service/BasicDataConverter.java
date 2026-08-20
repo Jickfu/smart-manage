@@ -11,7 +11,7 @@ import sm.framework.mapping.SmMapperConfig;
 
 @Mapper(config = SmMapperConfig.class)
 interface BasicDataConverter {
-    @Mapping(target = "cloudName", ignore = true)
+    @Mapping(target = "domainName", ignore = true)
     BasicDataCategoryVO toCategoryVO(BasicDataCategoryEntity entity);
     @Mapping(target = "categoryName", ignore = true)
     BasicDataListVO toListVO(BasicDataItemEntity entity);

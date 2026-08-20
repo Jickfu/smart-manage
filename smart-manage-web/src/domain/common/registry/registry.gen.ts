@@ -14,8 +14,8 @@ import pageRegistrationModule3 from '../../sys/base/attachmentConfig/pageRegistr
 // src/domain/sys/base/basicData/pageRegistration.ts
 import pageRegistrationModule4 from '../../sys/base/basicData/pageRegistration';
 
-// src/domain/sys/base/cloud/pageRegistration.ts
-import pageRegistrationModule5 from '../../sys/base/cloud/pageRegistration';
+// src/domain/sys/base/domain/pageRegistration.ts
+import pageRegistrationModule5 from '../../sys/base/domain/pageRegistration';
 
 // src/domain/sys/base/feature/pageRegistration.ts
 import pageRegistrationModule6 from '../../sys/base/feature/pageRegistration';

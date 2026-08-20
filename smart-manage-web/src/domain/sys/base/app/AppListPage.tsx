@@ -20,7 +20,7 @@ import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 const columnFeatures: ListColumnFeatures = {
   number: { label: '编码', filter: { type: 'string' }, sorter: true },
   name: { label: '名称', filter: { type: 'string' }, sorter: true },
-  cloudName: { label: '所属云', filter: { type: 'string' } },
+  domainName: { label: '所属领域', filter: { type: 'string' } },
   seq: { label: '排序', filter: { type: 'number' }, sorter: true },
   enabled: { label: '状态', filter: { type: 'boolean' }, sorter: true },
   description: { label: '描述', filter: { type: 'string' } },
@@ -30,16 +30,16 @@ const columnFeatures: ListColumnFeatures = {
 /** 应用编辑页 componentKey */
 const APP_EDIT_KEY = 'sys/base/app/edit';
 
-/** 应用列表页 — 左树（云）右表（应用） */
+/** 应用列表页 — 左树（领域）右表（应用） */
 const AppListPage = (props: PageComponentProps) => {
-  const [selectedCloudId, setSelectedCloudId] = useState<string | undefined>(undefined);
+  const [selectedDomainId, setSelectedDomainId] = useState<string | undefined>(undefined);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((s) => s.openBillTab);
   const openAddNewTab = useWorkbenchStore((s) => s.openAddNewTab);
 
   // 左侧树数据
   const treeQuery = useQuery({
-    queryKey: appQueryKeys.cloudAppsAll(),
+    queryKey: appQueryKeys.domainAppsAll(),
     queryFn: fetchAppsAll,
     staleTime: 5 * 60 * 1000,
   });
@@ -48,11 +48,11 @@ const AppListPage = (props: PageComponentProps) => {
     () => [
       {
         key: 'root',
-        title: '全部云',
+        title: '全部领域',
         children:
-          treeQuery.data?.map((cloud) => ({
-            key: cloud.id,
-            title: cloud.name,
+          treeQuery.data?.map((domain) => ({
+            key: domain.id,
+            title: domain.name,
             isLeaf: true,
           })) ?? [],
       },
@@ -73,11 +73,11 @@ const AppListPage = (props: PageComponentProps) => {
     onRefresh,
     columnQueryProps,
   } = useListPageQuery({
-    queryKey: appQueryKeys.list({ cloudId: selectedCloudId }),
+    queryKey: appQueryKeys.list({ domainId: selectedDomainId }),
     queryFn: (params) =>
       appApi.listPage({
         ...params,
-        cloudId: selectedCloudId,
+        domainId: selectedDomainId,
       }),
   });
   const enabledMutation = useEnabledMutation(appApi.setEnabled, async () => {
@@ -87,9 +87,9 @@ const AppListPage = (props: PageComponentProps) => {
 
   const handleTreeSelect = (keys: React.Key[]) => {
     if (keys.length === 0 || keys[0] === 'root') {
-      setSelectedCloudId(undefined);
+      setSelectedDomainId(undefined);
     } else {
-      setSelectedCloudId(String(keys[0]));
+      setSelectedDomainId(String(keys[0]));
     }
   };
 
@@ -113,7 +113,7 @@ const AppListPage = (props: PageComponentProps) => {
       ),
     },
     { title: '名称', dataIndex: 'name', width: 200 },
-    { title: '所属云', dataIndex: 'cloudName', width: 120 },
+    { title: '所属领域', dataIndex: 'domainName', width: 120 },
     { title: '排序', dataIndex: 'seq', width: 80 },
     {
       title: '状态',

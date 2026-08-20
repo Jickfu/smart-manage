@@ -12,7 +12,7 @@ import type { FeatureVO } from '../types';
  */
 export function useFeatureRefSelector(appId?: string) {
   const appsQuery = useQuery({
-    queryKey: appQueryKeys.cloudAppsAll(),
+    queryKey: appQueryKeys.domainAppsAll(),
     queryFn: fetchAppsAll,
     enabled: !appId,
     staleTime: 5 * 60 * 1000,
@@ -24,10 +24,10 @@ export function useFeatureRefSelector(appId?: string) {
         key: 'root',
         title: '全部功能',
         children:
-          appsQuery.data?.map((cloud) => ({
-            key: `cloud:${cloud.id}`,
-            title: cloud.name,
-            children: cloud.appList.map((application) => ({
+          appsQuery.data?.map((domain) => ({
+            key: `domain:${domain.id}`,
+            title: domain.name,
+            children: domain.appList.map((application) => ({
               key: `app:${application.id}`,
               title: application.name,
               isLeaf: true,
@@ -51,7 +51,7 @@ export function useFeatureRefSelector(appId?: string) {
             pageSize: params.pageSize,
             keyword: params.keyword,
             appId: appId ?? (scopeType === 'app' ? scopeId : undefined),
-            cloudId: !appId && scopeType === 'cloud' ? scopeId : undefined,
+            domainId: !appId && scopeType === 'domain' ? scopeId : undefined,
           });
         },
         displayRender: (record) => record.name,

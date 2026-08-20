@@ -16,7 +16,7 @@ export interface NumberRuleSegment {
 export interface NumberRuleListForm extends PageForm {
   keyword?: string;
   scopeType?: NumberScopeType;
-  cloudId?: string;
+  domainId?: string;
   appId?: string;
   featureId?: string;
   referenceKey?: string;
@@ -34,8 +34,8 @@ export interface NumberRuleVO {
   featureName: string;
   appId: string;
   appName: string;
-  cloudId: string;
-  cloudName: string;
+  domainId: string;
+  domainName: string;
   name: string;
   pattern: string;
   scopeType: NumberScopeType;
@@ -86,8 +86,8 @@ export interface NumberReference {
   featureName: string;
   appId: string;
   appName: string;
-  cloudId: string;
-  cloudName: string;
+  domainId: string;
+  domainName: string;
   allowedScopes: NumberScopeType[];
   variables: NumberVariable[];
 }

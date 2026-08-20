@@ -9,7 +9,7 @@ import sm.domain.sys.base.app.model.form.AppListForm;
 import sm.domain.sys.base.app.model.vo.AppDetailVO;
 import sm.domain.sys.base.app.model.vo.AppListVO;
 import sm.domain.sys.base.app.model.vo.AppVO;
-import sm.domain.sys.base.app.model.vo.CloudAppRowVO;
+import sm.domain.sys.base.app.model.vo.DomainAppRowVO;
 
 import java.util.List;
 import sm.system.query.ListSqlQuery;
@@ -21,9 +21,9 @@ public interface AppMapper extends BaseMapper<AppEntity> {
 
     AppDetailVO selectDetailById(Long id);
 
-    List<CloudAppRowVO> selectUserCloudApps(@Param("userId") Long userId, @Param("orgId") Long orgId);
+    List<DomainAppRowVO> selectUserDomainApps(@Param("userId") Long userId, @Param("orgId") Long orgId);
 
-    List<CloudAppRowVO> selectAllCloudApps();
+    List<DomainAppRowVO> selectAllDomainApps();
 
     AppVO selectAppByNumber(@Param("appNumber") String appNumber);
 

@@ -8,7 +8,7 @@
         LEFT JOIN t_sys_app b ON b.id = a.app_id
         <where>
             <if test="form.appId != null">a.app_id = #{form.appId}</if>
-            <if test="form.cloudId != null">b.cloud_id = #{form.cloudId}</if>
+            <if test="form.domainId != null">b.domain_id = #{form.domainId}</if>
             <if test="form.globalOnly == true">a.app_id IS NULL</if>
             <if test="form.keyword != null and form.keyword.trim() != ''">
                 AND (a.number LIKE CONCAT('%', #{form.keyword}, '%')

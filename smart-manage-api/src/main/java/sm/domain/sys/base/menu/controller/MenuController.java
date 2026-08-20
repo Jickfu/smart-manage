@@ -47,11 +47,18 @@ public class MenuController {
 		return Result.success(service.listByApp(form.getAppId()));
 	}
 
-	@Operation(summary = "菜单树形列表", description = "按云或应用获取分组、页面层级数据")
+	@Operation(summary = "菜单树形列表", description = "按领域或应用获取分组、页面层级数据")
 	@PostMapping("/sys/base/menu/listTree")
 	@SaCheckPermission(MenuPermission.LIST)
 	public Result<List<MenuTreeVO>> listTree(@RequestBody MenuTreeListForm form) {
 		return Result.success(service.listTree(form));
+	}
+
+	@Operation(summary = "菜单管理范围树", description = "获取领域、应用和功能三级目录")
+	@GetMapping("/sys/base/menu/catalog")
+	@SaCheckPermission(MenuPermission.LIST)
+	public Result<List<MenuCatalogNodeVO>> catalog() {
+		return Result.success(service.catalog());
 	}
 
 	@Operation(summary = "菜单选择", description = "基础资料选择：获取菜单分页列表数据")

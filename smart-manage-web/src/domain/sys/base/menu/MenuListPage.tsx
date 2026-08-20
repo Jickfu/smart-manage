@@ -11,11 +11,9 @@ import { useMenuDeleteMutation } from './useMenuDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { OperationType } from '@/domain/common/page/types';
-import { fetchAppsAll } from '@/domain/sys/base/app/api';
 import { menuApi } from './api';
 import { menuQueryKeys } from './queryKeys';
-import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';
-import type { MenuTreeVO } from './types';
+import type { MenuCatalogNodeVO, MenuTreeVO } from './types';
 import { menuAccess } from './permissions';
 import {
   serializeListFilters,
@@ -67,14 +65,28 @@ const columnFeatures: ListColumnFeatures = {
 const MENU_EDIT_KEY = 'sys/base/menu/edit';
 const ROOT_NODE_KEY = '__all__';
 
-type MenuScope = { type: 'root' } | { type: 'cloud'; id: string } | { type: 'app'; id: string };
+type MenuScope =
+  | { type: 'root' }
+  | { type: 'domain'; id: string }
+  | { type: 'app'; id: string }
+  | { type: 'feature'; id: string };
 
-/** 树节点 key 格式：cloud:{cloudId} | app:{appId} */
-function nodeKey(prefix: 'cloud' | 'app', id: string) {
+/** 树节点 key 格式：domain:{domainId} | app:{appId} | feature:{featureId}。 */
+function nodeKey(prefix: 'domain' | 'app' | 'feature', id: string) {
   return `${prefix}:${id}`;
 }
 
-/** 菜单列表页 — 左侧按云/应用筛选，右侧按分组/页面展示完整层级。 */
+function toTreeNode(node: MenuCatalogNodeVO): DataNode {
+  const prefix = node.type === 'APPLICATION' ? 'app' : node.type.toLowerCase();
+  return {
+    key: nodeKey(prefix as 'domain' | 'app' | 'feature', node.id),
+    title: node.name,
+    isLeaf: node.type === 'FEATURE',
+    children: node.children.map(toTreeNode),
+  };
+}
+
+/** 菜单列表页 — 左侧按领域/应用筛选，右侧按分组/页面展示完整层级。 */
 const MenuListPage = (props: PageComponentProps) => {
   const { modal } = App.useApp();
   const [selectedNodeKey, setSelectedNodeKey] = useState(ROOT_NODE_KEY);
@@ -87,9 +99,9 @@ const MenuListPage = (props: PageComponentProps) => {
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
 
-  const appsQuery = useQuery({
-    queryKey: appQueryKeys.cloudAppsAll(),
-    queryFn: fetchAppsAll,
+  const catalogQuery = useQuery({
+    queryKey: menuQueryKeys.catalog(),
+    queryFn: menuApi.catalog,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -102,8 +114,9 @@ const MenuListPage = (props: PageComponentProps) => {
     }),
     queryFn: () =>
       menuApi.listTree({
-        cloudId: selectedScope.type === 'cloud' ? selectedScope.id : undefined,
+        domainId: selectedScope.type === 'domain' ? selectedScope.id : undefined,
         appId: selectedScope.type === 'app' ? selectedScope.id : undefined,
+        featureId: selectedScope.type === 'feature' ? selectedScope.id : undefined,
         keyword: keyword || undefined,
         filters: serializeListFilters(columnFilters),
       }),
@@ -126,27 +139,18 @@ const MenuListPage = (props: PageComponentProps) => {
 
   const handleRefresh = useCallback(async () => {
     // 菜单管理是左树右表聚合页面，手动刷新必须同步更新两侧数据。
-    await Promise.all([appsQuery.refetch(), treeQuery.refetch()]);
-  }, [appsQuery, treeQuery]);
+    await Promise.all([catalogQuery.refetch(), treeQuery.refetch()]);
+  }, [catalogQuery, treeQuery]);
 
   const treeData: DataNode[] = useMemo(
     () => [
       {
         key: ROOT_NODE_KEY,
-        title: '全部应用',
-        children:
-          appsQuery.data?.map((cloud) => ({
-            key: nodeKey('cloud', cloud.id),
-            title: cloud.name,
-            children: cloud.appList.map((app) => ({
-              key: nodeKey('app', app.id),
-              title: app.name,
-              isLeaf: true,
-            })),
-          })) ?? [],
+        title: '全部功能',
+        children: catalogQuery.data?.map(toTreeNode) ?? [],
       },
     ],
-    [appsQuery.data],
+    [catalogQuery.data],
   );
 
   const handleTreeSelect = useCallback((keys: React.Key[]) => {
@@ -162,10 +166,12 @@ const MenuListPage = (props: PageComponentProps) => {
     const separatorIndex = key.indexOf(':');
     const type = key.slice(0, separatorIndex);
     const id = key.slice(separatorIndex + 1);
-    if (type === 'cloud') {
-      setSelectedScope({ type: 'cloud', id });
+    if (type === 'domain') {
+      setSelectedScope({ type: 'domain', id });
     } else if (type === 'app') {
       setSelectedScope({ type: 'app', id });
+    } else if (type === 'feature') {
+      setSelectedScope({ type: 'feature', id });
     }
   }, []);
 
@@ -244,8 +250,8 @@ const MenuListPage = (props: PageComponentProps) => {
     },
   ];
 
-  const loading = treeQuery.isLoading || appsQuery.isLoading;
-  const error = treeQuery.error || appsQuery.error;
+  const loading = treeQuery.isLoading || catalogQuery.isLoading;
+  const error = treeQuery.error || catalogQuery.error;
 
   const treePanel = (
     <ListTreePanel>
@@ -270,7 +276,7 @@ const MenuListPage = (props: PageComponentProps) => {
       error={error as Error | null}
       onRetry={() => {
         if (treeQuery.isError) treeQuery.refetch();
-        if (appsQuery.isError) appsQuery.refetch();
+        if (catalogQuery.isError) catalogQuery.refetch();
       }}
       total={records.length}
       pageNum={pageNum}

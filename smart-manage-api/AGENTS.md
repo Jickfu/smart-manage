@@ -5,10 +5,10 @@
 ## 分层与依赖
 
 - 根包为 `sm`。
-- `sm.framework` 只放第三方框架配置；`sm.system` 只放系统公共基础设施；业务代码按 `sm.domain.{领域}.{应用}.{单据}` 组织。
+- `sm.framework` 只放第三方框架配置；`sm.system` 只放系统公共基础设施；业务代码按 `sm.domain.{领域}.{应用}.{模块}` 组织。
 - 领域或应用公共能力放在对应 `common` 包，不额外拆分 Application、Domain、Infrastructure 层。
 - Controller 禁止依赖 Mapper 或 `*TxService`。
-- 每个单据只有一个公开 `*Service`；包级可见的 `*TxService` 只允许同单据 Service 委托调用。
+- 每个模块只有一个公开 `*Service`；包级可见的 `*TxService` 只允许同模块 Service 委托调用。
 - 不形成独立业务入口的技术协作者不得命名为 `*Service`；应按职责使用 `*Accessor`、`*Gateway` 等名称，并尽量保持包级可见。
 - `sm.system.storage` 只能通过 `FileStorageConfigProvider` 获取配置，禁止依赖 `sm.domain.sys` 的实体或 Service。
 

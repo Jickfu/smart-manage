@@ -3,7 +3,7 @@ import type { PageForm } from '@/types/api';
 /** 应用 VO */
 export interface AppVO {
   id: string;
-  cloudNumber: string;
+  domainNumber: string;
   number: string;
   name: string;
   icon: string;
@@ -13,7 +13,7 @@ export interface AppVO {
 }
 
 /** 按领域分组的应用列表 */
-export interface CloudAppsVO {
+export interface DomainAppsVO {
   id: string;
   name: string;
   number: string;
@@ -23,7 +23,7 @@ export interface CloudAppsVO {
 
 /** 应用列表查询 */
 export interface AppListForm extends PageForm {
-  cloudId?: string;
+  domainId?: string;
   keyword?: string;
 }
 
@@ -36,8 +36,8 @@ export interface AppListVO {
   iconColor: string;
   seq: number;
   description: string;
-  cloudId: string;
-  cloudName: string;
+  domainId: string;
+  domainName: string;
   enabled: boolean;
   createTime?: string;
   updateTime?: string;
@@ -53,7 +53,7 @@ export interface AppDetailVO {
   iconColor: string;
   seq: number;
   description: string;
-  cloud: {
+  domain: {
     id: string;
     number: string;
     name: string;
@@ -73,5 +73,5 @@ export interface AppSaveForm {
   iconColor?: string;
   seq?: number;
   description?: string;
-  cloudId: string;
+  domainId: string;
 }

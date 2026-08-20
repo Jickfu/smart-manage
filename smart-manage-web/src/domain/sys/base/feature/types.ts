@@ -3,7 +3,7 @@ import type { PageForm } from '@/types/api';
 export interface FeatureListForm extends PageForm {
   keyword?: string;
   appId?: string;
-  cloudId?: string;
+  domainId?: string;
 }
 
 export interface FeatureVO {
@@ -12,8 +12,8 @@ export interface FeatureVO {
   featureKey: string;
   appId: string;
   appName: string;
-  cloudId: string;
-  cloudName: string;
+  domainId: string;
+  domainName: string;
   defaultName: string;
   customName?: string;
   name: string;

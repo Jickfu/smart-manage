@@ -9,8 +9,8 @@ import lombok.Data;
 public class BasicDataCategorySaveForm {
     private Long id;
     private Integer version;
-    @NotNull(message = "所属云不能为空")
-    private Long cloudId;
+    @NotNull(message = "所属领域不能为空")
+    private Long domainId;
     @NotBlank(message = "编码不能为空")
     @Size(max = 64, message = "编码不能超过64个字符")
     private String number;

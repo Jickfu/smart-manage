@@ -83,17 +83,17 @@ public class AppController {
 		return Result.success();
 	}
 
-	@Operation(summary = "云与应用列表", description = "获取云及其下应用")
+	@Operation(summary = "领域与应用列表", description = "获取领域及其下应用")
 	@GetMapping("/sys/base/app/apps")
-	public Result<List<CloudAppsVO>> apps() {
-		return Result.success(service.getUserCloudApps(currentUserContext.getUserId()));
+	public Result<List<DomainAppsVO>> apps() {
+		return Result.success(service.getUserDomainApps(currentUserContext.getUserId()));
 	}
 
-	@Operation(summary = "云与应用列表（全量）", description = "获取所有云及其下应用（不按用户权限过滤）")
+	@Operation(summary = "领域与应用列表（全量）", description = "获取所有领域及其下应用（不按用户权限过滤）")
 	@GetMapping("/sys/base/app/appsAll")
 	@SaCheckPermission(AppPermission.LIST)
-	public Result<List<CloudAppsVO>> appsAll() {
-		return Result.success(service.getAllCloudApps());
+	public Result<List<DomainAppsVO>> appsAll() {
+		return Result.success(service.getAllDomainApps());
 	}
 
 	@Operation(summary = "按应用编号打开应用", description = "返回当前用户有权限访问的应用信息")

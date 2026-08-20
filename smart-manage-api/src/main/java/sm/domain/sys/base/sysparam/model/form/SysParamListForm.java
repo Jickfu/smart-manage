@@ -18,8 +18,8 @@ public class SysParamListForm extends PageForm {
     @Schema(description = "所属应用ID")
     private Long appId;
 
-    @Schema(description = "所属云ID")
-    private Long cloudId;
+    @Schema(description = "所属领域ID")
+    private Long domainId;
 
     @Schema(description = "是否只查询全局参数")
     private Boolean globalOnly;

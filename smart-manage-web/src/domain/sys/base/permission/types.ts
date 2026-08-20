@@ -3,7 +3,7 @@ import type { PageForm } from '@/types/api';
 export interface PermissionListForm extends PageForm {
   keyword?: string;
   appId?: string;
-  cloudId?: string;
+  domainId?: string;
   featureId?: string;
 }
 

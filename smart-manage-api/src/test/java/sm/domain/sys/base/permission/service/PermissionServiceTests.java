@@ -25,7 +25,7 @@ class PermissionServiceTests {
         PermissionListForm form = new PermissionListForm();
         form.setPageNum(2);
         form.setPageSize(20);
-        form.setCloudId(10L);
+        form.setDomainId(10L);
 
         PermissionListVO record = new PermissionListVO();
         record.setId(1L);

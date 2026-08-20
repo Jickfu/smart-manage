@@ -71,16 +71,16 @@ const BasicDataListPage = (props: PageComponentProps) => {
     queryFn: basicDataApi.categoryTree,
   });
   const flatNodes = useMemo(
-    () => treeQuery.data?.flatMap((cloud) => [cloud, ...cloud.children]) ?? [],
+    () => treeQuery.data?.flatMap((domain) => [domain, ...domain.children]) ?? [],
     [treeQuery.data],
   );
   const selectedCategoryId = selectedNode?.type === 'category' ? selectedNode.id : undefined;
   const listCategoryId = selectedCategoryId ?? '-1';
-  const selectedCloudId =
-    selectedNode?.type === 'cloud'
+  const selectedDomainId =
+    selectedNode?.type === 'domain'
       ? selectedNode.id
-      : treeQuery.data?.find((cloud) =>
-          cloud.children.some((category) => category.id === selectedCategoryId),
+      : treeQuery.data?.find((domain) =>
+          domain.children.some((category) => category.id === selectedCategoryId),
         )?.id;
 
   const {
@@ -177,7 +177,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
                   key: 'add-category',
                   label: <PlusOutlined />,
                   permission: basicDataAccess.permissions.save,
-                  disabled: !selectedCloudId,
+                  disabled: !selectedDomainId,
                   onClick: () => {
                     setEditingCategoryId(null);
                     setCategoryModalOpen(true);
@@ -303,7 +303,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
       <BasicDataCategoryEditModal
         open={categoryModalOpen}
         categoryId={editingCategoryId}
-        cloudId={selectedCloudId}
+        domainId={selectedDomainId}
         onClose={() => setCategoryModalOpen(false)}
         onSaved={async () => {
           setCategoryModalOpen(false);

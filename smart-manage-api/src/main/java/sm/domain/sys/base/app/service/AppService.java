@@ -29,7 +29,7 @@ public class AppService {
 	private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
 			"number", ListSqlQuery.string("a.number", true),
 			"name", ListSqlQuery.string("a.name", true),
-			"cloudName", ListSqlQuery.string("b.name", false),
+			"domainName", ListSqlQuery.string("b.name", false),
 			"seq", ListSqlQuery.number("a.seq", true),
 			"enabled", ListSqlQuery.bool("a.enabled", true),
 			"description", ListSqlQuery.string("a.description", false),
@@ -45,7 +45,7 @@ public class AppService {
 	}
 
 	/**
-	 * 详情页需要展示所属云信息（编码/名称），避免前端为 label 再请求一次 cloud/detail。
+	 * 详情页需要展示所属领域信息（编码/名称），避免前端为 label 再请求一次 domain/detail。
 	 */
 	public AppDetailVO detail(Long id) {
 		if (id == null) {
@@ -87,43 +87,43 @@ public class AppService {
 		txService.updateEnabled(ids, false);
 	}
 
-	// ==================== 云+应用入口查询 ====================
+	// ==================== 领域+应用入口查询 ====================
 
-	public List<CloudAppsVO> getUserCloudApps(Long userId) {
+	public List<DomainAppsVO> getUserDomainApps(Long userId) {
 		if (userId == null) {
 			return List.of();
 		}
 		// 超级管理员拥有全部应用，不依赖用户角色关系。
 		if (currentUserContext.isAdministrator()) {
-			return getAllCloudApps();
+			return getAllDomainApps();
 		}
-		return assembleCloudApps(mapper.selectUserCloudApps(userId, currentUserContext.getOrgId()));
+		return assembleDomainApps(mapper.selectUserDomainApps(userId, currentUserContext.getOrgId()));
 	}
 
-	public List<CloudAppsVO> getAllCloudApps() {
-		return assembleCloudApps(mapper.selectAllCloudApps());
+	public List<DomainAppsVO> getAllDomainApps() {
+		return assembleDomainApps(mapper.selectAllDomainApps());
 	}
 
-	private List<CloudAppsVO> assembleCloudApps(List<CloudAppRowVO> rows) {
-		Map<Long, CloudAppsVO> cloudMap = new LinkedHashMap<>();
+	private List<DomainAppsVO> assembleDomainApps(List<DomainAppRowVO> rows) {
+		Map<Long, DomainAppsVO> domainMap = new LinkedHashMap<>();
 		Map<Long, Map<Long, AppVO>> appMap = new LinkedHashMap<>();
-		for (CloudAppRowVO row : rows) {
-			if (row.getCloudId() == null) {
+		for (DomainAppRowVO row : rows) {
+			if (row.getDomainId() == null) {
 				continue;
 			}
-			CloudAppsVO cloud = cloudMap.computeIfAbsent(row.getCloudId(), cloudId -> {
-				CloudAppsVO item = new CloudAppsVO();
-				item.setId(cloudId);
-				item.setName(row.getCloudName());
-				item.setNumber(row.getCloudNumber());
-				item.setSeq(row.getCloudSeq());
+			DomainAppsVO domain = domainMap.computeIfAbsent(row.getDomainId(), domainId -> {
+				DomainAppsVO item = new DomainAppsVO();
+				item.setId(domainId);
+				item.setName(row.getDomainName());
+				item.setNumber(row.getDomainNumber());
+				item.setSeq(row.getDomainSeq());
 				item.setAppList(new ArrayList<>());
 				return item;
 			});
 			if (row.getAppId() == null) {
 				continue;
 			}
-			Map<Long, AppVO> appsMap = appMap.computeIfAbsent(row.getCloudId(), cloudId -> new LinkedHashMap<>());
+			Map<Long, AppVO> appsMap = appMap.computeIfAbsent(row.getDomainId(), domainId -> new LinkedHashMap<>());
 			if (appsMap.containsKey(row.getAppId())) {
 				continue;
 			}
@@ -136,9 +136,9 @@ public class AppService {
 			vo.setSeq(row.getAppSeq());
 			vo.setDescription(row.getAppDescription());
 			appsMap.put(row.getAppId(), vo);
-			cloud.getAppList().add(vo);
+			domain.getAppList().add(vo);
 		}
-		return new ArrayList<>(cloudMap.values());
+		return new ArrayList<>(domainMap.values());
 	}
 
 	public AppVO getUserAppByNumber(Long userId, String appNumber) {

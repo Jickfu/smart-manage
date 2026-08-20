@@ -10,7 +10,7 @@ const COMPONENT_KEY = 'scm/procurement/purchase-requisition/edit';
 
 const appInfo: AppVO = {
   id: '1',
-  cloudNumber: 'scm',
+  domainNumber: 'scm',
   number: APP_NUMBER,
   name: '采购管理',
   icon: 'app',

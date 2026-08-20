@@ -6,7 +6,7 @@ import org.springframework.data.redis.RedisSystemException;
 import org.springframework.data.redis.connection.RedisConnection;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.app.model.vo.AppVO;
-import sm.domain.sys.base.app.model.vo.CloudAppsVO;
+import sm.domain.sys.base.app.model.vo.DomainAppsVO;
 import sm.domain.sys.base.app.service.AppService;
 import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
@@ -122,8 +122,8 @@ class CacheServiceTests {
     }
 
     @Test
-    void scopeTreeMustUseCloudAndApplicationCatalog() {
-        when(appService.getAllCloudApps()).thenReturn(List.of(systemCloud()));
+    void scopeTreeMustUseDomainAndApplicationCatalog() {
+        when(appService.getAllDomainApps()).thenReturn(List.of(systemDomain()));
 
         var tree = service.scopeTree();
 
@@ -133,13 +133,13 @@ class CacheServiceTests {
     }
 
     @Test
-    void applicationScopeMustFilterRedisKeysByCloudAndApplicationPrefix() {
-        when(appService.getAllCloudApps()).thenReturn(List.of(systemCloud()));
+    void applicationScopeMustFilterRedisKeysByDomainAndApplicationPrefix() {
+        when(appService.getAllDomainApps()).thenReturn(List.of(systemDomain()));
         when(redisCacheAccessor.scanEntries()).thenReturn(List.of(
                 new RedisCacheAccessor.RedisEntry("sys:base:sys-paramall", "string", 60, 100L, true),
                 new RedisCacheAccessor.RedisEntry("satoken:login:1", "string", 60, 50L, false)));
         CacheEntryListForm form = listForm("APP");
-        form.setCloudNumber("sys");
+        form.setDomainNumber("sys");
         form.setAppNumber("base");
 
         var result = service.listPage(form);
@@ -150,7 +150,7 @@ class CacheServiceTests {
 
     @Test
     void otherScopeMustContainKeysOutsideRegisteredApplications() {
-        when(appService.getAllCloudApps()).thenReturn(List.of(systemCloud()));
+        when(appService.getAllDomainApps()).thenReturn(List.of(systemDomain()));
         when(redisCacheAccessor.scanEntries()).thenReturn(List.of(
                 new RedisCacheAccessor.RedisEntry("sys:unknown:item", "string", 60, 100L, true),
                 new RedisCacheAccessor.RedisEntry("satoken:login:1", "string", 60, 50L, false)));
@@ -162,7 +162,7 @@ class CacheServiceTests {
     }
 
     @Test
-    void managedCacheNamesMustUseCloudAndApplicationPrefix() {
+    void managedCacheNamesMustUseDomainAndApplicationPrefix() {
         assertEquals("sys:base:", BaseKeyPrefix.VALUE);
         assertEquals(true, BaseCacheName.USER_INFO.startsWith(BaseKeyPrefix.VALUE));
         assertEquals(true, BaseCacheName.SYS_PARAM.startsWith(BaseKeyPrefix.VALUE));
@@ -177,14 +177,14 @@ class CacheServiceTests {
         return form;
     }
 
-    private CloudAppsVO systemCloud() {
+    private DomainAppsVO systemDomain() {
         AppVO application = new AppVO();
         application.setNumber("base");
         application.setName("系统管理");
-        CloudAppsVO cloud = new CloudAppsVO();
-        cloud.setNumber("sys");
-        cloud.setName("系统服务");
-        cloud.setAppList(List.of(application));
-        return cloud;
+        DomainAppsVO domain = new DomainAppsVO();
+        domain.setNumber("sys");
+        domain.setName("系统服务");
+        domain.setAppList(List.of(application));
+        return domain;
     }
 }

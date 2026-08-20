@@ -20,20 +20,40 @@
 - [新增业务聚合检查清单](./development/business-aggregate-checklist.md)
 - [数据权限设计](./architecture/data-permission.md)
 
-## 模块
+## 领域与模块
 
-- [基础数据管理](./modules/system-basic-data.md)
-- [采购申请](./modules/purchase-requisition.md)
-- [缓存监控](./modules/system-cache-and-redis.md)
-- [系统监控日志](./modules/system-monitor-logs.md)
-- [任务调度](./modules/system-scheduler.md)
-- [附件与对象存储](./modules/system-attachment.md)
-- [SQL 控制台](./modules/system-sql-console.md)
-- [脚本控制台](./modules/system-script-console.md)
-- [运行监控](./modules/system-runtime-monitoring.md)
-- [线程诊断](./modules/system-thread-diagnostics.md)
+领域文档按照 `domains/{领域}/{应用}/{模块}.md` 组织，与前后端代码目录保持一致。
 
-每个可选业务模块都应记录边界、依赖、数据库迁移和移除方式。
+### 系统领域（sys）
+
+基础应用（base）：
+
+- [附件与对象存储](./domains/sys/base/attachment.md)
+- [基础资料](./domains/sys/base/basic-data.md)
+- [编号规则](./domains/sys/base/numbering.md)
+- [组织管理](./domains/sys/base/organization.md)
+
+监控应用（monitor）：
+
+- [缓存监控](./domains/sys/monitor/cache-and-redis.md)
+- [系统监控日志](./domains/sys/monitor/logs.md)
+- [运行监控](./domains/sys/monitor/runtime-monitoring.md)
+- [脚本控制台](./domains/sys/monitor/script-console.md)
+- [慢 SQL 监控](./domains/sys/monitor/slow-sql-monitoring.md)
+- [SQL 控制台](./domains/sys/monitor/sql-console.md)
+- [线程诊断](./domains/sys/monitor/thread-diagnostics.md)
+
+调度应用（scheduler）：
+
+- [任务调度](./domains/sys/scheduler/job.md)
+
+### 供应链领域（scm）
+
+采购应用（procurement）：
+
+- [采购申请](./domains/scm/procurement/purchase-requisition.md)
+
+每个领域模块都应记录边界、依赖、数据库迁移和移除方式；模块文档不要求与运行时 Feature 一一对应。
 
 ## 计划与提案
 

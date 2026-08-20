@@ -11,6 +11,8 @@ import sm.domain.sys.base.common.enums.MenuLevelEnum;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.feature.mapper.FeatureMapper;
 import sm.domain.sys.base.feature.model.entity.FeatureEntity;
+import sm.domain.sys.base.domain.mapper.DomainMapper;
+import sm.domain.sys.base.domain.model.entity.DomainEntity;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuListForm;
 import sm.domain.sys.base.menu.model.form.MenuSaveForm;
@@ -58,6 +60,7 @@ public class MenuService {
 	private final CurrentUserContext currentUserContext;
 	private final MenuMapper mapper;
 	private final AppMapper appMapper;
+	private final DomainMapper domainMapper;
 	private final FeatureMapper featureMapper;
 	private final PermissionMapper permissionMapper;
 	private final MenuTxService txService;
@@ -111,13 +114,27 @@ public class MenuService {
 	}
 
 	/**
-	 * 获取菜单管理树形列表。先限定云/应用范围，再一次性组装分组与页面，避免分页切断父子关系。
+	 * 获取菜单管理树形列表。先限定领域/应用范围，再一次性组装分组与页面，避免分页切断父子关系。
 	 */
 	public List<MenuTreeVO> listTree(MenuTreeListForm form) {
+		FeatureEntity selectedFeature = null;
+		if (form.getFeatureId() != null) {
+			selectedFeature = featureMapper.selectById(form.getFeatureId());
+			if (selectedFeature == null) {
+				return List.of();
+			}
+			if (form.getAppId() != null
+					&& !java.util.Objects.equals(form.getAppId(), selectedFeature.getAppId())) {
+				return List.of();
+			}
+		}
 		LambdaQueryWrapper<AppEntity> appWrapper = new LambdaQueryWrapper<AppEntity>()
-				.eq(form.getAppId() != null, AppEntity::getId, form.getAppId())
-				.eq(form.getAppId() == null && form.getCloudId() != null,
-						AppEntity::getCloudId, form.getCloudId())
+				.eq(selectedFeature != null, AppEntity::getId,
+						selectedFeature == null ? null : selectedFeature.getAppId())
+				.eq(selectedFeature == null && form.getAppId() != null,
+						AppEntity::getId, form.getAppId())
+				.eq(form.getAppId() == null && form.getDomainId() != null,
+						AppEntity::getDomainId, form.getDomainId())
 				.orderByAsc(AppEntity::getSeq)
 				.orderByAsc(AppEntity::getId);
 		List<AppEntity> apps = appMapper.selectList(appWrapper);
@@ -138,8 +155,82 @@ public class MenuService {
 				.orderByAsc(MenuEntity::getLevel)
 				.orderByAsc(MenuEntity::getSort)
 				.orderByAsc(MenuEntity::getId));
+		if (selectedFeature != null) {
+			menus = filterFeatureMenus(menus, selectedFeature.getId());
+		}
 		menus = filterTreeMenus(menus, form.getKeyword(), ListSqlQuery.of(form, LIST_FIELDS));
 		return assembleMenuTree(menus, appNames);
+	}
+
+	/** 功能筛选只保留所属页面及其父分组，避免返回与目标功能无关的空分组。 */
+	private List<MenuEntity> filterFeatureMenus(List<MenuEntity> menus, Long featureId) {
+		Set<Long> includedIds = new HashSet<>();
+		for (MenuEntity menu : menus) {
+			if (MenuLevelEnum.PAGE.equals(menu.getLevel())
+					&& java.util.Objects.equals(menu.getFeatureId(), featureId)) {
+				includedIds.add(menu.getId());
+				if (menu.getParentId() != null && menu.getParentId() > 0) {
+					includedIds.add(menu.getParentId());
+				}
+			}
+		}
+		List<MenuEntity> filteredMenus = new ArrayList<>();
+		for (MenuEntity menu : menus) {
+			if (includedIds.contains(menu.getId())) {
+				filteredMenus.add(menu);
+			}
+		}
+		return filteredMenus;
+	}
+
+	/** 菜单管理专用目录，避免页面额外依赖应用管理或功能管理权限。 */
+	public List<MenuCatalogNodeVO> catalog() {
+		List<DomainEntity> domains = domainMapper.selectList(new LambdaQueryWrapper<DomainEntity>()
+				.orderByAsc(DomainEntity::getSeq).orderByAsc(DomainEntity::getId));
+		List<AppEntity> applications = appMapper.selectList(new LambdaQueryWrapper<AppEntity>()
+				.orderByAsc(AppEntity::getDomainId).orderByAsc(AppEntity::getSeq)
+				.orderByAsc(AppEntity::getId));
+		List<FeatureEntity> features = new ArrayList<>(featureMapper.selectList(
+				new LambdaQueryWrapper<FeatureEntity>()
+						.orderByAsc(FeatureEntity::getAppId).orderByAsc(FeatureEntity::getDefaultSeq)
+						.orderByAsc(FeatureEntity::getId)));
+
+		Map<Long, MenuCatalogNodeVO> domainNodes = new HashMap<>();
+		Map<Long, MenuCatalogNodeVO> applicationNodes = new HashMap<>();
+		List<MenuCatalogNodeVO> roots = new ArrayList<>();
+		for (DomainEntity domain : domains) {
+			MenuCatalogNodeVO node = new MenuCatalogNodeVO(
+					"DOMAIN", domain.getId(), domain.getNumber(), domain.getName(), new ArrayList<>());
+			roots.add(node);
+			domainNodes.put(domain.getId(), node);
+		}
+		for (AppEntity application : applications) {
+			MenuCatalogNodeVO parent = domainNodes.get(application.getDomainId());
+			if (parent == null) {
+				throw new BizException(ResultEnum.CONFIG_ERROR, "应用缺少所属领域：" + application.getId());
+			}
+			MenuCatalogNodeVO node = new MenuCatalogNodeVO(
+					"APPLICATION", application.getId(), application.getNumber(),
+					application.getName(), new ArrayList<>());
+			parent.getChildren().add(node);
+			applicationNodes.put(application.getId(), node);
+		}
+		features.sort(Comparator
+				.comparing(FeatureEntity::getAppId)
+				.thenComparing(feature -> feature.getCustomSeq() == null
+						? feature.getDefaultSeq() : feature.getCustomSeq(), Comparator.nullsLast(Integer::compareTo))
+				.thenComparing(FeatureEntity::getId));
+		for (FeatureEntity feature : features) {
+			MenuCatalogNodeVO parent = applicationNodes.get(feature.getAppId());
+			if (parent == null) {
+				throw new BizException(ResultEnum.CONFIG_ERROR, "功能缺少所属应用：" + feature.getId());
+			}
+			String name = feature.getCustomName() == null || feature.getCustomName().isBlank()
+					? feature.getDefaultName() : feature.getCustomName();
+			parent.getChildren().add(new MenuCatalogNodeVO(
+					"FEATURE", feature.getId(), feature.getFeatureKey(), name, new ArrayList<>()));
+		}
+		return roots;
 	}
 
 	/** 关键词命中页面时保留其父分组，保证返回结果始终可以组成完整层级。 */
@@ -284,9 +375,9 @@ public class MenuService {
 		if (appInfo != null) {
 			root.setName(appInfo.getAppName());
 			root.setIcon(appInfo.getAppIcon());
-			if (appInfo.getCloudNumber() != null && !appInfo.getCloudNumber().isBlank()
+			if (appInfo.getDomainNumber() != null && !appInfo.getDomainNumber().isBlank()
 					&& appInfo.getAppNumber() != null && !appInfo.getAppNumber().isBlank()) {
-				root.setPath("/" + appInfo.getCloudNumber() + "/" + appInfo.getAppNumber() + "/home");
+				root.setPath("/" + appInfo.getDomainNumber() + "/" + appInfo.getAppNumber() + "/home");
 				root.setComponent(toWorkspaceComponentKeyByPath(root.getPath()));
 			}
 		}
