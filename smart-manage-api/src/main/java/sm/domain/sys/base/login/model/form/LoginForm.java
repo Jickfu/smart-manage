@@ -14,9 +14,6 @@ public class LoginForm {
 	@NotBlank(message = "密码不能为空")
 	private String password;
 
-	@NotBlank(message = "验证码不能为空")
-	private String captcha;
-
-	@NotBlank(message = "验证码ID不能为空")
-	private String captchaId;
+	@NotBlank(message = "滑块验证票据不能为空")
+	private String captchaTicket;
 }

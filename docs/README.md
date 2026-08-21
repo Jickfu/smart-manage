@@ -71,7 +71,7 @@
 ## 计划与提案
 
 - [项目路线图](./roadmap.md)
-- [登录保护方案（提案）](./proposals/login-protection.md)
+- [登录保护架构](./architecture/login-protection.md)
 
 `roadmap.md` 只记录已批准但尚未完成的项目级事项。`proposals/` 中的内容尚未生效，不能作为实现依据。
 

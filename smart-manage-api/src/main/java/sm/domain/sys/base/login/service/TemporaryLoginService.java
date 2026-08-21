@@ -49,6 +49,7 @@ public class TemporaryLoginService {
     private final UserService userService;
     private final LogWriteService logWriteService;
     private final ClientIpResolver clientIpResolver;
+    private final LoginRedisAccessor loginRedisAccessor;
 
     public boolean isSafe() {
         currentUserContext.checkAdministrator();
@@ -92,7 +93,7 @@ public class TemporaryLoginService {
     }
 
     public LoginVO consume(String username, String credential) {
-        Object value = redisTemplate.opsForValue().getAndDelete(redisKey(credential));
+        Object value = loginRedisAccessor.getAndDelete(redisKey(credential));
         if (!(value instanceof TemporaryLoginGrant grant) || !grant.getTargetUsername().equals(username)) {
             throw new BizException(ResultEnum.UNAUTHORIZED, "用户名或密码错误");
         }

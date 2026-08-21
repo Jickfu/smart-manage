@@ -1,0 +1,9 @@
+# 第三方软件说明
+
+Smart Manage 使用以下第三方开源软件。依赖自身的许可证继续适用于对应第三方代码。
+
+| 软件 | 用途 | 版本 | 许可证 | 项目地址 |
+| --- | --- | --- | --- | --- |
+| tianai-captcha | 滑块拼图生成与轨迹匹配核心 | 1.5.5 | MulanPSL 2.0 | https://github.com/dromara/tianai-captcha |
+
+完整的传递依赖清单以 Maven 和 pnpm 锁定文件为准。

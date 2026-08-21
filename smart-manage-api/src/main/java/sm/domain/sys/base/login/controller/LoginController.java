@@ -10,9 +10,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import sm.domain.sys.base.login.model.form.CaptchaChallengeForm;
+import sm.domain.sys.base.login.model.form.CaptchaVerifyForm;
 import sm.domain.sys.base.login.model.form.LoginForm;
 import sm.domain.sys.base.login.model.form.PasswordChangeForm;
-import sm.domain.sys.base.login.model.vo.CaptchaVO;
+import sm.domain.sys.base.login.model.vo.CaptchaChallengeVO;
+import sm.domain.sys.base.login.model.vo.CaptchaTicketVO;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.login.model.vo.SessionVO;
 import sm.domain.sys.base.login.service.LoginService;
@@ -48,11 +51,18 @@ public class LoginController {
 		return Result.success();
 	}
 
-	@Operation(summary = "获取验证码", description = "获取登录验证码图片")
-	@GetMapping(value = "/sys/base/captcha")
+	@Operation(summary = "创建滑块验证码", description = "创建一次性登录滑块挑战")
+	@PostMapping("/sys/base/captcha/challenge")
 	@SaIgnore
-	public Result<CaptchaVO> captcha() throws Exception {
-		return Result.success(service.captcha());
+	public Result<CaptchaChallengeVO> captchaChallenge(@Validated @RequestBody CaptchaChallengeForm form) {
+		return Result.success(service.createCaptchaChallenge(form));
+	}
+
+	@Operation(summary = "校验滑块验证码", description = "校验并消费挑战，成功后签发一次性登录票据")
+	@PostMapping("/sys/base/captcha/verify")
+	@SaIgnore
+	public Result<CaptchaTicketVO> captchaVerify(@Validated @RequestBody CaptchaVerifyForm form) {
+		return Result.success(service.verifyCaptcha(form));
 	}
 
 	@Operation(summary = "用户登出", description = "退出当前登录")

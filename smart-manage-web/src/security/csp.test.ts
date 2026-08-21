@@ -26,4 +26,24 @@ describe('login form visibility', () => {
     expect(html).toMatch(/<form id="passwordChangeForm"[^>]*\shidden>/);
     expect(css).toMatch(/\.sm-form\[hidden\]\s*\{\s*display:\s*none;/);
   });
+
+  it('opens slider verification as a hidden modal instead of rendering the retired text captcha', () => {
+    const html = readFileSync('public/login.html', 'utf8');
+    const css = readFileSync('public/css/login.css', 'utf8');
+
+    expect(html).toMatch(/<div\s+id="captchaModal"[^>]*\shidden\s*>/);
+    expect(html).toContain('/sys/base/captcha/challenge');
+    expect(html).toContain('/sys/base/captcha/verify');
+    expect(html).not.toContain('id="captchaImg"');
+    expect(css).toMatch(/\.sm-captcha-modal\[hidden\]\s*\{\s*display:\s*none;/);
+  });
+
+  it('tracks drag distance from the actual pointer-down position', () => {
+    const html = readFileSync('public/login.html', 'utf8');
+    const css = readFileSync('public/css/login.css', 'utf8');
+
+    expect(html).toContain('x: position.x - captchaDragStartX');
+    expect(html).toContain('captchaDragStartLeft + position.x - captchaDragStartX');
+    expect(css).toMatch(/\.sm-captcha-refresh\s*\{[^}]*font-size:\s*14px;/);
+  });
 });

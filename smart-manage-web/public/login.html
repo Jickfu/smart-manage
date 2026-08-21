@@ -7,7 +7,7 @@
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-uVvpaOlNm7UhWabSQVTVFwpenLXuAR5X9GcD4knZTiQ='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-wMCCx79ld7EofZBg4z0n/n0D1QIFv/nix+C2gQyPuQQ='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
     <title>Smart Manage - 登录</title>
     <script src="js/sm2.js"></script>
@@ -88,32 +88,6 @@
                 />
               </div>
 
-              <div id="captchaGroup" class="sm-captcha-group">
-                <div class="sm-captcha-row">
-                  <div class="sm-input-wrap">
-                    <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
-                      <path
-                        d="M4 7h16v10H4V7ZM8 11h.01M12 11h.01M16 11h.01M8 15h8"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      />
-                    </svg>
-                    <input
-                      id="captcha"
-                      class="sm-input"
-                      type="text"
-                      placeholder="图形验证码"
-                      maxlength="6"
-                      autocomplete="off"
-                    />
-                  </div>
-                  <img id="captchaImg" class="sm-captcha-img" src="" alt="验证码" />
-                </div>
-              </div>
-
               <div class="sm-form-extra">
                 <button id="forgotPasswordBtn" class="sm-link-button" type="button">
                   忘记密码
@@ -162,12 +136,8 @@
                   autocomplete="new-password"
                 />
               </div>
-              <button id="changePasswordBtn" class="sm-login-btn" type="submit">
-                确认修改
-              </button>
-              <button id="backToLoginBtn" class="sm-secondary-btn" type="button">
-                返回登录
-              </button>
+              <button id="changePasswordBtn" class="sm-login-btn" type="submit">确认修改</button>
+              <button id="backToLoginBtn" class="sm-secondary-btn" type="button">返回登录</button>
             </form>
           </div>
         </div>
@@ -176,14 +146,66 @@
       </section>
     </main>
 
+    <div
+      id="captchaModal"
+      class="sm-captcha-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="captchaModalTitle"
+      hidden
+    >
+      <section class="sm-captcha-dialog">
+        <header class="sm-captcha-header">
+          <div id="captchaModalTitle" class="sm-captcha-title">安全验证</div>
+          <button
+            id="captchaCloseBtn"
+            class="sm-captcha-close"
+            type="button"
+            aria-label="关闭滑块验证"
+          >
+            ×
+          </button>
+        </header>
+        <div class="sm-captcha-body">
+          <canvas
+            id="captchaCanvas"
+            class="sm-captcha-canvas"
+            width="300"
+            height="180"
+            aria-label="滑块拼图"
+          ></canvas>
+          <canvas
+            id="captchaSlider"
+            class="sm-captcha-slider"
+            width="300"
+            height="46"
+            tabindex="0"
+            aria-label="按住滑块向右拖动完成拼图"
+          ></canvas>
+          <div id="captchaStatus" class="sm-captcha-status" aria-live="polite">正在加载验证...</div>
+          <button id="captchaRefreshBtn" class="sm-link-button sm-captcha-refresh" type="button">
+            刷新验证
+          </button>
+        </div>
+      </section>
+    </div>
+
     <script>
       var SM2_PUBLIC_KEY =
         '0405102042204d15e802522ea09eb609358e4c72295e0ca44727eef75faac9afb3eeaa3e9df5af87e205e6ce5cb351e4fb30c37602f32aad969d2b222f05f8fa99';
       var API_BASE = '/smart-manage-api';
 
-      var captchaId = '';
-      var captchaVisible = false;
+      var captchaChallenge = null;
       var captchaLoading = false;
+      var captchaDragging = false;
+      var captchaStartTime = 0;
+      var captchaLeft = 0;
+      var captchaDragStartX = 0;
+      var captchaDragStartY = 0;
+      var captchaDragStartLeft = 0;
+      var captchaTrack = [];
+      var captchaBackgroundImage = new Image();
+      var captchaTemplateImage = new Image();
       var passwordChangeTicket = '';
       var defaultLoginTitle = '';
 
@@ -191,9 +213,12 @@
       var loginTitleEl = document.getElementById('loginTitle');
       var usernameEl = document.getElementById('username');
       var passwordEl = document.getElementById('password');
-      var captchaGroupEl = document.getElementById('captchaGroup');
-      var captchaEl = document.getElementById('captcha');
-      var captchaImgEl = document.getElementById('captchaImg');
+      var captchaModalEl = document.getElementById('captchaModal');
+      var captchaCanvasEl = document.getElementById('captchaCanvas');
+      var captchaSliderEl = document.getElementById('captchaSlider');
+      var captchaStatusEl = document.getElementById('captchaStatus');
+      var captchaCloseBtnEl = document.getElementById('captchaCloseBtn');
+      var captchaRefreshBtnEl = document.getElementById('captchaRefreshBtn');
       var errorMsgEl = document.getElementById('errorMsg');
       var errorMsgTextEl = document.getElementById('errorMsgText');
       var errorMsgCloseEl = document.getElementById('errorMsgClose');
@@ -299,46 +324,235 @@
           });
       }
 
-      function loadCaptcha() {
-        if (captchaLoading) {
-          return;
+      function setCaptchaStatus(message, state) {
+        captchaStatusEl.textContent = message;
+        captchaStatusEl.classList.toggle('is-error', state === 'error');
+        captchaStatusEl.classList.toggle('is-success', state === 'success');
+      }
+
+      function drawCaptcha() {
+        var context = captchaCanvasEl.getContext('2d');
+        context.clearRect(0, 0, captchaCanvasEl.width, captchaCanvasEl.height);
+        if (!captchaChallenge) return;
+        context.drawImage(
+          captchaBackgroundImage,
+          0,
+          0,
+          captchaCanvasEl.width,
+          captchaCanvasEl.height,
+        );
+        var templateWidth = getCaptchaTemplateWidth();
+        context.drawImage(
+          captchaTemplateImage,
+          captchaLeft,
+          0,
+          templateWidth,
+          captchaCanvasEl.height,
+        );
+      }
+
+      function drawCaptchaSlider() {
+        var context = captchaSliderEl.getContext('2d');
+        var handleWidth = 46;
+        context.clearRect(0, 0, captchaSliderEl.width, captchaSliderEl.height);
+        context.fillStyle = '#f5f7fa';
+        context.fillRect(0, 0, captchaSliderEl.width, captchaSliderEl.height);
+        context.strokeStyle = '#d9d9d9';
+        context.strokeRect(0.5, 0.5, captchaSliderEl.width - 1, captchaSliderEl.height - 1);
+        context.fillStyle = captchaDragging ? '#e6f4ff' : '#ffffff';
+        context.fillRect(captchaLeft, 0, handleWidth, captchaSliderEl.height);
+        context.strokeStyle = '#1677ff';
+        context.strokeRect(captchaLeft + 0.5, 0.5, handleWidth - 1, captchaSliderEl.height - 1);
+        context.fillStyle = '#1677ff';
+        context.font = '22px Arial';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText('›', captchaLeft + handleWidth / 2, captchaSliderEl.height / 2);
+        if (!captchaDragging && captchaLeft === 0) {
+          context.fillStyle = '#667085';
+          context.font = '14px Arial';
+          context.fillText('按住滑块，拖动完成拼图', 174, captchaSliderEl.height / 2);
         }
+      }
+
+      function getCaptchaTemplateWidth() {
+        if (!captchaChallenge) return 0;
+        return Math.round(
+          (captchaChallenge.templateImageWidth * captchaCanvasEl.width) /
+            captchaChallenge.backgroundImageWidth,
+        );
+      }
+
+      function loadImage(image, source) {
+        return new Promise(function (resolve, reject) {
+          image.onload = resolve;
+          image.onerror = reject;
+          image.src = source;
+        });
+      }
+
+      function resetCaptchaInteraction() {
+        captchaDragging = false;
+        captchaStartTime = 0;
+        captchaLeft = 0;
+        captchaDragStartX = 0;
+        captchaDragStartY = 0;
+        captchaDragStartLeft = 0;
+        captchaTrack = [];
+        drawCaptchaSlider();
+      }
+
+      function loadCaptchaChallenge() {
+        if (captchaLoading) return;
         captchaLoading = true;
-        // 刷新开始即废弃旧图片对应的 ID，避免请求尚未返回时再次提交旧验证码。
-        captchaId = '';
-        captchaEl.value = '';
-        captchaImgEl.style.opacity = '0.35';
-        fetch(API_BASE + '/sys/base/captcha')
+        captchaChallenge = null;
+        resetCaptchaInteraction();
+        setCaptchaStatus('正在加载验证...', '');
+        fetch(API_BASE + '/sys/base/captcha/challenge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: usernameEl.value.trim() }),
+        })
           .then(function (res) {
             return res.json();
           })
           .then(function (result) {
-            if (result.code === 0) {
-              captchaId = result.data.captchaId;
-              captchaImgEl.src = result.data.imageData;
-              captchaImgEl.style.opacity = '1';
-            } else {
-              showError(result.msg || '获取验证码失败');
+            if (result.code !== 0 || !result.data) {
+              throw new Error(result.msg || '获取滑块验证失败');
             }
+            captchaChallenge = result.data;
+            return Promise.all([
+              loadImage(captchaBackgroundImage, result.data.backgroundImage),
+              loadImage(captchaTemplateImage, result.data.templateImage),
+            ]);
           })
-          .catch(function () {
-            showError('网络异常，获取验证码失败');
+          .then(function () {
+            drawCaptcha();
+            drawCaptchaSlider();
+            setCaptchaStatus('请拖动滑块完成拼图', '');
+          })
+          .catch(function (error) {
+            captchaChallenge = null;
+            setCaptchaStatus(error.message || '网络异常，获取滑块验证失败', 'error');
           })
           .finally(function () {
             captchaLoading = false;
           });
       }
 
-      function refreshCaptchaVisible() {
-        var hasUsername = Boolean(usernameEl.value.trim());
-        if (hasUsername) {
-          captchaGroupEl.classList.add('is-visible');
-          if (!captchaVisible || !captchaId) {
-            loadCaptcha();
-          }
-          captchaVisible = true;
-        }
-        // 验证码一旦显示就不再因清空用户名而隐藏
+      function openCaptchaModal() {
+        captchaModalEl.hidden = false;
+        setLoginLoading(true);
+        loadCaptchaChallenge();
+        captchaSliderEl.focus();
+      }
+
+      function closeCaptchaModal() {
+        captchaModalEl.hidden = true;
+        captchaChallenge = null;
+        resetCaptchaInteraction();
+        setLoginLoading(false);
+      }
+
+      function pointerPosition(event) {
+        var bounds = captchaSliderEl.getBoundingClientRect();
+        return {
+          x: ((event.clientX - bounds.left) * captchaSliderEl.width) / bounds.width,
+          y: ((event.clientY - bounds.top) * captchaSliderEl.height) / bounds.height,
+        };
+      }
+
+      function recordCaptchaPoint(position, type) {
+        captchaTrack.push({
+          // 验证库按首尾轨迹位移计算结果，因此轨迹必须以实际按下点为原点。
+          x: position.x - captchaDragStartX,
+          y: position.y - captchaDragStartY,
+          t: Date.now() - captchaStartTime,
+          type: type,
+        });
+      }
+
+      function startCaptchaDrag(event) {
+        if (!captchaChallenge || captchaLoading || captchaDragging) return;
+        var position = pointerPosition(event);
+        if (position.x > 56) return;
+        captchaDragging = true;
+        captchaStartTime = Date.now();
+        captchaDragStartX = position.x;
+        captchaDragStartY = position.y;
+        captchaDragStartLeft = captchaLeft;
+        captchaTrack = [];
+        captchaSliderEl.setPointerCapture(event.pointerId);
+        recordCaptchaPoint(position, 'down');
+        drawCaptchaSlider();
+      }
+
+      function moveCaptchaDrag(event) {
+        if (!captchaDragging) return;
+        var position = pointerPosition(event);
+        var maxLeft = captchaSliderEl.width - getCaptchaTemplateWidth();
+        // 使用真实拖动增量，避免从滑块非中心位置按下时出现视觉位置与校验位移不一致。
+        captchaLeft = Math.max(
+          0,
+          Math.min(maxLeft, Math.round(captchaDragStartLeft + position.x - captchaDragStartX)),
+        );
+        recordCaptchaPoint(position, 'move');
+        drawCaptcha();
+        drawCaptchaSlider();
+      }
+
+      function stopCaptchaDrag(event) {
+        if (!captchaDragging) return;
+        var position = pointerPosition(event);
+        recordCaptchaPoint(position, 'up');
+        captchaDragging = false;
+        drawCaptchaSlider();
+        verifyCaptcha(Date.now());
+      }
+
+      function verifyCaptcha(stopTime) {
+        var challenge = captchaChallenge;
+        if (!challenge) return;
+        captchaLoading = true;
+        setCaptchaStatus('正在校验...', '');
+        fetch(API_BASE + '/sys/base/captcha/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: usernameEl.value.trim(),
+            challengeId: challenge.challengeId,
+            track: {
+              backgroundImageWidth: captchaCanvasEl.width,
+              backgroundImageHeight: captchaCanvasEl.height,
+              templateImageWidth: getCaptchaTemplateWidth(),
+              templateImageHeight: captchaCanvasEl.height,
+              startTime: captchaStartTime,
+              stopTime: stopTime,
+              left: captchaLeft,
+              top: 0,
+              trackList: captchaTrack,
+            },
+          }),
+        })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (result) {
+            if (result.code !== 0 || !result.data || !result.data.captchaTicket) {
+              throw new Error(result.msg || '滑块验证失败');
+            }
+            setCaptchaStatus('验证成功', 'success');
+            captchaModalEl.hidden = true;
+            captchaChallenge = null;
+            submitLogin(result.data.captchaTicket);
+          })
+          .catch(function (error) {
+            setCaptchaStatus(error.message || '滑块验证失败，请重试', 'error');
+            window.setTimeout(loadCaptchaChallenge, 1000);
+          })
+          .finally(function () {
+            captchaLoading = false;
+          });
       }
 
       function redirectToApplication() {
@@ -373,7 +587,6 @@
         loginFormEl.hidden = true;
         passwordChangeFormEl.hidden = false;
         passwordEl.value = '';
-        captchaEl.value = '';
         hideError();
         newPasswordEl.focus();
       }
@@ -385,8 +598,6 @@
         passwordChangeFormEl.hidden = true;
         loginFormEl.hidden = false;
         loginTitleEl.textContent = defaultLoginTitle || 'Smart Manage 账号登录';
-        captchaId = '';
-        loadCaptcha();
         if (successMessage) {
           showSuccess(successMessage);
         } else {
@@ -453,7 +664,6 @@
       function login() {
         var username = usernameEl.value.trim();
         var password = passwordEl.value;
-        var captchaText = captchaEl.value.trim();
 
         if (!username) {
           showError('请输入用户名');
@@ -465,23 +675,16 @@
           passwordEl.focus();
           return;
         }
-        if (!captchaText) {
-          showError('请输入验证码');
-          captchaEl.focus();
-          return;
-        }
-        if (!captchaId) {
-          showError('验证码未加载完成，请稍后再试');
-          loadCaptcha();
-          return;
-        }
-
         hideError();
-        setLoginLoading(true);
+        openCaptchaModal();
+      }
 
-        // SM2 C1C3C2 模式加密密码和验证码
+      function submitLogin(captchaTicket) {
+        var username = usernameEl.value.trim();
+        var password = passwordEl.value;
+
+        // SM2 C1C3C2 模式加密密码，滑块票据本身是短时高熵一次性凭证。
         var encryptedPassword = sm2.doEncrypt(password, SM2_PUBLIC_KEY, 1);
-        var encryptedCaptcha = sm2.doEncrypt(captchaText, SM2_PUBLIC_KEY, 1);
 
         fetch(API_BASE + '/sys/base/login', {
           method: 'POST',
@@ -489,8 +692,7 @@
           body: JSON.stringify({
             username: username,
             password: encryptedPassword,
-            captcha: encryptedCaptcha,
-            captchaId: captchaId,
+            captchaTicket: captchaTicket,
           }),
         })
           .then(function (res) {
@@ -511,11 +713,9 @@
               return;
             }
             showError((result.data && result.data.msg) || result.msg || '登录失败');
-            loadCaptcha();
           })
           .catch(function () {
             showError('网络异常，登录失败');
-            loadCaptcha();
           })
           .finally(function () {
             setLoginLoading(false);
@@ -529,9 +729,13 @@
       // 事件绑定
       usernameEl.addEventListener('input', function () {
         hideError();
-        refreshCaptchaVisible();
       });
-      captchaImgEl.addEventListener('click', loadCaptcha);
+      captchaSliderEl.addEventListener('pointerdown', startCaptchaDrag);
+      captchaSliderEl.addEventListener('pointermove', moveCaptchaDrag);
+      captchaSliderEl.addEventListener('pointerup', stopCaptchaDrag);
+      captchaSliderEl.addEventListener('pointercancel', stopCaptchaDrag);
+      captchaCloseBtnEl.addEventListener('click', closeCaptchaModal);
+      captchaRefreshBtnEl.addEventListener('click', loadCaptchaChallenge);
       errorMsgCloseEl.addEventListener('click', hideError);
       forgotPasswordBtnEl.addEventListener('click', function () {
         showError('请联系系统管理员重置密码');

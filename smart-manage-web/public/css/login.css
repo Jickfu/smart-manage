@@ -186,40 +186,6 @@ body {
   color: var(--sm-text-placeholder);
 }
 
-/* ===== 验证码 ===== */
-.sm-captcha-group {
-  display: none;
-}
-
-.sm-captcha-group.is-visible {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin-top: 30px;
-}
-
-.sm-captcha-row {
-  display: flex;
-  gap: 10px;
-}
-
-.sm-captcha-row .sm-input-wrap {
-  flex: 1;
-  min-width: 0;
-}
-
-.sm-captcha-img {
-  /* 后端验证码默认尺寸为 160×50；按同一比例展示，禁止 object-fit 裁切字符。 */
-  flex: 0 0 141px;
-  width: 141px;
-  height: 44px;
-  border: 1px solid var(--sm-border);
-  border-radius: 2px;
-  object-fit: contain;
-  cursor: pointer;
-  background: #f7f9fc;
-}
-
 /* ===== 忘记密码 ===== */
 .sm-form-extra {
   display: flex;
@@ -371,6 +337,113 @@ body {
   flex: 0 0 36px;
   padding-bottom: 6px;
   color: var(--sm-text-secondary);
+}
+
+/* ===== 弹出式滑块验证 ===== */
+.sm-captcha-modal[hidden] {
+  display: none;
+}
+
+.sm-captcha-modal {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.sm-captcha-dialog {
+  width: 348px;
+  max-width: 100%;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.24);
+}
+
+.sm-captcha-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 50px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--sm-border);
+}
+
+.sm-captcha-title {
+  color: var(--sm-text);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.sm-captcha-close {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  color: var(--sm-text-secondary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 28px;
+}
+
+.sm-captcha-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 24px 16px;
+}
+
+.sm-captcha-canvas,
+.sm-captcha-slider {
+  display: block;
+  width: 300px;
+  max-width: 100%;
+}
+
+.sm-captcha-canvas {
+  height: auto;
+  border-radius: 4px;
+  background: #f5f7fa;
+}
+
+.sm-captcha-slider {
+  height: 46px;
+  margin-top: 12px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.sm-captcha-slider:active {
+  cursor: grabbing;
+}
+
+.sm-captcha-slider:focus-visible {
+  outline: 2px solid var(--sm-primary);
+  outline-offset: 2px;
+}
+
+.sm-captcha-status {
+  min-height: 20px;
+  margin-top: 10px;
+  color: var(--sm-text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.sm-captcha-status.is-error {
+  color: var(--sm-danger);
+}
+
+.sm-captcha-status.is-success {
+  color: #2f8f57;
+}
+
+.sm-captcha-refresh {
+  margin-top: 2px;
+  font-size: 14px;
 }
 
 /* ===== 响应式 ===== */

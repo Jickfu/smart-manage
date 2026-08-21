@@ -191,6 +191,12 @@
             <artifactId>bcprov-jdk18on</artifactId>
             <version>1.84</version>
         </dependency>
+        <!-- 行为验证码核心：仅复用图片生成和轨迹匹配，不引入其 Spring 自动配置。 -->
+        <dependency>
+            <groupId>cloud.tianai.captcha</groupId>
+            <artifactId>tianai-captcha</artifactId>
+            <version>1.5.5</version>
+        </dependency>
         <!--系统硬件信息-->
         <dependency>
             <groupId>com.github.oshi</groupId>
