@@ -27,8 +27,8 @@ export interface EditFieldBase {
   placeholder?: string;
   /** 是否延伸至第四列标准控件的右边缘 */
   fullWidth?: boolean;
-  /** 延伸至第二列标准控件的右边缘；适用于类名等较长字段。 */
-  columnSpan?: 2;
+  /** 占用的标准字段列数；控件延伸至对应列标准控件的右边缘。 */
+  columnSpan?: 2 | 3;
 }
 
 /** RefSelector 字段配置 — type === 'ref-selector' 时必填 */

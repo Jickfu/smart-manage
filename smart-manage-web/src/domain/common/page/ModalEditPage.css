@@ -22,8 +22,15 @@
 }
 
 .sm-modal-edit .sm-edit-field--span-2,
+.sm-modal-edit .sm-edit-field--span-3,
 .sm-modal-edit .sm-edit-field--full {
-  width: 492px;
+  width: 524px;
   max-width: 100%;
   grid-column: 1 / -1;
+}
+
+.sm-modal-edit
+  :is(.sm-edit-field--span-2, .sm-edit-field--span-3, .sm-edit-field--full)
+  > .sm-edit-field-content {
+  width: 492px;
 }

@@ -162,6 +162,7 @@ function EditFieldItem({ field, editable }: EditFieldItemProps) {
   const className = [
     'sm-edit-field',
     field.columnSpan === 2 ? 'sm-edit-field--span-2' : '',
+    field.columnSpan === 3 ? 'sm-edit-field--span-3' : '',
     field.fullWidth ? 'sm-edit-field--full' : '',
   ]
     .filter(Boolean)

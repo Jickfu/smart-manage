@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { App } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
-import { OperationType } from '@/domain/common/page/types';
+import EditPage from '@/domain/common/page/EditPage';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import { OperationType } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { operateLogApi } from './api';
 import { operateLogQueryKeys } from './queryKeys';
