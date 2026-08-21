@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
@@ -44,7 +43,7 @@ class CorsConfigTests {
 		MockHttpServletRequest request = new MockHttpServletRequest("OPTIONS", "/smart-manage-api/sys/base/login");
 		request.addHeader("Origin", origin);
 		request.addHeader("Access-Control-Request-Method", "POST");
-		request.addHeader("Access-Control-Request-Headers", "content-type,smtoken");
+		request.addHeader("Access-Control-Request-Headers", "content-type,sm-csrf-token");
 		MockHttpServletResponse response = new MockHttpServletResponse();
 
 		corsFilter.doFilter(request, response, mock(FilterChain.class));
@@ -54,7 +53,6 @@ class CorsConfigTests {
 	private CorsFilter createCorsFilter() {
 		CorsProperties properties = new CorsProperties(List.of("http://localhost:*", "http://127.0.0.1:*"));
 		CorsConfig config = new CorsConfig(properties);
-		ReflectionTestUtils.setField(config, "tokenName", "smtoken");
 		FilterRegistrationBean<CorsFilter> registration = config.corsFilter();
 		return registration.getFilter();
 	}

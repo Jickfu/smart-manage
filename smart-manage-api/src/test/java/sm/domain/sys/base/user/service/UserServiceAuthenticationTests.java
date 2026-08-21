@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
-import sm.domain.sys.base.menu.service.MenuService;
 import sm.domain.sys.base.permission.service.PermissionService;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
@@ -17,6 +16,7 @@ import sm.domain.sys.base.org.model.entity.OrgEntity;
 import sm.domain.sys.base.user.model.vo.UserAuthentication;
 import sm.system.helper.Argon2Helper;
 import sm.system.exception.BizException;
+import sm.system.security.CsrfTokenManager;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -92,12 +92,12 @@ class UserServiceAuthenticationTests {
 				orgMapper,
 				mock(AttachmentService.class),
 				mock(UserTxService.class),
-				mock(MenuService.class),
 				mock(PermissionService.class),
 				mock(AuthorizationStateHelper.class),
 				mock(UserCacheAccessor.class),
 				mock(UserConverter.class),
-				mock(CurrentUserContext.class));
+				mock(CurrentUserContext.class),
+				mock(CsrfTokenManager.class));
 
 		try (MockedStatic<Argon2Helper> argon2Helper = mockStatic(Argon2Helper.class)) {
 			argon2Helper.when(() -> Argon2Helper.verify("encoded-password", "password"))
@@ -119,11 +119,11 @@ class UserServiceAuthenticationTests {
 				orgMapper,
 				mock(AttachmentService.class),
 				mock(UserTxService.class),
-				mock(MenuService.class),
 				mock(PermissionService.class),
 				mock(AuthorizationStateHelper.class),
 				mock(UserCacheAccessor.class),
 				mock(UserConverter.class),
-				currentUserContext);
+				currentUserContext,
+				mock(CsrfTokenManager.class));
 	}
 }

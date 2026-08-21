@@ -106,13 +106,22 @@ jetcache:
 
 sa-token:
   token-name: smtoken
-  is-read-cookie: false
+  is-read-cookie: true
+  is-read-header: false
+  is-read-body: false
+  is-write-header: false
+  is-lasting-cookie: true
   timeout: 86400
   active-timeout: 18000
   is-concurrent: true
   is-share: false
   token-style: random-64
   is-log: true
+  cookie:
+    path: /
+    secure: ${SMART_MANAGE_COOKIE_SECURE:false}
+    http-only: true
+    same-site: Lax
 
 smart-manage:
   instance-id: ${SMART_MANAGE_INSTANCE_ID:instance1}

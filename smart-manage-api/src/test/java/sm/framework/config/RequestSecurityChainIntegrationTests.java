@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import sm.system.interceptor.TraceIdInterceptor;
 import sm.system.response.Result;
+import sm.framework.security.BrowserRequestSecurity;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Map;
@@ -33,7 +34,9 @@ class RequestSecurityChainIntegrationTests {
         new SaTokenContextRegister();
         RequestMappingHandlerMapping handlerMapping = mock(RequestMappingHandlerMapping.class);
         when(handlerMapping.getHandlerMethods()).thenReturn(Map.of());
-        SaTokenConfig config = new SaTokenConfig(handlerMapping, JsonMapper.builder().build());
+        BrowserRequestSecurity browserRequestSecurity = mock(BrowserRequestSecurity.class);
+        SaTokenConfig config = new SaTokenConfig(
+                handlerMapping, JsonMapper.builder().build(), browserRequestSecurity);
         ReflectionTestUtils.setField(config, "noNeedLogin", new String[]{"/public-test"});
         SaServletFilter filter = config.getSaServletFilter();
         mockMvc = MockMvcBuilders.standaloneSetup(new TestController())

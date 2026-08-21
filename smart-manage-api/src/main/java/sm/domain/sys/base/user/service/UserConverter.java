@@ -18,7 +18,6 @@ interface UserConverter {
 
     @Mapping(target = "assignments", ignore = true)
     @Mapping(target = "roleIds", ignore = true)
-    @Mapping(target = "menus", ignore = true)
     @Mapping(target = "avatar", ignore = true)
     @Mapping(target = "currentOrgId", ignore = true)
     @Mapping(target = "currentOrgName", ignore = true)

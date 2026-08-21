@@ -10,9 +10,9 @@ import sm.domain.sys.base.common.constant.BaseRedisKey;
 import sm.domain.sys.base.login.model.form.LoginForm;
 import sm.domain.sys.base.login.model.form.PasswordChangeForm;
 import sm.domain.sys.base.login.model.vo.LoginVO;
-import sm.domain.sys.base.menu.service.MenuService;
 import sm.domain.sys.base.user.service.UserService;
 import sm.domain.sys.base.user.model.vo.UserAuthentication;
+import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.system.exception.BizException;
 import sm.system.helper.SM2Helper;
@@ -20,6 +20,7 @@ import sm.system.helper.Sm2DecryptionException;
 import sm.system.response.ResultEnum;
 import sm.system.util.ServletUtil;
 import sm.system.web.ClientIpResolver;
+import sm.system.security.CsrfTokenManager;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -47,25 +48,39 @@ class LoginServiceTests {
 	private LoginService loginService;
 	private final ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
 	private final TemporaryLoginService temporaryLoginService = mock(TemporaryLoginService.class);
+	private final CsrfTokenManager csrfTokenManager = mock(CsrfTokenManager.class);
 
 	@BeforeEach
 	void setUp() {
 		loginService = new LoginService(
 				mock(CaptchaConfig.class),
 				userService,
-				mock(MenuService.class),
 				logWriteService,
 				redisTemplate,
 				clientIpResolver,
-				temporaryLoginService);
+				temporaryLoginService,
+				csrfTokenManager);
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+	}
+
+	@Test
+	void sessionCombinesCurrentUserAndCsrfTokenWithoutNavigationData() {
+		UserInfoVO user = new UserInfoVO();
+		user.setId(1L);
+		when(userService.current()).thenReturn(user);
+		when(csrfTokenManager.getCurrentToken()).thenReturn("0123456789abcdef0123456789abcdef");
+
+		var session = loginService.session();
+
+		assertSame(user, session.getUser());
+		assertEquals("0123456789abcdef0123456789abcdef", session.getCsrfToken());
 	}
 
 	@Test
 	void temporaryCredentialUsesOneTimeGrantAuthentication() {
 		LoginForm form = loginForm();
 		LoginVO expected = new LoginVO();
-		expected.setToken("temporary-token");
+		expected.setAuthenticated(true);
 		when(valueOperations.get(CAPTCHA_KEY)).thenReturn("ABCD");
 		when(temporaryLoginService.supports("SMTL1.credential")).thenReturn(true);
 		when(temporaryLoginService.consume("administrator", "SMTL1.credential")).thenReturn(expected);
@@ -119,7 +134,7 @@ class LoginServiceTests {
 	void validCaptchaIsConsumedAndDecryptedPasswordIsAuthenticated() {
 		LoginForm form = loginForm();
 		LoginVO expected = new LoginVO();
-		expected.setToken("token");
+		expected.setAuthenticated(true);
 		UserAuthentication authentication =
 				new UserAuthentication(1L, "administrator", "管理员", false, true, 10L, null);
 		when(valueOperations.get(CAPTCHA_KEY)).thenReturn("ABCD");

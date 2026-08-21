@@ -10,6 +10,8 @@ import sm.system.http.HttpClientHelper;
 import sm.system.http.HttpRequestSpec;
 import sm.system.http.HttpResponseData;
 import sm.system.response.ResultEnum;
+import sm.system.security.CsrfTokenManager;
+import sm.system.util.ServletUtil;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -47,9 +49,17 @@ public class MonitorRoutingGateway {
 
     private HttpRequestSpec.Builder requestBuilder(MonitorInstanceRegistry.RegisteredInstance instance,
                                                    String path, String method) {
-        return HttpRequestSpec.builder(method, URI.create(instance.getInternalBaseUrl() + path))
+        HttpRequestSpec.Builder builder = HttpRequestSpec.builder(
+                        method, URI.create(instance.getInternalBaseUrl() + path))
                 .timeout(Duration.ofMillis(properties.getRequestTimeoutMs()))
-                .header(tokenName, currentUserContext.getToken());
+                .header("Cookie", tokenName + "=" + currentUserContext.getToken());
+        if ("POST".equals(method)) {
+            // 跨节点诊断延续原浏览器请求的安全上下文，目标节点仍执行完整认证与 CSRF 校验。
+            builder.header("Origin", ServletUtil.getRequest().getHeader("Origin"));
+            builder.header(CsrfTokenManager.HEADER_NAME,
+                    ServletUtil.getRequest().getHeader(CsrfTokenManager.HEADER_NAME));
+        }
+        return builder;
     }
 
     private <T> T execute(HttpRequestSpec request, Class<T> responseType) {

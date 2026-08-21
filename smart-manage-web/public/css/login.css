@@ -220,28 +220,14 @@ body {
   background: #f7f9fc;
 }
 
-/* ===== 记住账号 / 忘记密码 ===== */
+/* ===== 忘记密码 ===== */
 .sm-form-extra {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-top: 24px;
   color: var(--sm-text-secondary);
   font-size: 12px;
-}
-
-.sm-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.sm-checkbox input {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--sm-primary);
 }
 
 .sm-link-button {

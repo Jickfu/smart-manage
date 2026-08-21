@@ -19,6 +19,7 @@ public enum ResultEnum {
     FOREIGN_KEY_CONFLICT(100411, "数据仍被其他资源引用"),
     FILE_TOO_LARGE(100413, "上传文件超过大小限制"),
     PARAM_ERROR(100422, "参数异常"),
+    CSRF_TOKEN_INVALID(100419, "安全校验失败，请刷新页面后重试"),
     REQUEST_LIMIT(100429, "请求过于频繁，请稍后再试"),
     SERVER_ERROR(100500, "系统异常，请稍候再试"),
     SQL_ERROR(100501, "SQL异常，请联系管理员处理"),

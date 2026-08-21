@@ -47,6 +47,12 @@ export interface UserInfoVO {
   assignments: UserAssignmentVO[];
 }
 
+/** 浏览器启动时恢复的服务端登录会话。 */
+export interface SessionVO {
+  user: UserInfoVO;
+  csrfToken: string;
+}
+
 export interface UserAssignmentVO {
   id: string;
   org: {

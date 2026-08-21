@@ -10,11 +10,8 @@ import lombok.Data;
 @Schema(title = "登录返回视图")
 public class LoginVO {
 
-	@Schema(description = "token")
-	private String token;
-
-	@Schema(description = "姓名")
-	private String name;
+	@Schema(description = "是否已建立登录会话")
+	private Boolean authenticated;
 
 	@Schema(description = "消息")
 	private String msg;
@@ -24,12 +21,6 @@ public class LoginVO {
 
 	@Schema(description = "一次性改密凭证")
 	private String passwordChangeTicket;
-
-	/**
-	 * 与前端 Umi access 插件对齐的全局权限标识（如 kdcloud 表示可访问演示路由）
-	 */
-	@Schema(description = "前端 access 标识")
-	private String access;
 
 	public LoginVO() {
 	}

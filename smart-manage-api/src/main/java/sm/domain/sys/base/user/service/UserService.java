@@ -14,7 +14,6 @@ import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.login.model.vo.LoginVO;
-import sm.domain.sys.base.menu.service.MenuService;
 import sm.domain.sys.base.permission.service.PermissionService;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.form.UserListForm;
@@ -51,6 +50,7 @@ import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.system.query.ListSqlQuery;
+import sm.system.security.CsrfTokenManager;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -81,12 +81,12 @@ public class UserService {
 	private final OrgMapper orgMapper;
 	private final AttachmentService attachmentService;
 	private final UserTxService txService;
-	private final MenuService menuService;
 	private final PermissionService permissionService;
 	private final AuthorizationStateHelper authorizationStateHelper;
 	private final UserCacheAccessor userCacheAccessor;
 	private final UserConverter converter;
 	private final CurrentUserContext currentUserContext;
+	private final CsrfTokenManager csrfTokenManager;
 
 	public PageData<UserListVO> listPage(UserListForm form) {
 		List<Long> scopedOrgIds = resolveScopedOrgIds(form);
@@ -266,12 +266,10 @@ public class UserService {
 		StpUtil.login(authentication.userId());
 		currentUserContext.initializeIdentity(
 				authentication.orgId(), authentication.username(), authentication.administrator());
-		String token = StpUtil.getTokenValue();
+		csrfTokenManager.initializeCurrentSession();
 
 		LoginVO vo = new LoginVO();
-		vo.setToken(token);
-		vo.setName(authentication.name());
-		vo.setAccess(authentication.administrator() ? "kdcloud" : "");
+		vo.setAuthenticated(true);
 		return vo;
 	}
 
@@ -282,18 +280,17 @@ public class UserService {
 				.setTimeout(30 * 60)
 				.setDevice("temporary-admin-login")
 				.setIsLastingCookie(false);
-		String token = StpUtil.getStpLogic().createLoginSession(authentication.userId(), parameter);
-		currentUserContext.initializeIdentity(token, authentication.orgId(), authentication.username(), false);
-		var tokenSession = StpUtil.getStpLogic().getTokenSessionByToken(token);
+		StpUtil.login(authentication.userId(), parameter);
+		currentUserContext.initializeIdentity(authentication.orgId(), authentication.username(), false);
+		csrfTokenManager.initializeCurrentSession();
+		var tokenSession = StpUtil.getTokenSession();
 		tokenSession.set("authenticationMethod", "TEMPORARY_ADMIN_GRANT");
 		tokenSession.set("issuerUserId", issuerUserId);
 		tokenSession.set("grantId", grantId);
 		tokenSession.set("temporaryLoginReason", reason);
 
 		LoginVO vo = new LoginVO();
-		vo.setToken(token);
-		vo.setName(authentication.name());
-		vo.setAccess("");
+		vo.setAuthenticated(true);
 		return vo;
 	}
 

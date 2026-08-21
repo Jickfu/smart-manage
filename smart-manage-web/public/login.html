@@ -7,7 +7,7 @@
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-6wTMu+9sRDc48nkII4NKvox7DhlVhYnOAOCQxp+SIVk='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-uVvpaOlNm7UhWabSQVTVFwpenLXuAR5X9GcD4knZTiQ='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
     <title>Smart Manage - 登录</title>
     <script src="js/sm2.js"></script>
@@ -115,10 +115,6 @@
               </div>
 
               <div class="sm-form-extra">
-                <label class="sm-checkbox">
-                  <input id="rememberUsername" type="checkbox" />
-                  <span>记住账号</span>
-                </label>
                 <button id="forgotPasswordBtn" class="sm-link-button" type="button">
                   忘记密码
                 </button>
@@ -184,7 +180,6 @@
       var SM2_PUBLIC_KEY =
         '0405102042204d15e802522ea09eb609358e4c72295e0ca44727eef75faac9afb3eeaa3e9df5af87e205e6ce5cb351e4fb30c37602f32aad969d2b222f05f8fa99';
       var API_BASE = '/smart-manage-api';
-      var USERNAME_STORAGE_KEY = 'sm-login-username';
 
       var captchaId = '';
       var captchaVisible = false;
@@ -199,7 +194,6 @@
       var captchaGroupEl = document.getElementById('captchaGroup');
       var captchaEl = document.getElementById('captcha');
       var captchaImgEl = document.getElementById('captchaImg');
-      var rememberUsernameEl = document.getElementById('rememberUsername');
       var errorMsgEl = document.getElementById('errorMsg');
       var errorMsgTextEl = document.getElementById('errorMsgText');
       var errorMsgCloseEl = document.getElementById('errorMsgClose');
@@ -347,21 +341,24 @@
         // 验证码一旦显示就不再因清空用户名而隐藏
       }
 
-      function restoreRememberedUsername() {
-        var rememberedUsername = localStorage.getItem(USERNAME_STORAGE_KEY);
-        if (rememberedUsername) {
-          usernameEl.value = rememberedUsername;
-          rememberUsernameEl.checked = true;
-          refreshCaptchaVisible();
-        }
+      function redirectToApplication() {
+        var redirect = getSafeRedirectUrl();
+        window.location.replace(redirect || '/index.html?app=home');
       }
 
-      function persistRememberedUsername(username) {
-        if (rememberUsernameEl.checked) {
-          localStorage.setItem(USERNAME_STORAGE_KEY, username);
-        } else {
-          localStorage.removeItem(USERNAME_STORAGE_KEY);
-        }
+      function checkExistingSession() {
+        fetch(API_BASE + '/sys/base/session')
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (result) {
+            if (result.code === 0 && result.data) {
+              redirectToApplication();
+            }
+          })
+          .catch(function () {
+            // 会话检查失败不阻断用户使用登录表单。
+          });
       }
 
       function setLoginLoading(loading) {
@@ -506,15 +503,11 @@
               result.data.passwordReset &&
               result.data.passwordChangeTicket
             ) {
-              persistRememberedUsername(username);
               showPasswordChange(result.data.passwordChangeTicket);
               return;
             }
-            if (result.code === 0 && result.data && result.data.token) {
-              localStorage.setItem('token', result.data.token);
-              persistRememberedUsername(username);
-              var redirect = getSafeRedirectUrl();
-              window.location.href = redirect || '/index.html?app=home';
+            if (result.code === 0 && result.data && result.data.authenticated) {
+              redirectToApplication();
               return;
             }
             showError((result.data && result.data.msg) || result.msg || '登录失败');
@@ -531,7 +524,7 @@
 
       // 页面初始化
       loadUiConfig();
-      restoreRememberedUsername();
+      checkExistingSession();
 
       // 事件绑定
       usernameEl.addEventListener('input', function () {

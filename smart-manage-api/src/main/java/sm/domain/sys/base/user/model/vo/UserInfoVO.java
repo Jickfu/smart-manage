@@ -2,7 +2,6 @@ package sm.domain.sys.base.user.model.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-import sm.domain.sys.base.menu.model.vo.MenuVO;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -62,8 +61,5 @@ public class UserInfoVO {
 	private String companyName;
 
 	private List<UserAssignmentVO> assignments;
-
-	@Schema(description = "菜单")
-	private MenuVO menus;
 
 }

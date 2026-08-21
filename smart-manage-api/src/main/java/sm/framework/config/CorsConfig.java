@@ -1,7 +1,6 @@
 package sm.framework.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -24,9 +23,6 @@ public class CorsConfig {
 
 	private final CorsProperties corsProperties;
 
-	@Value("${sa-token.token-name:smtoken}")
-	private String tokenName;
-
 	public CorsConfig(CorsProperties corsProperties) {
 		this.corsProperties = corsProperties;
 	}
@@ -46,8 +42,6 @@ public class CorsConfig {
 		// 设置允许的HTTP方法和头
 		config.addAllowedMethod("*");
 		config.addAllowedHeader("*");
-		config.addExposedHeader(tokenName);
-
 		// 注册CORS配置
 		source.registerCorsConfiguration("/**", config);
 

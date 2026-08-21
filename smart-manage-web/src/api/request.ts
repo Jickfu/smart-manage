@@ -5,22 +5,26 @@ import { ApiError } from './ApiError';
 
 const SUCCESS_CODE = 0;
 const UNAUTHORIZED_CODE = 100401;
+const CSRF_TOKEN_INVALID_CODE = 100419;
+const CSRF_HEADER_NAME = 'sm-csrf-token';
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 const request = axios.create({
   baseURL: '/smart-manage-api',
   timeout: 30000,
 });
 
-/** 清理浏览器中的失效认证状态，避免 401 后继续携带旧 token。 */
+/** 清理前端会话快照；HttpOnly Cookie 只能由服务端失效或删除。 */
 function clearAuthentication() {
   useUserStore.getState().clearUser();
 }
 
-/** 请求拦截器 - 注入 Sa-Token */
+/** 已认证的非安全请求统一提交会话绑定的 CSRF Token。 */
 request.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers['smtoken'] = token;
+  const method = (config.method ?? 'GET').toUpperCase();
+  const csrfToken = useUserStore.getState().csrfToken;
+  if (!SAFE_METHODS.has(method) && csrfToken) {
+    config.headers[CSRF_HEADER_NAME] = csrfToken;
   }
   return config;
 });
@@ -40,6 +44,9 @@ request.interceptors.response.use(
         clearAuthentication();
         const redirectUrl = encodeURIComponent(window.location.href);
         window.location.href = `/login.html?redirect=${redirectUrl}`;
+      }
+      if (result.code === CSRF_TOKEN_INVALID_CODE) {
+        window.dispatchEvent(new CustomEvent('sm:csrf-invalid'));
       }
       return Promise.reject(
         new ApiError(result.code, result.msg, result.traceId ?? '', result.data),

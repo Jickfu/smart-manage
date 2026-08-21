@@ -14,6 +14,7 @@ import sm.domain.sys.base.login.model.form.LoginForm;
 import sm.domain.sys.base.login.model.form.PasswordChangeForm;
 import sm.domain.sys.base.login.model.vo.CaptchaVO;
 import sm.domain.sys.base.login.model.vo.LoginVO;
+import sm.domain.sys.base.login.model.vo.SessionVO;
 import sm.domain.sys.base.login.service.LoginService;
 import sm.system.response.Result;
 
@@ -26,7 +27,13 @@ import sm.system.response.Result;
 public class LoginController {
 	private final LoginService service;
 
-	@Operation(summary = "用户登录", description = "通过用户名密码登录获取token")
+	@Operation(summary = "当前会话", description = "获取当前登录用户和会话绑定的 CSRF Token")
+	@GetMapping("/sys/base/session")
+	public Result<SessionVO> session() {
+		return Result.success(service.session());
+	}
+
+	@Operation(summary = "用户登录", description = "通过用户名密码建立浏览器登录会话")
 	@PostMapping("/sys/base/login")
 	@SaIgnore
 	public Result<LoginVO> login(@Parameter(description = "登录表单", required = true) @Validated @RequestBody LoginForm form) {

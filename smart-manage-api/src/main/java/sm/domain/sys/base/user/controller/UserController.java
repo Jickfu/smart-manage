@@ -83,12 +83,6 @@ public class UserController {
 		return Result.success(service.listPage(form));
 	}
 
-	@GetMapping("/sys/base/user/current")
-	@Operation(summary = "用户信息", description = "获取当前登录用户信息")
-	public Result<UserInfoVO> current() {
-		return Result.success(service.current());
-	}
-
 	@PostMapping("/sys/base/user/current/theme")
 	@Operation(summary = "保存个人主题", description = "保存当前登录用户选择的预置主题色")
 	public Result<String> updateCurrentTheme(@RequestBody @Valid CurrentUserThemeForm form) {

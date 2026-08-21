@@ -13,7 +13,7 @@ import sm.domain.sys.base.login.model.form.LoginForm;
 import sm.domain.sys.base.login.model.form.PasswordChangeForm;
 import sm.domain.sys.base.login.model.vo.CaptchaVO;
 import sm.domain.sys.base.login.model.vo.LoginVO;
-import sm.domain.sys.base.menu.service.MenuService;
+import sm.domain.sys.base.login.model.vo.SessionVO;
 import sm.domain.sys.base.user.service.UserService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
@@ -23,6 +23,7 @@ import sm.system.helper.Sm2DecryptionException;
 import sm.system.response.ResultEnum;
 import sm.system.util.ServletUtil;
 import sm.system.web.ClientIpResolver;
+import sm.system.security.CsrfTokenManager;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -42,11 +43,15 @@ public class LoginService {
 	private static final long PASSWORD_CHANGE_TICKET_MINUTES = 5;
 	private final CaptchaConfig captchaConfig;
 	private final UserService userService;
-	private final MenuService menuService;
 	private final LogWriteService logWriteService;
 	private final RedisTemplate<String, Object> redisTemplate;
 	private final ClientIpResolver clientIpResolver;
 	private final TemporaryLoginService temporaryLoginService;
+	private final CsrfTokenManager csrfTokenManager;
+
+	public SessionVO session() {
+		return new SessionVO(userService.current(), csrfTokenManager.getCurrentToken());
+	}
 
 	public LoginVO login(LoginForm form) {
 		// 验证码校验

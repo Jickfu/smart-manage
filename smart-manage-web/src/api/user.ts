@@ -1,9 +1,9 @@
 import request from './request';
-import type { Result, UserInfoVO } from '@/types/api';
+import type { Result, SessionVO, UserInfoVO } from '@/types/api';
 
-/** 获取当前用户信息 */
-export function getCurrentUser() {
-  return request.get<Result<UserInfoVO>>('/sys/base/user/current').then((res) => res.data);
+/** 恢复当前浏览器登录会话和会话绑定的 CSRF Token。 */
+export function getCurrentSession() {
+  return request.get<Result<SessionVO>>('/sys/base/session').then((res) => res.data);
 }
 
 /** 按业务前缀获取当前用户权限，超级管理员返回通配符。 */

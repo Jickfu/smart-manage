@@ -2,6 +2,8 @@ package sm.framework.config;
 
 import cn.dev33.satoken.annotation.SaIgnore;
 import cn.dev33.satoken.context.SaHolder;
+import cn.dev33.satoken.SaManager;
+import cn.dev33.satoken.context.model.SaCookie;
 import cn.dev33.satoken.filter.SaServletFilter;
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.stp.StpUtil;
@@ -15,6 +17,8 @@ import org.springframework.web.servlet.mvc.condition.PathPatternsRequestConditio
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import sm.system.exception.ExceptionResultResolver;
+import sm.system.response.ResultEnum;
+import sm.framework.security.BrowserRequestSecurity;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.lang.reflect.Method;
@@ -34,6 +38,7 @@ import java.util.Set;
 public class SaTokenConfig {
 	private final RequestMappingHandlerMapping requestMappingHandlerMapping;
 	private final JsonMapper jsonMapper;
+	private final BrowserRequestSecurity browserRequestSecurity;
 	@Value("${smart-manage.framework.no-need-login}")
 	private String[] noNeedLogin;
 	@Bean
@@ -46,9 +51,13 @@ public class SaTokenConfig {
 					SaRouter.match("/**")
 							.notMatch(noNeedLogin)
 							.notMatch(saIgnoreList())
-							.check(r -> StpUtil.checkLogin());
+							.check(r -> {
+								StpUtil.checkLogin();
+								browserRequestSecurity.validateCsrfToken();
+							});
 				})
 				.setBeforeAuth(obj -> {
+					browserRequestSecurity.validateOrigin();
 					// ---------- 设置一些安全响应头 ----------
 					//					SaHolder.getResponse()
 					//							// 是否可以在iframe显示视图： DENY=不可以 | SAMEORIGIN=同域下可以 | ALLOW-FROM uri=指定域名下可以
@@ -77,11 +86,29 @@ public class SaTokenConfig {
 					SaHolder.getResponse().setHeader("Content-Type", "application/json;charset=UTF-8");
 					// 处理异常
 					try {
-						return jsonMapper.writeValueAsString(ExceptionResultResolver.resolve(e));
+						var result = ExceptionResultResolver.resolve(e);
+						if (ResultEnum.UNAUTHORIZED.getCode() == result.getCode()) {
+							clearAuthenticationCookie();
+						}
+						return jsonMapper.writeValueAsString(result);
 					} catch (Exception ex) {
 						return "{\"code\":500,\"msg\":\"server error\"}";
 					}
 				});
+	}
+
+	/** 认证失败时覆盖同路径 Cookie，避免浏览器持续提交已失效凭证。 */
+	private void clearAuthenticationCookie() {
+		var cookieConfig = SaManager.getConfig().getCookie();
+		SaHolder.getResponse().addCookie(new SaCookie()
+				.setName(SaManager.getConfig().getTokenName())
+				.setValue(null)
+				.setMaxAge(0)
+				.setDomain(cookieConfig.getDomain())
+				.setPath(cookieConfig.getPath())
+				.setSecure(cookieConfig.getSecure())
+				.setHttpOnly(cookieConfig.getHttpOnly())
+				.setSameSite(cookieConfig.getSameSite()));
 	}
 
 	/**
