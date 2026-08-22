@@ -2,6 +2,16 @@
 
 验证应与改动风险匹配。以下命令是代码修改的最低门槛，不能通过降低规则、忽略错误或手工修补生成文件来绕过。
 
+## 模块约定
+
+新增或显著扩展业务模块时，先执行仓库级确定性约束检查：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-conventions.ps1
+```
+
+该脚本检查文档与 skill 路由、页面注册字段、前端内联样式、Controller 依赖和权限注解等可可靠机械判断的约束。业务状态、数据安全和交互语义仍必须通过评审及风险驱动测试验证。
+
 ## 后端
 
 修改后端代码至少执行：
@@ -48,16 +58,17 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 
 `.github/workflows/quality-gate.yml` 当前执行：
 
-1. 后端 `mvn test`；
-2. 前端依赖锁定安装；
-3. `pnpm lint`；
-4. `pnpm format:check`；
-5. `pnpm test`；
-6. `pnpm build`；
-7. 组件注册表无差异检查；
-8. PostgreSQL 16 上的 Flyway 空库迁移；
-9. 使用迁移完成后的真实权限目录执行代码权限一致性校验。
-10. 使用迁移完成后的真实功能目录校验全部页面注册的 `featureKey`，并校验菜单与入口权限属于同一功能。
+1. 模块约定脚本；
+2. 后端 `mvn test`；
+3. 前端依赖锁定安装；
+4. `pnpm lint`；
+5. `pnpm format:check`；
+6. `pnpm test`；
+7. `pnpm build`；
+8. 组件注册表无差异检查；
+9. PostgreSQL 16 上的 Flyway 空库迁移；
+10. 使用迁移完成后的真实权限目录执行代码权限一致性校验。
+11. 使用迁移完成后的真实功能目录校验全部页面注册的 `featureKey`，并校验菜单与入口权限属于同一功能。
 
 主分支保护属于 GitHub 仓库外部设置，需要由仓库管理员启用并要求质量门禁通过。
 

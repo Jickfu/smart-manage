@@ -26,7 +26,9 @@
 - 核心架构边界、安全逻辑、状态流转、事务和并发控制必须有自动化测试；不以测试数量或覆盖率为目标。
 - 编辑详情中的实体引用字段必须返回引用对象，默认包含 `id`、`number`、`name`，供引用选择器直接回显；保存表单仍只提交对应外键 ID，禁止详情仅返回外键 ID 或由前端额外请求列表、树、选项接口反查回显对象。
 - 每项代码任务都必须执行与风险匹配的编译、测试、静态检查、构建或迁移验证。
-- 新增业务聚合必须使用[业务聚合检查清单](./docs/development/business-aggregate-checklist.md)。
+- 新增或显著扩展业务模块必须先使用[模块开发指南](./docs/development/module-development-guide.md)完成模块分类、样板选择、边界设计和验收基线；新增业务聚合还必须使用[业务聚合检查清单](./docs/development/business-aggregate-checklist.md)。
+- 使用支持仓库 skills 的开发代理时，新增或显著扩展业务模块应调用 `$smart-manage-module`；skill 只编排流程，仓库文档和当前代码仍是事实来源。
+- 适合机械判断的项目约束必须通过测试或 `scripts/verify-module-conventions.ps1` 校验，不得只依赖人工记忆或提示词。
 
 ## 安全与工具
 
@@ -47,7 +49,8 @@
 | 数据权限、组织范围或对象级访问 | `docs/architecture/data-permission.md` |
 | 数据库或迁移 | `docs/development/database.md` |
 | 构建、测试或 CI | `docs/development/verification.md` |
-| 新增业务模块 | `docs/development/business-aggregate-checklist.md`、`docs/domains/{领域}/{应用}/` 下对应模块文档 |
+| 新增或显著扩展业务模块 | `docs/development/module-development-guide.md`、`docs/development/module-pattern-catalog.md`、`docs/domains/{领域}/{应用}/` 下对应模块文档 |
+| 新增业务聚合 | 上述模块文档及 `docs/development/business-aggregate-checklist.md` |
 | 具体业务模块 | `docs/domains/{领域}/{应用}/` 下对应模块文档 |
 
 `docs/archive/` 只用于历史追溯，不是当前规则来源；`docs/proposals/` 中的内容尚未生效。

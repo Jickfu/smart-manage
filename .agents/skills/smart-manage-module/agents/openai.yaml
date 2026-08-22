@@ -1,0 +1,4 @@
+interface:
+  display_name: "Smart Manage 模块开发"
+  short_description: "遵循项目架构、现有样板与验证流程规划并实施完整业务模块"
+  default_prompt: "使用 $smart-manage-module 规划、实现并验证一个符合项目规范的新模块。"

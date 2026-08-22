@@ -216,7 +216,7 @@ const SysParamListPage = (props: PageComponentProps) => {
       columnFeatures={columnFeatures}
       {...columnQueryProps}
       dataSource={records}
-      selectMode="radio"
+      selectMode="checkbox"
       selectedRowKeys={selectedRowKeys}
       onSelectChange={setSelectedRowKeys}
     />

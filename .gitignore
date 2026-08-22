@@ -34,7 +34,11 @@ smart-manage-api/src/main/resources/application-local.yml
 
 ### AI ###
 .claude
-.agents
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/smart-manage-module/
+!.agents/skills/smart-manage-module/**
 .codex
 skills-lock.json
 **/.playwright-cli

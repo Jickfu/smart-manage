@@ -5,6 +5,14 @@ on:
   pull_request:
 
 jobs:
+  conventions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify module conventions
+        shell: pwsh
+        run: ./scripts/verify-module-conventions.ps1
+
   backend:
     runs-on: ubuntu-latest
     steps:

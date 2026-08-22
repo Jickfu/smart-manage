@@ -2,6 +2,8 @@
 
 本文件适用于 `smart-manage-api`。同时继承根目录 `AGENTS.md`。
 
+新增或显著扩展后端业务模块时，必须先阅读 `docs/development/module-development-guide.md` 和 `docs/development/module-pattern-catalog.md`，确定模块类型、参考实现、公开入口、事务边界和风险验证；本文件只保留后端不可违反的硬约束。
+
 ## 分层与依赖
 
 - 根包为 `sm`。
