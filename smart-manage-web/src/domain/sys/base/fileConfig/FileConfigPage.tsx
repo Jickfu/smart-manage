@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { App, Collapse, Form, Input, InputNumber, Select, Switch } from 'antd';
+import { App, Form, Input, InputNumber, Select, Switch } from 'antd';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { EditSectionCollapse } from '@/domain/common/page/EditSectionCollapse';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -143,10 +144,8 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
         className="sm-edit-form sm-file-config-form"
         onValuesChange={() => setDirty(true)}
       >
-        <Collapse
-          className="sm-edit-collapse"
-          collapsible="icon"
-          defaultActiveKey={['storage']}
+        <EditSectionCollapse
+          defaultActiveKeys={['storage']}
           items={[
             {
               key: 'storage',

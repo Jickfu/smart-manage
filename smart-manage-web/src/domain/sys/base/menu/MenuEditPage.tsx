@@ -148,50 +148,51 @@ const MenuEditPage = (props: PageComponentProps) => {
       rules: [{ required: true, message: '所属应用不能为空' }],
       refSelector: appRefSelector,
     },
-    {
-      label: '所属功能',
-      dataIndex: 'feature',
-      type: 'ref-selector',
-      disabled: !selectedAppId,
-      placeholder: selectedAppId ? '请选择所属功能' : '请先选择所属应用',
-      rules:
-        selectedLevel === MENU_LEVEL_PAGE
-          ? [{ required: true, message: '页面菜单的所属功能不能为空' }]
-          : undefined,
-      refSelector: featureRefSelector,
-    },
-    {
-      label: '父分组（可选）',
-      dataIndex: 'parent',
-      type: 'ref-selector',
-      disabled: !selectedAppId,
-      placeholder: selectedAppId ? '留空则显示在应用根级' : '请先选择所属应用',
-      refSelector: defineRefSelector<MenuSelectVO>({
-        selectorKey: ['sys-menu-parent', selectedAppId],
-        modalTitle: '选择父分组',
-        fetchFn: (params) =>
-          menuApi.select({
-            pageNum: params.pageNum,
-            pageSize: params.pageSize,
-            keyword: params.keyword,
-            appId: selectedAppId!,
-            level: 0,
-            excludeId: billId ?? undefined,
-          }),
-        displayRender: (record) => record.name,
-        fieldNames: { key: 'id', label: 'name' },
-        columns: [
-          { title: '编码', dataIndex: 'number', width: 120 },
-          { title: '名称', dataIndex: 'name' },
+    ...(selectedLevel === MENU_LEVEL_PAGE
+      ? [
           {
-            title: '层级',
-            dataIndex: 'level',
-            width: 60,
-            render: (val: unknown) => (Number(val) === 0 ? '分组' : '页面'),
+            label: '所属功能',
+            dataIndex: 'feature',
+            type: 'ref-selector' as const,
+            disabled: !selectedAppId,
+            placeholder: selectedAppId ? '请选择所属功能' : '请先选择所属应用',
+            rules: [{ required: true, message: '页面菜单的所属功能不能为空' }],
+            refSelector: featureRefSelector,
           },
-        ],
-      }),
-    },
+          {
+            label: '父分组（可选）',
+            dataIndex: 'parent',
+            type: 'ref-selector' as const,
+            disabled: !selectedAppId,
+            placeholder: selectedAppId ? '留空则显示在应用根级' : '请先选择所属应用',
+            refSelector: defineRefSelector<MenuSelectVO>({
+              selectorKey: ['sys-menu-parent', selectedAppId],
+              modalTitle: '选择父分组',
+              fetchFn: (params) =>
+                menuApi.select({
+                  pageNum: params.pageNum,
+                  pageSize: params.pageSize,
+                  keyword: params.keyword,
+                  appId: selectedAppId!,
+                  level: 0,
+                  excludeId: billId ?? undefined,
+                }),
+              displayRender: (record) => record.name,
+              fieldNames: { key: 'id', label: 'name' },
+              columns: [
+                { title: '编码', dataIndex: 'number', width: 120 },
+                { title: '名称', dataIndex: 'name' },
+                {
+                  title: '层级',
+                  dataIndex: 'level',
+                  width: 60,
+                  render: (val: unknown) => (Number(val) === 0 ? '分组' : '页面'),
+                },
+              ],
+            }),
+          },
+        ]
+      : []),
     {
       label: '权限',
       dataIndex: 'permission',
@@ -347,7 +348,13 @@ const MenuEditPage = (props: PageComponentProps) => {
           form.setFieldValue('component', undefined);
           form.setFieldValue('externalUrl', undefined);
           form.setFieldValue('externalOpenMode', undefined);
-          if (nextLevel === MENU_LEVEL_CATEGORY) form.setFieldValue('parent', null);
+          if (nextLevel === MENU_LEVEL_CATEGORY) {
+            // 分组是应用级导航容器，不归属功能，也不能沿用功能级入口权限。
+            form.setFieldValue('parent', null);
+            form.setFieldValue('feature', null);
+            form.setFieldValue('permission', null);
+            setFeatureSelection({ billId, featureId: undefined });
+          }
           setMenuShapeSelection({ billId, level: nextLevel, targetType: nextTargetType });
         }
         if (Object.hasOwn(changedValues, 'targetType')) {

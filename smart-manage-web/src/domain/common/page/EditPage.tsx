@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Collapse, Form } from 'antd';
+import { Form } from 'antd';
 import type { FormInstance } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { ReactNode } from 'react';
@@ -8,6 +8,7 @@ import { EditFormFields } from './EditFormFields';
 import type { AccessResource, PermissionAction } from './access';
 import { PermissionActions } from './PermissionActions';
 import { EditPageShell } from './EditPageShell';
+import { EditSectionCollapse } from './EditSectionCollapse';
 import { useBeforeCloseGuard } from './useBeforeCloseGuard';
 import { BusinessAttachmentPanel } from '@/domain/common/attachment/BusinessAttachmentPanel';
 import type {
@@ -191,23 +192,6 @@ const EditPage = ({
     values: BusinessAttachment[];
   }>({ source: undefined, values: [] });
   const editable = isEditable(operationType, billStatus);
-  const detailExpanded = activeCollapseKeys.includes('detail');
-  const toggleCollapsePanel = (key: string) => {
-    setActiveCollapseKeys((currentKeys) =>
-      currentKeys.includes(key)
-        ? currentKeys.filter((currentKey) => currentKey !== key)
-        : [...currentKeys, key],
-    );
-  };
-  const renderCollapseLabel = (key: string, label: ReactNode) => (
-    <button
-      type="button"
-      className="sm-edit-collapse-title"
-      onClick={() => toggleCollapsePanel(key)}
-    >
-      {label}
-    </button>
-  );
   const attachments =
     attachmentState.source === attachmentResource?.initialAttachments
       ? attachmentState.values
@@ -327,15 +311,13 @@ const EditPage = ({
           onValuesChange?.(changedValues, allValues, form);
         }}
       >
-        <Collapse
-          className="sm-edit-collapse"
-          collapsible="icon"
-          activeKey={activeCollapseKeys}
-          onChange={(keys) => setActiveCollapseKeys(Array.isArray(keys) ? keys : [keys])}
+        <EditSectionCollapse
+          activeKeys={activeCollapseKeys}
+          onActiveKeysChange={setActiveCollapseKeys}
           items={[
             {
               key: 'basic',
-              label: renderCollapseLabel('basic', basicLabel),
+              label: basicLabel,
               children: basicContent?.(editable) ?? (
                 <EditFormFields fields={fields} editable={editable} />
               ),
@@ -344,9 +326,9 @@ const EditPage = ({
               ? [
                   {
                     key: 'detail',
-                    label: renderCollapseLabel('detail', detailLabel),
+                    label: detailLabel,
                     children: detailContent(editable),
-                    extra: detailExpanded ? detailExtra?.(editable) : undefined,
+                    extra: (expanded: boolean) => (expanded ? detailExtra?.(editable) : undefined),
                   },
                 ]
               : []),
@@ -354,7 +336,7 @@ const EditPage = ({
               ? [
                   {
                     key: 'attachments',
-                    label: renderCollapseLabel('attachments', '附件'),
+                    label: '附件',
                     children: (
                       <BusinessAttachmentPanel
                         resourceType={attachmentResource.resourceType}

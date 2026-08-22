@@ -117,6 +117,12 @@ class MenuTxService {
             if (form.getParentId() != null && form.getParentId() > 0) {
                 throw new BizException(ResultEnum.PARAM_ERROR, "分组菜单必须位于应用根级");
             }
+            if (form.getFeatureId() != null) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "分组菜单不能选择所属功能");
+            }
+            if (form.getPermissionId() == null) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "分组菜单必须选择应用级入口权限");
+            }
             entity.setPath(null);
             entity.setComponent(null);
             entity.setTargetType(null);

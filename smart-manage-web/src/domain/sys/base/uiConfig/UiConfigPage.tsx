@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { App, Collapse, Form, Input } from 'antd';
+import { App, Form, Input } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { activeUiConfigQueryKey } from '@/api/uiConfig';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { EditSectionCollapse } from '@/domain/common/page/EditSectionCollapse';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useConfigDirtyGuard } from '@/domain/sys/base/configCommon/useConfigDirtyGuard';
@@ -166,10 +167,8 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
         <Form.Item name="headerLogo" hidden>
           <Input />
         </Form.Item>
-        <Collapse
-          className="sm-edit-collapse"
-          collapsible="icon"
-          defaultActiveKey={['basic', 'images']}
+        <EditSectionCollapse
+          defaultActiveKeys={['basic', 'images']}
           items={[
             {
               key: 'basic',

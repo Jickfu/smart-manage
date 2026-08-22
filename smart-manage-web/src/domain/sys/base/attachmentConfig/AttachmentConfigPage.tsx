@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { Key } from 'react';
-import { Button, Collapse, Form, Input, InputNumber, Table } from 'antd';
+import { Button, Form, Input, InputNumber, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormListFieldData } from 'antd/es/form';
 import { useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { EditSectionCollapse } from '@/domain/common/page/EditSectionCollapse';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -159,10 +160,8 @@ const AttachmentConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
         <Form.Item name="version" hidden>
           <input />
         </Form.Item>
-        <Collapse
-          className="sm-edit-collapse"
-          collapsible="icon"
-          defaultActiveKey={['upload-limit', 'file-types']}
+        <EditSectionCollapse
+          defaultActiveKeys={['upload-limit', 'file-types']}
           items={[
             {
               key: 'upload-limit',

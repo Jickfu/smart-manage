@@ -86,7 +86,7 @@ function toTreeNode(node: MenuCatalogNodeVO): DataNode {
   };
 }
 
-/** 菜单列表页 — 左侧按领域/应用筛选，右侧按分组/页面展示完整层级。 */
+/** 菜单列表页 — 左侧按领域/应用/功能筛选，右侧按分组/页面展示完整层级。 */
 const MenuListPage = (props: PageComponentProps) => {
   const { modal } = App.useApp();
   const [selectedNodeKey, setSelectedNodeKey] = useState(ROOT_NODE_KEY);
@@ -146,7 +146,7 @@ const MenuListPage = (props: PageComponentProps) => {
     () => [
       {
         key: ROOT_NODE_KEY,
-        title: '全部功能',
+        title: '全部菜单',
         children: catalogQuery.data?.map(toTreeNode) ?? [],
       },
     ],

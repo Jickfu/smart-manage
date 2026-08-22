@@ -186,6 +186,16 @@ class MenuTxServiceTests {
         verify(mapper, never()).insert(any(MenuEntity.class));
     }
 
+    @Test
+    void categoryMenuCannotBelongToAFeature() {
+        MenuSaveForm form = validEditForm();
+        form.setId(null);
+        form.setFeatureId(100L);
+
+        assertThrows(BizException.class, () -> txService.save(form));
+        verify(mapper, never()).insert(any(MenuEntity.class));
+    }
+
     private MenuSaveForm validEditForm() {
         MenuSaveForm form = new MenuSaveForm();
         form.setId(1L);
@@ -193,11 +203,11 @@ class MenuTxServiceTests {
         form.setName("菜单");
         form.setLevel(MenuLevelEnum.CATEGORY);
         form.setAppId(31L);
-        form.setFeatureId(100L);
-        FeatureEntity feature = new FeatureEntity();
-        feature.setId(100L);
-        feature.setAppId(31L);
-        when(featureMapper.selectById(100L)).thenReturn(feature);
+        form.setPermissionId(200L);
+        PermissionEntity permission = new PermissionEntity();
+        permission.setId(200L);
+        permission.setAppId(31L);
+        when(permissionMapper.selectById(200L)).thenReturn(permission);
         return form;
     }
 
