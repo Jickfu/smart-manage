@@ -175,16 +175,20 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
               onChange={(value) => setLimit(value ?? 10)}
             />
           </Space>
-          <Button onClick={() => void listQuery.refetch()}>刷新列表</Button>
+          <Button type="primary" onClick={() => void listQuery.refetch()}>
+            刷新列表
+          </Button>
           {can(threadDiagnosticAccess.permissions.collect) && (
             <Space size={10}>
               <Button
+                type="primary"
                 loading={collectMutation.isPending}
                 onClick={() => collectMutation.mutate({ action: 'hot' })}
               >
                 采集热点
               </Button>
               <Button
+                type="primary"
                 loading={collectMutation.isPending}
                 onClick={() => collectMutation.mutate({ action: 'deadlocks' })}
               >

@@ -157,7 +157,11 @@ export default function NodeMonitorPage({ active }: PageComponentProps) {
             options={REFRESH_INTERVAL_OPTIONS}
             onChange={setRefreshInterval}
           />
-          <Button loading={snapshotQuery.isFetching} onClick={() => void snapshotQuery.refetch()}>
+          <Button
+            type="primary"
+            loading={snapshotQuery.isFetching}
+            onClick={() => void snapshotQuery.refetch()}
+          >
             立即刷新
           </Button>
         </Space>

@@ -77,7 +77,7 @@ export default function ScriptHelpPage(_props: PageComponentProps) {
       error={apiQuery.error}
       onRetry={() => apiQuery.refetch()}
       actions={
-        <Button icon={<ReloadOutlined />} onClick={() => apiQuery.refetch()}>
+        <Button type="primary" icon={<ReloadOutlined />} onClick={() => apiQuery.refetch()}>
           刷新 API
         </Button>
       }

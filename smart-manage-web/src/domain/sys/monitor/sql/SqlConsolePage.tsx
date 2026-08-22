@@ -89,6 +89,7 @@ export default function SqlConsolePage(_props: PageComponentProps) {
             </Button>
           )}
           <Button
+            danger
             icon={<ClearOutlined />}
             onClick={() =>
               modal.confirm({

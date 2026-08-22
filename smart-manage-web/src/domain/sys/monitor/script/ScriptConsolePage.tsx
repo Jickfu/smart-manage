@@ -74,42 +74,6 @@ export default function ScriptConsolePage(props: PageComponentProps) {
       loading={false}
       actions={
         <>
-          {can(scriptAccess.permissions.execute) && (
-            <Button
-              type="primary"
-              icon={<PlayCircleOutlined />}
-              loading={executeMutation.isPending}
-              onClick={() => execute(editorRef.current?.getExecutableScript() ?? '')}
-            >
-              执行
-            </Button>
-          )}
-          <Button
-            icon={<ClearOutlined />}
-            onClick={() =>
-              modal.confirm({
-                title: '确认清空脚本？',
-                content: '清空后当前编辑内容和执行结果将无法恢复。',
-                okText: '确认清空',
-                okButtonProps: { danger: true },
-                onOk: () => {
-                  setContent('');
-                  setScriptId(undefined);
-                  setResult(undefined);
-                },
-              })
-            }
-          >
-            清空
-          </Button>
-          <Button
-            icon={<QuestionCircleOutlined />}
-            onClick={() => {
-              openCustomTab(props.appNumber, HELP_COMPONENT_KEY);
-            }}
-          >
-            使用帮助
-          </Button>
           <Select
             className="sm-script-console-mode"
             value={transactionMode}
@@ -158,6 +122,44 @@ export default function ScriptConsolePage(props: PageComponentProps) {
               setResult(undefined);
             }}
           />
+          {can(scriptAccess.permissions.execute) && (
+            <Button
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              loading={executeMutation.isPending}
+              onClick={() => execute(editorRef.current?.getExecutableScript() ?? '')}
+            >
+              执行
+            </Button>
+          )}
+          <Button
+            type="primary"
+            icon={<QuestionCircleOutlined />}
+            onClick={() => {
+              openCustomTab(props.appNumber, HELP_COMPONENT_KEY);
+            }}
+          >
+            使用帮助
+          </Button>
+          <Button
+            danger
+            icon={<ClearOutlined />}
+            onClick={() =>
+              modal.confirm({
+                title: '确认清空脚本？',
+                content: '清空后当前编辑内容和执行结果将无法恢复。',
+                okText: '确认清空',
+                okButtonProps: { danger: true },
+                onOk: () => {
+                  setContent('');
+                  setScriptId(undefined);
+                  setResult(undefined);
+                },
+              })
+            }
+          >
+            清空
+          </Button>
           <Typography.Text type="secondary" className="sm-script-console-hint">
             选中脚本后按 Ctrl + E 可执行选区
           </Typography.Text>

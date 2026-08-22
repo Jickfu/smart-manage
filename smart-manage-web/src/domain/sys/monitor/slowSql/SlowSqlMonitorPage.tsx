@@ -110,6 +110,7 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
           <Typography.Text>ms</Typography.Text>
           {can('config') && (
             <Button
+              type="primary"
               loading={thresholdMutation.isPending}
               disabled={!effectiveInstanceId}
               onClick={() => thresholdMutation.mutate()}
@@ -117,7 +118,11 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
               应用阈值
             </Button>
           )}
-          <Button loading={snapshotQuery.isFetching} onClick={() => void snapshotQuery.refetch()}>
+          <Button
+            type="primary"
+            loading={snapshotQuery.isFetching}
+            onClick={() => void snapshotQuery.refetch()}
+          >
             立即刷新
           </Button>
           {can('clear') && (
