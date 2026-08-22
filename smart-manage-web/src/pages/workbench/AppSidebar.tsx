@@ -66,6 +66,7 @@ const AppSidebar = ({ menuTree, loading, onItemClick }: Props) => {
           ) : (
             <Menu
               mode="vertical"
+              selectable={false}
               onClick={handleClick}
               items={renderMenuTree(menuTree.routes)}
               theme="dark"

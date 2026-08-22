@@ -24,6 +24,10 @@ public class SysParamVO {
 
     private Boolean isSystem;
 
+    private Long featureId;
+
+    private String featureName;
+
     private Long appId;
 
     private String appName;

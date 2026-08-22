@@ -8,7 +8,7 @@ import type { EditField } from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
-import { useAppRefSelector } from '@/domain/sys/base/app/refSelector';
+import { useFeatureRefSelector } from '@/domain/sys/base/feature/refSelector';
 import { sysParamApi } from './api';
 import { sysParamAccess } from './permissions';
 import { sysParamQueryKeys } from './queryKeys';
@@ -20,7 +20,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
   const isAddNew = operationType === OperationType.ADDNEW;
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
-  const appRefSelector = useAppRefSelector();
+  const featureRefSelector = useFeatureRefSelector();
   const detailQuery = useQuery({
     queryKey: sysParamQueryKeys.detail(billId),
     queryFn: () => sysParamApi.detail(billId!),
@@ -44,12 +44,12 @@ const SysParamEditPage = (props: PageComponentProps) => {
         rules: [{ required: true, message: '参数名称不能为空' }],
       },
       {
-        label: '所属应用',
-        dataIndex: 'application',
+        label: '所属功能',
+        dataIndex: 'feature',
         type: 'ref-selector',
         disabled: detail?.isSystem,
         placeholder: '留空表示全局参数',
-        refSelector: appRefSelector,
+        refSelector: featureRefSelector,
       },
       { label: '参数值', dataIndex: 'value', type: 'textarea', fullWidth: true },
       {
@@ -60,7 +60,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
         disabled: detail?.isSystem,
       },
     ],
-    [appRefSelector, detail?.isSystem],
+    [detail?.isSystem, featureRefSelector],
   );
   const initialValues = useMemo(
     () =>
@@ -70,14 +70,14 @@ const SysParamEditPage = (props: PageComponentProps) => {
             name: detail.name,
             value: detail.value ?? '',
             description: detail.description ?? '',
-            application: detail.application ?? null,
+            feature: detail.feature ?? null,
           }
         : {},
     [detail],
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
-      const application = values.application as { id?: string } | null;
+      const feature = values.feature as { id?: string } | null;
       const savedId = await sysParamApi.save({
         id: billId,
         version: detail?.version,
@@ -85,7 +85,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
         name: String(values.name).trim(),
         value: String(values.value ?? ''),
         description: String(values.description ?? ''),
-        appId: application?.id,
+        featureId: feature?.id,
       });
       if (isAddNew) {
         const nextKey = createBillTabKey(props.componentKey, savedId);

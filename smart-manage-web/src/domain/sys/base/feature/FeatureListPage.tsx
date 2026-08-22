@@ -128,8 +128,10 @@ const FeatureListPage = (props: PageComponentProps) => {
               onSelect={(keys) => {
                 const key = String(keys[0] ?? 'all');
                 resetPage();
-                if (key.startsWith('domain:')) setScope({ type: 'domain', id: key.slice(6) });
-                else if (key.startsWith('app:')) setScope({ type: 'app', id: key.slice(4) });
+                if (key.startsWith('domain:'))
+                  setScope({ type: 'domain', id: key.slice('domain:'.length) });
+                else if (key.startsWith('app:'))
+                  setScope({ type: 'app', id: key.slice('app:'.length) });
                 else setScope({ type: 'all' });
               }}
             />

@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.base.sysparam.model.entity.SysParamEntity;
 import sm.domain.sys.base.sysparam.model.form.SysParamSaveForm;
 import sm.domain.sys.base.sysparam.mapper.SysParamMapper;
+import sm.domain.sys.base.feature.mapper.FeatureMapper;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -22,6 +23,7 @@ import sm.system.response.ResultEnum;
 @Transactional(rollbackFor = Exception.class)
 class SysParamTxService {
     private final SysParamMapper mapper;
+    private final FeatureMapper featureMapper;
 
     /** 新增/编辑，清除缓存 */
     public Long save(SysParamSaveForm form) {
@@ -54,11 +56,14 @@ class SysParamTxService {
         if (duplicateCount > 0) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "系统参数编码已存在");
         }
+        if (form.getFeatureId() != null && featureMapper.selectById(form.getFeatureId()) == null) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "所属功能不存在");
+        }
         entity.setNumber(form.getNumber());
         entity.setName(form.getName());
         entity.setValue(form.getValue());
         entity.setDescription(form.getDescription());
-        entity.setAppId(form.getAppId());
+        entity.setFeatureId(form.getFeatureId());
         if (form.getId() == null) {
             entity.setIsSystem(false);
         }

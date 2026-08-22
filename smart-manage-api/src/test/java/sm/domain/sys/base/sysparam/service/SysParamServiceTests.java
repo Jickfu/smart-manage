@@ -4,7 +4,7 @@ import com.alicp.jetcache.anno.Cached;
 import org.junit.jupiter.api.Test;
 import org.springframework.stereotype.Component;
 import sm.domain.sys.base.sysparam.mapper.SysParamMapper;
-import sm.domain.sys.base.app.mapper.AppMapper;
+import sm.domain.sys.base.feature.mapper.FeatureMapper;
 
 import java.util.Map;
 
@@ -27,7 +27,7 @@ class SysParamServiceTests {
         SysParamCacheAccessor cacheAccessor = mock(SysParamCacheAccessor.class);
         when(cacheAccessor.getAll()).thenReturn(Map.of("SCRIPT_CONSOLE_TIMEOUT_SECONDS", "45"));
         SysParamService service = new SysParamService(
-                mock(SysParamMapper.class), mock(SysParamTxService.class), cacheAccessor, mock(AppMapper.class));
+                mock(SysParamMapper.class), mock(SysParamTxService.class), cacheAccessor, mock(FeatureMapper.class));
 
         Integer value = service.getInt("SCRIPT_CONSOLE_TIMEOUT_SECONDS");
 

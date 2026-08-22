@@ -2,6 +2,7 @@ import type { PageForm } from '@/types/api';
 import type { ReferenceVO } from '@/domain/sys/base/common/types';
 
 export interface SysParamListForm extends PageForm {
+  featureId?: string;
   appId?: string;
   domainId?: string;
   globalOnly?: boolean;
@@ -16,12 +17,17 @@ export interface SysParamVO {
   value?: string;
   description?: string;
   isSystem: boolean;
+  featureId?: string;
+  featureName?: string;
   appId?: string;
   appName?: string;
 }
 
-export interface SysParamDetailVO extends Omit<SysParamVO, 'appId' | 'appName'> {
-  application?: ReferenceVO;
+export interface SysParamDetailVO extends Omit<
+  SysParamVO,
+  'featureId' | 'featureName' | 'appId' | 'appName'
+> {
+  feature?: ReferenceVO;
 }
 
 export interface SysParamSaveForm {
@@ -31,5 +37,5 @@ export interface SysParamSaveForm {
   name: string;
   value?: string;
   description?: string;
-  appId?: string;
+  featureId?: string;
 }

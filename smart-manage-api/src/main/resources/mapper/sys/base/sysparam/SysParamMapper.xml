@@ -3,13 +3,16 @@
 <mapper namespace="sm.domain.sys.base.sysparam.mapper.SysParamMapper">
     <select id="selectListPage" resultType="sm.domain.sys.base.sysparam.model.vo.SysParamVO">
         SELECT a.id, a.version, a.number, a.name, a.value, a.description, a.is_system,
-               a.app_id, b.name AS app_name
+               a.feature_id, COALESCE(b.custom_name, b.default_name) AS feature_name,
+               b.app_id, c.name AS app_name
         FROM t_sys_param a
-        LEFT JOIN t_sys_app b ON b.id = a.app_id
+        LEFT JOIN t_sys_feature b ON b.id = a.feature_id
+        LEFT JOIN t_sys_app c ON c.id = b.app_id
         <where>
-            <if test="form.appId != null">a.app_id = #{form.appId}</if>
-            <if test="form.domainId != null">b.domain_id = #{form.domainId}</if>
-            <if test="form.globalOnly == true">a.app_id IS NULL</if>
+            <if test="form.featureId != null">a.feature_id = #{form.featureId}</if>
+            <if test="form.appId != null">b.app_id = #{form.appId}</if>
+            <if test="form.domainId != null">c.domain_id = #{form.domainId}</if>
+            <if test="form.globalOnly == true">a.feature_id IS NULL</if>
             <if test="form.keyword != null and form.keyword.trim() != ''">
                 AND (a.number LIKE CONCAT('%', #{form.keyword}, '%')
                 OR a.name LIKE CONCAT('%', #{form.keyword}, '%'))

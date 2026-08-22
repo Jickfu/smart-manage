@@ -33,6 +33,6 @@ public class SysParamSaveForm {
     @Schema(description = "描述")
     private String description;
 
-    @Schema(description = "所属应用ID")
-    private Long appId;
+    @Schema(description = "所属功能ID，留空表示全局参数")
+    private Long featureId;
 }

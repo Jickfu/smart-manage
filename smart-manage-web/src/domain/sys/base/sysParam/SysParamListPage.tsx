@@ -14,6 +14,9 @@ import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { fetchAppsAll } from '@/domain/sys/base/app/api';
 import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';
+import { featureApi } from '@/domain/sys/base/feature/api';
+import { featureQueryKeys } from '@/domain/sys/base/feature/queryKeys';
+import type { FeatureVO } from '@/domain/sys/base/feature/types';
 import { useQuery } from '@tanstack/react-query';
 import { sysParamApi } from './api';
 import { sysParamAccess } from './permissions';
@@ -25,6 +28,7 @@ const columnFeatures: ListColumnFeatures = {
   number: { label: '编码', filter: { type: 'string' }, sorter: true },
   name: { label: '名称', filter: { type: 'string' }, sorter: true },
   appName: { label: '所属应用', filter: { type: 'string' } },
+  featureName: { label: '所属功能', filter: { type: 'string' } },
   value: { label: '参数值', filter: { type: 'string' } },
   description: { label: '描述', filter: { type: 'string' } },
   isSystem: { label: '类型', filter: { type: 'boolean' } },
@@ -36,7 +40,8 @@ type Scope =
   | { type: 'all' }
   | { type: 'global' }
   | { type: 'domain'; id: string }
-  | { type: 'app'; id: string };
+  | { type: 'app'; id: string }
+  | { type: 'feature'; id: string };
 
 const SysParamListPage = (props: PageComponentProps) => {
   const { modal, message } = App.useApp();
@@ -50,7 +55,13 @@ const SysParamListPage = (props: PageComponentProps) => {
     queryFn: fetchAppsAll,
     staleTime: 5 * 60 * 1000,
   });
+  const featuresQuery = useQuery({
+    queryKey: featureQueryKeys.visible(),
+    queryFn: featureApi.listAllVisible,
+    staleTime: 5 * 60 * 1000,
+  });
   const scopeParams = {
+    featureId: scope.type === 'feature' ? scope.id : undefined,
     appId: scope.type === 'app' ? scope.id : undefined,
     domainId: scope.type === 'domain' ? scope.id : undefined,
     globalOnly: scope.type === 'global' ? true : undefined,
@@ -65,6 +76,7 @@ const SysParamListPage = (props: PageComponentProps) => {
     onSearch,
     onPageChange,
     onRefresh,
+    resetPage,
     columnQueryProps,
   } = useListPageQuery({
     queryKey: sysParamQueryKeys.list(scopeParams),
@@ -78,8 +90,12 @@ const SysParamListPage = (props: PageComponentProps) => {
       message.success('删除成功');
     },
   });
-  const treeData = useMemo<DataNode[]>(
-    () => [
+  const treeData = useMemo<DataNode[]>(() => {
+    const featuresByApp = new Map<string, FeatureVO[]>();
+    for (const feature of featuresQuery.data ?? []) {
+      featuresByApp.set(feature.appId, [...(featuresByApp.get(feature.appId) ?? []), feature]);
+    }
+    return [
       {
         key: 'all',
         title: '全部参数',
@@ -91,14 +107,17 @@ const SysParamListPage = (props: PageComponentProps) => {
             children: domain.appList.map((application) => ({
               key: `app:${application.id}`,
               title: application.name,
-              isLeaf: true,
+              children: (featuresByApp.get(application.id) ?? []).map((feature) => ({
+                key: `feature:${feature.id}`,
+                title: feature.name,
+                isLeaf: true,
+              })),
             })),
           })) ?? []),
         ],
       },
-    ],
-    [treeQuery.data],
-  );
+    ];
+  }, [featuresQuery.data, treeQuery.data]);
   const columns: ColumnsType<SysParamVO> = [
     {
       title: '编码',
@@ -116,6 +135,7 @@ const SysParamListPage = (props: PageComponentProps) => {
     },
     { title: '名称', dataIndex: 'name', width: 180 },
     { title: '所属应用', dataIndex: 'appName', width: 160, render: (value) => value ?? '全局参数' },
+    { title: '所属功能', dataIndex: 'featureName', width: 160, render: (value) => value ?? '—' },
     { title: '参数值', dataIndex: 'value', ellipsis: true },
     { title: '描述', dataIndex: 'description', ellipsis: true },
     {
@@ -131,9 +151,9 @@ const SysParamListPage = (props: PageComponentProps) => {
       {...props}
       title="系统参数"
       access={sysParamAccess}
-      loading={query.isLoading}
-      error={query.error as Error | null}
-      onRetry={() => query.refetch()}
+      loading={query.isLoading || treeQuery.isLoading || featuresQuery.isLoading}
+      error={(query.error ?? treeQuery.error ?? featuresQuery.error) as Error | null}
+      onRetry={() => Promise.all([query.refetch(), treeQuery.refetch(), featuresQuery.refetch()])}
       total={total}
       pageNum={pageNum}
       pageSize={pageSize}
@@ -144,12 +164,22 @@ const SysParamListPage = (props: PageComponentProps) => {
             treeData={treeData}
             blockNode
             defaultExpandedKeys={['all']}
-            defaultSelectedKeys={['all']}
+            selectedKeys={[
+              scope.type === 'all' || scope.type === 'global'
+                ? scope.type
+                : `${scope.type}:${scope.id}`,
+            ]}
             onSelect={(keys) => {
               const key = String(keys[0] ?? 'all');
+              setSelectedRowKeys([]);
+              resetPage();
               if (key === 'global') setScope({ type: 'global' });
-              else if (key.startsWith('domain:')) setScope({ type: 'domain', id: key.slice(6) });
-              else if (key.startsWith('app:')) setScope({ type: 'app', id: key.slice(4) });
+              else if (key.startsWith('domain:'))
+                setScope({ type: 'domain', id: key.slice('domain:'.length) });
+              else if (key.startsWith('app:'))
+                setScope({ type: 'app', id: key.slice('app:'.length) });
+              else if (key.startsWith('feature:'))
+                setScope({ type: 'feature', id: key.slice('feature:'.length) });
               else setScope({ type: 'all' });
             }}
           />

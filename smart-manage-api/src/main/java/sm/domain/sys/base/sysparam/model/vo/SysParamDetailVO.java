@@ -12,5 +12,5 @@ public class SysParamDetailVO {
     private String value;
     private String description;
     private Boolean isSystem;
-    private ReferenceVO application;
+    private ReferenceVO feature;
 }

@@ -21,7 +21,10 @@ public class SysParamListForm extends PageForm {
     @Schema(description = "所属领域ID")
     private Long domainId;
 
-    @Schema(description = "是否只查询全局参数")
+    @Schema(description = "所属功能ID")
+    private Long featureId;
+
+    @Schema(description = "是否只查询全局参数（所属功能为空）")
     private Boolean globalOnly;
 
     @Schema(description = "关键词")

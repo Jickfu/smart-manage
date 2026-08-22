@@ -12,8 +12,8 @@ import sm.domain.sys.base.sysparam.model.vo.SysParamCreateNewDataVO;
 import sm.domain.sys.base.sysparam.model.vo.SysParamVO;
 import sm.domain.sys.base.sysparam.model.vo.SysParamDetailVO;
 import sm.domain.sys.base.sysparam.model.entity.SysParamEntity;
-import sm.domain.sys.base.app.mapper.AppMapper;
-import sm.domain.sys.base.app.model.entity.AppEntity;
+import sm.domain.sys.base.feature.mapper.FeatureMapper;
+import sm.domain.sys.base.feature.model.entity.FeatureEntity;
 import sm.domain.sys.base.common.model.vo.ReferenceVO;
 import sm.domain.sys.base.sysparam.mapper.SysParamMapper;
 import sm.system.exception.BizException;
@@ -35,14 +35,15 @@ public class SysParamService {
     private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
             "number", ListSqlQuery.string("a.number", true),
             "name", ListSqlQuery.string("a.name", true),
-            "appName", ListSqlQuery.string("b.name", false),
+            "featureName", ListSqlQuery.string("COALESCE(b.custom_name, b.default_name)", false),
+            "appName", ListSqlQuery.string("c.name", false),
             "value", ListSqlQuery.string("a.value", false),
             "description", ListSqlQuery.string("a.description", false),
             "isSystem", ListSqlQuery.bool("a.is_system", false));
     private final SysParamMapper mapper;
     private final SysParamTxService txService;
     private final SysParamCacheAccessor cacheAccessor;
-    private final AppMapper appMapper;
+    private final FeatureMapper featureMapper;
 
     /** 管理端分页列表 */
     public PageData<SysParamVO> listPage(SysParamListForm form) {
@@ -68,11 +69,11 @@ public class SysParamService {
         detail.setValue(entity.getValue());
         detail.setDescription(entity.getDescription());
         detail.setIsSystem(entity.getIsSystem());
-        if (entity.getAppId() != null) {
-            AppEntity application = appMapper.selectById(entity.getAppId());
-            if (application == null) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "系统参数关联了无效应用");
-            detail.setApplication(new ReferenceVO(
-                    application.getId(), application.getNumber(), application.getName()));
+        if (entity.getFeatureId() != null) {
+            FeatureEntity feature = featureMapper.selectById(entity.getFeatureId());
+            if (feature == null) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "系统参数关联了无效功能");
+            String featureName = feature.getCustomName() == null ? feature.getDefaultName() : feature.getCustomName();
+            detail.setFeature(new ReferenceVO(feature.getId(), feature.getFeatureKey(), featureName));
         }
         return detail;
     }
