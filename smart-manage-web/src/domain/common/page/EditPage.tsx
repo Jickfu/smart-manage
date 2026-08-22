@@ -45,8 +45,8 @@ export interface RefSelectorFieldConfig {
     keyword?: string;
     parentId?: string;
   }) => Promise<{ records: Record<string, unknown>[]; total: number }>;
-  /** 选中记录的展示渲染 */
-  displayRender: (record: Record<string, unknown>) => ReactNode;
+  /** 选中记录的文本展示，用于输入框查看与多选值拼接。 */
+  displayRender: (record: Record<string, unknown>) => string;
   /** 字段名映射 */
   fieldNames: { key: string; label: string };
   /** 表格列定义 */
@@ -68,6 +68,8 @@ export interface RefSelectorFieldConfig {
   defaultTreeKey?: string;
   /** 树表模式：树字段映射 */
   treeFieldNames?: { key: string; title: string; children: string };
+  /** 树表模式：固定在左树下方的范围或状态控件。 */
+  treeFooter?: ReactNode;
 }
 
 export interface TreeSelectFieldNode {

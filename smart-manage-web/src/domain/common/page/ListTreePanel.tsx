@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import './ListTreePanel.css';
 
 interface ListTreePanelProps {
   /** 固定在树上方的任意控件，例如搜索框、按钮组或组合工具栏。 */

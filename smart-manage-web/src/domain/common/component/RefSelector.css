@@ -8,7 +8,6 @@
   align-items: center;
   min-height: var(--ant-control-height);
   border-bottom: var(--ant-line-width) var(--ant-line-type) var(--ant-color-border);
-  cursor: pointer;
   transition: border-color 0.2s;
 }
 
@@ -20,16 +19,34 @@
   border-bottom-color: var(--ant-color-primary);
 }
 
-.sm-ref-selector-trigger-display {
+.sm-ref-selector-trigger-input {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  padding-inline-start: 0;
+  padding-inline-end: 0;
+}
+
+.sm-ref-selector-trigger-input.ant-input {
   text-overflow: ellipsis;
+}
+
+/* 只读输入框聚焦仅用于查看文本，不展示 antd 输入态描边。 */
+.sm-ref-selector-trigger-input.ant-input:focus,
+.sm-ref-selector-trigger-input.ant-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.sm-ref-selector-trigger-total {
+  flex-shrink: 0;
   white-space: nowrap;
-  font-size: var(--ant-font-size);
-  line-height: var(--ant-control-height);
-  color: var(--ant-color-text);
-  padding: var(--ant-input-padding-block) var(--ant-input-padding-inline);
+  word-break: keep-all;
+  padding-inline-start: var(--ant-padding-xxs);
+  font-size: var(--ant-font-size-sm);
+  line-height: 1;
+  color: var(--ant-color-text-secondary);
+  background: var(--ant-color-bg-container);
+  cursor: text;
 }
 
 /* 清空按钮 — 默认隐藏，hover 触发器时显示 */
@@ -56,11 +73,6 @@
 
 .sm-ref-selector-trigger-btn:hover {
   color: var(--ant-color-primary);
-}
-
-.sm-ref-selector-placeholder {
-  color: var(--ant-color-text-quaternary);
-  font-size: var(--ant-font-size);
 }
 
 /* ============================================
@@ -305,8 +317,7 @@
 
 .sm-ref-selector-tree-panel {
   height: 100%;
-  overflow: auto;
-  padding: 8px 6px;
+  min-height: 0;
 }
 
 .sm-ref-selector-tree-panel .ant-tree {

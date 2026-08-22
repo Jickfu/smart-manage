@@ -9,7 +9,7 @@ type TypedRefSelectorFieldConfig<T extends object> = Omit<
     records: T[];
     total: number;
   }>;
-  displayRender: (record: T) => ReactNode;
+  displayRender: (record: T) => string;
   columns: {
     title: string;
     dataIndex: string;

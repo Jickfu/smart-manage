@@ -1,13 +1,16 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Button, Input, Table, Pagination, Spin, Empty, Splitter } from 'antd';
 import { SearchOutlined, CloseOutlined } from '@ant-design/icons';
+import type { InputRef } from 'antd';
 import AppModal from './AppModal';
 import type { ColumnsType, TableRowSelection } from 'antd/es/table/interface';
 import type { DataNode } from 'antd/es/tree';
 import ListTree from '@/domain/common/page/ListTree';
+import ListTreePanel from '@/domain/common/page/ListTreePanel';
 import { useRefSelectorQuery } from './useRefSelectorQuery';
 import type { RefSelectorFetchFn } from './useRefSelectorQuery';
+import { formatRefSelectorDisplayText, isRefSelectorTextOverflowing } from './refSelectorDisplay';
 import './RefSelector.css';
 
 // ============================================================
@@ -38,7 +41,7 @@ interface RefSelectorProps<T extends Record<string, unknown>> {
   onChange?: (value: T | T[] | null) => void;
 
   /** 显示渲染函数，用于触发器展示 */
-  displayRender: (record: T) => ReactNode;
+  displayRender: (record: T) => string;
   /** 字段名映射 */
   fieldNames: RefSelectorFieldNames;
   placeholder?: string;
@@ -69,6 +72,8 @@ interface RefSelectorProps<T extends Record<string, unknown>> {
   defaultTreeKey?: string;
   /** 树表模式：树字段映射 */
   treeFieldNames?: { key: string; title: string; children: string };
+  /** 树表模式：固定在左树下方的范围或状态控件。 */
+  treeFooter?: ReactNode;
 }
 
 // ============================================================
@@ -106,8 +111,14 @@ function RefSelector<T extends Record<string, unknown>>({
   treeData,
   defaultTreeKey,
   treeFieldNames,
+  treeFooter,
 }: RefSelectorProps<T>) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [triggerFocused, setTriggerFocused] = useState(false);
+  const [showSelectionTotal, setShowSelectionTotal] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const triggerInputRef = useRef<InputRef>(null);
+  const selectionTotalRef = useRef<HTMLSpanElement>(null);
   /**
    * 多选选择池 — 用 Map<key, record> 维护，跨分页不丢失已选记录。
    * 更新时返回新 Map 触发渲染，selectedRowKeys / 已选面板均由此派生。
@@ -216,20 +227,38 @@ function RefSelector<T extends Record<string, unknown>>({
   /** 是否有已选值 */
   const hasValue = value != null && (!Array.isArray(value) || value.length > 0);
 
-  // ---- 渲染：触发器 ----
+  const displayText = useMemo(
+    () => formatRefSelectorDisplayText(value, displayRender),
+    [displayRender, value],
+  );
 
-  function renderTriggerContent(): ReactNode {
-    if (value == null) {
-      return <span className="sm-ref-selector-placeholder">{placeholder || '请选择'}</span>;
+  /**
+   * 多选文本是否溢出按“未显示总数时”的可用宽度判断。
+   * 总数已经显示时，需要把它当前占用的宽度加回去，避免容器变宽后遮罩无法消失。
+   */
+  const updateSelectionTotal = useCallback(() => {
+    const input = triggerInputRef.current?.input;
+    if (!isMultiple || !input || !displayText) {
+      setShowSelectionTotal(false);
+      return;
     }
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        return <span className="sm-ref-selector-placeholder">{placeholder || '请选择'}</span>;
-      }
-      return <span>已选 {value.length} 项</span>;
-    }
-    return displayRender(value);
-  }
+    const availableWidth = input.clientWidth + (selectionTotalRef.current?.offsetWidth ?? 0);
+    setShowSelectionTotal(isRefSelectorTextOverflowing(input.scrollWidth, availableWidth));
+  }, [displayText, isMultiple]);
+
+  useLayoutEffect(() => {
+    updateSelectionTotal();
+  }, [updateSelectionTotal]);
+
+  useEffect(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const resizeObserver = new ResizeObserver(updateSelectionTotal);
+    resizeObserver.observe(trigger);
+    return () => resizeObserver.disconnect();
+  }, [updateSelectionTotal]);
+
+  // ---- 渲染：触发器 ----
 
   // ---- 渲染：Modal 标题扩展区 ----
 
@@ -444,16 +473,18 @@ function RefSelector<T extends Record<string, unknown>>({
   function renderTree(): ReactNode {
     if (!treeData || treeData.length === 0) return null;
     return (
-      <ListTree
-        treeData={treeData as unknown as DataNode[]}
-        fieldNames={treeFieldNames}
-        onSelect={(keys) => {
-          query.onTreeSelect(keys.length > 0 ? String(keys[0]) : undefined);
-        }}
-        selectedKeys={query.parentId ? [query.parentId] : []}
-        defaultExpandAll
-        blockNode
-      />
+      <ListTreePanel footer={treeFooter}>
+        <ListTree
+          treeData={treeData as unknown as DataNode[]}
+          fieldNames={treeFieldNames}
+          onSelect={(keys) => {
+            query.onTreeSelect(keys.length > 0 ? String(keys[0]) : undefined);
+          }}
+          selectedKeys={query.parentId ? [query.parentId] : []}
+          defaultExpandAll
+          blockNode
+        />
+      </ListTreePanel>
     );
   }
 
@@ -515,16 +546,31 @@ function RefSelector<T extends Record<string, unknown>>({
           {trigger}
         </span>
       ) : (
-        <div
-          className="sm-ref-selector-trigger"
-          onClick={disabled ? undefined : handleOpen}
-          role="button"
-          tabIndex={disabled ? -1 : 0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !disabled) handleOpen();
-          }}
-        >
-          <div className="sm-ref-selector-trigger-display">{renderTriggerContent()}</div>
+        <div ref={triggerRef} className="sm-ref-selector-trigger">
+          <Input
+            ref={triggerInputRef}
+            variant="borderless"
+            className="sm-ref-selector-trigger-input"
+            value={displayText}
+            placeholder={placeholder || '请选择'}
+            disabled={disabled}
+            readOnly
+            onFocus={() => setTriggerFocused(true)}
+            onBlur={() => {
+              // 输入框只用于查看；失焦后重新以受控引用值审查并恢复规范显示。
+              setTriggerFocused(false);
+              updateSelectionTotal();
+            }}
+          />
+          {showSelectionTotal && !triggerFocused && isMultiple && Array.isArray(value) && (
+            <span
+              ref={selectionTotalRef}
+              className="sm-ref-selector-trigger-total"
+              onClick={() => triggerInputRef.current?.focus({ cursor: 'end' })}
+            >
+              共{value.length}项
+            </span>
+          )}
           {/* 清空按钮 — 有值时显示 */}
           {hasValue && !disabled && (
             <Button

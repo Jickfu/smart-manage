@@ -1,0 +1,42 @@
+.sm-list-tree-layout {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sm-list-tree-header,
+.sm-list-tree-footer {
+  flex-shrink: 0;
+  padding: 8px;
+}
+
+.sm-list-tree-header {
+  border-bottom: 1px solid var(--sm-color-divider);
+}
+
+.sm-list-tree-footer {
+  border-top: 1px solid var(--sm-color-divider);
+  font-size: var(--ant-font-size-sm);
+}
+
+/* Checkbox 自带 14px 字号，需直接覆盖控件根节点才能继承树底部的小号文本。 */
+.sm-list-tree-footer .ant-checkbox-wrapper {
+  font-size: var(--ant-font-size-sm);
+}
+
+.sm-list-tree-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 4px;
+}
+
+/* 树宽度随节点内容增长，同时至少铺满面板，确保深层级和长名称可横向滚动。 */
+.sm-list-tree-content .ant-tree {
+  width: max-content;
+  min-width: 100%;
+}

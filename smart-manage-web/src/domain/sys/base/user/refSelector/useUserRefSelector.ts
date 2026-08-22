@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { createElement, useMemo, useState } from 'react';
+import { Checkbox } from 'antd';
 import type { RefSelectorFieldConfig } from '@/domain/common/page/EditPage';
 import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
 import { useQuery } from '@tanstack/react-query';
@@ -19,6 +20,7 @@ export function useUserRefSelector(options?: {
   multiple?: boolean;
   title?: string;
 }): RefSelectorFieldConfig {
+  const [includeDescendants, setIncludeDescendants] = useState(false);
   const treeQuery = useQuery({
     queryKey: orgQueryKeys.tree(false),
     queryFn: () => orgApi.tree(false),
@@ -31,7 +33,7 @@ export function useUserRefSelector(options?: {
   return useMemo(
     () =>
       defineRefSelector<UserListVO>({
-        selectorKey: ['sys-base-user', multiple ? 'multiple' : 'single'],
+        selectorKey: ['sys-base-user', multiple ? 'multiple' : 'single', includeDescendants],
         mode: multiple ? 'tree-table-multiple' : 'tree-table',
         modalTitle: title,
         fetchFn: (params) =>
@@ -40,18 +42,26 @@ export function useUserRefSelector(options?: {
             pageSize: params.pageSize,
             keyword: params.keyword,
             orgId: params.parentId ?? defaultTreeKey,
-            includeDescendants: false,
+            includeDescendants,
           }),
-        displayRender: (record) => `${record.name}（${record.number}）`,
+        displayRender: (record) => record.name,
         fieldNames: { key: 'id', label: 'name' },
         treeData,
         defaultTreeKey,
+        treeFooter: createElement(
+          Checkbox,
+          {
+            checked: includeDescendants,
+            onChange: (event) => setIncludeDescendants(event.target.checked),
+          },
+          '包含下级',
+        ),
         columns: [
           { title: '工号', dataIndex: 'number', width: 140 },
           { title: '姓名', dataIndex: 'name', width: 160 },
           { title: '用户名', dataIndex: 'username' },
         ],
       }),
-    [defaultTreeKey, multiple, title, treeData],
+    [defaultTreeKey, includeDescendants, multiple, title, treeData],
   );
 }
