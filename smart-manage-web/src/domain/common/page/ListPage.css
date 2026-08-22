@@ -348,17 +348,6 @@
   overflow: auto !important;
 }
 
-/* 默认按可见行交替着色；业务色调类放在其后，可覆盖树表等特殊层级规则。 */
-.sm-list-table .sm-list-row-base > .ant-table-cell,
-.sm-list-table .sm-list-row-tone-base > .ant-table-cell {
-  background-color: var(--sm-table-row-base);
-}
-
-.sm-list-table .sm-list-row-alternate > .ant-table-cell,
-.sm-list-table .sm-list-row-tone-alternate > .ant-table-cell {
-  background-color: var(--sm-table-row-alternate);
-}
-
 /* 选择列和序号列属于列表基础结构，宽度固定，不参与剩余空间分配。 */
 .sm-list-table .ant-table-selection-column {
   width: 36px !important;

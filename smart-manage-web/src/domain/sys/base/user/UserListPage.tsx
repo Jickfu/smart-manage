@@ -410,7 +410,6 @@ const UserListPage = (props: PageComponentProps) => {
         columnFeatures={columnFeatures}
         {...columnQueryProps}
         dataSource={records}
-        striped
         selectMode="checkbox"
         selectedRowKeys={selectedRowKeys}
         onSelectChange={setSelectedRowKeys}

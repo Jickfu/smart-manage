@@ -1,6 +1,7 @@
 .sm-editable-detail-table {
   width: 100%;
   min-width: 0;
+  font-size: var(--ant-font-size-sm);
 }
 
 .sm-editable-detail-table .ant-form-item {
@@ -8,12 +9,30 @@
   margin-bottom: 0;
 }
 
-.sm-editable-detail-table .ant-table-tbody > tr > td {
-  padding: 0 1px !important;
+.sm-editable-detail-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
+  padding: 3px !important;
+}
+
+/* Ant Design 用该隐藏行测量列宽，不能让业务单元格内边距将它撑出可见高度。 */
+.sm-editable-detail-table .ant-table-measure-row > td {
+  padding-block: 0 !important;
 }
 
 .sm-editable-detail-table .ant-table-thead > tr > th {
   padding-block: 5px !important;
+}
+
+/* 选择列和默认序号列固定在左侧，宽度与 ListPage 保持一致。 */
+.sm-editable-detail-table .ant-table-selection-column {
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+}
+
+.sm-editable-detail-table .sm-editable-detail-table-index-column {
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
 }
 
 .sm-editable-detail-table .ant-input,
@@ -23,19 +42,111 @@
 .sm-editable-detail-table .sm-ref-selector-trigger {
   width: 100%;
   border-radius: 0;
+  font-size: var(--ant-font-size-sm);
 }
 
-.sm-editable-detail-table .ant-input:focus,
-.sm-editable-detail-table .ant-input-number-focused,
-.sm-editable-detail-table .ant-picker-focused,
-.sm-editable-detail-table .ant-select-focused .ant-select-selector {
+.sm-editable-detail-table .ant-input-number-input,
+.sm-editable-detail-table .ant-picker-input > input,
+.sm-editable-detail-table .ant-select-selection-item,
+.sm-editable-detail-table .ant-select-selection-placeholder {
+  font-size: var(--ant-font-size-sm);
+}
+
+.sm-editable-detail-table .ant-input,
+.sm-editable-detail-table .ant-input-number,
+.sm-editable-detail-table .ant-picker,
+.sm-editable-detail-table .ant-select .ant-select-selector,
+.sm-editable-detail-table .sm-ref-selector-trigger {
+  background: var(--ant-color-bg-container) !important;
+}
+
+/* 普通行保持无边框；悬停或选中时仅强调单元格内的可编辑控件。 */
+.sm-editable-detail-table
+  .ant-table-row:hover
+  > td
+  .ant-input:not(.ant-input-disabled, .sm-ref-selector-trigger-input),
+.sm-editable-detail-table
+  .ant-table-row-selected
+  > td
+  .ant-input:not(.ant-input-disabled, .sm-ref-selector-trigger-input),
+.sm-editable-detail-table
+  .ant-table-row:hover
+  > td
+  .ant-input-number:not(.ant-input-number-disabled),
+.sm-editable-detail-table
+  .ant-table-row-selected
+  > td
+  .ant-input-number:not(.ant-input-number-disabled),
+.sm-editable-detail-table .ant-table-row:hover > td .ant-picker:not(.ant-picker-disabled),
+.sm-editable-detail-table .ant-table-row-selected > td .ant-picker:not(.ant-picker-disabled),
+.sm-editable-detail-table
+  .ant-table-row:hover
+  > td
+  .ant-select:not(.ant-select-disabled)
+  .ant-select-selector,
+.sm-editable-detail-table
+  .ant-table-row-selected
+  > td
+  .ant-select:not(.ant-select-disabled)
+  .ant-select-selector {
+  box-shadow: inset 0 0 0 1px var(--ant-color-border) !important;
+}
+
+/* RefSelector 默认是下边框字段，进入明细表后只保留统一的完整控件框。 */
+.sm-editable-detail-table .sm-ref-selector-trigger,
+.sm-editable-detail-table .sm-ref-selector-trigger:hover {
+  position: relative;
+  border-bottom-color: transparent !important;
+}
+
+/* RefSelector 的内部白色 Input 会遮住父容器内阴影，使用上层伪元素保证四边完整可见。 */
+.sm-editable-detail-table .sm-ref-selector-trigger::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  content: '';
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+.sm-editable-detail-table .ant-table-row:hover > td .sm-ref-selector-trigger:not(:disabled)::after,
+.sm-editable-detail-table
+  .ant-table-row-selected
+  > td
+  .sm-ref-selector-trigger:not(:disabled)::after {
+  box-shadow: inset 0 0 0 1px var(--ant-color-border);
+}
+
+/* 重复控件类用于提高聚焦态优先级，确保行悬停/选中描边不会覆盖主色焦点框。 */
+.sm-editable-detail-table
+  .ant-table-row
+  > td
+  .ant-input.ant-input:not(.sm-ref-selector-trigger-input):focus,
+.sm-editable-detail-table
+  .ant-table-row
+  > td
+  .ant-input-number.ant-input-number.ant-input-number-focused,
+.sm-editable-detail-table .ant-table-row > td .ant-picker.ant-picker.ant-picker-focused,
+.sm-editable-detail-table
+  .ant-table-row
+  > td
+  .ant-select.ant-select.ant-select-focused
+  .ant-select-selector,
+.sm-editable-detail-table
+  .ant-table-row
+  > td
+  .sm-ref-selector-trigger.sm-ref-selector-trigger:focus-within::after {
   box-shadow: inset 0 0 0 1px var(--ant-color-primary) !important;
 }
 
-.sm-editable-detail-table .ant-form-item-has-error .ant-input,
+.sm-editable-detail-table .ant-form-item-has-error .ant-input:not(.sm-ref-selector-trigger-input),
 .sm-editable-detail-table .ant-form-item-has-error .ant-input-number,
 .sm-editable-detail-table .ant-form-item-has-error .ant-picker,
 .sm-editable-detail-table .ant-form-item-has-error .ant-select-selector {
+  box-shadow: inset 0 0 0 1px var(--ant-color-error) !important;
+}
+
+.sm-editable-detail-table .ant-form-item-has-error .sm-ref-selector-trigger::after {
   box-shadow: inset 0 0 0 1px var(--ant-color-error) !important;
 }
 

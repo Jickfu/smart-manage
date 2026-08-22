@@ -4,11 +4,21 @@ import { normalizeThemeColor, SM_SAFE_LINK_COLOR } from './themePalette';
 const SM_FONT_FAMILY =
   'Roboto, "San Francisco", "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "WenQuanYi Micro Hei", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif';
 
+/** 将主题色与白色混合，生成不抢夺正文注意力的极淡表格选中态。 */
+function mixThemeColorWithWhite(themeColor: string, ratio: number): string {
+  const red = Number.parseInt(themeColor.slice(1, 3), 16);
+  const green = Number.parseInt(themeColor.slice(3, 5), 16);
+  const blue = Number.parseInt(themeColor.slice(5, 7), 16);
+  const mixChannel = (channel: number) => Math.round(255 + (channel - 255) * ratio);
+  return `rgb(${mixChannel(red)} ${mixChannel(green)} ${mixChannel(blue)})`;
+}
+
 /** 固定的视觉令牌。换肤时仅 colorPrimary 及其派生色发生变化。 */
 export function createThemeConfig(themeColor?: string | null): ThemeConfig {
+  const colorPrimary = normalizeThemeColor(themeColor);
   return {
     token: {
-      colorPrimary: normalizeThemeColor(themeColor),
+      colorPrimary,
       colorLink: SM_SAFE_LINK_COLOR,
       colorLinkHover: '#0041B0',
       colorLinkActive: '#002D87',
@@ -121,7 +131,9 @@ export function createThemeConfig(themeColor?: string | null): ThemeConfig {
         cellPaddingInline: 12,
         cellPaddingInlineMD: 12,
         cellPaddingInlineSM: 8,
-        rowHoverBg: '#F5F8FC',
+        rowHoverBg: '#F5F5F5',
+        rowSelectedBg: mixThemeColorWithWhite(colorPrimary, 0.05),
+        rowSelectedHoverBg: mixThemeColorWithWhite(colorPrimary, 0.08),
         selectionColumnWidth: 40,
       },
       Tabs: {

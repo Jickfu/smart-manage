@@ -23,6 +23,8 @@ export function EditableDetailTable<RecordType extends object>({
   onSelectedRowKeysChange,
   className,
   columns,
+  onRow,
+  rowKey = 'key',
   scroll,
   ...tableProps
 }: EditableDetailTableProps<RecordType>) {
@@ -32,8 +34,10 @@ export function EditableDetailTable<RecordType extends object>({
           {
             key: '__index',
             title: '#',
-            width: 56,
+            width: 44,
+            className: 'sm-editable-detail-table-index-column',
             align: 'center' as const,
+            fixed: 'left' as const,
             render: (_value: unknown, _record: RecordType, index: number) => index + 1,
           },
         ]
@@ -41,12 +45,23 @@ export function EditableDetailTable<RecordType extends object>({
     ...(columns ?? []),
   ];
 
+  const resolveRowKey = (record: RecordType): Key | undefined => {
+    const resolvedKey =
+      typeof rowKey === 'function'
+        ? rowKey(record)
+        : (record as Record<string, unknown>)[String(rowKey)];
+    return typeof resolvedKey === 'string' || typeof resolvedKey === 'number'
+      ? resolvedKey
+      : undefined;
+  };
+
   return (
     <div className="sm-editable-detail-table">
       <Table<RecordType>
         {...tableProps}
         className={className}
         columns={mergedColumns}
+        rowKey={rowKey}
         pagination={false}
         size="small"
         scroll={{ x: 'max-content', ...scroll }}
@@ -55,9 +70,27 @@ export function EditableDetailTable<RecordType extends object>({
             ? {
                 selectedRowKeys,
                 onChange: onSelectedRowKeysChange,
+                columnWidth: 36,
+                fixed: true,
               }
             : undefined
         }
+        onRow={(record, index) => {
+          const configuredRow = onRow?.(record, index) ?? {};
+          const configuredOnClick = configuredRow.onClick;
+          return {
+            ...configuredRow,
+            onClick: (event) => {
+              configuredOnClick?.(event);
+              if (event.defaultPrevented || !editable || !onSelectedRowKeysChange) return;
+              const target = event.target as HTMLElement;
+              // 复选框维持增量多选；点击行内其他区域则收敛为当前行单选。
+              if (target.closest('.ant-table-selection-column')) return;
+              const currentRowKey = resolveRowKey(record);
+              if (currentRowKey !== undefined) onSelectedRowKeysChange([currentRowKey]);
+            },
+          };
+        }}
       />
     </div>
   );

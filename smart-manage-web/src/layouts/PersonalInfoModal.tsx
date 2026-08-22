@@ -125,9 +125,6 @@ export default function PersonalInfoModal({
           pagination={false}
           tableLayout="fixed"
           rowKey="id"
-          rowClassName={(_, index) =>
-            index % 2 === 0 ? 'sm-list-row-base' : 'sm-list-row-alternate'
-          }
           dataSource={userInfo?.assignments ?? []}
           columns={[
             {
