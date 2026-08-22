@@ -18,8 +18,7 @@ import sm.domain.sys.base.permission.service.PermissionService;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.form.UserListForm;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
-import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
-import sm.domain.sys.base.user.model.form.UserRoleScopeForm;
+import sm.domain.sys.base.user.model.form.UserRoleAssignmentSaveForm;
 import sm.domain.sys.base.user.model.form.CurrentUserPasswordForm;
 import sm.domain.sys.base.user.model.form.CurrentUserProfileForm;
 import sm.domain.sys.base.user.model.form.CurrentUserContactForm;
@@ -41,8 +40,10 @@ import sm.domain.sys.base.org.model.entity.OrgEntity;
 import sm.domain.sys.base.org.model.OrgType;
 import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
 import sm.domain.sys.base.user.model.vo.UserAssignmentVO;
+import sm.domain.sys.base.user.model.vo.UserRoleAssignmentWorkspaceVO;
+import sm.domain.sys.base.user.model.vo.UserRoleOrganizationVO;
+import sm.domain.sys.base.user.model.vo.UserAssignedRoleVO;
 import sm.domain.sys.base.common.model.vo.ReferenceVO;
-import sm.domain.sys.base.user.model.entity.UserRoleEntity;
 import sm.system.helper.Argon2Helper;
 import sm.system.auth.SessionTerminationReason;
 import sm.system.aop.log.BizLog;
@@ -58,6 +59,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.io.IOException;
 import java.util.stream.Collectors;
 
@@ -108,6 +110,9 @@ public class UserService {
 	public Long save(UserSaveForm form) {
 		UserEntity previous = form.getId() == null ? null : mapper.selectById(form.getId());
 		Long userId = previous == null ? IdWorker.getId() : previous.getId();
+		List<Long> previousAuthorizationOrgIds = previous == null
+				? List.of()
+				: userRoleMapper.selectOrgIdsByUserId(userId);
 		Long temporaryAvatarId = findTemporaryAvatarId(form.getAvatarAttachmentId());
 		promoteAvatar(form, userId);
 		Long savedId;
@@ -117,6 +122,10 @@ public class UserService {
 		} catch (RuntimeException exception) {
 			deleteAvatarForCompensation(temporaryAvatarId);
 			throw exception;
+		}
+		// 任职移除会同步删除角色，必须刷新删除前仍存在的精确组织授权缓存。
+		for (Long orgId : previousAuthorizationOrgIds) {
+			authorizationStateHelper.refreshUserAuthorization(savedId, orgId);
 		}
 		if (form.getAssignments().isEmpty()) {
 			authorizationStateHelper.terminateUsers(
@@ -145,10 +154,45 @@ public class UserService {
 		authorizationStateHelper.terminateUsers(ids, SessionTerminationReason.ACCOUNT_DISABLED);
 	}
 
+	/** 一次加载用户摘要、全部任职组织和各组织的精确角色关系。 */
+	public UserRoleAssignmentWorkspaceVO roleAssignmentWorkspace(Long userId) {
+		UserEntity user = mapper.selectById(userId);
+		if (user == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+		List<UserAssignmentVO> assignments = loadAssignments(List.of(userId), null)
+				.getOrDefault(userId, List.of());
+		Map<Long, List<UserAssignedRoleVO>> rolesByOrgId = mapper.selectAssignedRoles(userId)
+				.stream()
+				.collect(Collectors.groupingBy(UserAssignedRoleVO::getOrgId));
+
+		List<UserRoleOrganizationVO> organizations = new ArrayList<>();
+		for (UserAssignmentVO assignment : assignments) {
+			UserRoleOrganizationVO organization = new UserRoleOrganizationVO();
+			organization.setOrg(assignment.getOrg());
+			organization.setOrgNamePath(assignment.getOrgNamePath());
+			organization.setPosition(assignment.getPosition());
+			organization.setIsPrimary(assignment.getIsPrimary());
+			organization.setRoles(rolesByOrgId.getOrDefault(assignment.getOrg().getId(), List.of()));
+			organizations.add(organization);
+		}
+		UserRoleAssignmentWorkspaceVO workspace = new UserRoleAssignmentWorkspaceVO();
+		workspace.setId(user.getId());
+		workspace.setName(user.getName());
+		workspace.setUsername(user.getUsername());
+		workspace.setNumber(user.getNumber());
+		workspace.setOrganizations(organizations);
+		return workspace;
+	}
+
+	/** 整体保存用户全部任职组织的角色结果，并精确刷新变更前后的授权缓存。 */
 	@BizLog("分配用户角色")
-	public void assignRoles(UserRoleAssignForm form) {
-		txService.assignRoles(form);
-		authorizationStateHelper.refreshUserAuthorization(form.getUserId(), form.getOrgId());
+	public void saveRoleAssignment(UserRoleAssignmentSaveForm form) {
+		LinkedHashSet<Long> affectedOrgIds = new LinkedHashSet<>(
+				userRoleMapper.selectOrgIdsByUserId(form.getUserId()));
+		for (var assignment : form.getAssignments()) affectedOrgIds.add(assignment.getOrgId());
+		txService.saveRoleAssignment(form);
+		for (Long orgId : affectedOrgIds) {
+			authorizationStateHelper.refreshUserAuthorization(form.getUserId(), orgId);
+		}
 	}
 
 	/** 查询用户基础详情和全部任职；角色关系必须通过带组织上下文的独立查询获取。 */
@@ -163,28 +207,6 @@ public class UserService {
 		return userInfoVO;
 	}
 
-	/** 角色关系始终按用户和任职组织两个维度查询，禁止隐式使用操作者当前组织。 */
-	public List<Long> roleIds(UserRoleScopeForm form) {
-		requireUserAssignment(form.getUserId(), form.getOrgId());
-		return userRoleMapper.selectList(new LambdaQueryWrapper<UserRoleEntity>()
-					.select(UserRoleEntity::getRoleId)
-					.eq(UserRoleEntity::getUserId, form.getUserId())
-					.eq(UserRoleEntity::getOrgId, form.getOrgId()))
-				.stream()
-				.map(UserRoleEntity::getRoleId)
-				.toList();
-	}
-
-	private void requireUserAssignment(Long userId, Long orgId) {
-		if (mapper.selectById(userId) == null) {
-			throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
-		}
-		if (userAssignmentMapper.selectCount(new LambdaQueryWrapper<UserAssignmentEntity>()
-				.eq(UserAssignmentEntity::getUserId, userId)
-				.eq(UserAssignmentEntity::getOrgId, orgId)) == 0) {
-			throw new BizException(ResultEnum.PARAM_ERROR, "只能查询用户任职组织的角色");
-		}
-	}
 
 	public UserAuthentication authenticate(String username, String password) {
 		// 查询用户

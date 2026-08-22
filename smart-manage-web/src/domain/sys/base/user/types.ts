@@ -1,5 +1,6 @@
 import type { PageForm } from '@/types/api';
 import type { ReferenceVO } from '@/domain/sys/base/common/types';
+import type { RoleSelectVO } from '@/domain/sys/base/role/types';
 
 /** 用户列表查询 */
 export interface UserListForm extends PageForm {
@@ -51,6 +52,27 @@ export interface UserDetailVO {
   updateTime?: string;
   version: number;
   assignments: UserAssignmentVO[];
+}
+
+export interface UserRoleOrganizationVO {
+  org: ReferenceVO;
+  orgNamePath?: string;
+  position: string;
+  isPrimary: boolean;
+  roles: RoleSelectVO[];
+}
+
+export interface UserRoleAssignmentWorkspaceVO {
+  id: string;
+  name: string;
+  username: string;
+  number: string;
+  organizations: UserRoleOrganizationVO[];
+}
+
+export interface UserRoleAssignmentSaveForm {
+  userId: string;
+  assignments: Array<{ orgId: string; roleIds: string[] }>;
 }
 
 /** 用户保存 — ID 均以字符串传递 */

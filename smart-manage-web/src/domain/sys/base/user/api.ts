@@ -7,6 +7,8 @@ import type {
   UserListForm,
   UserListVO,
   UserSaveForm,
+  UserRoleAssignmentSaveForm,
+  UserRoleAssignmentWorkspaceVO,
 } from './types';
 
 export const userApi = {
@@ -35,14 +37,16 @@ export const userApi = {
       .post<Result<string>>(enabled ? '/sys/base/user/enable' : '/sys/base/user/disable', { ids })
       .then((response) => response.data.data),
 
-  roleIds: (userId: string, orgId: string) =>
+  roleAssignmentWorkspace: (userId: string) =>
     request
-      .post<Result<string[]>>('/sys/base/user/roleIds', { userId, orgId })
+      .post<Result<UserRoleAssignmentWorkspaceVO>>('/sys/base/user/roleAssignment/workspace', {
+        id: userId,
+      })
       .then((response) => response.data.data),
 
-  assignRoles: (userId: string, orgId: string, roleIds: string[]) =>
+  saveRoleAssignment: (form: UserRoleAssignmentSaveForm) =>
     request
-      .post<Result<string>>('/sys/base/user/assignRoles', { userId, orgId, roleIds })
+      .post<Result<string>>('/sys/base/user/roleAssignment/save', form)
       .then((response) => response.data.data),
 
   resetPassword: (id: string) =>

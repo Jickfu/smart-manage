@@ -1,13 +1,6 @@
 import request from '@/api/request';
 import type { PageData, Result } from '@/types/api';
-import type {
-  RoleDetailVO,
-  RoleListAllVO,
-  RoleListForm,
-  RoleListVO,
-  RoleSaveForm,
-  RoleSelectVO,
-} from './types';
+import type { RoleDetailVO, RoleListForm, RoleListVO, RoleSaveForm, RoleSelectVO } from './types';
 
 export const roleApi = {
   listPage: (form: RoleListForm) =>
@@ -15,12 +8,13 @@ export const roleApi = {
       .post<Result<PageData<RoleListVO>>>('/sys/base/role/listPage', form)
       .then((response) => response.data.data),
 
-  listAll: () =>
-    request
-      .post<Result<RoleListAllVO[]>>('/sys/base/role/listAll', {})
-      .then((response) => response.data.data),
-
-  select: (form: { pageNum: number; pageSize: number; keyword?: string }) =>
+  select: (form: {
+    pageNum: number;
+    pageSize: number;
+    keyword?: string;
+    orgId?: string;
+    excludedIds?: string[];
+  }) =>
     request
       .post<Result<PageData<RoleSelectVO>>>('/sys/base/role/select', form)
       .then((response) => response.data.data),

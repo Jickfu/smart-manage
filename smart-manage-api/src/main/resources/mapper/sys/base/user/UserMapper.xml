@@ -52,4 +52,16 @@
             <otherwise>ORDER BY a.number, a.id</otherwise>
         </choose>
     </select>
+
+    <select id="selectAssignedRoles" resultType="sm.domain.sys.base.user.model.vo.UserAssignedRoleVO">
+        SELECT a.org_id,
+               b.id,
+               b.number,
+               b.name,
+               b.description
+        FROM t_sys_user_role a
+        INNER JOIN t_sys_role b ON b.id = a.role_id
+        WHERE a.user_id = #{userId}
+        ORDER BY a.org_id, b.number, b.id
+    </select>
 </mapper>

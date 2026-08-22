@@ -13,8 +13,7 @@ import sm.domain.sys.base.user.constant.UserPermission;
 import sm.domain.sys.base.user.model.form.UserListForm;
 import sm.domain.sys.base.user.model.form.UserPermissionsForm;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
-import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
-import sm.domain.sys.base.user.model.form.UserRoleScopeForm;
+import sm.domain.sys.base.user.model.form.UserRoleAssignmentSaveForm;
 import sm.domain.sys.base.user.model.form.CurrentUserThemeForm;
 import sm.domain.sys.base.user.model.form.CurrentOrganizationForm;
 import sm.domain.sys.base.user.model.form.CurrentUserPasswordForm;
@@ -23,6 +22,7 @@ import sm.domain.sys.base.user.model.form.CurrentUserContactForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.base.user.model.vo.UserDetailVO;
+import sm.domain.sys.base.user.model.vo.UserRoleAssignmentWorkspaceVO;
 import sm.domain.sys.base.user.model.vo.UserListVO;
 import sm.domain.sys.base.user.model.vo.ResetPasswordVO;
 import sm.domain.sys.base.user.model.form.TemporaryLoginGrantForm;
@@ -139,18 +139,18 @@ public class UserController {
 		return Result.success(service.createNewData());
 	}
 
-	@Operation(summary = "查询用户角色", description = "查询指定用户在指定任职组织下的角色关系")
-	@PostMapping("/sys/base/user/roleIds")
+	@Operation(summary = "用户角色分配工作区", description = "查询用户摘要、全部任职组织和各组织精确角色关系")
+	@PostMapping("/sys/base/user/roleAssignment/workspace")
 	@SaCheckPermission(UserPermission.ASSIGN_ROLES)
-	public Result<List<Long>> roleIds(@RequestBody @Valid UserRoleScopeForm form) {
-		return Result.success(service.roleIds(form));
+	public Result<UserRoleAssignmentWorkspaceVO> roleAssignmentWorkspace(@RequestBody @Valid IdForm form) {
+		return Result.success(service.roleAssignmentWorkspace(form.getId()));
 	}
 
-	@Operation(summary = "分配用户角色", description = "整体替换指定用户在指定任职组织下的角色关系")
-	@PostMapping("/sys/base/user/assignRoles")
+	@Operation(summary = "保存用户角色分配", description = "整体替换用户全部任职组织下的精确角色关系")
+	@PostMapping("/sys/base/user/roleAssignment/save")
 	@SaCheckPermission(UserPermission.ASSIGN_ROLES)
-	public Result<String> assignRoles(@RequestBody @Valid UserRoleAssignForm form) {
-		service.assignRoles(form);
+	public Result<String> saveRoleAssignment(@RequestBody @Valid UserRoleAssignmentSaveForm form) {
+		service.saveRoleAssignment(form);
 		return Result.success();
 	}
 

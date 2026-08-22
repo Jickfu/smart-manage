@@ -63,27 +63,20 @@ public class RoleService {
 	}
 
 	/**
-	 * 用户角色分配需要一次性展示全部角色，仅返回选择所需的轻量字段。
-	 */
-	public List<RoleSelectVO> listAll() {
-		return mapper.selectList(new LambdaQueryWrapper<RoleEntity>()
-				.orderByAsc(RoleEntity::getNumber)
-				.orderByAsc(RoleEntity::getId))
-				.stream()
-				.map(converter::toSelectVO)
-				.toList();
-	}
-
-	/**
 	 * 基础资料选择：分页查询角色。
 	 */
 	public PageData<RoleSelectVO> select(RoleSelectForm form) {
-		LambdaQueryWrapper<RoleEntity> qw = new LambdaQueryWrapper<RoleEntity>()
-				.orderByAsc(RoleEntity::getId);
+		LambdaQueryWrapper<RoleEntity> qw = new LambdaQueryWrapper<RoleEntity>();
 		if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
 			String kw = form.getKeyword().trim();
-			qw.and(condition -> condition.like(RoleEntity::getName, kw).or().like(RoleEntity::getNumber, kw));
+			qw.and(condition -> condition.like(RoleEntity::getNumber, kw)
+					.or().like(RoleEntity::getName, kw)
+					.or().like(RoleEntity::getDescription, kw));
 		}
+		if (form.getExcludedIds() != null && !form.getExcludedIds().isEmpty()) {
+			qw.notIn(RoleEntity::getId, form.getExcludedIds());
+		}
+		qw.orderByAsc(RoleEntity::getNumber).orderByAsc(RoleEntity::getId);
 		Page<RoleEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		Page<RoleEntity> result = mapper.selectPage(page, qw);
 		List<RoleSelectVO> voList = result.getRecords().stream().map(converter::toSelectVO).collect(Collectors.toList());

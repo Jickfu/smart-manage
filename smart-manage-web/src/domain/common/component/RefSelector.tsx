@@ -43,6 +43,8 @@ interface RefSelectorProps<T extends Record<string, unknown>> {
   fieldNames: RefSelectorFieldNames;
   placeholder?: string;
   disabled?: boolean;
+  /** 自定义触发器；适用于工具栏按钮等非表单字段入口。 */
+  trigger?: ReactNode;
 
   /** 选择器标识，用于 queryKey 隔离不同实例的缓存 */
   selectorKey: string | readonly unknown[];
@@ -92,6 +94,7 @@ function RefSelector<T extends Record<string, unknown>>({
   fieldNames,
   placeholder,
   disabled = false,
+  trigger,
   selectorKey,
   fetchFn,
   columns,
@@ -504,36 +507,45 @@ function RefSelector<T extends Record<string, unknown>>({
   return (
     <>
       {/* 触发器 */}
-      <div
-        className="sm-ref-selector-trigger"
-        onClick={disabled ? undefined : handleOpen}
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !disabled) handleOpen();
-        }}
-      >
-        <div className="sm-ref-selector-trigger-display">{renderTriggerContent()}</div>
-        {/* 清空按钮 — 有值时显示 */}
-        {hasValue && !disabled && (
-          <Button
-            type="link"
-            icon={<CloseOutlined />}
-            className="sm-ref-selector-trigger-clear"
-            onClick={handleClear}
-          />
-        )}
-        <Button
-          type="text"
-          icon={<SearchOutlined />}
-          className="sm-ref-selector-trigger-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!disabled) handleOpen();
+      {trigger ? (
+        <span
+          className="sm-ref-selector-custom-trigger"
+          onClick={disabled ? undefined : handleOpen}
+        >
+          {trigger}
+        </span>
+      ) : (
+        <div
+          className="sm-ref-selector-trigger"
+          onClick={disabled ? undefined : handleOpen}
+          role="button"
+          tabIndex={disabled ? -1 : 0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !disabled) handleOpen();
           }}
-          disabled={disabled}
-        />
-      </div>
+        >
+          <div className="sm-ref-selector-trigger-display">{renderTriggerContent()}</div>
+          {/* 清空按钮 — 有值时显示 */}
+          {hasValue && !disabled && (
+            <Button
+              type="link"
+              icon={<CloseOutlined />}
+              className="sm-ref-selector-trigger-clear"
+              onClick={handleClear}
+            />
+          )}
+          <Button
+            type="text"
+            icon={<SearchOutlined />}
+            className="sm-ref-selector-trigger-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!disabled) handleOpen();
+            }}
+            disabled={disabled}
+          />
+        </div>
+      )}
 
       {/* 选择 Modal */}
       <AppModal

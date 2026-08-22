@@ -12,6 +12,10 @@
   transition: border-color 0.2s;
 }
 
+.sm-ref-selector-custom-trigger {
+  display: inline-flex;
+}
+
 .sm-ref-selector-trigger:hover {
   border-bottom-color: var(--ant-color-primary);
 }

@@ -4,7 +4,7 @@ export const userQueryKeys = {
   list: (params: object) => [...userQueryKeys.lists(), params] as const,
   details: () => [...userQueryKeys.all, 'detail'] as const,
   detail: (id: string | undefined) => [...userQueryKeys.details(), id] as const,
-  roleIds: (userId: string | undefined, orgId: string | undefined) =>
-    [...userQueryKeys.all, 'roleIds', userId, orgId] as const,
+  roleAssignmentWorkspace: (userId: string | undefined) =>
+    [...userQueryKeys.all, 'roleAssignmentWorkspace', userId] as const,
   permissions: () => [...userQueryKeys.all, 'permissions'] as const,
 };

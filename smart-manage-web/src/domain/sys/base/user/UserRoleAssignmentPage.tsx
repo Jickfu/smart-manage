@@ -1,28 +1,23 @@
 import { useMemo, useState } from 'react';
-import { App, Button, Checkbox, Menu, Table } from 'antd';
+import { App, Button, Descriptions, Input, Splitter, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import RefSelector from '@/domain/common/component/RefSelector';
 import { AssignmentPage } from '@/domain/common/page/AssignmentPage';
-import { AssignmentSelectionPanel } from '@/domain/common/page/AssignmentSelectionPanel';
-import {
-  getAssignmentSelectionDiff,
-  replaceAssignmentScope,
-} from '@/domain/common/page/assignmentSelection';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
-import { roleApi } from '@/domain/sys/base/role/api';
-import { roleQueryKeys } from '@/domain/sys/base/role/queryKeys';
-import type { RoleListAllVO } from '@/domain/sys/base/role/types';
+import type { RoleSelectVO } from '@/domain/sys/base/role/types';
+import { useRoleRefSelector } from '@/domain/sys/base/role/refSelector/useRoleRefSelector';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { userApi } from './api';
 import { userAccess } from './permissions';
 import { userQueryKeys } from './queryKeys';
+import type { UserRoleOrganizationVO } from './types';
 import './UserRoleAssignmentPage.css';
 
-const EMPTY_IDS: string[] = [];
-const EMPTY_ROLES: RoleListAllVO[] = [];
+type RolesByOrgId = Record<string, RoleSelectVO[]>;
 
-const roleColumns: ColumnsType<RoleListAllVO> = [
+const roleColumns: ColumnsType<RoleSelectVO> = [
   {
     title: '#',
     width: 44,
@@ -30,106 +25,149 @@ const roleColumns: ColumnsType<RoleListAllVO> = [
     className: 'sm-assignment-sequence-column',
     render: (_value, _record, index) => index + 1,
   },
-  { title: '编码', dataIndex: 'number', width: 220 },
-  { title: '名称', dataIndex: 'name', width: 220 },
-  { title: '说明', dataIndex: 'description', render: (description) => description || '—' },
+  { title: '编码', dataIndex: 'number', width: 160 },
+  { title: '名称', dataIndex: 'name', width: 180 },
+  { title: '描述', dataIndex: 'description', render: (description) => description || '—' },
 ];
+
+const buildRolesByOrgId = (organizations: UserRoleOrganizationVO[]): RolesByOrgId =>
+  Object.fromEntries(
+    organizations.map((organization) => [organization.org.id, organization.roles]),
+  );
+
+const canonicalize = (assignments: RolesByOrgId) =>
+  Object.entries(assignments)
+    .sort(([leftOrgId], [rightOrgId]) => leftOrgId.localeCompare(rightOrgId))
+    .map(([orgId, roles]) => [orgId, roles.map((role) => role.id).sort()] as const);
 
 /** 用户角色分配专用页面。 */
 const UserRoleAssignmentPage = ({ appNumber, tabKey, billId, context }: PageComponentProps) => {
   const { modal } = App.useApp();
   const queryClient = useQueryClient();
-  const [localIds, setLocalIds] = useState<string[] | null>(null);
-  const [keyword, setKeyword] = useState('');
-  const [onlySelected, setOnlySelected] = useState(false);
+  const [localAssignments, setLocalAssignments] = useState<RolesByOrgId | null>(null);
   const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(context?.orgId);
-  const detailQuery = useQuery({
-    queryKey: userQueryKeys.detail(billId),
-    queryFn: () => userApi.detail(billId!),
+  const [roleKeyword, setRoleKeyword] = useState('');
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
+
+  const workspaceQuery = useQuery({
+    queryKey: userQueryKeys.roleAssignmentWorkspace(billId),
+    queryFn: () => userApi.roleAssignmentWorkspace(billId!),
     enabled: Boolean(billId),
   });
-  const assignments = detailQuery.data?.assignments ?? [];
+  const organizations = useMemo(
+    () => workspaceQuery.data?.organizations ?? [],
+    [workspaceQuery.data?.organizations],
+  );
+  const initialAssignments = useMemo(() => buildRolesByOrgId(organizations), [organizations]);
+  const assignments = localAssignments ?? initialAssignments;
   const effectiveOrgId =
-    (selectedOrgId && assignments.some((assignment) => assignment.org.id === selectedOrgId)
+    (selectedOrgId && organizations.some((item) => item.org.id === selectedOrgId)
       ? selectedOrgId
       : undefined) ??
-    assignments.find((assignment) => assignment.isPrimary)?.org.id ??
-    assignments[0]?.org.id;
-  const selectedAssignment = assignments.find((assignment) => assignment.org.id === effectiveOrgId);
-  const roleIdsQuery = useQuery({
-    queryKey: userQueryKeys.roleIds(billId, effectiveOrgId),
-    queryFn: () => userApi.roleIds(billId!, effectiveOrgId!),
-    enabled: Boolean(billId && effectiveOrgId),
-  });
-  const rolesQuery = useQuery({ queryKey: roleQueryKeys.listAll(), queryFn: roleApi.listAll });
-  const initialIds = roleIdsQuery.data ?? EMPTY_IDS;
-  const checkedIds = localIds ?? initialIds;
-  const checkedIdSet = useMemo(() => new Set(checkedIds), [checkedIds]);
-  const selectionDiff = useMemo(
-    () => getAssignmentSelectionDiff(initialIds, checkedIds),
-    [checkedIds, initialIds],
+    organizations.find((item) => item.isPrimary)?.org.id ??
+    organizations[0]?.org.id;
+  const selectedOrganization = organizations.find((item) => item.org.id === effectiveOrgId);
+  const currentRoles = effectiveOrgId ? (assignments[effectiveOrgId] ?? []) : [];
+  const currentRoleIds = currentRoles.map((role) => role.id);
+  const normalizedRoleKeyword = roleKeyword.trim().toLowerCase();
+  const visibleAssignedRoles = currentRoles.filter((role) =>
+    !normalizedRoleKeyword
+      ? true
+      : [role.number, role.name, role.description]
+          .filter(Boolean)
+          .some((value) => value!.toLowerCase().includes(normalizedRoleKeyword)),
   );
-  const dirty = selectionDiff.addedIds.length > 0 || selectionDiff.removedIds.length > 0;
-  const roles = rolesQuery.data ?? EMPTY_ROLES;
-  const visibleRoles = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-    return roles.filter((role) => {
-      if (onlySelected && !checkedIdSet.has(role.id)) return false;
-      if (!normalizedKeyword) return true;
-      return [role.number, role.name, role.description]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(normalizedKeyword));
-    });
-  }, [checkedIdSet, keyword, onlySelected, roles]);
-  const visibleIds = visibleRoles.map((role) => role.id);
-  const visibleSelectedCount = visibleIds.filter((id) => checkedIdSet.has(id)).length;
-  const allVisibleSelected = visibleIds.length > 0 && visibleSelectedCount === visibleIds.length;
+  const roleRefSelector = useRoleRefSelector({
+    orgId: effectiveOrgId,
+    orgName: selectedOrganization?.org.name,
+    excludedIds: currentRoleIds,
+  });
+  const dirty =
+    JSON.stringify(canonicalize(assignments)) !== JSON.stringify(canonicalize(initialAssignments));
+
   const mutation = useCommandMutation({
-    mutationFn: () => userApi.assignRoles(billId!, effectiveOrgId!, checkedIds),
+    mutationFn: () =>
+      userApi.saveRoleAssignment({
+        userId: billId!,
+        assignments: organizations.map((organization) => ({
+          orgId: organization.org.id,
+          roleIds: (assignments[organization.org.id] ?? []).map((role) => role.id),
+        })),
+      }),
     successMessage: '角色分配成功',
     onSuccess: async () => {
-      queryClient.setQueryData<string[]>(userQueryKeys.roleIds(billId, effectiveOrgId), [
-        ...checkedIds,
-      ]);
-      setLocalIds(null);
+      setLocalAssignments(null);
+      setSelectedRoleIds([]);
       await queryClient.invalidateQueries({
-        queryKey: userQueryKeys.roleIds(billId, effectiveOrgId),
+        queryKey: userQueryKeys.roleAssignmentWorkspace(billId),
       });
     },
   });
 
-  const updateVisibleSelection = (selected: boolean) => {
-    setLocalIds(replaceAssignmentScope(checkedIds, visibleIds, selected ? visibleIds : []));
+  const updateCurrentRoles = (nextRoles: RoleSelectVO[]) => {
+    if (!effectiveOrgId) return;
+    setLocalAssignments({ ...assignments, [effectiveOrgId]: nextRoles });
+    setSelectedRoleIds([]);
+  };
+
+  const addSelectedRoles = (value: Record<string, unknown> | Record<string, unknown>[] | null) => {
+    if (!Array.isArray(value)) return;
+    updateCurrentRoles([...currentRoles, ...(value as unknown as RoleSelectVO[])]);
+  };
+
+  const deleteSelectedRoles = () => {
+    if (selectedRoleIds.length === 0 || !selectedOrganization) return;
+    modal.confirm({
+      title: '确认删除角色',
+      content: `将从组织“${selectedOrganization.org.name}”移除 ${selectedRoleIds.length} 个角色，是否继续？`,
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: () =>
+        updateCurrentRoles(currentRoles.filter((role) => !selectedRoleIds.includes(role.id))),
+    });
   };
 
   const confirmSave = () => {
-    if (!dirty || !detailQuery.data || !selectedAssignment) return;
+    if (!dirty || !workspaceQuery.data) return;
+    let addedCount = 0;
+    let removedCount = 0;
+    for (const organization of organizations) {
+      const orgId = organization.org.id;
+      const initialIds = new Set((initialAssignments[orgId] ?? []).map((role) => role.id));
+      const nextIds = new Set((assignments[orgId] ?? []).map((role) => role.id));
+      for (const roleId of nextIds) if (!initialIds.has(roleId)) addedCount += 1;
+      for (const roleId of initialIds) if (!nextIds.has(roleId)) removedCount += 1;
+    }
     modal.confirm({
-      title: '确认分配角色',
-      content: `将为用户“${detailQuery.data.name}”在组织“${selectedAssignment.org.name}”下新增 ${selectionDiff.addedIds.length} 个角色、移除 ${selectionDiff.removedIds.length} 个角色，是否保存？`,
+      title: '确认保存角色分配',
+      content: `将为用户“${workspaceQuery.data.name}”新增 ${addedCount} 个角色关系、移除 ${removedCount} 个角色关系，是否保存？`,
       okText: '保存',
       cancelText: '取消',
       onOk: () => mutation.mutateAsync(),
     });
   };
 
-  const changeOrganization = (orgId: string) => {
-    const applyChange = () => {
-      setSelectedOrgId(orgId);
-      setLocalIds(null);
-    };
-    if (!dirty) {
-      applyChange();
-      return;
-    }
-    modal.confirm({
-      title: '切换任职组织',
-      content: '切换后将放弃当前组织尚未保存的角色修改，是否继续？',
-      okText: '放弃并切换',
-      cancelText: '取消',
-      onOk: applyChange,
-    });
-  };
+  const organizationColumns: ColumnsType<UserRoleOrganizationVO> = [
+    { title: '编码', dataIndex: ['org', 'number'], width: 130 },
+    {
+      title: '组织',
+      dataIndex: ['org', 'name'],
+      render: (name, organization) => (
+        <span>
+          {name}
+          {organization.isPrimary && <span className="sm-user-role-primary-badge">主职</span>}
+        </span>
+      ),
+    },
+    { title: '职位', dataIndex: 'position', width: 150, render: (position) => position || '—' },
+    {
+      title: '角色数',
+      width: 72,
+      align: 'right',
+      render: (_value, organization) => assignments[organization.org.id]?.length ?? 0,
+    },
+  ];
 
   return (
     <AssignmentPage
@@ -137,112 +175,115 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId, context }: PageComp
         prefix: userAccess.prefix,
         permissions: { save: userAccess.permissions.assignRoles },
       }}
-      loading={detailQuery.isLoading || roleIdsQuery.isLoading || rolesQuery.isLoading}
+      loading={workspaceQuery.isLoading}
       saving={mutation.isPending}
-      error={(detailQuery.error || roleIdsQuery.error || rolesQuery.error) as Error | null}
-      subject={
-        detailQuery.data
-          ? `用户：${detailQuery.data.name}（${detailQuery.data.username} / ${detailQuery.data.number}）`
-          : undefined
-      }
-      selectedCount={checkedIds.length}
-      totalCount={roles.length}
+      error={workspaceQuery.error as Error | null}
       dirty={dirty}
-      saveDisabled={!dirty || !effectiveOrgId || mutation.isPending}
+      saveDisabled={!dirty || mutation.isPending}
       closeGuard={{ appNumber, tabKey }}
-      onRetry={() =>
-        void Promise.all([detailQuery.refetch(), roleIdsQuery.refetch(), rolesQuery.refetch()])
-      }
+      onRetry={() => void workspaceQuery.refetch()}
       onSave={confirmSave}
       onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
     >
-      <AssignmentSelectionPanel
-        title={selectedAssignment ? `${selectedAssignment.org.name} — 角色选择` : '角色选择'}
-        keyword={keyword}
-        keywordPlaceholder="搜索角色编码/名称/说明"
-        onlySelected={onlySelected}
-        meta={`当前显示 ${visibleRoles.length} 个角色，已选 ${visibleSelectedCount} 个`}
-        actions={
-          <>
-            <Checkbox
-              checked={allVisibleSelected}
-              indeterminate={visibleSelectedCount > 0 && !allVisibleSelected}
-              disabled={visibleIds.length === 0}
-              onChange={(event) => updateVisibleSelection(event.target.checked)}
-            >
-              全选当前结果
-            </Checkbox>
-            <Button
-              type="link"
-              size="small"
-              disabled={visibleSelectedCount === 0}
-              onClick={() => updateVisibleSelection(false)}
-            >
-              清空当前结果
-            </Button>
-          </>
-        }
-        treePanel={
-          <div className="sm-user-role-organization-panel">
-            <div className="sm-user-role-organization-title">任职组织</div>
-            <Menu
-              className="sm-user-role-organization-menu"
-              mode="inline"
-              selectedKeys={effectiveOrgId ? [effectiveOrgId] : []}
-              items={assignments.map((assignment) => ({
-                key: assignment.org.id,
-                label: (
-                  <div className="sm-user-role-organization-item">
-                    <div className="sm-user-role-organization-name">
-                      <span>{assignment.org.name}</span>
-                      {assignment.isPrimary && (
-                        <span className="sm-user-role-primary-badge">主职</span>
-                      )}
-                    </div>
-                    <div className="sm-user-role-organization-meta">
-                      {[assignment.position, assignment.orgNamePath].filter(Boolean).join(' · ')}
-                    </div>
+      {workspaceQuery.data && (
+        <div className="sm-user-role-workspace">
+          <Descriptions
+            className="sm-user-role-summary"
+            size="small"
+            column={3}
+            items={[
+              { key: 'name', label: '姓名', children: workspaceQuery.data.name },
+              { key: 'username', label: '账号', children: workspaceQuery.data.username },
+              { key: 'number', label: '工号', children: workspaceQuery.data.number },
+            ]}
+          />
+          <Splitter className="sm-user-role-split">
+            <Splitter.Panel defaultSize="46%" min="36%" max="60%">
+              <section className="sm-user-role-panel">
+                <div className="sm-user-role-panel-header">
+                  <h2>任职组织</h2>
+                  <span>共 {organizations.length} 个</span>
+                </div>
+                <div className="sm-user-role-table-body">
+                  <Table<UserRoleOrganizationVO>
+                    className="sm-user-role-organization-table"
+                    rowKey={(organization) => organization.org.id}
+                    size="small"
+                    sticky
+                    pagination={false}
+                    columns={organizationColumns}
+                    dataSource={organizations}
+                    scroll={{ x: 'max-content', y: 1 }}
+                    rowClassName={(organization) =>
+                      organization.org.id === effectiveOrgId ? 'sm-user-role-selected-row' : ''
+                    }
+                    onRow={(organization) => ({
+                      title: organization.orgNamePath,
+                      onClick: () => {
+                        setSelectedOrgId(organization.org.id);
+                        setSelectedRoleIds([]);
+                      },
+                    })}
+                  />
+                </div>
+              </section>
+            </Splitter.Panel>
+            <Splitter.Panel>
+              <section className="sm-user-role-panel">
+                <div className="sm-user-role-panel-header sm-user-role-role-header">
+                  <div>
+                    <h2>{selectedOrganization?.org.name ?? '已分配角色'}</h2>
+                    <span>{selectedOrganization?.orgNamePath}</span>
                   </div>
-                ),
-              }))}
-              onClick={({ key }) => changeOrganization(key)}
-            />
-          </div>
-        }
-        onKeywordChange={setKeyword}
-        onOnlySelectedChange={setOnlySelected}
-      >
-        <Table<RoleListAllVO>
-          className="sm-assignment-table"
-          rowKey="id"
-          size="small"
-          sticky
-          pagination={false}
-          columns={roleColumns}
-          dataSource={visibleRoles}
-          scroll={{ x: 'max-content', y: 1 }}
-          onRow={(role) => ({
-            onClick: () => {
-              const selected = !checkedIdSet.has(role.id);
-              setLocalIds(replaceAssignmentScope(checkedIds, [role.id], selected ? [role.id] : []));
-            },
-          })}
-          rowSelection={{
-            selectedRowKeys: checkedIds,
-            preserveSelectedRowKeys: true,
-            columnWidth: 36,
-            onSelect: (role, selected) => {
-              setLocalIds(replaceAssignmentScope(checkedIds, [role.id], selected ? [role.id] : []));
-            },
-            onSelectAll: (selected, _selectedRows, changedRows) => {
-              const changedIds = changedRows.map((role) => role.id);
-              setLocalIds(
-                replaceAssignmentScope(checkedIds, changedIds, selected ? changedIds : []),
-              );
-            },
-          }}
-        />
-      </AssignmentSelectionPanel>
+                  <div className="sm-user-role-actions">
+                    <Input.Search
+                      allowClear
+                      value={roleKeyword}
+                      placeholder="搜索角色编码/名称/描述"
+                      onChange={(event) => setRoleKeyword(event.target.value)}
+                    />
+                    <RefSelector
+                      {...roleRefSelector}
+                      value={null}
+                      onChange={addSelectedRoles}
+                      disabled={!effectiveOrgId}
+                      trigger={
+                        <Button type="primary" disabled={!effectiveOrgId}>
+                          增加
+                        </Button>
+                      }
+                    />
+                    <Button
+                      danger
+                      disabled={selectedRoleIds.length === 0}
+                      onClick={deleteSelectedRoles}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                </div>
+                <div className="sm-user-role-table-body">
+                  <Table<RoleSelectVO>
+                    className="sm-assignment-table"
+                    rowKey="id"
+                    size="small"
+                    sticky
+                    pagination={false}
+                    columns={roleColumns}
+                    dataSource={visibleAssignedRoles}
+                    scroll={{ x: 'max-content', y: 1 }}
+                    rowSelection={{
+                      selectedRowKeys: selectedRoleIds,
+                      columnWidth: 36,
+                      onChange: (keys) => setSelectedRoleIds(keys.map(String)),
+                    }}
+                  />
+                </div>
+              </section>
+            </Splitter.Panel>
+          </Splitter>
+        </div>
+      )}
     </AssignmentPage>
   );
 };

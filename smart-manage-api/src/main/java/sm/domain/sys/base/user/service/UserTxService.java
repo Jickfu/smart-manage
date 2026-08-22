@@ -16,7 +16,7 @@ import sm.domain.sys.base.user.model.form.UserAssignmentForm;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.entity.UserRoleEntity;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
-import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
+import sm.domain.sys.base.user.model.form.UserRoleAssignmentSaveForm;
 import sm.domain.sys.base.user.constant.UserThemeColor;
 import sm.domain.sys.base.user.model.Gender;
 import sm.system.exception.BizException;
@@ -280,29 +280,48 @@ class UserTxService {
         }
     }
 
-    /** 指定任职组织下的角色关系通过独立命令整体替换。 */
-    public void assignRoles(UserRoleAssignForm form) {
-        if (mapper.selectById(form.getUserId()) == null) {
-            throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
-        }
-        if (userAssignmentMapper.selectCount(new LambdaQueryWrapper<UserAssignmentEntity>()
-                .eq(UserAssignmentEntity::getUserId, form.getUserId())
-                .eq(UserAssignmentEntity::getOrgId, form.getOrgId())) == 0) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "只能为用户任职组织分配角色");
-        }
-        userRoleMapper.delete(new LambdaQueryWrapper<UserRoleEntity>()
-                .eq(UserRoleEntity::getUserId, form.getUserId())
-                .eq(UserRoleEntity::getOrgId, form.getOrgId()));
-        for (Long roleId : form.getRoleIds()) {
-            UserRoleEntity userRoleEntity = new UserRoleEntity();
-            userRoleEntity.setUserId(form.getUserId());
-            userRoleEntity.setOrgId(form.getOrgId());
-            userRoleEntity.setRoleId(roleId);
-            if (userRoleMapper.insert(userRoleEntity) != 1) {
-                throw new BizException(sm.system.response.ResultEnum.PERSISTENCE_ERROR, "聚合明细写入失败");
-            }
-        }
-    }
+	/** 全部任职组织的角色关系通过一个事务整体替换。 */
+	public void saveRoleAssignment(UserRoleAssignmentSaveForm form) {
+		if (mapper.selectById(form.getUserId()) == null) {
+			throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+		}
+		List<UserAssignmentEntity> userAssignments = userAssignmentMapper.selectList(
+				new LambdaQueryWrapper<UserAssignmentEntity>()
+						.eq(UserAssignmentEntity::getUserId, form.getUserId()));
+		Set<Long> allowedOrgIds = new HashSet<>();
+		for (UserAssignmentEntity assignment : userAssignments) allowedOrgIds.add(assignment.getOrgId());
+		Set<Long> submittedOrgIds = new HashSet<>();
+		Set<Long> submittedRoleIds = new HashSet<>();
+		for (var assignment : form.getAssignments()) {
+			if (!submittedOrgIds.add(assignment.getOrgId())) {
+				throw new BizException(ResultEnum.PARAM_ERROR, "同一任职组织不能重复提交");
+			}
+			if (!allowedOrgIds.contains(assignment.getOrgId())) {
+				throw new BizException(ResultEnum.PARAM_ERROR, "只能为用户任职组织分配角色");
+			}
+			if (new HashSet<>(assignment.getRoleIds()).size() != assignment.getRoleIds().size()) {
+				throw new BizException(ResultEnum.PARAM_ERROR, "同一组织下不能重复分配角色");
+			}
+			submittedRoleIds.addAll(assignment.getRoleIds());
+		}
+		if (!submittedRoleIds.isEmpty()
+				&& userRoleMapper.selectExistingRoleIds(submittedRoleIds).size() != submittedRoleIds.size()) {
+			throw new BizException(ResultEnum.PARAM_ERROR, "角色不存在或已被删除");
+		}
+		userRoleMapper.delete(new LambdaQueryWrapper<UserRoleEntity>()
+				.eq(UserRoleEntity::getUserId, form.getUserId()));
+		for (var assignment : form.getAssignments()) {
+			for (Long roleId : assignment.getRoleIds()) {
+				UserRoleEntity relation = new UserRoleEntity();
+				relation.setUserId(form.getUserId());
+				relation.setOrgId(assignment.getOrgId());
+				relation.setRoleId(roleId);
+				if (userRoleMapper.insert(relation) != 1) {
+					throw new BizException(ResultEnum.PERSISTENCE_ERROR, "用户角色关系写入失败");
+				}
+			}
+		}
+	}
 
     private String normalizeOptional(String value) {
         String normalized = value.trim();
@@ -331,6 +350,23 @@ class UserTxService {
 	}
 
 	private void replaceAssignments(Long userId, List<UserAssignmentForm> assignments) {
+		Set<Long> nextOrgIds = new HashSet<>();
+		for (UserAssignmentForm assignment : assignments) nextOrgIds.add(assignment.getOrgId());
+		List<UserAssignmentEntity> previousAssignments = userAssignmentMapper.selectList(
+				new LambdaQueryWrapper<UserAssignmentEntity>()
+						.eq(UserAssignmentEntity::getUserId, userId));
+		Set<Long> removedOrgIds = new HashSet<>();
+		for (UserAssignmentEntity previousAssignment : previousAssignments) {
+			if (!nextOrgIds.contains(previousAssignment.getOrgId())) {
+				removedOrgIds.add(previousAssignment.getOrgId());
+			}
+		}
+		// 任职和角色必须保持一致，避免重新任职时历史授权自动恢复。
+		if (!removedOrgIds.isEmpty()) {
+			userRoleMapper.delete(new LambdaQueryWrapper<UserRoleEntity>()
+					.eq(UserRoleEntity::getUserId, userId)
+					.in(UserRoleEntity::getOrgId, removedOrgIds));
+		}
 		userAssignmentMapper.delete(new LambdaQueryWrapper<UserAssignmentEntity>()
 				.eq(UserAssignmentEntity::getUserId, userId));
 		for (UserAssignmentForm assignment : assignments) {

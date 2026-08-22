@@ -28,7 +28,7 @@
 | 标准列表 | `smart-manage-web/src/domain/scm/procurement/purchaseRequisition/PurchaseRequisitionListPage.tsx` |
 | 标准编辑 | `smart-manage-web/src/domain/sys/base/sysParam/SysParamEditPage.tsx` |
 | 编辑页明细操作区 | `smart-manage-web/src/domain/sys/base/numberRule/NumberRuleEditPage.tsx`、`smart-manage-web/src/domain/scm/procurement/purchaseRequisition/PurchaseRequisitionEditPage.tsx`；观察通过 `detailExtra` 将新增、删除、排序等操作归集到明细折叠面板标题栏右侧，表格只使用选择列确定操作目标 |
-| 实体引用选择器 | `smart-manage-web/src/domain/sys/base/user/refSelector/useUserRefSelector.ts`、`smart-manage-web/src/domain/sys/message/email/refSelector/useEmailAccountRefSelector.ts` |
+| 实体引用选择器 | 公共交互见 `smart-manage-web/src/domain/common/component/RefSelector.tsx`；树表选择见 `smart-manage-web/src/domain/sys/base/org/refSelector/useOrgRefSelector.ts`；领域多选与组织范围见 `smart-manage-web/src/domain/sys/base/user/refSelector/useUserRefSelector.ts`；账号选择见 `smart-manage-web/src/domain/sys/message/email/refSelector/useEmailAccountRefSelector.ts` |
 | 通用业务弹框 | `smart-manage-web/src/domain/common/component/AppModal.tsx` |
 | 公开 Service 与 TxService | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/service` |
 | 权限常量 | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/constant/PurchaseRequisitionPermission.java` |

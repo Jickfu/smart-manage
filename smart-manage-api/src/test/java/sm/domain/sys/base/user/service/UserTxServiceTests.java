@@ -11,8 +11,10 @@ import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserAssignmentForm;
-import sm.domain.sys.base.user.model.form.UserRoleAssignForm;
+import sm.domain.sys.base.user.model.form.UserOrganizationRoleForm;
+import sm.domain.sys.base.user.model.form.UserRoleAssignmentSaveForm;
 import sm.domain.sys.base.user.model.entity.UserRoleEntity;
+import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
 import sm.domain.sys.base.common.helper.CurrentUserContext;
 import sm.system.helper.Argon2Helper;
 
@@ -173,48 +175,85 @@ class UserTxServiceTests {
 	}
 
 	@Test
-	void roleAssignmentUsesExplicitTargetOrganization() {
+	void roleAssignmentReplacesAllExplicitOrganizationRoles() {
 		UserMapper userMapper = mock(UserMapper.class);
 		UserRoleMapper userRoleMapper = mock(UserRoleMapper.class);
 		UserAssignmentMapper userAssignmentMapper = mock(UserAssignmentMapper.class);
 		CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
 		when(userMapper.selectById(10L)).thenReturn(new UserEntity());
-		when(userAssignmentMapper.selectCount(any())).thenReturn(1L);
+		UserAssignmentEntity firstAssignment = new UserAssignmentEntity();
+		firstAssignment.setOrgId(20L);
+		UserAssignmentEntity secondAssignment = new UserAssignmentEntity();
+		secondAssignment.setOrgId(21L);
+		when(userAssignmentMapper.selectList(any())).thenReturn(List.of(firstAssignment, secondAssignment));
+		when(userRoleMapper.selectExistingRoleIds(any())).thenReturn(List.of(30L, 31L, 32L));
 		when(userRoleMapper.insert(any(UserRoleEntity.class))).thenReturn(1);
 		UserTxService service = new UserTxService(
 				userMapper, userRoleMapper, userAssignmentMapper,
 				mock(OrgMapper.class), currentUserContext);
-		UserRoleAssignForm form = new UserRoleAssignForm();
+		UserRoleAssignmentSaveForm form = new UserRoleAssignmentSaveForm();
 		form.setUserId(10L);
-		form.setOrgId(20L);
-		form.setRoleIds(List.of(30L, 31L));
+		form.setAssignments(List.of(organizationRoles(20L, 30L, 31L), organizationRoles(21L, 32L)));
 
-		service.assignRoles(form);
+		service.saveRoleAssignment(form);
 
 		ArgumentCaptor<UserRoleEntity> relationCaptor = ArgumentCaptor.forClass(UserRoleEntity.class);
-		verify(userRoleMapper, org.mockito.Mockito.times(2)).insert(relationCaptor.capture());
-		assertTrue(relationCaptor.getAllValues().stream()
-				.allMatch(relation -> relation.getUserId().equals(10L) && relation.getOrgId().equals(20L)));
+		verify(userRoleMapper, org.mockito.Mockito.times(3)).insert(relationCaptor.capture());
+		assertEquals(List.of(20L, 20L, 21L), relationCaptor.getAllValues().stream()
+				.map(UserRoleEntity::getOrgId).toList());
 		verify(currentUserContext, never()).getOrgId();
 	}
 
 	@Test
-	void roleAssignmentRejectsOrganizationWithoutUserAssignment() {
+	void roleAssignmentRejectsOrganizationOutsideUserAssignments() {
 		UserMapper userMapper = mock(UserMapper.class);
 		UserRoleMapper userRoleMapper = mock(UserRoleMapper.class);
 		UserAssignmentMapper userAssignmentMapper = mock(UserAssignmentMapper.class);
 		when(userMapper.selectById(10L)).thenReturn(new UserEntity());
-		when(userAssignmentMapper.selectCount(any())).thenReturn(0L);
+		UserAssignmentEntity assignment = new UserAssignmentEntity();
+		assignment.setOrgId(20L);
+		when(userAssignmentMapper.selectList(any())).thenReturn(List.of(assignment));
 		UserTxService service = new UserTxService(
 				userMapper, userRoleMapper, userAssignmentMapper,
 				mock(OrgMapper.class), mock(CurrentUserContext.class));
-		UserRoleAssignForm form = new UserRoleAssignForm();
+		UserRoleAssignmentSaveForm form = new UserRoleAssignmentSaveForm();
 		form.setUserId(10L);
-		form.setOrgId(99L);
-		form.setRoleIds(List.of(30L));
+		form.setAssignments(List.of(organizationRoles(99L, 30L)));
 
-		assertThrows(sm.system.exception.BizException.class, () -> service.assignRoles(form));
+		assertThrows(sm.system.exception.BizException.class, () -> service.saveRoleAssignment(form));
 		verify(userRoleMapper, never()).insert(any(UserRoleEntity.class));
+	}
+
+	@Test
+	void removingAssignmentAlsoRemovesRolesInThatOrganization() {
+		UserMapper userMapper = mock(UserMapper.class);
+		UserRoleMapper userRoleMapper = mock(UserRoleMapper.class);
+		UserAssignmentMapper userAssignmentMapper = mock(UserAssignmentMapper.class);
+		OrgMapper orgMapper = mock(OrgMapper.class);
+		UserEntity existing = new UserEntity();
+		existing.setId(10L);
+		existing.setUsername("assignment-user");
+		existing.setVersion(0);
+		when(userMapper.selectById(10L)).thenReturn(existing);
+		when(userMapper.selectCount(any())).thenReturn(0L);
+		when(userMapper.updateById(any(UserEntity.class))).thenReturn(1);
+		UserAssignmentEntity removedAssignment = new UserAssignmentEntity();
+		removedAssignment.setOrgId(20L);
+		when(userAssignmentMapper.selectList(any())).thenReturn(List.of(removedAssignment));
+		UserTxService service = new UserTxService(
+				userMapper, userRoleMapper, userAssignmentMapper, orgMapper,
+				mock(CurrentUserContext.class));
+		UserSaveForm form = new UserSaveForm();
+		form.setId(10L);
+		form.setVersion(0);
+		form.setUsername("assignment-user");
+		form.setName("任职用户");
+		form.setNumber("U-ASG");
+		form.setAssignments(List.of());
+
+		service.save(form);
+
+		verify(userRoleMapper).delete(any());
 	}
 
 	private static UserSaveForm newUserForm() {
@@ -231,6 +270,13 @@ class UserTxServiceTests {
 		assignment.setOrgId(orgId);
 		assignment.setPosition("工程师");
 		assignment.setIsPrimary(primary);
+		return assignment;
+	}
+
+	private static UserOrganizationRoleForm organizationRoles(Long orgId, Long... roleIds) {
+		UserOrganizationRoleForm assignment = new UserOrganizationRoleForm();
+		assignment.setOrgId(orgId);
+		assignment.setRoleIds(List.of(roleIds));
 		return assignment;
 	}
 }

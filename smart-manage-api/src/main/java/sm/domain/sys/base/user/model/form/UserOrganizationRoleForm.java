@@ -5,12 +5,9 @@ import lombok.Data;
 
 import java.util.List;
 
-/** 用户角色分配命令。 */
+/** 用户在一个任职组织下的完整角色分配结果。 */
 @Data
-public class UserRoleAssignForm {
-	@NotNull(message = "用户ID不能为空")
-	private Long userId;
-
+public class UserOrganizationRoleForm {
 	@NotNull(message = "组织ID不能为空")
 	private Long orgId;
 

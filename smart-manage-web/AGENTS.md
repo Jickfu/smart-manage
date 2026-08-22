@@ -40,7 +40,7 @@
 
 - 标准列表、编辑、引用选择和业务弹框的完整选型、布局与视觉规则统一由 `docs/development/module-development-guide.md` 定义；实现前必须从 `docs/development/module-pattern-catalog.md` 选择最接近的现有页面作为样板。
 - 自定义页面仍须优先复用通用页面壳层；仅由标准字段、引用选择器和普通命令组成的表单必须优先使用 `EditPage`。只有通用字段模型无法表达的真实业务结构才允许使用自定义内容或独立壳层。
-- 业务弹框默认复用 `src/domain/common/component/AppModal.tsx`；只有简单提示、确认和结果反馈弹框可以直接使用 Ant Design Modal。
+- 业务表单、命令参数和复杂结果展示弹框默认复用 `src/domain/common/component/AppModal.tsx`；简单提示、确认和结果反馈弹框可以直接使用 Ant Design Modal。
 - 固定高度表格必须建立完整 flex 高度链并让横向滚动条位于内容区底部，优先复用 `ListTableShell`、`ListPage` 或 `RefSelector`，禁止用固定 `scroll.y` 模拟布局。
 - `ListPage` 中可由 `columnFeatures` 表达的筛选和排序必须使用通用能力；`filterContent` 只用于跨字段或领域专用筛选。
 - 禁止在 TSX 中编写 CSS 或内联 `style`。
@@ -57,6 +57,13 @@
 - 表单字段校验由 Ant Design Form 负责；没有明确的外部不可信数据校验需求时不引入重复校验模型。
 - ESLint 报错时，未经用户允许不得用注释跳过，也不得修改 `eslint.config.js` 降低规则。
 - 只有需要自动修复格式或用户明确要求时才执行 `pnpm lint:fix` 或 `pnpm format`。
+
+### 实体引用选择
+
+- 从已有实体中选择记录并用于表单引用、主从明细、关联关系、授权关系或分配结果时，统一使用 `RefSelector`，并优先由实体所属领域提供 `use*RefSelector`。该规则适用于 `EditPage`、列表页、CUSTOM 页面、明细卡片和操作按钮弹框。
+- 选择器统一提供标题栏搜索、服务端分页、整行选择和稳定表格布局；多选模式还必须支持跨页保留与已选结果管理。
+- 影响候选范围的组织、排除集合和选择用途等上下文必须进入查询参数及稳定 `selectorKey`。已关联或不可选记录由服务端排除，或者由选择器明确禁用。
+- 选择器向领域页面返回实体对象，领域页面负责合并暂存结果；最终保存只提交实体 ID，取消或关闭选择器不得修改暂存结果。
 
 ## 验证
 

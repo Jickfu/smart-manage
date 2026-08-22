@@ -10,4 +10,12 @@
     <select id="selectOrgIdsByUserId" resultType="java.lang.Long">
         SELECT DISTINCT org_id FROM t_sys_user_role WHERE user_id = #{userId}
     </select>
+    <select id="selectExistingRoleIds" resultType="java.lang.Long">
+        SELECT id
+        FROM t_sys_role
+        WHERE id IN
+        <foreach collection="roleIds" item="roleId" open="(" separator="," close=")">
+            #{roleId}
+        </foreach>
+    </select>
 </mapper>

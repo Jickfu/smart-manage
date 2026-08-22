@@ -34,17 +34,10 @@ export interface RoleSaveForm {
   description?: string;
 }
 
-/** 角色全量列表（不分页） */
-export interface RoleListAllVO {
-  id: string;
-  number: string;
-  name: string;
-  description?: string;
-}
-
 /** 角色选择器列表项 */
 export interface RoleSelectVO {
   id: string;
   number: string;
   name: string;
+  description?: string;
 }

@@ -14,6 +14,8 @@ import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
 import sm.domain.sys.base.org.model.entity.OrgEntity;
 import sm.domain.sys.base.user.model.vo.UserAuthentication;
+import sm.domain.sys.base.user.model.form.UserOrganizationRoleForm;
+import sm.domain.sys.base.user.model.form.UserRoleAssignmentSaveForm;
 import sm.system.helper.Argon2Helper;
 import sm.system.exception.BizException;
 import sm.system.security.CsrfTokenManager;
@@ -27,6 +29,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
+import java.util.List;
 
 class UserServiceAuthenticationTests {
 
@@ -108,6 +111,32 @@ class UserServiceAuthenticationTests {
 			assertTrue(authentication.successful());
 			assertFalse(authentication.administrator());
 		}
+	}
+
+	@Test
+	void savingRoleAssignmentRefreshesPreviousAndSubmittedOrganizationCaches() {
+		UserRoleMapper userRoleMapper = mock(UserRoleMapper.class);
+		when(userRoleMapper.selectOrgIdsByUserId(10L)).thenReturn(List.of(20L));
+		UserTxService txService = mock(UserTxService.class);
+		AuthorizationStateHelper authorizationStateHelper = mock(AuthorizationStateHelper.class);
+		UserService service = new UserService(
+				mock(UserMapper.class), userRoleMapper, mock(UserAssignmentMapper.class),
+				mock(OrgMapper.class), mock(AttachmentService.class), txService,
+				mock(PermissionService.class), authorizationStateHelper,
+				mock(UserCacheAccessor.class), mock(UserConverter.class),
+				mock(CurrentUserContext.class), mock(CsrfTokenManager.class));
+		UserOrganizationRoleForm organization = new UserOrganizationRoleForm();
+		organization.setOrgId(21L);
+		organization.setRoleIds(List.of(30L));
+		UserRoleAssignmentSaveForm form = new UserRoleAssignmentSaveForm();
+		form.setUserId(10L);
+		form.setAssignments(List.of(organization));
+
+		service.saveRoleAssignment(form);
+
+		verify(txService).saveRoleAssignment(form);
+		verify(authorizationStateHelper).refreshUserAuthorization(10L, 20L);
+		verify(authorizationStateHelper).refreshUserAuthorization(10L, 21L);
 	}
 
 	private UserService createService(UserAssignmentMapper assignmentMapper, OrgMapper orgMapper,
