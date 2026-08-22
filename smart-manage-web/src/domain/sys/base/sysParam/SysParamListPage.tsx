@@ -1,5 +1,7 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
-import { App, Button, Tag } from 'antd';
+import { Button, Tag } from 'antd';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
@@ -44,7 +46,8 @@ type Scope =
   | { type: 'feature'; id: string };
 
 const SysParamListPage = (props: PageComponentProps) => {
-  const { modal, message } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const [scope, setScope] = useState<Scope>({ type: 'all' });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
@@ -87,7 +90,7 @@ const SysParamListPage = (props: PageComponentProps) => {
     onSuccess: async () => {
       setSelectedRowKeys([]);
       await queryClient.invalidateQueries({ queryKey: sysParamQueryKeys.all });
-      message.success('删除成功');
+      feedback.success('删除成功');
     },
   });
   const treeData = useMemo<DataNode[]>(() => {
@@ -199,11 +202,12 @@ const SysParamListPage = (props: PageComponentProps) => {
           onClick: () => {
             const record = selectedRecords[0];
             if (!record) return;
-            modal.confirm({
+            void confirmOperation({
+              type: 'delete',
               title: '确认删除系统参数？',
-              content: record.number,
-              okButtonProps: { danger: true },
-              onOk: () => deleteMutation.mutateAsync(record.id),
+              description: record.number,
+              confirmText: '删除',
+              onConfirm: () => deleteMutation.mutateAsync(record.id),
             });
           },
         },

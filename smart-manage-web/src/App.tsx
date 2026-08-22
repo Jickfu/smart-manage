@@ -11,6 +11,8 @@ import { useUserStore } from '@/stores/user';
 // 自动生成的组件注册表导入 — 由 pnpm gen:registry 生成
 import '@/domain/common/registry/registry.gen';
 import { AppErrorBoundary } from '@/pages/errors/AppErrorBoundary';
+import { OperationConfirmProvider } from '@/domain/common/component/OperationConfirmProvider';
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 
 const UNAUTHORIZED_CODE = 100401;
 
@@ -18,13 +20,13 @@ const UNAUTHORIZED_CODE = 100401;
 type AuthState = 'loading' | 'authenticated' | 'error';
 
 function SecurityErrorNotifier() {
-  const { message } = AntApp.useApp();
+  const feedback = useOperationFeedback();
 
   useEffect(() => {
-    const notify = () => message.error('安全校验失败，请刷新页面后重试');
+    const notify = () => feedback.error('安全校验失败，请刷新页面后重试');
     window.addEventListener('sm:csrf-invalid', notify);
     return () => window.removeEventListener('sm:csrf-invalid', notify);
-  }, [message]);
+  }, [feedback]);
 
   return null;
 }
@@ -124,11 +126,13 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider theme={themeConfig} locale={zhCN}>
-        <AntApp>
-          <SecurityErrorNotifier />
-          <AppErrorBoundary>
-            <RouterProvider router={router} />
-          </AppErrorBoundary>
+        <AntApp message={{ maxCount: 3, top: 32 }}>
+          <OperationConfirmProvider>
+            <SecurityErrorNotifier />
+            <AppErrorBoundary>
+              <RouterProvider router={router} />
+            </AppErrorBoundary>
+          </OperationConfirmProvider>
         </AntApp>
       </ConfigProvider>
     </QueryClientProvider>

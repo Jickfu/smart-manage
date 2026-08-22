@@ -1,0 +1,57 @@
+.sm-operation-confirm .ant-modal-body {
+  border-bottom: 0;
+}
+
+.sm-operation-confirm .sm-app-modal-footer-content {
+  min-height: 76px;
+  padding: 12px 16px 32px;
+}
+
+.sm-operation-confirm-title {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.sm-operation-confirm-title-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ant-color-info);
+}
+
+.sm-operation-confirm-title-dot--delete,
+.sm-operation-confirm-title-dot--destructive {
+  background: var(--ant-color-error);
+}
+
+.sm-operation-confirm-title-dot--warning {
+  background: var(--ant-color-warning);
+}
+
+.sm-operation-confirm-content {
+  display: flex;
+  min-height: 224px;
+  padding: 20px 32px 24px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.sm-operation-confirm-illustration {
+  display: block;
+  width: 144px;
+  height: 96px;
+  object-fit: contain;
+}
+
+.sm-operation-confirm-description {
+  max-width: 360px;
+  color: var(--ant-color-text);
+  line-height: 1.7;
+  text-align: center;
+  white-space: pre-line;
+}

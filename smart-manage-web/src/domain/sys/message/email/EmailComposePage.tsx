@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
-import { App } from 'antd';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
@@ -9,9 +9,11 @@ import { useUserRefSelector } from '@/domain/sys/base/user/refSelector/useUserRe
 import { useEmailAccountRefSelector } from './refSelector/useEmailAccountRefSelector';
 import { emailApi } from './api';
 import { composeAccess } from './permissions';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 
 const EmailComposePage = (props: PageComponentProps) => {
-  const { message, modal } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const accountSelector = useEmailAccountRefSelector();
   const recipientSelector = useUserRefSelector({ multiple: true, title: '选择收件人' });
   const ccSelector = useUserRefSelector({ multiple: true, title: '选择抄送人' });
@@ -82,18 +84,16 @@ const EmailComposePage = (props: PageComponentProps) => {
         bccUsers: undefined,
         account: undefined,
       });
-      message.success('邮件任务已创建');
+      feedback.success('邮件任务已创建');
     },
   });
   const handleSend = async (values: Record<string, unknown>) => {
-    const confirmed = await new Promise<boolean>((resolve) =>
-      modal.confirm({
-        title: '确认提交正式邮件？',
-        content: '提交后内容不可修改，系统将使用持久化队列发送。',
-        onOk: () => resolve(true),
-        onCancel: () => resolve(false),
-      }),
-    );
+    const confirmed = await confirmOperation({
+      type: 'normal',
+      title: '确认提交正式邮件？',
+      description: '提交后内容不可修改，系统将使用持久化队列发送。',
+      confirmText: '提交',
+    });
     if (!confirmed) return false;
     await send.mutateAsync(values);
     return true;

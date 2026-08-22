@@ -6,7 +6,6 @@ import {
   Input,
   InputNumber,
   Pagination,
-  Popconfirm,
   Select,
   Space,
   Table,
@@ -18,6 +17,7 @@ import type { PageComponentProps } from '@/domain/common/page/types';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import { slowSqlApi } from './api';
 import { slowSqlAccess } from './permissions';
 import { slowSqlQueryKeys } from './queryKeys';
@@ -27,6 +27,7 @@ import './slowSqlMonitor.css';
 const PAGE_SIZE = 20;
 
 export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
+  const confirmOperation = useOperationConfirm();
   const queryClient = useQueryClient();
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>();
   const [keyword, setKeyword] = useState('');
@@ -126,17 +127,22 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
             立即刷新
           </Button>
           {can('clear') && (
-            <Popconfirm
-              title="清空当前实例 SQL 统计？"
-              description="内存统计清空后不可恢复，不影响数据库数据。"
-              okText="确认清空"
-              cancelText="取消"
-              onConfirm={() => clearMutation.mutate()}
+            <Button
+              danger
+              loading={clearMutation.isPending}
+              disabled={!effectiveInstanceId}
+              onClick={() =>
+                void confirmOperation({
+                  type: 'destructive',
+                  title: '清空当前实例 SQL 统计？',
+                  description: '内存统计清空后不可恢复，不影响数据库数据。',
+                  confirmText: '确认清空',
+                  onConfirm: () => clearMutation.mutateAsync(),
+                })
+              }
             >
-              <Button danger loading={clearMutation.isPending} disabled={!effectiveInstanceId}>
-                清空统计
-              </Button>
-            </Popconfirm>
+              清空统计
+            </Button>
           )}
         </Space>
       }

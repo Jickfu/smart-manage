@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
-import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
@@ -25,7 +25,7 @@ const cronPresets = [
 ];
 
 const JobEditPage = (props: PageComponentProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const isAddNew = props.operationType === OperationType.ADDNEW;
   const [cronExpression, setCronExpression] = useState('');
@@ -209,7 +209,7 @@ const JobEditPage = (props: PageComponentProps) => {
         useWorkbenchStore.getState().activateContentTab(props.appNumber, nextKey);
       }
       await queryClient.invalidateQueries({ queryKey: jobQueryKeys.all });
-      message.success(isAddNew ? '新增成功' : '保存成功');
+      feedback.success(isAddNew ? '新增成功' : '保存成功');
     },
   });
 

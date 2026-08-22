@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
-import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
@@ -62,7 +62,7 @@ const fields: EditField[] = [
 
 /** 应用编辑页 — 独立页形态，无单据状态 */
 const AppEditPage = (props: PageComponentProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const { appNumber, tabKey, operationType, billId } = props;
   const isAddNew = operationType === OperationType.ADDNEW;
@@ -126,7 +126,7 @@ const AppEditPage = (props: PageComponentProps) => {
       activateContentTab(appNumber, createBillTabKey(props.componentKey, savedId));
     }
     await queryClient.invalidateQueries({ queryKey: appQueryKeys.all });
-    message.success(isAddNew ? '新增成功' : '保存成功');
+    feedback.success(isAddNew ? '新增成功' : '保存成功');
   };
   const saveMutation = useCommandMutation({
     mutationFn: handleSave,

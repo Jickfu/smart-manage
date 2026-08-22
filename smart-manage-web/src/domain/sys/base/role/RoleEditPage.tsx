@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
-import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
@@ -35,7 +35,7 @@ const fields: EditField[] = [
 
 /** 角色编辑页只维护角色资料，权限关系由专用分配页面处理。 */
 const RoleEditPage = (props: PageComponentProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const { appNumber, tabKey, operationType, billId } = props;
   const isAddNew = operationType === OperationType.ADDNEW;
@@ -81,7 +81,7 @@ const RoleEditPage = (props: PageComponentProps) => {
         activateContentTab(appNumber, nextKey);
       }
       await queryClient.invalidateQueries({ queryKey: roleQueryKeys.all });
-      message.success(isAddNew ? '新增成功' : '保存成功');
+      feedback.success(isAddNew ? '新增成功' : '保存成功');
     },
   });
 

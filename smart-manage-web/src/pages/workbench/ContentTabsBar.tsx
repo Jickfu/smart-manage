@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { App, Tooltip } from 'antd';
+import { Tooltip } from 'antd';
 import { CloseCircleOutlined, CloseSquareOutlined, HomeOutlined } from '@ant-design/icons';
 import { useHorizontalTabScroll } from '@/hooks/useHorizontalTabScroll';
 import { useWorkbenchStore } from '@/stores/workbench';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import './ContentTabsBar.css';
 
 interface Props {
@@ -10,7 +11,7 @@ interface Props {
 }
 
 const ContentTabsBar = ({ appNumber }: Props) => {
-  const { modal } = App.useApp();
+  const confirmOperation = useOperationConfirm();
   const ws = useWorkbenchStore((state) => state.workspaces[appNumber]);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
   const removeContentTab = useWorkbenchStore((state) => state.removeContentTab);
@@ -54,12 +55,13 @@ const ContentTabsBar = ({ appNumber }: Props) => {
     const allKeys = scrollableTabs.map((tab) => tab.key);
     if (allKeys.length === 0) return;
 
-    modal.confirm({
+    void confirmOperation({
+      type: 'warning',
       title: '关闭全部页签',
-      content: `确定关闭全部 ${allKeys.length} 个页签吗？`,
-      okText: '确定',
+      description: `确定关闭全部 ${allKeys.length} 个页签吗？`,
+      confirmText: '确定',
       cancelText: '取消',
-      onOk: async () => {
+      onConfirm: async () => {
         setClosing(true);
         try {
           await closeContentTabs(appNumber, allKeys);

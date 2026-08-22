@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useRef, useState } from 'react';
-import { App, Button, Empty, Image, Input, Modal, Popover, Progress, Tooltip, Upload } from 'antd';
+import { Button, Empty, Image, Input, Modal, Popover, Progress, Tooltip, Upload } from 'antd';
 import {
   FileImageOutlined,
   FilePdfOutlined,
@@ -10,6 +11,7 @@ import type { UploadProps } from 'antd';
 import { businessAttachmentApi } from './api';
 import type { BusinessAttachment } from './types';
 import './BusinessAttachmentPanel.css';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 
 interface BusinessAttachmentPanelProps {
   resourceType: string;
@@ -65,7 +67,8 @@ export function BusinessAttachmentPanel({
   editable,
   onChange,
 }: BusinessAttachmentPanelProps) {
-  const { message, modal } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const attachmentsRef = useRef(attachments);
   const previewUrlRef = useRef<string | undefined>(undefined);
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
@@ -109,7 +112,7 @@ export function BusinessAttachmentPanel({
       anchor.click();
       URL.revokeObjectURL(objectUrl);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '附件下载失败');
+      feedback.fromError(error, '附件下载失败');
     }
   };
 
@@ -127,18 +130,18 @@ export function BusinessAttachmentPanel({
         };
       });
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '附件预览失败');
+      feedback.fromError(error, '附件预览失败');
     }
   };
 
   const deleteAttachment = (attachment: BusinessAttachment) => {
-    modal.confirm({
+    void confirmOperation({
+      type: 'delete',
       title: '确认删除附件？',
-      content: '删除会立即生效，取消或关闭当前表单也无法恢复。',
-      okText: '删除',
-      okType: 'danger',
+      description: '删除会立即生效，取消或关闭当前表单也无法恢复。',
+      confirmText: '删除',
       cancelText: '取消',
-      onOk: async () => {
+      onConfirm: async () => {
         try {
           await businessAttachmentApi.delete(attachment.id, attachment.uploadSessionId);
           const nextAttachments = attachmentsRef.current.filter(
@@ -147,7 +150,7 @@ export function BusinessAttachmentPanel({
           attachmentsRef.current = nextAttachments;
           onChange(nextAttachments, 'delete');
         } catch (error) {
-          message.error(error instanceof Error ? error.message : '附件删除失败');
+          feedback.fromError(error, '附件删除失败');
           throw error;
         }
       },
@@ -186,7 +189,7 @@ export function BusinessAttachmentPanel({
       onSuccess?.(attachment);
     } catch (error) {
       if (!controller.signal.aborted) {
-        message.error(error instanceof Error ? error.message : '附件上传失败');
+        feedback.fromError(error, '附件上传失败');
         onError?.(error as Error);
       }
     } finally {
@@ -311,7 +314,7 @@ function AttachmentRemarkEditor({
   attachment: BusinessAttachment;
   onUpdated: (attachment: BusinessAttachment) => void;
 }) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const [open, setOpen] = useState(false);
   const [remark, setRemark] = useState(attachment.remark ?? '');
   const [saving, setSaving] = useState(false);
@@ -328,7 +331,7 @@ function AttachmentRemarkEditor({
       onUpdated(updated);
       setOpen(false);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '附件备注保存失败');
+      feedback.fromError(error, '附件备注保存失败');
     } finally {
       setSaving(false);
     }

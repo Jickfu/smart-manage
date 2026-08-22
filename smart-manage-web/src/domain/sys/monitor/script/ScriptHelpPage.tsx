@@ -1,16 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
-import {
-  App,
-  Alert,
-  Button,
-  Collapse,
-  Input,
-  Segmented,
-  Space,
-  Table,
-  Tag,
-  Typography,
-} from 'antd';
+import { Alert, Button, Collapse, Input, Segmented, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { CopyOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
@@ -41,7 +31,7 @@ const fieldColumns: ColumnsType<ScriptApiField> = [
 ];
 
 export default function ScriptHelpPage(_props: PageComponentProps) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const [section, setSection] = useState<HelpSection>('guide');
   const [keyword, setKeyword] = useState('');
   const apiQuery = useQuery({
@@ -67,7 +57,7 @@ export default function ScriptHelpPage(_props: PageComponentProps) {
 
   const copy = async (content: string) => {
     await navigator.clipboard.writeText(content);
-    message.success('示例已复制');
+    feedback.success('示例已复制');
   };
 
   return (

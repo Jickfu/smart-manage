@@ -1,0 +1,69 @@
+.ant-message-notice.sm-operation-feedback-message-root {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ant-message.ant-message-list {
+  top: 4px !important;
+}
+
+.sm-operation-feedback {
+  width: max-content;
+  max-width: min(600px, calc(100vw - 32px));
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.sm-operation-feedback-section,
+.sm-operation-feedback-title {
+  min-width: 0;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+
+.sm-operation-feedback-close {
+  margin-inline-start: 16px;
+}
+
+.sm-operation-feedback.sm-operation-feedback--success {
+  border-color: #79e7a3;
+  background: #d5fae2;
+}
+
+.sm-operation-feedback--success .ant-alert-icon,
+.sm-operation-feedback--success .sm-operation-feedback-title {
+  color: #00b65a;
+}
+
+.sm-operation-feedback.sm-operation-feedback--warning {
+  border-color: #ffe0a6;
+  background: #fff1d4;
+}
+
+.sm-operation-feedback--warning .ant-alert-icon,
+.sm-operation-feedback--warning .sm-operation-feedback-title {
+  color: #ff991c;
+}
+
+.sm-operation-feedback.sm-operation-feedback--error {
+  border-color: #ffa1ad;
+  background: #ffd9de;
+}
+
+.sm-operation-feedback--error .ant-alert-icon,
+.sm-operation-feedback--error .sm-operation-feedback-title {
+  color: #f5222d;
+}
+
+.sm-operation-feedback.sm-operation-feedback--info {
+  border-color: #91caff;
+  background: #e6f4ff;
+}
+
+.sm-operation-feedback--info .ant-alert-icon,
+.sm-operation-feedback--info .sm-operation-feedback-title {
+  color: #0e5fd8;
+}

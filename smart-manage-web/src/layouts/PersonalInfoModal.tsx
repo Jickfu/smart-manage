@@ -1,6 +1,7 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
-import { App, Button, DatePicker, Form, Input, Select, Table } from 'antd';
+import { Button, DatePicker, Form, Input, Select, Table } from 'antd';
 import AppModal from '@/domain/common/component/AppModal';
 import { updateCurrentUserProfile } from '@/api/user';
 import type { UserInfoVO } from '@/types/api';
@@ -25,7 +26,7 @@ export default function PersonalInfoModal({
   onClose,
   onSaved,
 }: PersonalInfoModalProps) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const [form] = Form.useForm<PersonalInfoValues>();
   const [saving, setSaving] = useState(false);
 
@@ -51,7 +52,7 @@ export default function PersonalInfoModal({
         attachmentUploadSessions: {},
       });
       onSaved(profile);
-      message.success('个人信息已保存');
+      feedback.success('个人信息已保存');
       onClose();
     } finally {
       setSaving(false);

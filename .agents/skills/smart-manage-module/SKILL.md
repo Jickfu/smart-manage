@@ -42,6 +42,8 @@ description: "Plan, implement, or significantly extend a Smart Manage business m
 
 保持 Feature、权限、菜单、迁移、后端接口、前端注册、页面和测试之间的显式关联。保留用户已有改动，避免无关重构。
 
+前端操作前确认统一使用 `useOperationConfirm` 并声明风险类型，操作结果统一使用 `useOperationFeedback`；模块页面不得重新引入 Ant Design 的 `Modal.confirm`、`Popconfirm` 或 `message.*`。
+
 标准主数据和配置默认使用 `LIST + EDIT`。业务聚合必须执行聚合检查清单。只有通用页面模型无法表达真实业务交互时才使用 `CUSTOM`。
 
 ### 4. 执行确定性检查和风险匹配验证

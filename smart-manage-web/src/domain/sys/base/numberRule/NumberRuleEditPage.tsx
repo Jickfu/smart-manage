@@ -1,6 +1,7 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Key, RefObject } from 'react';
-import { App, Button, Form, Input, InputNumber, Select, Table } from 'antd';
+import { Button, Form, Input, InputNumber, Select, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormListOperation } from 'antd/es/form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -352,7 +353,7 @@ const SegmentActions = ({
 
 const NumberPreview = () => {
   const form = Form.useFormInstance();
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const [preview, setPreview] = useState('');
   const { can } = usePermissionAccess(numberRuleAccess.prefix);
   const previewMutation = useMutation({
@@ -373,7 +374,7 @@ const NumberPreview = () => {
       };
       const firstError = validationError.errorFields?.[0];
       if (!firstError) return;
-      void message.error(firstError.errors[0] || '请完善编号格式后再生成预览');
+      void feedback.warning(firstError.errors[0] || '请完善编号格式后再生成预览');
       form.scrollToField(firstError.name, { focus: true });
     },
   });

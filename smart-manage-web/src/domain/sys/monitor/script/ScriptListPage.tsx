@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
-import { App, Button } from 'antd';
+import { Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -14,6 +15,7 @@ import { scriptAccess } from './permissions';
 import { scriptQueryKeys } from './queryKeys';
 import type { ScriptListItem } from './types';
 import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 
 const EDIT_KEY = componentKeys.scriptManageEdit;
 
@@ -26,7 +28,8 @@ const columnFeatures: ListColumnFeatures = {
 };
 
 export default function ScriptListPage(props: PageComponentProps) {
-  const { modal, message } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const queryClient = useQueryClient();
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
@@ -96,15 +99,15 @@ export default function ScriptListPage(props: PageComponentProps) {
       onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY)}
       onDelete={() => {
         if (selectedKeys.length === 0) {
-          message.warning('请选择要删除的脚本');
+          feedback.warning('请选择要删除的脚本');
           return;
         }
-        modal.confirm({
+        void confirmOperation({
+          type: 'delete',
           title: '确认删除选中的脚本？',
-          content: '执行历史中的脚本快照不会被删除。',
-          okText: '确认删除',
-          okButtonProps: { danger: true },
-          onOk: () => deleteMutation.mutateAsync(),
+          description: '执行历史中的脚本快照不会被删除。',
+          confirmText: '确认删除',
+          onConfirm: () => deleteMutation.mutateAsync(),
         });
       }}
       rowKey="id"

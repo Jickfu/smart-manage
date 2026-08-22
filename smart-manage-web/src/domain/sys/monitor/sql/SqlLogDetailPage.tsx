@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useQuery } from '@tanstack/react-query';
-import { App } from 'antd';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
@@ -21,7 +21,7 @@ const fields: EditField[] = [
 ];
 
 export default function SqlLogDetailPage(props: PageComponentProps) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const query = useQuery({
     queryKey: sqlQueryKeys.logDetail(props.billId),
     queryFn: () => sqlApi.detail(props.billId!),
@@ -32,9 +32,9 @@ export default function SqlLogDetailPage(props: PageComponentProps) {
     if (!sqlText) return;
     try {
       await navigator.clipboard.writeText(sqlText);
-      message.success('SQL 已复制');
+      feedback.success('SQL 已复制');
     } catch {
-      message.error('复制失败，请检查浏览器剪贴板权限');
+      feedback.error('复制失败，请检查浏览器剪贴板权限');
     }
   };
   return (

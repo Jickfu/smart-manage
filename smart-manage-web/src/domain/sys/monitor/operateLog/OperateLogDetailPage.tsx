@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
-import { App } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import type { EditField } from '@/domain/common/page/EditPage';
 import EditPage from '@/domain/common/page/EditPage';
@@ -37,7 +37,7 @@ const fields: EditField[] = [
 ];
 
 const OperateLogDetailPage = (props: PageComponentProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const detailQuery = useQuery({
     queryKey: operateLogQueryKeys.detail(props.billId),
     queryFn: () => operateLogApi.detail(props.billId!),
@@ -60,9 +60,9 @@ const OperateLogDetailPage = (props: PageComponentProps) => {
     try {
       // detail 即接口响应的 data 部分，复制时保留完整字段并格式化为可读 JSON。
       await navigator.clipboard.writeText(JSON.stringify(detail, null, 2));
-      message.success('日志数据已复制');
+      feedback.success('日志数据已复制');
     } catch {
-      message.error('复制失败，请检查浏览器剪贴板权限');
+      feedback.error('复制失败，请检查浏览器剪贴板权限');
     }
   };
 

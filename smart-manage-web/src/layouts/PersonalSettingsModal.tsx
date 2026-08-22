@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useState } from 'react';
-import { App, Button, Form, Upload } from 'antd';
+import { Button, Form, Upload } from 'antd';
 import { DeleteOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import AppModal from '@/domain/common/component/AppModal';
@@ -37,7 +38,7 @@ export default function PersonalSettingsModal({
   onProfileSaved,
   onPasswordChanged,
 }: PersonalSettingsModalProps) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const [profileForm] = Form.useForm<ProfileValues>();
   const [avatarSaving, setAvatarSaving] = useState(false);
   const [credentialType, setCredentialType] = useState<CredentialType>();
@@ -69,7 +70,7 @@ export default function PersonalSettingsModal({
           attachmentId && uploadSessionId ? { [attachmentId]: uploadSessionId } : {},
       });
       onProfileSaved(profile);
-      message.success('头像已更新');
+      feedback.success('头像已更新');
     } finally {
       setAvatarSaving(false);
     }
@@ -87,7 +88,7 @@ export default function PersonalSettingsModal({
       await saveAvatar(attachment.id, attachment.uploadSessionId);
       onSuccess?.(attachment);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '头像上传失败');
+      feedback.fromError(error, '头像上传失败');
       onError?.(error as Error);
     }
   };
@@ -150,7 +151,7 @@ export default function PersonalSettingsModal({
                       customRequest={uploadAvatar}
                       beforeUpload={(file) => {
                         if (AVATAR_TYPES.has(file.type)) return true;
-                        message.error('头像仅支持 JPG、PNG、WebP 格式');
+                        feedback.warning('头像仅支持 JPG、PNG、WebP 格式');
                         return Upload.LIST_IGNORE;
                       }}
                     >

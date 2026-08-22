@@ -1,6 +1,7 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import type { Key, ReactNode } from 'react';
-import { App, Form, Input, Switch, Table } from 'antd';
+import { Form, Input, Switch, Table } from 'antd';
 import type { FormListOperation } from 'antd/es/form';
 import type { ColumnsType } from 'antd/es/table';
 import RefSelector from '@/domain/common/component/RefSelector';
@@ -40,7 +41,7 @@ function OrganizationLongName({ fieldName }: { fieldName: number }) {
 
 export const UserAssignmentTable = forwardRef<UserAssignmentTableRef, UserAssignmentTableProps>(
   function UserAssignmentTable({ editable, onSelectionChange }, ref) {
-    const { message } = App.useApp();
+    const feedback = useOperationFeedback();
     const form = Form.useFormInstance();
     const orgRefSelector = useOrgRefSelector();
     const operationsRef = useRef<FormListOperation | null>(null);
@@ -59,7 +60,7 @@ export const UserAssignmentTable = forwardRef<UserAssignmentTableRef, UserAssign
         const assignments = form.getFieldValue('assignments') ?? [];
         const removesPrimary = selectedIndexes.some((index) => assignments[index]?.isPrimary);
         if (removesPrimary && selectedIndexes.length < assignments.length) {
-          message.warning('请先将其他任职设为主职');
+          feedback.warning('请先将其他任职设为主职');
           return;
         }
         operationsRef.current?.remove(selectedIndexes);
@@ -135,7 +136,7 @@ export const UserAssignmentTable = forwardRef<UserAssignmentTableRef, UserAssign
                     onChange={(checked) => {
                       if (!checked) {
                         form.setFieldValue(['assignments', row.name, 'isPrimary'], true);
-                        message.warning('请直接将其他任职设为主职');
+                        feedback.warning('请直接将其他任职设为主职');
                         return;
                       }
                       const assignments = (form.getFieldValue('assignments') ?? []).map(

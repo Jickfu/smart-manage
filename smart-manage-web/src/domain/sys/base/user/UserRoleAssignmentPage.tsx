@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { App, Button, Descriptions, Input, Splitter, Table } from 'antd';
+import { Button, Descriptions, Input, Splitter, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import RefSelector from '@/domain/common/component/RefSelector';
@@ -14,6 +14,7 @@ import { userAccess } from './permissions';
 import { userQueryKeys } from './queryKeys';
 import type { UserRoleOrganizationVO } from './types';
 import './UserRoleAssignmentPage.css';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 
 type RolesByOrgId = Record<string, RoleSelectVO[]>;
 
@@ -42,7 +43,7 @@ const canonicalize = (assignments: RolesByOrgId) =>
 
 /** 用户角色分配专用页面。 */
 const UserRoleAssignmentPage = ({ appNumber, tabKey, billId, context }: PageComponentProps) => {
-  const { modal } = App.useApp();
+  const confirmOperation = useOperationConfirm();
   const queryClient = useQueryClient();
   const [localAssignments, setLocalAssignments] = useState<RolesByOrgId | null>(null);
   const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(context?.orgId);
@@ -117,13 +118,13 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId, context }: PageComp
 
   const deleteSelectedRoles = () => {
     if (selectedRoleIds.length === 0 || !selectedOrganization) return;
-    modal.confirm({
+    void confirmOperation({
+      type: 'delete',
       title: '确认删除角色',
-      content: `将从组织“${selectedOrganization.org.name}”移除 ${selectedRoleIds.length} 个角色，是否继续？`,
-      okText: '删除',
-      okButtonProps: { danger: true },
+      description: `将从组织“${selectedOrganization.org.name}”移除 ${selectedRoleIds.length} 个角色，是否继续？`,
+      confirmText: '删除',
       cancelText: '取消',
-      onOk: () =>
+      onConfirm: () =>
         updateCurrentRoles(currentRoles.filter((role) => !selectedRoleIds.includes(role.id))),
     });
   };
@@ -139,12 +140,13 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId, context }: PageComp
       for (const roleId of nextIds) if (!initialIds.has(roleId)) addedCount += 1;
       for (const roleId of initialIds) if (!nextIds.has(roleId)) removedCount += 1;
     }
-    modal.confirm({
+    void confirmOperation({
+      type: 'normal',
       title: '确认保存角色分配',
-      content: `将为用户“${workspaceQuery.data.name}”新增 ${addedCount} 个角色关系、移除 ${removedCount} 个角色关系，是否保存？`,
-      okText: '保存',
+      description: `将为用户“${workspaceQuery.data.name}”新增 ${addedCount} 个角色关系、移除 ${removedCount} 个角色关系，是否保存？`,
+      confirmText: '保存',
       cancelText: '取消',
-      onOk: () => mutation.mutateAsync(),
+      onConfirm: () => mutation.mutateAsync(),
     });
   };
 

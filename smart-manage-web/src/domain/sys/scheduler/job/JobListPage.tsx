@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
-import { App, Button, Select, Tag } from 'antd';
+import { Button, Select, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -15,6 +16,7 @@ import { jobAccess } from './permissions';
 import { jobQueryKeys } from './queryKeys';
 import type { JobStatus, JobVO } from './types';
 import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 
 const EDIT_KEY = componentKeys.schedulerJobEdit;
 
@@ -38,7 +40,8 @@ const columnFeatures: ListColumnFeatures = {
 };
 
 const JobListPage = (props: PageComponentProps) => {
-  const { modal, message } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const [status, setStatus] = useState<JobStatus>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
@@ -53,7 +56,7 @@ const JobListPage = (props: PageComponentProps) => {
   const refreshAll = async (successMessage: string) => {
     setSelectedRowKeys([]);
     await queryClient.invalidateQueries({ queryKey: jobQueryKeys.all });
-    message.success(successMessage);
+    feedback.success(successMessage);
   };
   const commandMutation = useCommandMutation({
     mutationFn: async (command: 'delete' | 'pause' | 'resume' | 'trigger' | 'sync') => {
@@ -113,11 +116,12 @@ const JobListPage = (props: PageComponentProps) => {
 
   const confirmCommand = (command: 'delete' | 'trigger', title: string) => {
     if (!selected) return;
-    modal.confirm({
+    void confirmOperation({
+      type: command === 'delete' ? 'delete' : 'normal',
       title,
-      content: `${selected.jobGroup} / ${selected.jobName}`,
-      okButtonProps: command === 'delete' ? { danger: true } : undefined,
-      onOk: () => commandMutation.mutateAsync(command),
+      description: `${selected.jobGroup} / ${selected.jobName}`,
+      confirmText: command === 'delete' ? '删除' : '确定',
+      onConfirm: () => commandMutation.mutateAsync(command),
     });
   };
 

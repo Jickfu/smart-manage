@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { App } from 'antd';
 import { useWorkbenchStore } from '@/stores/workbench';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 
 type DirtyState = boolean | { readonly current: boolean };
 
@@ -10,24 +10,21 @@ export function useBeforeCloseGuard(
   tabKey: string | undefined,
   dirtyState: DirtyState,
 ): void {
-  const { modal } = App.useApp();
+  const confirmOperation = useOperationConfirm();
   useEffect(() => {
     if (!appNumber || !tabKey) return;
     const store = useWorkbenchStore.getState();
     store.registerBeforeClose(appNumber, tabKey, async () => {
       const dirty = typeof dirtyState === 'boolean' ? dirtyState : dirtyState.current;
       if (!dirty) return true;
-      return new Promise<boolean>((resolve) => {
-        modal.confirm({
-          title: '存在未保存的修改',
-          content: '关闭页面将丢失当前修改，是否继续？',
-          okText: '继续关闭',
-          cancelText: '留在页面',
-          onOk: () => resolve(true),
-          onCancel: () => resolve(false),
-        });
+      return confirmOperation({
+        type: 'warning',
+        title: '存在未保存的修改',
+        description: '关闭页面将丢失当前修改，是否继续？',
+        confirmText: '继续关闭',
+        cancelText: '留在页面',
       });
     });
     return () => store.unregisterBeforeClose(appNumber, tabKey);
-  }, [appNumber, dirtyState, modal, tabKey]);
+  }, [appNumber, confirmOperation, dirtyState, tabKey]);
 }

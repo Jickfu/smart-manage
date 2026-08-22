@@ -1,6 +1,7 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
-import { App, Button, DatePicker, Form, Input, Select, Table } from 'antd';
+import { Button, DatePicker, Form, Input, Select, Table } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
@@ -23,7 +24,7 @@ import { updateCurrentUserProfile } from '@/api/user';
 import { useUserStore } from '@/stores/user';
 
 const UserEditPage = (props: PageComponentProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const assignmentTableRef = useRef<UserAssignmentTableRef>(null);
   const [hasSelectedAssignments, setHasSelectedAssignments] = useState(false);
   const queryClient = useQueryClient();
@@ -88,7 +89,7 @@ const UserEditPage = (props: PageComponentProps) => {
           attachmentUploadSessions: {},
         });
         useUserStore.getState().setUserInfo({ ...currentUser, ...profile });
-        message.success('个人信息已保存');
+        feedback.success('个人信息已保存');
         return;
       }
       const savedId = await userApi.save({
@@ -139,7 +140,7 @@ const UserEditPage = (props: PageComponentProps) => {
         activateContentTab(appNumber, nextKey);
       }
       await queryClient.invalidateQueries({ queryKey: userQueryKeys.all });
-      message.success(isAddNew ? '新增成功' : '保存成功');
+      feedback.success(isAddNew ? '新增成功' : '保存成功');
     },
   });
   return (

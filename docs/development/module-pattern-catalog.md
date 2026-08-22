@@ -30,6 +30,8 @@
 | 编辑页明细操作区 | `smart-manage-web/src/domain/sys/base/numberRule/NumberRuleEditPage.tsx`、`smart-manage-web/src/domain/scm/procurement/purchaseRequisition/PurchaseRequisitionEditPage.tsx`；观察通过 `detailExtra` 将新增、删除、排序等操作归集到明细折叠面板标题栏右侧，表格只使用选择列确定操作目标 |
 | 实体引用选择器 | 公共交互见 `smart-manage-web/src/domain/common/component/RefSelector.tsx`；树表选择见 `smart-manage-web/src/domain/sys/base/org/refSelector/useOrgRefSelector.ts`；领域多选与组织范围见 `smart-manage-web/src/domain/sys/base/user/refSelector/useUserRefSelector.ts`；账号选择见 `smart-manage-web/src/domain/sys/message/email/refSelector/useEmailAccountRefSelector.ts` |
 | 通用业务弹框 | `smart-manage-web/src/domain/common/component/AppModal.tsx` |
+| 操作确认 | `smart-manage-web/src/domain/common/component/useOperationConfirm.ts`、`OperationConfirmProvider.tsx`、`OperationConfirmModal.tsx`；观察风险类型、遮罩行为、危险操作键盘限制和统一按钮区 |
+| 操作结果反馈 | `smart-manage-web/src/domain/common/component/useOperationFeedback.tsx`、`operationFeedbackPolicy.ts`；观察默认自动关闭、可选常驻与关闭按钮、语义颜色、最大宽度和稳定错误码分类 |
 | 公开 Service 与 TxService | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/service` |
 | 权限常量 | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/constant/PurchaseRequisitionPermission.java` |
 | 架构边界测试 | `smart-manage-api/src/test/java/sm/architecture/SystemDependencyBoundaryTests.java` |
@@ -52,6 +54,7 @@
 | 将编辑页明细操作放进折叠面板内容区或为明细表格增加“操作”列 | 操作位置不统一，并绕过标题操作区和批量选择约定 | 使用 `detailExtra` 或 `EditSectionCollapse` 分区的 `extra` 将操作归集到标题栏右侧，表格使用选择列确定目标；只有明确的特殊交互要求才允许偏离并说明原因 |
 | 顶部普通命令使用默认按钮，或将危险命令混排在常规命令中 | 页面主操作视觉不一致，危险操作难以识别且容易误触 | 普通命令统一使用 `primary`；上下文控件在前、主要命令和辅助命令居中、`danger` 危险命令最后 |
 | CUSTOM 页面自行实现 Modal、分页或固定表格高度 | 容易出现间距、滚动和操作位置不一致 | 复用 `AppModal`、通用分页和 flex 高度链 |
+| 页面直接使用 `Modal.confirm`、`Popconfirm` 或 `message.*` | 操作风险、遮罩行为、反馈级别和关闭方式不一致 | 确认操作使用 `useOperationConfirm`，结果反馈使用 `useOperationFeedback` |
 | 在 TSX 中使用内联样式快速修补布局 | 难以维护且绕过项目 CSS 约定 | 使用以 `sm-` 开头的 CSS 类 |
 | 通过权限前缀或组件路径推断 Feature | 稳定身份被命名偶然性绑架 | 在迁移和页面注册中显式关联 `featureKey` |
 | 外部调用放在数据库事务中并默认重试 | 可能造成长事务、重复副作用和不可判定结果 | 事务提交后调用或使用持久任务，并明确超时、幂等和补偿 |

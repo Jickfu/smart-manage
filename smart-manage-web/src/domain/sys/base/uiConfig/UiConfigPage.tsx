@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useRef, useState } from 'react';
-import { App, Form, Input } from 'antd';
+import { Form, Input } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { activeUiConfigQueryKey } from '@/api/uiConfig';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -26,7 +27,7 @@ interface UiConfigFormValues {
 }
 
 const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const [form] = Form.useForm<UiConfigFormValues>();
   const [dirty, setDirty] = useState(false);
@@ -76,7 +77,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       await query.refetch();
       await queryClient.invalidateQueries({ queryKey: activeUiConfigQueryKey });
       setDirty(false);
-      message.success('界面配置保存成功');
+      feedback.success('界面配置保存成功');
     },
   });
   const handleSave = async () => {
@@ -86,7 +87,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     } catch (error) {
       // 表单校验错误由字段自身展示，校验通过前不得进入后端请求的加载状态。
       if (!(error as { errorFields?: unknown[] }).errorFields) {
-        message.error(error instanceof Error ? error.message : '表单校验失败');
+        feedback.fromError(error, '表单校验失败');
       }
     }
   };
@@ -107,7 +108,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
             sessionUploadedIds.current.delete(attachmentId);
             void uiConfigApi
               .deleteAttachment(attachmentId, uploadSessions.current[attachmentId])
-              .catch(() => message.warning('未使用的临时图片清理失败，将由临时文件任务处理'));
+              .catch(() => feedback.warning('未使用的临时图片清理失败，将由临时文件任务处理'));
           }
           if (nextAttachmentId) {
             sessionUploadedIds.current.add(nextAttachmentId);

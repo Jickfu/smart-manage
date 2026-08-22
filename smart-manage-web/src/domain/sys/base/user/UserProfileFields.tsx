@@ -1,4 +1,5 @@
-import { App, Button, DatePicker, Form, Input, Select, Upload } from 'antd';
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
+import { Button, DatePicker, Form, Input, Select, Upload } from 'antd';
 import type { UploadProps } from 'antd';
 import { businessAttachmentApi } from '@/domain/common/attachment/api';
 import { UserAvatar } from './UserAvatar';
@@ -16,7 +17,7 @@ export function UserProfileFields({
   isAddNew,
   canReadSensitive,
 }: UserProfileFieldsProps) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const form = Form.useFormInstance();
   const name = Form.useWatch('name', form) as string | undefined;
   const number = Form.useWatch('number', form) as string | undefined;
@@ -38,13 +39,13 @@ export function UserProfileFields({
       form.setFieldValue('avatarUploadSessionId', attachment.uploadSessionId);
       onSuccess?.(attachment);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '头像上传失败');
+      feedback.fromError(error, '头像上传失败');
       onError?.(error as Error);
     }
   };
   const beforeUpload: UploadProps['beforeUpload'] = (file) => {
     if (ALLOWED_AVATAR_TYPES.has(file.type)) return true;
-    message.error('头像仅支持 JPG、PNG、WebP 格式');
+    feedback.warning('头像仅支持 JPG、PNG、WebP 格式');
     return Upload.LIST_IGNORE;
   };
 

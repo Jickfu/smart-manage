@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { App, Button, Tag } from 'antd';
+import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ListPage from '@/domain/common/page/ListPage';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -13,6 +13,7 @@ import { purchaseRequisitionAccess } from './permissions';
 import { purchaseRequisitionQueryKeys } from './queryKeys';
 import type { PurchaseRequisitionListVO } from './types';
 import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 
 const EDIT_COMPONENT_KEY = componentKeys.purchaseRequisitionEdit;
 
@@ -39,7 +40,7 @@ const columnFeatures: ListColumnFeatures = {
 };
 
 const PurchaseRequisitionListPage = (props: PageComponentProps) => {
-  const { modal } = App.useApp();
+  const confirmOperation = useOperationConfirm();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
@@ -97,10 +98,12 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
     const selectedIds = new Set(selectedRowKeys.map(String));
     const records = listQuery.records.filter((record) => selectedIds.has(record.id));
     if (records.length === 0) return;
-    modal.confirm({
+    void confirmOperation({
+      type: 'delete',
       title: '删除采购申请',
-      content: '只有暂存状态的采购申请可以删除，是否继续？',
-      onOk: () => deleteMutation.mutateAsync(records),
+      description: '只有暂存状态的采购申请可以删除，是否继续？',
+      confirmText: '删除',
+      onConfirm: () => deleteMutation.mutateAsync(records),
     });
   };
 

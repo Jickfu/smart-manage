@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
-import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
@@ -14,7 +14,7 @@ import { sysParamAccess } from './permissions';
 import { sysParamQueryKeys } from './queryKeys';
 
 const SysParamEditPage = (props: PageComponentProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const { appNumber, tabKey, operationType, billId } = props;
   const isAddNew = operationType === OperationType.ADDNEW;
@@ -100,7 +100,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
         activateContentTab(appNumber, nextKey);
       }
       await queryClient.invalidateQueries({ queryKey: sysParamQueryKeys.all });
-      message.success(isAddNew ? '新增成功' : '保存成功');
+      feedback.success(isAddNew ? '新增成功' : '保存成功');
     },
   });
   return (

@@ -1,7 +1,7 @@
-import { App } from 'antd';
 import { useMutation } from '@tanstack/react-query';
 import type { UseMutationOptions } from '@tanstack/react-query';
 import { ApiError } from '@/api/ApiError';
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 
 const DATA_CONFLICT_CODE = 100409;
 
@@ -18,28 +18,28 @@ export function useCommandMutation<TData = unknown, TVariables = void>({
   onSuccess,
   ...options
 }: CommandMutationOptions<TData, TVariables>) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   return useMutation<TData, Error, TVariables>({
     ...options,
     onSuccess: async (data, variables, result, context) => {
       try {
         await onSuccess?.(data, variables, result, context);
       } catch {
-        message.warning('操作已成功，但页面数据刷新失败，请手动刷新');
+        feedback.warning('操作已成功，但页面数据刷新失败，请手动刷新');
         return;
       }
       if (successMessage) {
-        message.success(
+        feedback.success(
           typeof successMessage === 'function' ? successMessage(variables) : successMessage,
         );
       }
     },
     onError: (error) => {
       if (error instanceof ApiError && error.code === DATA_CONFLICT_CODE) {
-        message.error('数据已被其他请求修改，请刷新后重试');
+        feedback.warning('数据已被其他请求修改，请刷新后重试');
         return;
       }
-      message.error(error.message || '操作失败');
+      feedback.fromError(error);
     },
   });
 }

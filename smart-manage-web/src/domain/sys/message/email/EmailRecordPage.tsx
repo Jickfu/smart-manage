@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
-import { App, Button, Tag } from 'antd';
+import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
@@ -12,6 +13,7 @@ import { emailApi } from './api';
 import { recordAccess } from './permissions';
 import type { EmailRecord } from './types';
 import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 const labels: Record<string, string> = {
   PENDING: '待发送',
   SENDING: '发送中',
@@ -37,7 +39,8 @@ const columnFeatures: ListColumnFeatures = {
   createTime: { label: '创建时间', filter: { type: 'date' }, sorter: true },
 };
 const EmailRecordPage = (props: PageComponentProps) => {
-  const { message, modal } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((s) => s.openBillTab);
   const queryClient = useQueryClient();
@@ -58,7 +61,7 @@ const EmailRecordPage = (props: PageComponentProps) => {
     onSuccess: async (_, kind) => {
       setSelectedKeys([]);
       await queryClient.invalidateQueries({ queryKey: ['email', 'records'] });
-      message.success(kind === 'retry' ? '已创建新的重发任务' : '已取消');
+      feedback.success(kind === 'retry' ? '已创建新的重发任务' : '已取消');
     },
   });
   const columns: ColumnsType<EmailRecord> = [
@@ -132,9 +135,12 @@ const EmailRecordPage = (props: PageComponentProps) => {
           loading: command.isPending,
           onClick: () =>
             selected &&
-            modal.confirm({
+            void confirmOperation({
+              type: 'normal',
               title: '确认创建新的重发任务？',
-              onOk: () => command.mutateAsync('retry'),
+              description: '系统将根据原邮件内容创建一条新的发送任务，是否继续？',
+              confirmText: '重新发送',
+              onConfirm: () => command.mutateAsync('retry'),
             }),
         },
         {

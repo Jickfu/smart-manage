@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useMemo, useState } from 'react';
-import { App, Button, Input, Popover, Table, Tooltip, Tree } from 'antd';
+import { Button, Input, Popover, Table, Tooltip, Tree } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { MessageOutlined } from '@ant-design/icons';
 import { UserAvatar } from '@/domain/sys/base/user/UserAvatar';
@@ -31,7 +32,7 @@ interface OrganizationTreeNode {
 }
 
 const Header = () => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const [themeOpen, setThemeOpen] = useState(false);
   const [themeSaving, setThemeSaving] = useState(false);
   const [userPanelOpen, setUserPanelOpen] = useState(false);
@@ -81,7 +82,7 @@ const Header = () => {
       }
       useHeaderTabsStore.getState().setAppPinned(tab.key, !tab.pinned);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '应用固定状态更新失败');
+      feedback.fromError(error, '应用固定状态更新失败');
     } finally {
       setPinSavingKeys((keys) => {
         const nextKeys = new Set(keys);
@@ -107,7 +108,7 @@ const Header = () => {
       clearUser();
       window.location.href = '/login.html';
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '退出登录失败');
+      feedback.fromError(error, '退出登录失败');
     }
   };
 
@@ -124,7 +125,7 @@ const Header = () => {
       await updateCurrentUserTheme(themeColor);
       setThemeColor(themeColor);
       setThemeOpen(false);
-      message.success('个人主题已更新');
+      feedback.success('个人主题已更新');
     } finally {
       setThemeSaving(false);
     }
@@ -211,7 +212,7 @@ const Header = () => {
       // 组织上下文影响应用、菜单和权限，刷新可确保所有服务端状态按新组织重新加载。
       window.location.reload();
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '切换组织失败');
+      feedback.fromError(error, '切换组织失败');
       setOrganizationSaving(false);
     }
   };

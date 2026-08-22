@@ -1,7 +1,7 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
 import {
   Alert,
-  App,
   Button,
   Card,
   Input,
@@ -33,7 +33,7 @@ const stateColors: Record<string, string> = {
 };
 
 export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>();
   const [selectedThreadId, setSelectedThreadId] = useState<number>();
   const [nameFilter, setNameFilter] = useState('');
@@ -95,9 +95,9 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
   const copyStack = async () => {
     try {
       await navigator.clipboard.writeText(selectedStackText);
-      message.success('线程栈已复制');
+      feedback.success('线程栈已复制');
     } catch {
-      message.error('复制失败，请检查浏览器剪贴板权限');
+      feedback.error('复制失败，请检查浏览器剪贴板权限');
     }
   };
   const pageSize = 20;

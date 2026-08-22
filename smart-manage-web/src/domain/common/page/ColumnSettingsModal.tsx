@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
-import { App, Button, Checkbox, ConfigProvider, InputNumber, Select, Space, Table } from 'antd';
+import { Button, Checkbox, ConfigProvider, InputNumber, Select, Space, Table } from 'antd';
 import AppModal from '@/domain/common/component/AppModal';
 import type { ThemeConfig } from 'antd';
 import type { ColumnsType } from 'antd/es/table/interface';
@@ -40,7 +41,7 @@ const ColumnSettingsModal = ({
   onCancel,
   onConfirm,
 }: ColumnSettingsModalProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const [draft, setDraft] = useState(settings);
   const [selectedKey, setSelectedKey] = useState<string | undefined>(settings[0]?.key);
 
@@ -164,7 +165,7 @@ const ColumnSettingsModal = ({
     const normalized = normalizeFixedColumnOrder(draft);
     const validationError = validateColumnSettings(normalized);
     if (validationError) {
-      void message.warning(validationError);
+      void feedback.warning(validationError);
       return;
     }
     onConfirm(normalized);

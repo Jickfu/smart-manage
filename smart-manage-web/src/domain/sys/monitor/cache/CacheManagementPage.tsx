@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Key } from 'react';
-import { Alert, App, Button, Tag, Tree } from 'antd';
+import { Alert, Button, Tag, Tree } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import ListTreePanel from '@/domain/common/page/ListTreePanel';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import { OperationType } from '@/domain/common/page/types';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
 import { useWorkbenchStore } from '@/stores/workbench';
@@ -26,7 +27,7 @@ const CACHE_VALUE_COMPONENT = 'sys/monitor/cache-value';
 const ALL_SCOPE: CacheScopeFilter = { scopeType: 'ALL' };
 
 export default function CacheManagementPage(props: PageComponentProps) {
-  const { modal } = App.useApp();
+  const confirmOperation = useOperationConfirm();
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const { can } = usePermissionAccess(cacheAccess.prefix);
   const queryClient = useQueryClient();
@@ -69,12 +70,12 @@ export default function CacheManagementPage(props: PageComponentProps) {
     scope.resourceKey != null &&
     scope.resourceKey !== 'monitor-instances';
   const confirmDelete = (entries: CacheEntry[]) =>
-    modal.confirm({
+    void confirmOperation({
+      type: 'delete',
       title: `删除 ${entries.length} 个缓存条目？`,
-      content: '删除后无法恢复，请确认这些缓存可以安全重建。',
-      okText: '确认删除',
-      okButtonProps: { danger: true },
-      onOk: () => deleteMutation.mutateAsync(entries.map(entryKey)),
+      description: '删除后无法恢复，请确认这些缓存可以安全重建。',
+      confirmText: '确认删除',
+      onConfirm: () => deleteMutation.mutateAsync(entries.map(entryKey)),
     });
   const columns: ColumnsType<CacheEntry> = [
     {
@@ -202,12 +203,12 @@ export default function CacheManagementPage(props: PageComponentProps) {
             danger: true,
             loading: clearAllMutation.isPending,
             onClick: () =>
-              modal.confirm({
+              void confirmOperation({
+                type: 'destructive',
                 title: '清空全部已登记应用缓存？',
-                content: '包含当前节点本地缓存和共享 Redis 应用缓存；不会执行 FLUSHDB。',
-                okText: '确认清空',
-                okButtonProps: { danger: true },
-                onOk: () => clearAllMutation.mutateAsync(),
+                description: '包含当前节点本地缓存和共享 Redis 应用缓存；不会执行 FLUSHDB。',
+                confirmText: '确认清空',
+                onConfirm: () => clearAllMutation.mutateAsync(),
               }),
           },
         ]}

@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
-import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ModalEditPage from '@/domain/common/page/ModalEditPage';
@@ -34,7 +34,7 @@ const fields: EditField[] = [
 
 /** 领域编辑弹框 */
 const DomainEditPage = ({ open, domainId, onClose, onSaved }: Props) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const isAddNew = domainId === null;
 
@@ -66,7 +66,7 @@ const DomainEditPage = ({ open, domainId, onClose, onSaved }: Props) => {
       seq: (values.seq as number) ?? 0,
     });
     await queryClient.invalidateQueries({ queryKey: domainQueryKeys.all });
-    message.success(isAddNew ? '新增成功' : '保存成功');
+    feedback.success(isAddNew ? '新增成功' : '保存成功');
     onSaved();
   };
   const saveMutation = useCommandMutation({

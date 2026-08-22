@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
-import { App, Form } from 'antd';
+import { Form } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
@@ -33,7 +34,7 @@ const fields: EditField[] = [
 ];
 
 export default function ScriptEditPage(props: PageComponentProps) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const isAddNew = props.operationType === OperationType.ADDNEW;
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
@@ -78,7 +79,7 @@ export default function ScriptEditPage(props: PageComponentProps) {
         activateContentTab(props.appNumber, nextKey);
       }
       await queryClient.invalidateQueries({ queryKey: scriptQueryKeys.all });
-      message.success(isAddNew ? '新增成功' : '保存成功');
+      feedback.success(isAddNew ? '新增成功' : '保存成功');
     },
   });
   return (

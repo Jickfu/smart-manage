@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { App, Button, Checkbox, Table } from 'antd';
+import { Button, Checkbox, Table } from 'antd';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AssignmentPage } from '@/domain/common/page/AssignmentPage';
@@ -33,7 +34,7 @@ const EMPTY_PERMISSIONS: PermissionListAllVO[] = [];
 
 /** 角色权限分配专用页面。 */
 const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageComponentProps) => {
-  const { modal } = App.useApp();
+  const confirmOperation = useOperationConfirm();
   const queryClient = useQueryClient();
   const [localIds, setLocalIds] = useState<string[] | null>(null);
   const [scope, setScope] = useState<PermissionAssignmentScope>({ type: 'all' });
@@ -127,12 +128,13 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
 
   const confirmSave = () => {
     if (!dirty || !detailQuery.data) return;
-    modal.confirm({
+    void confirmOperation({
+      type: 'normal',
       title: '确认分配权限',
-      content: `将为角色“${detailQuery.data.name}”新增 ${selectionDiff.addedIds.length} 项权限、移除 ${selectionDiff.removedIds.length} 项权限，是否保存？`,
-      okText: '保存',
+      description: `将为角色“${detailQuery.data.name}”新增 ${selectionDiff.addedIds.length} 项权限、移除 ${selectionDiff.removedIds.length} 项权限，是否保存？`,
+      confirmText: '保存',
       cancelText: '取消',
-      onOk: () => mutation.mutateAsync(),
+      onConfirm: () => mutation.mutateAsync(),
     });
   };
 

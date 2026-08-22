@@ -1,5 +1,7 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
-import { App, Button, Input, Tag } from 'antd';
+import { Button, Input, Tag } from 'antd';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
@@ -56,7 +58,8 @@ const filterTree = (nodes: BasicDataTreeNode[], keyword: string): BasicDataTreeN
 };
 
 const BasicDataListPage = (props: PageComponentProps) => {
-  const { message, modal } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const queryClient = useQueryClient();
   const [selectedNode, setSelectedNode] = useState<BasicDataTreeNode>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -202,11 +205,12 @@ const BasicDataListPage = (props: PageComponentProps) => {
                   onClick: async () => {
                     if (!selectedCategoryId) return;
                     const category = await basicDataApi.categoryDetail(selectedCategoryId);
-                    modal.confirm({
+                    void confirmOperation({
+                      type: 'delete',
                       title: '确认删除基础资料分类？',
-                      content: `${category.number} - ${category.name}`,
-                      okButtonProps: { danger: true },
-                      onOk: () =>
+                      description: `${category.number} - ${category.name}`,
+                      confirmText: '删除',
+                      onConfirm: () =>
                         deleteCategoryMutation.mutateAsync({
                           id: category.id,
                           version: category.version,
@@ -256,7 +260,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
         quickSearchPlaceholder="搜索编码/名称/长名称"
         onAddNew={() => {
           if (!selectedCategoryId) {
-            void message.warning('请先选择基础资料分类');
+            void feedback.warning('请先选择基础资料分类');
             return;
           }
           openAddNewTab(props.appNumber, EDIT_KEY, {
@@ -279,11 +283,13 @@ const BasicDataListPage = (props: PageComponentProps) => {
             onClick: () => {
               const record = selectedRecords[0];
               if (!record) return;
-              modal.confirm({
+              void confirmOperation({
+                type: 'delete',
                 title: '确认删除基础资料？',
-                content: `${record.number} - ${record.name}`,
-                okButtonProps: { danger: true },
-                onOk: () => deleteMutation.mutateAsync({ id: record.id, version: record.version }),
+                description: `${record.number} - ${record.name}`,
+                confirmText: '删除',
+                onConfirm: () =>
+                  deleteMutation.mutateAsync({ id: record.id, version: record.version }),
               });
             },
           },

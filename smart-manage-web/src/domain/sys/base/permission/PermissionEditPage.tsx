@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
-import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import ModalEditPage from '@/domain/common/page/ModalEditPage';
@@ -17,7 +17,7 @@ interface Props {
 }
 
 const PermissionEditPage = ({ open, permissionId, onClose, onSaved }: Props) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const isAddNew = permissionId === null;
   const featureRefSelector = useFeatureRefSelector();
@@ -77,7 +77,7 @@ const PermissionEditPage = ({ open, permissionId, onClose, onSaved }: Props) => 
         featureId: feature.id,
       });
       await queryClient.invalidateQueries({ queryKey: permissionQueryKeys.all });
-      message.success(isAddNew ? '新增成功' : '保存成功');
+      feedback.success(isAddNew ? '新增成功' : '保存成功');
       onSaved();
     },
   });

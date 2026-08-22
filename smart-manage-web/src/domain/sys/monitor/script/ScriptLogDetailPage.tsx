@@ -1,4 +1,4 @@
-import { App } from 'antd';
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useQuery } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
@@ -24,7 +24,7 @@ const fields: EditField[] = [
 ];
 
 export default function ScriptLogDetailPage(props: PageComponentProps) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const query = useQuery({
     queryKey: scriptQueryKeys.logDetail(props.billId),
     queryFn: () => scriptApi.logDetail(props.billId!),
@@ -34,9 +34,9 @@ export default function ScriptLogDetailPage(props: PageComponentProps) {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-      message.success(successMessage);
+      feedback.success(successMessage);
     } catch {
-      message.error('复制失败，请检查浏览器剪贴板权限');
+      feedback.error('复制失败，请检查浏览器剪贴板权限');
     }
   };
   return (

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { App, Button } from 'antd';
+import { Button } from 'antd';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
 import { useQuery } from '@tanstack/react-query';
@@ -36,7 +37,7 @@ type PermissionScope =
   | { type: 'feature'; id: string };
 
 const PermissionListPage = (props: PageComponentProps) => {
-  const { modal } = App.useApp();
+  const confirmOperation = useOperationConfirm();
   const { can } = usePermissionAccess(permissionAccess.prefix);
   const [scope, setScope] = useState<PermissionScope>({ type: 'all' });
   const appsQuery = useQuery({ queryKey: appQueryKeys.domainAppsAll(), queryFn: fetchAppsAll });
@@ -162,13 +163,13 @@ const PermissionListPage = (props: PageComponentProps) => {
         onAddNew={() => openEdit(null)}
         onDelete={() => {
           if (selectedRowKeys.length === 0) return;
-          modal.confirm({
+          void confirmOperation({
+            type: 'delete',
             title: '确认删除',
-            content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
-            okText: '删除',
-            okType: 'danger',
+            description: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
+            confirmText: '删除',
             cancelText: '取消',
-            onOk: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
+            onConfirm: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
           });
         }}
         onRefresh={async () => {

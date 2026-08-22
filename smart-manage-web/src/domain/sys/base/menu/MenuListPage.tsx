@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { App, Button, Tag } from 'antd';
+import { Button, Tag } from 'antd';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
 import { useQuery } from '@tanstack/react-query';
@@ -88,7 +89,7 @@ function toTreeNode(node: MenuCatalogNodeVO): DataNode {
 
 /** 菜单列表页 — 左侧按领域/应用/功能筛选，右侧按分组/页面展示完整层级。 */
 const MenuListPage = (props: PageComponentProps) => {
-  const { modal } = App.useApp();
+  const confirmOperation = useOperationConfirm();
   const [selectedNodeKey, setSelectedNodeKey] = useState(ROOT_NODE_KEY);
   const [selectedScope, setSelectedScope] = useState<MenuScope>({ type: 'root' });
   const [keyword, setKeyword] = useState('');
@@ -188,15 +189,15 @@ const MenuListPage = (props: PageComponentProps) => {
 
   const handleDelete = useCallback(() => {
     if (selectedRowKeys.length === 0) return;
-    modal.confirm({
+    void confirmOperation({
+      type: 'delete',
       title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
-      okText: '删除',
-      okType: 'danger',
+      description: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
+      confirmText: '删除',
       cancelText: '取消',
-      onOk: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
+      onConfirm: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
     });
-  }, [selectedRowKeys, deleteMutation, modal]);
+  }, [selectedRowKeys, deleteMutation, confirmOperation]);
 
   const columns: ColumnsType<MenuTreeVO> = [
     {

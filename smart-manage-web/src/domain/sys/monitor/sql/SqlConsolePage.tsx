@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useRef, useState } from 'react';
-import { App, Alert, Button, Empty, Space, Splitter, Table, Tag, Typography } from 'antd';
+import { Alert, Button, Empty, Space, Splitter, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlayCircleOutlined, ClearOutlined } from '@ant-design/icons';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -12,6 +13,7 @@ import SqlEditor from './SqlEditor';
 import type { SqlEditorRef } from './SqlEditor';
 import type { SqlExecutionResult } from './types';
 import './sqlConsole.css';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 
 const DEFAULT_SQL = 'SELECT current_database() AS database_name, now() AS server_time;';
 
@@ -26,7 +28,8 @@ function displayValue(value: unknown) {
 }
 
 export default function SqlConsolePage(_props: PageComponentProps) {
-  const { modal, message } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const [sqlText, setSqlText] = useState(DEFAULT_SQL);
   const [result, setResult] = useState<SqlExecutionResult>();
   const editorRef = useRef<SqlEditorRef>(null);
@@ -37,7 +40,7 @@ export default function SqlConsolePage(_props: PageComponentProps) {
   });
   const execute = (candidate = sqlText.trim()) => {
     if (!candidate) {
-      message.warning('请输入要执行的 SQL');
+      feedback.warning('请输入要执行的 SQL');
       return;
     }
     const run = () => executeMutation.mutate(candidate);
@@ -45,12 +48,12 @@ export default function SqlConsolePage(_props: PageComponentProps) {
       run();
       return;
     }
-    modal.confirm({
+    void confirmOperation({
+      type: 'destructive',
       title: '确认执行写入或结构变更 SQL？',
-      content: '该操作可能修改数据库。多条语句仅允许纯 INSERT，并会在同一事务中执行。',
-      okText: '确认执行',
-      okButtonProps: { danger: true },
-      onOk: run,
+      description: '该操作可能修改数据库。多条语句仅允许纯 INSERT，并会在同一事务中执行。',
+      confirmText: '确认执行',
+      onConfirm: run,
     });
   };
   const tableColumns = useMemo<ColumnsType<unknown[]>>(
@@ -92,12 +95,12 @@ export default function SqlConsolePage(_props: PageComponentProps) {
             danger
             icon={<ClearOutlined />}
             onClick={() =>
-              modal.confirm({
+              void confirmOperation({
+                type: 'destructive',
                 title: '确认清空 SQL？',
-                content: '清空后当前编辑内容和执行结果将无法恢复。',
-                okText: '确认清空',
-                okButtonProps: { danger: true },
-                onOk: () => {
+                description: '清空后当前编辑内容和执行结果将无法恢复。',
+                confirmText: '确认清空',
+                onConfirm: () => {
                   setSqlText('');
                   setResult(undefined);
                 },

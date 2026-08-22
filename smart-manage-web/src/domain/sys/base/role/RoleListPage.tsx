@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { App, Button } from 'antd';
+import { Button } from 'antd';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import type { ColumnsType } from 'antd/es/table';
 import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
@@ -27,7 +28,7 @@ const columnFeatures: ListColumnFeatures = {
 
 /** 角色管理列表页 */
 const RoleListPage = (props: PageComponentProps) => {
-  const { modal } = App.useApp();
+  const confirmOperation = useOperationConfirm();
   const {
     records,
     total,
@@ -66,15 +67,15 @@ const RoleListPage = (props: PageComponentProps) => {
 
   const handleDelete = useCallback(() => {
     if (selectedRowKeys.length === 0) return;
-    modal.confirm({
+    void confirmOperation({
+      type: 'delete',
       title: '确认删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
-      okText: '删除',
-      okType: 'danger',
+      description: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
+      confirmText: '删除',
       cancelText: '取消',
-      onOk: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
+      onConfirm: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
     });
-  }, [selectedRowKeys, deleteMutation, modal]);
+  }, [selectedRowKeys, deleteMutation, confirmOperation]);
 
   const handleAssignPermissions = useCallback(() => {
     if (selectedRowKeys.length !== 1) return;

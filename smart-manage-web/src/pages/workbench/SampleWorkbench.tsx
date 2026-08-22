@@ -1,4 +1,5 @@
-import { App, Button, Card, Progress, Table, Tag } from 'antd';
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
+import { Button, Card, Progress, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   AppstoreOutlined,
@@ -84,10 +85,10 @@ const quickActions = [
 
 /** 工作台样例，集中覆盖快捷入口、关键数字、分析、列表和进度类卡片。 */
 const SampleWorkbench = ({ title = '工作台' }: SampleWorkbenchProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
 
   const showSampleNotice = () => {
-    message.info('当前为工作台样例数据');
+    feedback.info('当前为工作台样例数据');
   };
 
   return (

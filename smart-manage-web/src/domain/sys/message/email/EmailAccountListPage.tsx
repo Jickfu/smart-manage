@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
-import { App, Button, Tag } from 'antd';
+import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/ListPage';
@@ -9,6 +10,7 @@ import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
 import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import { emailApi } from './api';
 import { accountAccess } from './permissions';
 import { emailAccountQueryKeys } from './queryKeys';
@@ -35,7 +37,8 @@ const columnFeatures: ListColumnFeatures = {
 };
 
 const EmailAccountListPage = (props: PageComponentProps) => {
-  const { message, modal } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
@@ -63,7 +66,7 @@ const EmailAccountListPage = (props: PageComponentProps) => {
     onSuccess: async (result) => {
       setSelectedKeys([]);
       await queryClient.invalidateQueries({ queryKey: emailAccountQueryKeys.all });
-      message.success(typeof result === 'string' ? result : '操作成功');
+      feedback.success(typeof result === 'string' ? result : '操作成功');
     },
   });
   const columns: ColumnsType<EmailAccount> = [
@@ -138,10 +141,12 @@ const EmailAccountListPage = (props: PageComponentProps) => {
           loading: command.isPending,
           onClick: () =>
             selected &&
-            modal.confirm({
+            void confirmOperation({
+              type: 'delete',
               title: '确认删除发信账号？',
-              content: selected.name,
-              onOk: () => command.mutateAsync('delete'),
+              description: selected.name,
+              confirmText: '删除',
+              onConfirm: () => command.mutateAsync('delete'),
             }),
         },
       ]}

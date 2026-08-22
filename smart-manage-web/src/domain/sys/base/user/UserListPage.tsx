@@ -1,5 +1,7 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useCallback, useMemo, useState } from 'react';
-import { App, Button, Checkbox, Form, Input, Modal, Space, Tag, Typography } from 'antd';
+import { Button, Checkbox, Form, Input, Modal, Space, Tag, Typography } from 'antd';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import { CheckOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
@@ -79,7 +81,8 @@ const AssignmentCells = ({
 );
 
 const UserListPage = (props: PageComponentProps) => {
-  const { message, modal } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const [selectedTreeKey, setSelectedTreeKey] = useState<string>();
   const [treeKeyword, setTreeKeyword] = useState('');
   const [includeDescendants, setIncludeDescendants] = useState(false);
@@ -325,11 +328,12 @@ const UserListPage = (props: PageComponentProps) => {
         filterSummary={keyword ? `关键字：${keyword}` : undefined}
         onAddNew={() => openAddNewTab(props.appNumber, USER_EDIT_KEY)}
         onDelete={() =>
-          modal.confirm({
+          void confirmOperation({
+            type: 'delete',
             title: '确认删除',
-            content: `确定删除选中的 ${selectedRowKeys.length} 个用户吗？`,
-            okType: 'danger',
-            onOk: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
+            description: `确定删除选中的 ${selectedRowKeys.length} 个用户吗？`,
+            confirmText: '删除',
+            onConfirm: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
           })
         }
         onEnable={() => enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: true })}
@@ -346,10 +350,12 @@ const UserListPage = (props: PageComponentProps) => {
             loading: resetPasswordMutation.isPending,
             onClick: () => {
               if (!selectedUser) return;
-              modal.confirm({
+              void confirmOperation({
+                type: 'destructive',
                 title: '确认重置密码',
-                content: `确定重置用户“${selectedUser.username}”的密码吗？`,
-                onOk: async () => {
+                description: `确定重置用户“${selectedUser.username}”的密码吗？`,
+                confirmText: '重置密码',
+                onConfirm: async () => {
                   setResetUsername(selectedUser.username);
                   await resetPasswordMutation.mutateAsync(selectedUser.id);
                 },
@@ -420,7 +426,7 @@ const UserListPage = (props: PageComponentProps) => {
             onClick={async () => {
               if (resetPassword) {
                 await navigator.clipboard.writeText(resetPassword);
-                message.success('新密码已复制');
+                feedback.success('新密码已复制');
               }
             }}
           >
@@ -503,7 +509,7 @@ const UserListPage = (props: PageComponentProps) => {
             onClick={async () => {
               if (temporaryLoginCredential) {
                 await navigator.clipboard.writeText(temporaryLoginCredential);
-                message.success('代登录密码已复制');
+                feedback.success('代登录密码已复制');
               }
             }}
           >

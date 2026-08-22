@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useRef, useState } from 'react';
-import { App, Alert, Button, Empty, Select, Space, Splitter, Tag, Typography } from 'antd';
+import { Alert, Button, Empty, Select, Space, Splitter, Tag, Typography } from 'antd';
 import { ClearOutlined, PlayCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -16,6 +17,7 @@ import type { ScriptEditorRef } from './ScriptEditor';
 import type { ScriptExecutionResult, ScriptTransactionMode } from './types';
 import { scriptTemplates } from './scriptTemplates';
 import './scriptConsole.css';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 
 const DEFAULT_SCRIPT = `console.log('Hello Smart Manage');
 return { success: true };`;
@@ -25,7 +27,8 @@ const statusColor = { SUCCESS: 'success', ERROR: 'error', TIMEOUT: 'warning' } a
 const HELP_COMPONENT_KEY = componentKeys.scriptHelp;
 
 export default function ScriptConsolePage(props: PageComponentProps) {
-  const { modal, message } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const openCustomTab = useWorkbenchStore((state) => state.openCustomTab);
   const editorRef = useRef<ScriptEditorRef>(null);
   const { can } = usePermissionAccess(scriptAccess.prefix);
@@ -52,19 +55,20 @@ export default function ScriptConsolePage(props: PageComponentProps) {
 
   const execute = (candidate: string) => {
     if (!candidate.trim()) {
-      message.warning('请输入要执行的脚本');
+      feedback.warning('请输入要执行的脚本');
       return;
     }
-    modal.confirm({
+    void confirmOperation({
+      type: 'destructive',
       title:
         transactionMode === 'ATOMIC' ? '确认以原子事务执行脚本？' : '确认以非事务模式执行脚本？',
-      content:
+      description:
         transactionMode === 'ATOMIC'
           ? '加入当前 Spring 事务的数据库操作将在失败时回滚；独立事务、异步任务和外部副作用无法回滚。'
           : '脚本失败时，已经完成的数据库操作或外部副作用可能不会回滚。',
-      okText: '确认执行',
-      okButtonProps: { danger: true },
-      onOk: () => executeMutation.mutate({ scriptId, content: candidate.trim(), transactionMode }),
+      confirmText: '确认执行',
+      onConfirm: () =>
+        executeMutation.mutateAsync({ scriptId, content: candidate.trim(), transactionMode }),
     });
   };
 
@@ -94,11 +98,12 @@ export default function ScriptConsolePage(props: PageComponentProps) {
             onChange={(templateKey) => {
               const template = scriptTemplates.find((item) => item.key === templateKey);
               if (!template) return;
-              modal.confirm({
+              void confirmOperation({
+                type: 'warning',
                 title: `载入“${template.name}”模板？`,
-                content: '当前编辑器内容将被模板替换，已保存的脚本不会受到影响。',
-                okText: '确认载入',
-                onOk: () => {
+                description: '当前编辑器内容将被模板替换，已保存的脚本不会受到影响。',
+                confirmText: '确认载入',
+                onConfirm: () => {
                   setContent(template.content);
                   setScriptId(undefined);
                   setResult(undefined);
@@ -145,12 +150,12 @@ export default function ScriptConsolePage(props: PageComponentProps) {
             danger
             icon={<ClearOutlined />}
             onClick={() =>
-              modal.confirm({
+              void confirmOperation({
+                type: 'destructive',
                 title: '确认清空脚本？',
-                content: '清空后当前编辑内容和执行结果将无法恢复。',
-                okText: '确认清空',
-                okButtonProps: { danger: true },
-                onOk: () => {
+                description: '清空后当前编辑内容和执行结果将无法恢复。',
+                confirmText: '确认清空',
+                onConfirm: () => {
                   setContent('');
                   setScriptId(undefined);
                   setResult(undefined);

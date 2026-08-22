@@ -1,4 +1,4 @@
-import { App } from 'antd';
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { roleQueryKeys } from '@/domain/sys/base/role/queryKeys';
@@ -7,7 +7,7 @@ import { userQueryKeys } from './queryKeys';
 
 /** 用户删除命令及其缓存一致性规则。 */
 export function useUserDeleteMutation(onSuccess: () => void | Promise<void>) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   return useCommandMutation({
     mutationFn: (ids: string[]) => Promise.all(ids.map((id) => userApi.delete(id))),
@@ -17,7 +17,7 @@ export function useUserDeleteMutation(onSuccess: () => void | Promise<void>) {
         queryClient.invalidateQueries({ queryKey: userQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: roleQueryKeys.all }),
       ]);
-      message.success('删除成功');
+      feedback.success('删除成功');
       await onSuccess();
     },
   });

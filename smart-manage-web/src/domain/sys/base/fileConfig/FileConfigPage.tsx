@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useState } from 'react';
-import { App, Form, Input, InputNumber, Select, Switch } from 'antd';
+import { Form, Input, InputNumber, Select, Switch } from 'antd';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { EditSectionCollapse } from '@/domain/common/page/EditSectionCollapse';
@@ -13,7 +14,7 @@ import type { FileConfigSaveForm } from './types';
 import './FileConfigPage.css';
 
 const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const [form] = Form.useForm<FileConfigSaveForm>();
   const [dirty, setDirty] = useState(false);
   const query = useQuery({
@@ -52,7 +53,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       });
       await query.refetch();
       setDirty(false);
-      message.success('存储配置保存成功');
+      feedback.success('存储配置保存成功');
     },
   });
   const testMutation = useMutation({
@@ -65,8 +66,8 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
         ftpDir: values.ftpDir,
         ftpPassiveMode: values.ftpPassiveMode,
       }),
-    onSuccess: (result) => message.success(result || 'FTP 连接成功'),
-    onError: (error) => message.error(error instanceof Error ? error.message : 'FTP 连接失败'),
+    onSuccess: (result) => feedback.success(result || 'FTP 连接成功'),
+    onError: (error) => feedback.fromError(error, 'FTP 连接失败'),
   });
   const handleSave = async () => {
     try {
@@ -75,7 +76,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     } catch (error) {
       // 表单校验错误由字段自身展示，校验通过前不得进入后端请求的加载状态。
       if (!(error as { errorFields?: unknown[] }).errorFields) {
-        message.error(error instanceof Error ? error.message : '表单校验失败');
+        feedback.fromError(error, '表单校验失败');
       }
     }
   };
@@ -101,7 +102,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       testMutation.mutate(values);
     } catch (error) {
       if (!(error as { errorFields?: unknown[] }).errorFields) {
-        message.error(error instanceof Error ? error.message : '表单校验失败');
+        feedback.fromError(error, '表单校验失败');
       }
     }
   };

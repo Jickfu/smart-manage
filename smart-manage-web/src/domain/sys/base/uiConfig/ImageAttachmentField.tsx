@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useMemo } from 'react';
-import { App, Button, Upload } from 'antd';
+import { Button, Upload } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import { resolveAssetUrl } from '@/utils/assetUrl';
@@ -22,7 +23,7 @@ export function ImageAttachmentField({
   disabled,
   onChange,
 }: ImageAttachmentFieldProps) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const resolvedImageUrl = resolveAssetUrl(imageUrl);
   useEffect(
     () => () => {
@@ -52,7 +53,7 @@ export function ImageAttachmentField({
       onChange(attachment.id, previewUrl, attachment.uploadSessionId);
       onSuccess?.(attachment);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '图片上传失败');
+      feedback.fromError(error, '图片上传失败');
       onError?.(error as Error);
     }
   };
@@ -66,11 +67,11 @@ export function ImageAttachmentField({
       customRequest={customRequest}
       beforeUpload={(file) => {
         if (!file.type.startsWith('image/')) {
-          message.error('只能上传图片文件');
+          feedback.warning('只能上传图片文件');
           return Upload.LIST_IGNORE;
         }
         if (file.size > 5 * 1024 * 1024) {
-          message.error('图片大小不能超过 5 MB');
+          feedback.warning('图片大小不能超过 5 MB');
           return Upload.LIST_IGNORE;
         }
         return true;

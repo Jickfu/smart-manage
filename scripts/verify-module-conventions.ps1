@@ -100,6 +100,25 @@ Assert-NoFileMatch `
     -Pattern '\bstyle\s*=' `
     -Message 'Domain TSX must not use inline style'
 
+$frontendSourceRoot = Resolve-RepositoryPath 'smart-manage-web/src'
+$operationFeedbackImplementation = Resolve-RepositoryPath 'smart-manage-web/src/domain/common/component/useOperationFeedback.tsx'
+foreach ($frontendFile in Get-ChildItem -LiteralPath $frontendSourceRoot -Recurse -File -Include '*.ts', '*.tsx') {
+    if ($frontendFile.FullName -eq $operationFeedbackImplementation) {
+        continue
+    }
+    $content = Get-Content -Raw -LiteralPath $frontendFile.FullName
+    if ($content -match '\bmessage\.(success|warning|error|info|open)\s*\(') {
+        $relativeFile = Get-RepositoryRelativePath $frontendFile.FullName
+        Add-Violation "Frontend operation feedback must use useOperationFeedback: $relativeFile"
+    }
+}
+
+Assert-NoFileMatch `
+    -RelativeDirectory 'smart-manage-web/src' `
+    -Filter '*.tsx' `
+    -Pattern '\bModal\.confirm\s*\(|<Popconfirm\b' `
+    -Message 'Frontend operation confirmation must use useOperationConfirm'
+
 Assert-NoFileMatch `
     -RelativeDirectory 'smart-manage-api/src/main/java' `
     -Filter '*Controller.java' `
@@ -150,4 +169,4 @@ if ($violations.Count -gt 0) {
     exit 1
 }
 
-Write-Host "Module convention verification passed for governance routing, $($registrationFiles.Count) page registration file(s), frontend inline styles, and backend controllers." -ForegroundColor Green
+Write-Host "Module convention verification passed for governance routing, $($registrationFiles.Count) page registration file(s), frontend operation interactions, inline styles, and backend controllers." -ForegroundColor Green

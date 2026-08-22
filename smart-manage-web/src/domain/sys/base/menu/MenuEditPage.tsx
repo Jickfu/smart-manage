@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
-import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
@@ -43,7 +43,7 @@ function validateExternalUrl(_: unknown, rawValue: unknown) {
 
 /** 菜单编辑页 — 全页 Tab，3 个 RefSelector + 层级联动 */
 const MenuEditPage = (props: PageComponentProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const { appNumber, tabKey, operationType, billId } = props;
   const isAddNew = operationType === OperationType.ADDNEW;
@@ -320,7 +320,7 @@ const MenuEditPage = (props: PageComponentProps) => {
       activateContentTab(appNumber, createBillTabKey(props.componentKey, savedId));
     }
     await queryClient.invalidateQueries({ queryKey: menuQueryKeys.all });
-    message.success(isAddNew ? '新增成功' : '保存成功');
+    feedback.success(isAddNew ? '新增成功' : '保存成功');
   };
   const saveMutation = useCommandMutation({
     mutationFn: handleSave,

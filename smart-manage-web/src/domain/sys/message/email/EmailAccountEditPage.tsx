@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
-import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
@@ -15,7 +15,7 @@ import { emailAccountQueryKeys } from './queryKeys';
 import type { AccountForm } from './types';
 
 const EmailAccountEditPage = (props: PageComponentProps) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const { appNumber, tabKey, billId, operationType } = props;
   const isAdd = operationType === OperationType.ADDNEW;
@@ -141,7 +141,7 @@ const EmailAccountEditPage = (props: PageComponentProps) => {
         activateContentTab(appNumber, next);
       }
       await queryClient.invalidateQueries({ queryKey: emailAccountQueryKeys.all });
-      message.success(isAdd ? '新增成功' : '保存成功');
+      feedback.success(isAdd ? '新增成功' : '保存成功');
     },
   });
   return (

@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { memo, useCallback } from 'react';
-import { App, Spin } from 'antd';
+import { Spin } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { menuQueryKeys } from '@/domain/sys/base/menu/queryKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
@@ -19,7 +20,7 @@ interface Props {
 }
 
 const Workbench = ({ appNumber }: Props) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const ws = useWorkbenchStore((s) => s.workspaces[appNumber]);
   const openListTab = useWorkbenchStore((s) => s.openListTab);
   const openCustomTab = useWorkbenchStore((s) => s.openCustomTab);
@@ -49,10 +50,10 @@ const Workbench = ({ appNumber }: Props) => {
           openListTab(appNumber, action.componentKey);
         }
       } catch (error) {
-        message.error(error instanceof Error ? error.message : '菜单配置无效');
+        feedback.fromError(error, '菜单配置无效');
       }
     },
-    [appNumber, message, openCustomTab, openExternalLinkTab, openListTab],
+    [appNumber, feedback, openCustomTab, openExternalLinkTab, openListTab],
   );
 
   if (!ws) return null;

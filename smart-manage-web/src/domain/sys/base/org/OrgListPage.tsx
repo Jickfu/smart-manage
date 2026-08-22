@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { App, Button, Checkbox, Input, Tag } from 'antd';
+import { Button, Checkbox, Input, Tag } from 'antd';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -76,7 +77,7 @@ const flattenTree = (nodes: OrgTreeNode[]): OrgTreeNode[] => {
 };
 
 const OrgListPage = (props: PageComponentProps) => {
-  const { modal } = App.useApp();
+  const confirmOperation = useOperationConfirm();
   const queryClient = useQueryClient();
   const [selectedTreeKey, setSelectedTreeKey] = useState<string>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -226,13 +227,14 @@ const OrgListPage = (props: PageComponentProps) => {
 
   const confirmArchive = (archived: boolean) => {
     const actionLabel = archived ? '封存' : '解封';
-    modal.confirm({
+    void confirmOperation({
+      type: archived ? 'destructive' : 'normal',
       title: `确认${actionLabel}所选组织？`,
-      content: archived
+      description: archived
         ? `将处理 ${selectedRowKeys.length} 个组织。封存后组织会同时禁用，且不能继续编辑。`
         : `将处理 ${selectedRowKeys.length} 个组织。解封后组织仍保持禁用。`,
-      okButtonProps: archived ? { danger: true } : undefined,
-      onOk: () => archiveMutation.mutateAsync({ ids: selectedRowKeys.map(String), archived }),
+      confirmText: actionLabel,
+      onConfirm: () => archiveMutation.mutateAsync({ ids: selectedRowKeys.map(String), archived }),
     });
   };
 

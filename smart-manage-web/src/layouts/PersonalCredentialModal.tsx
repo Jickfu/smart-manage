@@ -1,5 +1,6 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
-import { App, Button, Form, Input, Select } from 'antd';
+import { Button, Form, Input, Select } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { sm2 } from 'sm-crypto';
 import AppModal from '@/domain/common/component/AppModal';
@@ -41,7 +42,7 @@ export default function PersonalCredentialModal({
   onProfileSaved,
   onPasswordChanged,
 }: PersonalCredentialModalProps) {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const [verifyForm] = Form.useForm<VerifyValues>();
   const [changeForm] = Form.useForm<ChangeValues>();
   const [step, setStep] = useState<'verify' | 'change'>('verify');
@@ -59,7 +60,7 @@ export default function PersonalCredentialModal({
           encryptedPassword,
           sm2.doEncrypt(change.value, publicKey, 1),
         );
-        message.success('密码已修改，请重新登录');
+        feedback.success('密码已修改，请重新登录');
         onPasswordChanged();
       } else {
         const profile = await updateCurrentUserContact({
@@ -69,7 +70,7 @@ export default function PersonalCredentialModal({
           value: change.value.trim(),
         });
         onProfileSaved(profile);
-        message.success(type === 'PHONE' ? '手机号已修改' : '邮箱已修改');
+        feedback.success(type === 'PHONE' ? '手机号已修改' : '邮箱已修改');
         onClose();
       }
     } finally {

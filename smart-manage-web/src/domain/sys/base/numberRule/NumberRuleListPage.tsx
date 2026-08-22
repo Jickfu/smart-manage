@@ -1,5 +1,7 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
-import { App, Button, Tag } from 'antd';
+import { Button, Tag } from 'antd';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -71,7 +73,8 @@ const buildTree = (references: NumberReference[]): DataNode[] => {
 };
 
 const NumberRuleListPage = (props: PageComponentProps) => {
-  const { modal, message } = App.useApp();
+  const feedback = useOperationFeedback();
+  const confirmOperation = useOperationConfirm();
   const [scope, setScope] = useState<NumberRuleScope>({ type: 'all' });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
@@ -108,7 +111,7 @@ const NumberRuleListPage = (props: PageComponentProps) => {
     onSuccess: async () => {
       setSelectedRowKeys([]);
       await queryClient.invalidateQueries({ queryKey: numberRuleQueryKeys.all });
-      message.success('删除成功');
+      feedback.success('删除成功');
     },
   });
   const enabledMutation = useEnabledMutation(numberRuleApi.setEnabled, async () => {
@@ -120,7 +123,7 @@ const NumberRuleListPage = (props: PageComponentProps) => {
     onSuccess: async () => {
       setSelectedRowKeys([]);
       await queryClient.invalidateQueries({ queryKey: numberRuleQueryKeys.all });
-      message.success('默认规则已切换');
+      feedback.success('默认规则已切换');
     },
   });
   const columns: ColumnsType<NumberRuleVO> = [
@@ -195,10 +198,12 @@ const NumberRuleListPage = (props: PageComponentProps) => {
       onAddNew={() => openAddNewTab(props.appNumber, componentKeys.numberRuleEdit)}
       onEnable={() => enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: true })}
       onDisable={() =>
-        modal.confirm({
+        void confirmOperation({
+          type: 'warning',
           title: '确认停用所选编号规则？',
-          content: '正在使用的规则会被后端拒绝停用，请先切换对应业务引用。',
-          onOk: () =>
+          description: '正在使用的规则会被后端拒绝停用，请先切换对应业务引用。',
+          confirmText: '停用',
+          onConfirm: () =>
             enabledMutation.mutateAsync({ ids: selectedRowKeys.map(String), enabled: false }),
         })
       }
@@ -216,10 +221,12 @@ const NumberRuleListPage = (props: PageComponentProps) => {
           onClick: () => {
             const record = selectedRecords[0];
             if (!record) return;
-            modal.confirm({
+            void confirmOperation({
+              type: 'normal',
               title: '确认切换默认编号规则？',
-              content: `之后新生成的编号将使用：${record.name}`,
-              onOk: () => setDefaultMutation.mutateAsync(record.id),
+              description: `之后新生成的编号将使用：${record.name}`,
+              confirmText: '设为默认',
+              onConfirm: () => setDefaultMutation.mutateAsync(record.id),
             });
           },
         },
@@ -233,11 +240,13 @@ const NumberRuleListPage = (props: PageComponentProps) => {
           onClick: () => {
             const record = selectedRecords[0];
             if (!record) return;
-            modal.confirm({
+            void confirmOperation({
+              type: 'delete',
               title: '确认删除编号规则？',
-              content: record.ruleKey,
-              okButtonProps: { danger: true },
-              onOk: () => deleteMutation.mutateAsync({ id: record.id, version: record.version }),
+              description: record.ruleKey,
+              confirmText: '删除',
+              onConfirm: () =>
+                deleteMutation.mutateAsync({ id: record.id, version: record.version }),
             });
           },
         },

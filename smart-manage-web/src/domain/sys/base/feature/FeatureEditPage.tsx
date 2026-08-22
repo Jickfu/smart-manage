@@ -1,5 +1,5 @@
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
-import { App } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ModalEditPage from '@/domain/common/page/ModalEditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
@@ -15,7 +15,7 @@ interface Props {
 }
 
 const FeatureEditPage = ({ open, featureId, onClose }: Props) => {
-  const { message } = App.useApp();
+  const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: featureQueryKeys.detail(featureId),
@@ -58,7 +58,7 @@ const FeatureEditPage = ({ open, featureId, onClose }: Props) => {
         visible: Boolean(values.visible),
       });
       await queryClient.invalidateQueries({ queryKey: featureQueryKeys.all });
-      message.success('保存成功');
+      feedback.success('保存成功');
       onClose();
     },
   });
