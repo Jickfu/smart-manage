@@ -131,35 +131,3 @@
   align-items: center;
   gap: 8px;
 }
-
-.sm-user-assignment-editor .ant-form-item {
-  margin-bottom: 0;
-}
-
-.sm-user-assignment-editor .ant-table-tbody > tr > td {
-  padding: 0 1px !important;
-}
-
-.sm-user-assignment-editor .ant-table-thead > tr > th {
-  padding-block: 5px !important;
-}
-
-.sm-user-assignment-editor .ant-input,
-.sm-user-assignment-editor .ant-select {
-  width: 100%;
-  border-radius: 0;
-}
-
-.sm-user-assignment-required {
-  margin-inline-end: 4px;
-  color: var(--ant-color-error);
-}
-
-.sm-user-assignment-error {
-  min-height: 30px;
-  padding: 6px 12px;
-  border-top: 1px solid var(--ant-color-error-border);
-  color: var(--ant-color-error);
-  background: var(--ant-color-error-bg);
-  font-size: 12px;
-}

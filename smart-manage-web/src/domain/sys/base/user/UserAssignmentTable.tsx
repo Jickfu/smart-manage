@@ -1,12 +1,16 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
-import type { Key, ReactNode } from 'react';
-import { Form, Input, Switch, Table } from 'antd';
+import type { Key } from 'react';
+import { Form, Input, Switch } from 'antd';
 import type { FormListOperation } from 'antd/es/form';
 import type { ColumnsType } from 'antd/es/table';
 import RefSelector from '@/domain/common/component/RefSelector';
 import { useOrgRefSelector } from '@/domain/sys/base/org/refSelector/useOrgRefSelector';
 import type { OrgRefRecord } from '@/domain/sys/base/org/refSelector/useOrgRefSelector';
+import {
+  EditableDetailTable,
+  RequiredDetailColumnTitle,
+} from '@/domain/common/component/EditableDetailTable';
 
 interface UserAssignmentTableProps {
   editable: boolean;
@@ -21,15 +25,6 @@ interface AssignmentRow {
 export interface UserAssignmentTableRef {
   add: () => void;
   removeSelected: () => void;
-}
-
-function RequiredTitle({ children }: { children: ReactNode }) {
-  return (
-    <span>
-      <span className="sm-user-assignment-required">*</span>
-      {children}
-    </span>
-  );
 }
 
 function OrganizationLongName({ fieldName }: { fieldName: number }) {
@@ -71,19 +66,13 @@ export const UserAssignmentTable = forwardRef<UserAssignmentTableRef, UserAssign
 
     return (
       <Form.List name="assignments">
-        {(fields, operations, { errors }) => {
+        {(fields, operations) => {
           operationsRef.current = operations;
           indexByKeyRef.current = new Map(fields.map((field) => [field.key, field.name]));
           const rows = fields.map((field) => ({ key: field.key, name: field.name }));
           const columns: ColumnsType<AssignmentRow> = [
             {
-              title: '#',
-              width: 56,
-              align: 'center',
-              render: (_value, _row, index) => index + 1,
-            },
-            {
-              title: <RequiredTitle>部门</RequiredTitle>,
+              title: <RequiredDetailColumnTitle>部门</RequiredDetailColumnTitle>,
               width: 240,
               render: (_, row) => (
                 <Form.Item
@@ -104,7 +93,7 @@ export const UserAssignmentTable = forwardRef<UserAssignmentTableRef, UserAssign
               render: (_, row) => <OrganizationLongName fieldName={row.name} />,
             },
             {
-              title: <RequiredTitle>职位</RequiredTitle>,
+              title: <RequiredDetailColumnTitle>职位</RequiredDetailColumnTitle>,
               width: 180,
               render: (_, row) => (
                 <Form.Item
@@ -154,30 +143,17 @@ export const UserAssignmentTable = forwardRef<UserAssignmentTableRef, UserAssign
           ];
           return (
             <div className="sm-user-assignment-editor">
-              <Table
+              <EditableDetailTable
+                editable={editable}
                 rowKey="key"
-                size="small"
-                pagination={false}
                 columns={columns}
                 dataSource={rows}
-                scroll={{ x: 'max-content' }}
-                rowSelection={
-                  editable
-                    ? {
-                        selectedRowKeys,
-                        onChange: (keys) => {
-                          setSelectedRowKeys(keys);
-                          onSelectionChange?.(keys.length > 0);
-                        },
-                      }
-                    : undefined
-                }
+                selectedRowKeys={selectedRowKeys}
+                onSelectedRowKeysChange={(keys) => {
+                  setSelectedRowKeys(keys);
+                  onSelectionChange?.(keys.length > 0);
+                }}
               />
-              {errors.length > 0 && (
-                <div className="sm-user-assignment-error">
-                  <Form.ErrorList errors={errors} />
-                </div>
-              )}
             </div>
           );
         }}

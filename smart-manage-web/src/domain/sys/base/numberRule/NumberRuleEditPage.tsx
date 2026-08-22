@@ -1,7 +1,7 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Key, RefObject } from 'react';
-import { Button, Form, Input, InputNumber, Select, Table } from 'antd';
+import { Button, Form, Input, InputNumber, Select } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormListOperation } from 'antd/es/form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +14,10 @@ import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
+import {
+  EditableDetailTable,
+  RequiredDetailColumnTitle,
+} from '@/domain/common/component/EditableDetailTable';
 import { numberRuleApi } from './api';
 import { numberRuleAccess } from './permissions';
 import { numberRuleQueryKeys } from './queryKeys';
@@ -115,15 +119,14 @@ const SegmentEditor = ({
         const columns: ColumnsType<(typeof fields)[number]> = [
           { title: '顺序', width: 54, render: (_, __, index) => index + 1 },
           {
-            title: '值类型',
+            title: <RequiredDetailColumnTitle>值类型</RequiredDetailColumnTitle>,
             width: 130,
             render: (_, field) => (
               <Form.Item
                 name={[field.name, 'segmentType']}
                 rules={[{ required: true, message: '请选择值类型' }]}
-                noStyle
               >
-                <Select variant="underlined" disabled={!editable} options={segmentTypeOptions} />
+                <Select variant="borderless" disabled={!editable} options={segmentTypeOptions} />
               </Form.Item>
             ),
           },
@@ -140,10 +143,9 @@ const SegmentEditor = ({
                       <Form.Item
                         name={[field.name, 'value']}
                         rules={[{ required: true, message: '请选择值或来源' }]}
-                        noStyle
                       >
                         <Select
-                          variant="underlined"
+                          variant="borderless"
                           disabled={!editable}
                           placeholder="选择受控业务变量"
                           options={variableOptions(type)}
@@ -156,10 +158,9 @@ const SegmentEditor = ({
                       <Form.Item
                         name={[field.name, 'value']}
                         rules={[{ required: true, whitespace: true, message: '请输入固定值' }]}
-                        noStyle
                       >
                         <Input
-                          variant="underlined"
+                          variant="borderless"
                           disabled={!editable}
                           maxLength={200}
                           placeholder="固定文本"
@@ -167,7 +168,7 @@ const SegmentEditor = ({
                       </Form.Item>
                     );
                   }
-                  return <Input variant="underlined" disabled placeholder="由流水计数器生成" />;
+                  return <Input variant="borderless" disabled placeholder="由流水计数器生成" />;
                 }}
               </Form.Item>
             ),
@@ -186,10 +187,9 @@ const SegmentEditor = ({
                       <Form.Item
                         name={[field.name, 'format']}
                         rules={[{ required: true, message: '请选择日期格式' }]}
-                        noStyle
                       >
                         <Select
-                          variant="underlined"
+                          variant="borderless"
                           disabled={!editable}
                           options={[
                             { label: 'yyyy', value: 'yyyy' },
@@ -205,10 +205,9 @@ const SegmentEditor = ({
                       <Form.Item
                         name={[field.name, 'length']}
                         rules={[{ required: true, message: '请输入流水号位数' }]}
-                        noStyle
                       >
                         <InputNumber
-                          variant="underlined"
+                          variant="borderless"
                           disabled={!editable}
                           min={1}
                           max={18}
@@ -217,7 +216,7 @@ const SegmentEditor = ({
                       </Form.Item>
                     );
                   }
-                  return <Input variant="underlined" disabled />;
+                  return <Input variant="borderless" disabled />;
                 }}
               </Form.Item>
             ),
@@ -226,9 +225,9 @@ const SegmentEditor = ({
             title: '段后分隔符',
             width: 130,
             render: (_, field) => (
-              <Form.Item name={[field.name, 'separator']} noStyle>
+              <Form.Item name={[field.name, 'separator']}>
                 <Input
-                  variant="underlined"
+                  variant="borderless"
                   disabled={!editable}
                   maxLength={10}
                   placeholder="默认 -"
@@ -239,27 +238,21 @@ const SegmentEditor = ({
         ];
         return (
           <div className="sm-number-rule-segments">
-            <Table
+            <EditableDetailTable
+              editable={editable}
+              showIndexColumn={false}
               rowKey="key"
-              size="small"
-              pagination={false}
               columns={columns}
               dataSource={fields}
               tableLayout="fixed"
               scroll={{ x: 800 }}
-              rowSelection={
-                editable
-                  ? {
-                      selectedRowKeys,
-                      onChange: (keys) => {
-                        onSelectedRowKeysChange(keys);
-                        onSelectedIndexChange(
-                          keys.length === 1 ? indexByKeyRef.current.get(keys[0]!) : undefined,
-                        );
-                      },
-                    }
-                  : undefined
-              }
+              selectedRowKeys={selectedRowKeys}
+              onSelectedRowKeysChange={(keys) => {
+                onSelectedRowKeysChange(keys);
+                onSelectedIndexChange(
+                  keys.length === 1 ? indexByKeyRef.current.get(keys[0]!) : undefined,
+                );
+              }}
             />
             <NumberPreview />
           </div>

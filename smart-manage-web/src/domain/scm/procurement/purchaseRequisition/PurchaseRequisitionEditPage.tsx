@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import type { Key } from 'react';
-import { Button, DatePicker, Form, Input, InputNumber, Table } from 'antd';
+import { Button, DatePicker, Form, Input, InputNumber } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormListFieldData, FormListOperation } from 'antd/es/form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,6 +15,10 @@ import type { PageComponentProps } from '@/domain/common/page/types';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
+import {
+  EditableDetailTable,
+  RequiredDetailColumnTitle,
+} from '@/domain/common/component/EditableDetailTable';
 import { purchaseRequisitionApi } from './api';
 import { purchaseRequisitionAccess } from './permissions';
 import { purchaseRequisitionQueryKeys } from './queryKeys';
@@ -166,12 +170,12 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
         },
       ]}
     >
-      {(entryFields, { add, remove, move }, { errors }) => {
+      {(entryFields, { add, remove, move }) => {
         entryOperationsRef.current = { add, remove, move };
         entryIndexByKeyRef.current = new Map(entryFields.map((field) => [field.key, field.name]));
         const columns: ColumnsType<FormListFieldData> = [
           {
-            title: '物料名称',
+            title: <RequiredDetailColumnTitle>物料名称</RequiredDetailColumnTitle>,
             dataIndex: 'materialName',
             width: 200,
             render: (_value, field) => (
@@ -179,7 +183,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
                 name={[field.name, 'materialName']}
                 rules={[{ required: true, message: '请输入物料名称' }]}
               >
-                <Input disabled={!editable} />
+                <Input variant="borderless" disabled={!editable} />
               </Form.Item>
             ),
           },
@@ -188,31 +192,36 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
             width: 160,
             render: (_value, field) => (
               <Form.Item name={[field.name, 'specification']}>
-                <Input disabled={!editable} />
+                <Input variant="borderless" disabled={!editable} />
               </Form.Item>
             ),
           },
           {
-            title: '单位',
+            title: <RequiredDetailColumnTitle>单位</RequiredDetailColumnTitle>,
             width: 100,
             render: (_value, field) => (
               <Form.Item
                 name={[field.name, 'unit']}
                 rules={[{ required: true, message: '请输入单位' }]}
               >
-                <Input disabled={!editable} />
+                <Input variant="borderless" disabled={!editable} />
               </Form.Item>
             ),
           },
           {
-            title: '数量',
+            title: <RequiredDetailColumnTitle>数量</RequiredDetailColumnTitle>,
             width: 140,
             render: (_value, field) => (
               <Form.Item
                 name={[field.name, 'quantity']}
                 rules={[{ required: true, message: '请输入数量' }]}
               >
-                <InputNumber min={0.000001} precision={6} disabled={!editable} />
+                <InputNumber
+                  variant="borderless"
+                  min={0.000001}
+                  precision={6}
+                  disabled={!editable}
+                />
               </Form.Item>
             ),
           },
@@ -239,34 +248,21 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
             width: 180,
             render: (_value, field) => (
               <Form.Item name={[field.name, 'remark']}>
-                <Input disabled={!editable} />
+                <Input variant="borderless" disabled={!editable} />
               </Form.Item>
             ),
           },
         ];
         return (
           <div className="sm-purchase-requisition-entrys">
-            <Table
+            <EditableDetailTable
+              editable={editable}
               rowKey={(field) => field.key}
               columns={columns}
               dataSource={entryFields}
-              pagination={false}
-              size="small"
-              scroll={{ x: 'max-content' }}
-              rowSelection={
-                editable
-                  ? {
-                      selectedRowKeys: selectedEntryKeys,
-                      onChange: (keys) => setSelectedEntryKeys(keys),
-                    }
-                  : undefined
-              }
+              selectedRowKeys={selectedEntryKeys}
+              onSelectedRowKeysChange={setSelectedEntryKeys}
             />
-            {errors.length > 0 && (
-              <div className="sm-purchase-entry-error">
-                <Form.ErrorList errors={errors} />
-              </div>
-            )}
           </div>
         );
       }}

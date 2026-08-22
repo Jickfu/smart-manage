@@ -11,6 +11,7 @@ import { EditPageShell } from './EditPageShell';
 import { EditSectionCollapse } from './EditSectionCollapse';
 import { useBeforeCloseGuard } from './useBeforeCloseGuard';
 import { BusinessAttachmentPanel } from '@/domain/common/attachment/BusinessAttachmentPanel';
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import type {
   BusinessAttachment,
   BusinessAttachmentFormValues,
@@ -182,6 +183,7 @@ const EditPage = ({
   onValuesChange,
 }: EditPageProps) => {
   const [form] = Form.useForm();
+  const feedback = useOperationFeedback();
   const revisionRef = useRef(0);
   const dirtyRef = useRef(false);
   const [activeCollapseKeys, setActiveCollapseKeys] = useState<string[]>([
@@ -245,7 +247,16 @@ const EditPage = ({
       }
     } catch (err) {
       // 表单校验错误由 Form 展示，命令错误由领域 Mutation 统一处理。
-      if ((err as { errorFields?: unknown[] }).errorFields) return;
+      const errorFields = (
+        err as { errorFields?: Array<{ name: (string | number)[]; errors: string[] }> }
+      ).errorFields;
+      if (errorFields?.length) {
+        const firstError = errorFields[0];
+        if (!firstError) return;
+        feedback.warning(firstError.errors[0] ?? '请检查表单中的必填项');
+        form.scrollToField(firstError.name, { focus: true });
+        return;
+      }
     }
   };
 
@@ -259,7 +270,16 @@ const EditPage = ({
         dirtyRef.current = false;
       }
     } catch (err) {
-      if ((err as { errorFields?: unknown[] }).errorFields) return;
+      const errorFields = (
+        err as { errorFields?: Array<{ name: (string | number)[]; errors: string[] }> }
+      ).errorFields;
+      if (errorFields?.length) {
+        const firstError = errorFields[0];
+        if (!firstError) return;
+        feedback.warning(firstError.errors[0] ?? '请检查表单中的必填项');
+        form.scrollToField(firstError.name, { focus: true });
+        return;
+      }
     }
   };
 

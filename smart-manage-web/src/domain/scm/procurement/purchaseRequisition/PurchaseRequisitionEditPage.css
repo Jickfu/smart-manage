@@ -9,53 +9,6 @@
   gap: 8px;
 }
 
-.sm-purchase-entry-error {
-  min-height: 30px;
-  padding: 6px 12px;
-  border-top: 1px solid #ffbec8;
-  color: var(--sm-danger);
-  background: #fff2f4;
-  font-size: 12px;
-}
-
-.sm-purchase-requisition-entrys .ant-form-item {
-  margin-bottom: 0;
-}
-
-.sm-purchase-requisition-entrys .ant-table-tbody > tr > td {
-  padding: 0 1px !important;
-}
-
-.sm-purchase-requisition-entrys .ant-table-thead > tr > th {
-  padding-block: 5px !important;
-}
-
-.sm-purchase-requisition-entrys .ant-input,
-.sm-purchase-requisition-entrys .ant-input-number,
 .sm-purchase-entry-date-picker {
   width: 100%;
-  border-color: transparent;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.sm-purchase-requisition-entrys .ant-input:hover,
-.sm-purchase-requisition-entrys .ant-input:focus,
-.sm-purchase-requisition-entrys .ant-input-number:hover,
-.sm-purchase-requisition-entrys .ant-input-number-focused {
-  border-color: var(--sm-primary);
-}
-
-/* 查看态仍使用 disabled 阻止交互，但不显示明细数字框的步进按钮。 */
-.sm-edit-form--view
-  .sm-purchase-requisition-entrys
-  .ant-input-number-disabled
-  .ant-input-number-handler-wrap {
-  display: none;
-}
-
-.sm-edit-form--view .sm-purchase-requisition-entrys .ant-input:hover,
-.sm-edit-form--view .sm-purchase-requisition-entrys .ant-input:focus,
-.sm-edit-form--view .sm-purchase-requisition-entrys .ant-input-number:hover {
-  border-color: transparent;
 }

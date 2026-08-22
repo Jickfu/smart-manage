@@ -44,6 +44,8 @@ description: "Plan, implement, or significantly extend a Smart Manage business m
 
 前端操作前确认统一使用 `useOperationConfirm` 并声明风险类型，操作结果统一使用 `useOperationFeedback`；模块页面不得重新引入 Ant Design 的 `Modal.confirm`、`Popconfirm` 或 `message.*`。
 
+前端存在表单内可编辑明细表格时，按模块开发指南复用 `EditableDetailTable`，并从模块样板目录选择动态明细、主从单据或实体引用等最接近的真实使用方；只在领域组件中维护业务列、动态控件和领域校验，不复制页面私有的表格密度、选择、焦点或错误展示样式。
+
 标准主数据和配置默认使用 `LIST + EDIT`。业务聚合必须执行聚合检查清单。只有通用页面模型无法表达真实业务交互时才使用 `CUSTOM`。
 
 ### 4. 执行确定性检查和风险匹配验证
