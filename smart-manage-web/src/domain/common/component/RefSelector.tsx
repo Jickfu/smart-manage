@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Button, Input, Table, Pagination, Spin, Empty, Splitter } from 'antd';
 import { SearchOutlined, CloseOutlined } from '@ant-design/icons';
@@ -15,7 +15,7 @@ import './RefSelector.css';
 // ============================================================
 
 /** RefSelector 选择模式 */
-type RefSelectorMode = 'default' | 'multiple' | 'tree-table';
+type RefSelectorMode = 'default' | 'multiple' | 'tree-table' | 'tree-table-multiple';
 
 /** 表格列定义 */
 interface RefSelectorColumn<T> {
@@ -64,6 +64,7 @@ interface RefSelectorProps<T extends Record<string, unknown>> {
 
   /** 树表模式：树形数据 */
   treeData?: Record<string, unknown>[];
+  defaultTreeKey?: string;
   /** 树表模式：树字段映射 */
   treeFieldNames?: { key: string; title: string; children: string };
 }
@@ -82,6 +83,7 @@ interface RefSelectorProps<T extends Record<string, unknown>> {
  * - default：单选，radio 列，双击行自动确认关闭
  * - multiple：多选，checkbox 列，右侧已选面板
  * - tree-table：单选，左树右表 Splitter 布局
+ * - tree-table-multiple：多选，左树、数据表和已选面板组合布局
  */
 function RefSelector<T extends Record<string, unknown>>({
   value,
@@ -99,6 +101,7 @@ function RefSelector<T extends Record<string, unknown>>({
   modalDraggable = false,
   modalResizable = false,
   treeData,
+  defaultTreeKey,
   treeFieldNames,
 }: RefSelectorProps<T>) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -117,7 +120,14 @@ function RefSelector<T extends Record<string, unknown>>({
 
   // ---- 派生 ----
 
-  const isMultiple = mode === 'multiple';
+  const isMultiple = mode === 'multiple' || mode === 'tree-table-multiple';
+  const hasTree = mode === 'tree-table' || mode === 'tree-table-multiple';
+
+  useEffect(() => {
+    if (modalOpen && hasTree && defaultTreeKey && !query.parentId) {
+      query.onTreeSelect(defaultTreeKey);
+    }
+  }, [defaultTreeKey, hasTree, modalOpen, query]);
 
   /** 记录上次 selectedRowKeys，用于 onChange 差分同步 selectionMap */
   const prevKeysRef = useRef<React.Key[]>([]);
@@ -437,6 +447,7 @@ function RefSelector<T extends Record<string, unknown>>({
         onSelect={(keys) => {
           query.onTreeSelect(keys.length > 0 ? String(keys[0]) : undefined);
         }}
+        selectedKeys={query.parentId ? [query.parentId] : []}
         defaultExpandAll
         blockNode
       />
@@ -454,14 +465,21 @@ function RefSelector<T extends Record<string, unknown>>({
       );
     }
 
-    if (mode === 'tree-table') {
+    if (hasTree) {
       return (
         <Splitter className="sm-ref-selector-split">
           <Splitter.Panel defaultSize={200} min={160} max="40%">
             <div className="sm-ref-selector-tree-panel">{renderTree()}</div>
           </Splitter.Panel>
           <Splitter.Panel>
-            <div className="sm-ref-selector-body">{renderTableContent()}</div>
+            {isMultiple ? (
+              <div className="sm-ref-selector-body-multi">
+                {renderTableContent()}
+                {renderSelectedPanel()}
+              </div>
+            ) : (
+              <div className="sm-ref-selector-body">{renderTableContent()}</div>
+            )}
           </Splitter.Panel>
         </Splitter>
       );
@@ -525,7 +543,7 @@ function RefSelector<T extends Record<string, unknown>>({
         onCancel={handleCancel}
         bodyMode="fixed"
         className="sm-ref-selector-modal"
-        width={mode === 'tree-table' ? 960 : 800}
+        width={hasTree ? (isMultiple ? 1120 : 960) : 800}
         draggable={modalDraggable}
         resizable={modalResizable}
         footer={modalFooter}

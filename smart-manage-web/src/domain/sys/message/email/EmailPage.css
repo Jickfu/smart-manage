@@ -1,0 +1,7 @@
+.sm-email-record-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sm-email-attempts {
+  margin-top: 10px;
+}

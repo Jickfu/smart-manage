@@ -35,7 +35,7 @@ export interface EditFieldBase {
 export interface RefSelectorFieldConfig {
   /** 选择器标识，用于隔离不同实例的查询缓存 */
   selectorKey: string | readonly unknown[];
-  mode?: 'default' | 'multiple' | 'tree-table';
+  mode?: 'default' | 'multiple' | 'tree-table' | 'tree-table-multiple';
   modalTitle: string;
   /** 数据获取函数，传入分页/搜索参数，返回分页结果 */
   fetchFn: (params: {
@@ -63,6 +63,8 @@ export interface RefSelectorFieldConfig {
   modalResizable?: boolean;
   /** 树表模式：树形数据 */
   treeData?: Record<string, unknown>[];
+  /** 树表模式：默认选中的根节点。 */
+  defaultTreeKey?: string;
   /** 树表模式：树字段映射 */
   treeFieldNames?: { key: string; title: string; children: string };
 }
@@ -108,7 +110,10 @@ interface EditPageProps {
   error?: Error | null;
   onRetry?: () => void;
   /** 保存回调，接收 Form 校验通过后的字段值 */
-  onSave?: (values: Record<string, unknown>) => Promise<void>;
+  /** 返回 false 表示命令被用户取消，页面应保留脏状态。 */
+  onSave?: (values: Record<string, unknown>) => Promise<void | boolean>;
+  /** 无状态命令型表单可覆盖默认“保存”文案，例如“发送”。 */
+  saveLabel?: string;
   /** 提交回调，接收 Form 校验通过后的字段值 */
   onSubmit?: (values: Record<string, unknown>) => Promise<void>;
   onExit?: () => void;
@@ -159,6 +164,7 @@ const EditPage = ({
   error = null,
   onRetry,
   onSave,
+  saveLabel = '保存',
   onSubmit,
   onExit,
   access,
@@ -247,8 +253,8 @@ const EditPage = ({
     try {
       const values = await form.validateFields();
       const savedRevision = revisionRef.current;
-      await onSave(withAttachmentValues(values));
-      if (revisionRef.current === savedRevision) {
+      const completed = await onSave(withAttachmentValues(values));
+      if (completed !== false && revisionRef.current === savedRevision) {
         dirtyRef.current = false;
       }
     } catch (err) {
@@ -285,7 +291,7 @@ const EditPage = ({
               ? [
                   {
                     key: 'save',
-                    label: '保存',
+                    label: saveLabel,
                     permission: access?.permissions.save,
                     type: 'primary' as const,
                     loading: saving,
