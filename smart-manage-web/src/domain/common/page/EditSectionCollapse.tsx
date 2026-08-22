@@ -5,6 +5,10 @@ import { Collapse } from 'antd';
 export interface EditSectionCollapseItem {
   key: string;
   label: ReactNode;
+  /** 标题右侧的只读摘要，不应放置按钮、链接等交互控件。 */
+  summary?: ReactNode;
+  /** 摘要默认始终显示，也可配置为仅在面板折叠时显示。 */
+  summaryVisibility?: 'always' | 'collapsed';
   children: ReactNode;
   extra?: ReactNode | ((expanded: boolean) => ReactNode);
   forceRender?: boolean;
@@ -48,6 +52,8 @@ export function EditSectionCollapse({
       onChange={(keys) => updateActiveKeys((Array.isArray(keys) ? keys : [keys]).map(String))}
       items={items.map((item) => {
         const expanded = currentActiveKeys.includes(item.key);
+        const hasSummary = item.summary !== undefined && item.summary !== null;
+        const summaryVisible = hasSummary && (item.summaryVisibility !== 'collapsed' || !expanded);
         return {
           key: item.key,
           label: (
@@ -56,7 +62,10 @@ export function EditSectionCollapse({
               className="sm-edit-collapse-title"
               onClick={() => toggleItem(item.key)}
             >
-              {item.label}
+              <span className="sm-edit-collapse-title__label">{item.label}</span>
+              {summaryVisible && (
+                <span className="sm-edit-collapse-title__summary">{item.summary}</span>
+              )}
             </button>
           ),
           children: item.children,

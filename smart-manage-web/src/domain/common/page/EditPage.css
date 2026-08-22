@@ -64,13 +64,35 @@
   font-weight: 500;
 }
 
+.sm-edit-collapse > .ant-collapse-item > .ant-collapse-header > .ant-collapse-title {
+  min-width: 0;
+}
+
 .sm-edit-collapse-title {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
   padding: 0;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
   cursor: pointer;
+}
+
+.sm-edit-collapse-title__label {
+  flex: none;
+}
+
+.sm-edit-collapse-title__summary {
+  min-width: 0;
+  margin-left: 24px;
+  overflow: hidden;
+  color: var(--ant-color-text-secondary);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sm-edit-collapse .ant-collapse-content {

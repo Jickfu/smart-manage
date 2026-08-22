@@ -27,6 +27,7 @@
 | 页面注册 | `smart-manage-web/src/domain/scm/procurement/purchaseRequisition/pageRegistration.ts` |
 | 标准列表 | `smart-manage-web/src/domain/scm/procurement/purchaseRequisition/PurchaseRequisitionListPage.tsx` |
 | 标准编辑 | `smart-manage-web/src/domain/sys/base/sysParam/SysParamEditPage.tsx` |
+| 编辑页明细操作区 | `smart-manage-web/src/domain/sys/base/numberRule/NumberRuleEditPage.tsx`、`smart-manage-web/src/domain/scm/procurement/purchaseRequisition/PurchaseRequisitionEditPage.tsx`；观察通过 `detailExtra` 将新增、删除、排序等操作归集到明细折叠面板标题栏右侧，表格只使用选择列确定操作目标 |
 | 实体引用选择器 | `smart-manage-web/src/domain/sys/base/user/refSelector/useUserRefSelector.ts`、`smart-manage-web/src/domain/sys/message/email/refSelector/useEmailAccountRefSelector.ts` |
 | 通用业务弹框 | `smart-manage-web/src/domain/common/component/AppModal.tsx` |
 | 公开 Service 与 TxService | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/service` |
@@ -48,6 +49,7 @@
 | 使用 `remark`、`note` 或“说明”表达通用描述 | 同义字段重复建模 | 使用 `description` 和“描述” |
 | 给组织树人工增加没有业务语义的“全部组织”根节点 | 改变默认查询范围并偏离已有页面 | 复用真实顶级组织和现有默认选择语义 |
 | 为标准表单复制 `EditPageShell + Form` | 重复布局、校验、操作区和只读逻辑 | 优先使用 `EditPage`，只扩展无法表达的部分 |
+| 将编辑页明细操作放进折叠面板内容区或为明细表格增加“操作”列 | 操作位置不统一，并绕过标题操作区和批量选择约定 | 使用 `detailExtra` 或 `EditSectionCollapse` 分区的 `extra` 将操作归集到标题栏右侧，表格使用选择列确定目标；只有明确的特殊交互要求才允许偏离并说明原因 |
 | CUSTOM 页面自行实现 Modal、分页或固定表格高度 | 容易出现间距、滚动和操作位置不一致 | 复用 `AppModal`、通用分页和 flex 高度链 |
 | 在 TSX 中使用内联样式快速修补布局 | 难以维护且绕过项目 CSS 约定 | 使用以 `sm-` 开头的 CSS 类 |
 | 通过权限前缀或组件路径推断 Feature | 稳定身份被命名偶然性绑架 | 在迁移和页面注册中显式关联 `featureKey` |
