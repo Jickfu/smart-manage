@@ -97,18 +97,14 @@ public class PurchaseRequisitionService {
     public PurchaseRequisitionHomeSummaryVO homeSummary() {
         DataScope viewScope = dataScope.resolve(PurchaseRequisitionResourceRegistration.ACTION_VIEW);
         Map<String, Long> statusCounts = new LinkedHashMap<>();
-        for (String status : List.of("SAVED", "SUBMITTED", "APPROVED", "CLOSED")) {
-            statusCounts.put(status, 0L);
+        for (BillStatusEnum status : BillStatusEnum.values()) {
+            String statusValue = status.getValue();
+            statusCounts.put(statusValue, 0L);
         }
         for (Map<String, Object> row : mapper.selectStatusCounts(viewScope)) {
-            String statusKey = switch ((String) row.get("billStatus")) {
-                case "A" -> "SAVED";
-                case "B" -> "SUBMITTED";
-                case "C" -> "APPROVED";
-                case "D" -> "CLOSED";
-                default -> throw new BizException(ResultEnum.BILL_STATUS_ERROR, "采购申请状态非法");
-            };
-            statusCounts.put(statusKey, ((Number) row.get("total")).longValue());
+            String statusValue = (String) row.get("billStatus");
+            BillStatusEnum.fromValue(statusValue);
+            statusCounts.put(statusValue, ((Number) row.get("total")).longValue());
         }
         LambdaQueryWrapper<PurchaseRequisitionEntity> recentQuery = new LambdaQueryWrapper<>();
         dataScope.apply(recentQuery, viewScope);

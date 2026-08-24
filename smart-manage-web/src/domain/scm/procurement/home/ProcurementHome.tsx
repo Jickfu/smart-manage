@@ -5,10 +5,10 @@ import type { PurchaseRequisitionListVO } from '../purchaseRequisition/types';
 import './ProcurementHome.css';
 
 const statusLabels: Record<string, string> = {
-  SAVED: '暂存',
-  SUBMITTED: '已提交',
-  APPROVED: '已审核',
-  CLOSED: '已关闭',
+  A: '暂存',
+  B: '已提交',
+  C: '审核通过',
+  D: '已关闭',
 };
 
 const ProcurementHome = () => {
