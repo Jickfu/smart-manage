@@ -125,12 +125,6 @@ Assert-NoFileMatch `
     -Pattern '@SaCheckPermission\s*\(\s*["'']' `
     -Message 'Controller permission annotations must reference permission constants'
 
-Assert-NoFileMatch `
-    -RelativeDirectory 'smart-manage-api/src/main/java' `
-    -Filter '*Controller.java' `
-    -Pattern 'import\s+[^;]*\.mapper\.|import\s+[^;]*TxService\s*;' `
-    -Message 'Controller must not depend on Mapper or TxService'
-
 $registrationRoot = Resolve-RepositoryPath 'smart-manage-web/src/domain'
 $registrationFiles = @(
     Get-ChildItem -LiteralPath $registrationRoot -Recurse -File |
@@ -169,4 +163,4 @@ if ($violations.Count -gt 0) {
     exit 1
 }
 
-Write-Host "Module convention verification passed for governance routing, $($registrationFiles.Count) page registration file(s), frontend operation interactions, inline styles, and backend controllers." -ForegroundColor Green
+Write-Host "Module convention verification passed for governance routing, $($registrationFiles.Count) page registration file(s), frontend operation interactions, inline styles, and backend permission constants." -ForegroundColor Green

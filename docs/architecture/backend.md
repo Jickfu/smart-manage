@@ -74,3 +74,20 @@
 - 该机制不是动态模型平台，不提供动态字段、动态表单、动态建表或配置化业务权限。
 
 强制编码规则由 [后端 AGENTS.md](../../smart-manage-api/AGENTS.md) 定义。
+
+## 自动化架构契约
+
+后端 `mvn test` 通过 ArchUnit 对编译后的生产类强制执行以下 Java 架构边界，不建立历史违规基线，也不忽略真实依赖：
+
+- `framework -> system` 的公共层依赖方向，以及 `framework`、`system` 不得反向依赖 `domain`；
+- 系统内核领域 `sm.domain.sys` 不得依赖可选业务领域 `sm.domain.scm`；
+- Controller 不得依赖 Mapper 或 TxService；
+- 公开 Service 不得声明事务，`@BizLog` 只允许标注公开 Service 的公开方法；
+- TxService 位于模块 `service` 包、保持包级可见、声明类级
+  `@Transactional(rollbackFor = Exception.class)`，且只允许同包公开 Service 调用；
+- 领域 Controller、Service、TxService、Mapper、Converter、Entity、Form 和 VO 的包位置；
+- Controller、模型和常量不得依赖 Mapper，Converter 不得依赖 Mapper、Service、缓存、安全上下文或外部资源；
+- Entity、Form、VO 不得反向依赖 Controller、Service 或 Mapper；
+- 公开 Service 的标准详情方法使用 `detail`，不得暴露通用 `getById` 入口。
+
+这些规则集中在 `sm.architecture.ArchitectureContractTests`，随 Maven Surefire 自动进入本地测试和 CI quality gate。文件、配置、Flyway、文档、前端源码和生成文件等仓库级约束继续由专用测试或脚本承担。高风险方法必须把真实 `administrator` 身份校验作为方法首个动作，这属于方法体执行顺序和安全语义，继续由独立安全契约测试验证，不使用 ArchUnit 的依赖图近似替代。

@@ -10,7 +10,7 @@
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-conventions.ps1
 ```
 
-该脚本检查文档与 skill 路由、页面注册字段、前端内联样式、Controller 依赖和权限注解等可可靠机械判断的约束。业务状态、数据安全和交互语义仍必须通过评审及风险驱动测试验证。
+该脚本检查文档与 skill 路由、页面注册字段、前端内联样式和 Controller 权限注解常量等文件或前端源码约束。Java 类型、包、注解和依赖边界统一由后端 ArchUnit 测试验证，脚本不重复扫描 Java import。业务状态、数据安全和交互语义仍必须通过评审及风险驱动测试验证。
 
 ## 后端
 
@@ -75,6 +75,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 ## 按风险增加验证
 
 - 架构边界：架构测试或静态检查。
+- Java 类型、包、注解、可见性和依赖边界：优先扩展 `ArchitectureContractTests`，不得新增 regex/import 源码扫描与其重复校验。
 - 认证、权限和安全：单元/集成测试及必要浏览器验证。
 - 状态、事务和乐观锁：覆盖成功、非法状态、过期版本和回滚。
 - 文件存储：覆盖上传、授权下载、删除失败后的补偿。

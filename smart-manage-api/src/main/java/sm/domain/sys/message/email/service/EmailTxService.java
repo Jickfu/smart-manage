@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.message.email.mapper.*;
 import sm.domain.sys.message.email.model.entity.*;
+import sm.domain.sys.message.email.model.form.AccountSaveForm;
 import sm.system.exception.BizException;
 import sm.system.helper.SM4Helper;
 import sm.system.response.ResultEnum;
@@ -21,7 +22,7 @@ class EmailTxService {
     private final EmailAttemptMapper attemptMapper;
     private final SM4Helper sm4Helper;
 
-    Long saveAccount(sm.domain.sys.message.email.controller.EmailController.AccountSaveForm form) {
+    Long saveAccount(AccountSaveForm form) {
         EmailAccountEntity entity = form.id() == null ? new EmailAccountEntity() : requireAccount(form.id());
         if (form.id() != null && !Objects.equals(entity.getVersion(), form.version())) conflict();
         if (form.id() == null) entity.setEnabled(false);
