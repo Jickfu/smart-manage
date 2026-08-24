@@ -1,7 +1,7 @@
 package sm.domain.sys.monitor.sql.service;
 
 import org.junit.jupiter.api.Test;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.sysparam.service.SysParamService;
 import sm.domain.sys.monitor.sql.mapper.SqlLogMapper;
 import sm.system.exception.BizException;

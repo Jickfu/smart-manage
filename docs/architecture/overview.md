@@ -18,6 +18,8 @@ smart-manage/
 
 后端业务按 `sm.domain.{领域}.{应用}.{模块}` 组织，前端业务按 `src/domain/{领域}/{应用}/{模块}` 组织。模块是应用内最小的内聚能力边界，可以是业务聚合、主数据、配置、查询记录或监控能力；它通常对应一个 Feature 或业务聚合，但不强制与 Feature 一一对应。非系统内核业务集中在独立领域，系统内核禁止反向依赖可选业务领域。
 
+后端顶层语义固定为 Infrastructure、System、Domain：Infrastructure 承担第三方技术与外部设施适配；System 承担跨所有领域共享且不具有独立业务生命周期的系统内核能力；Domain 承担具有独立业务语义和生命周期的模块，其中 `sm.domain.sys`（系统管理）与 `sm.domain.scm`（供应链）是同级领域。依赖方向为 `domain -> system -> infrastructure`，跨领域只允许显式稳定 Contract。
+
 ## 已生效的架构结论
 
 | 事项 | 当前结论 |

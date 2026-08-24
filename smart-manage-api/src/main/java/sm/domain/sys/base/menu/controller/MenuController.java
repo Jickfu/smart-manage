@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import sm.domain.sys.base.menu.constant.MenuPermission;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.menu.model.form.*;
 import sm.domain.sys.base.menu.model.vo.*;
 import sm.domain.sys.base.menu.service.MenuService;

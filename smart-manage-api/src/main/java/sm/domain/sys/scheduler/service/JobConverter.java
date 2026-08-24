@@ -5,7 +5,7 @@ import org.mapstruct.Mapping;
 import sm.domain.sys.scheduler.model.entity.JobEntity;
 import sm.domain.sys.scheduler.model.vo.JobDetailVO;
 import sm.domain.sys.scheduler.model.vo.JobListVO;
-import sm.framework.mapping.SmMapperConfig;
+import sm.infrastructure.mapping.SmMapperConfig;
 
 /** 定时任务持久化字段转换器，运行态信息由 Service 组装。 */
 @Mapper(config = SmMapperConfig.class)

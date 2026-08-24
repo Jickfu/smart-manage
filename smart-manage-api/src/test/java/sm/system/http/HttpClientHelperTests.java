@@ -1,5 +1,7 @@
 package sm.system.http;
 
+import sm.infrastructure.http.HttpClientProperties;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;

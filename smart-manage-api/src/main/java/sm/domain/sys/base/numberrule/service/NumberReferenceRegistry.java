@@ -1,7 +1,9 @@
 package sm.domain.sys.base.numberrule.service;
 
+import sm.domain.sys.base.numberrule.contract.NumberReferenceProvider;
+
 import org.springframework.stereotype.Component;
-import sm.domain.sys.base.numberrule.model.NumberReferenceDefinition;
+import sm.domain.sys.base.numberrule.contract.model.NumberReferenceDefinition;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 

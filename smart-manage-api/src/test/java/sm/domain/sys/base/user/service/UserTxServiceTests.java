@@ -15,7 +15,7 @@ import sm.domain.sys.base.user.model.form.UserOrganizationRoleForm;
 import sm.domain.sys.base.user.model.form.UserRoleAssignmentSaveForm;
 import sm.domain.sys.base.user.model.entity.UserRoleEntity;
 import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.system.helper.Argon2Helper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

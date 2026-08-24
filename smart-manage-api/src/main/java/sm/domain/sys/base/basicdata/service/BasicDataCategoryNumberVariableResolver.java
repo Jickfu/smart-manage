@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import sm.domain.sys.base.basicdata.mapper.BasicDataCategoryMapper;
 import sm.domain.sys.base.basicdata.model.entity.BasicDataCategoryEntity;
-import sm.domain.sys.base.numberrule.model.NumberGenerationContext;
+import sm.domain.sys.base.numberrule.contract.model.NumberGenerationContext;
 import sm.domain.sys.base.numberrule.service.NumberVariableResolver;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;

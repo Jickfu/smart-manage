@@ -1,8 +1,0 @@
-package sm.domain.sys.base.numberrule.model;
-
-public enum NumberSegmentType {
-    FIXED,
-    VARIABLE,
-    DATE,
-    SEQUENCE
-}

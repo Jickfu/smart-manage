@@ -6,7 +6,7 @@ import sm.domain.sys.base.role.model.entity.RoleEntity;
 import sm.domain.sys.base.role.model.vo.RoleDetailVO;
 import sm.domain.sys.base.role.model.vo.RoleListVO;
 import sm.domain.sys.base.role.model.vo.RoleSelectVO;
-import sm.framework.mapping.SmMapperConfig;
+import sm.infrastructure.mapping.SmMapperConfig;
 
 /** 角色纯字段转换器，权限关系由 RoleService 显式组装。 */
 @Mapper(config = SmMapperConfig.class)

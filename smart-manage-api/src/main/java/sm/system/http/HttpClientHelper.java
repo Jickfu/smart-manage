@@ -6,6 +6,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import sm.system.util.TraceIdUtil;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.json.JsonMapper;
+import sm.infrastructure.http.HttpClientProperties;
 
 import java.io.IOException;
 import java.net.ConnectException;

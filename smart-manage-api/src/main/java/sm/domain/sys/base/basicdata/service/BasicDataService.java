@@ -29,7 +29,7 @@ import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.system.query.ListQueryUtil;
 import sm.domain.sys.base.numberrule.model.vo.NumberRuleOptionVO;
-import sm.domain.sys.base.numberrule.constant.NumberRuleKeys;
+import sm.domain.sys.base.numberrule.contract.NumberRuleKeys;
 import sm.domain.sys.base.numberrule.service.NumberRuleService;
 
 import java.util.ArrayList;

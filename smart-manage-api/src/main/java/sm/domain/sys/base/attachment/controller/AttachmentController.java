@@ -12,9 +12,9 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
-import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
 import sm.domain.sys.base.attachment.model.form.AttachmentRemarkUpdateForm;
-import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.contract.model.vo.AttachmentVO;
 import sm.domain.sys.base.attachment.model.vo.AttachmentDownloadAccessVO;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.system.form.IdForm;

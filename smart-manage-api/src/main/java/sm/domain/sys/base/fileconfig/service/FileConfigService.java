@@ -16,7 +16,7 @@ import sm.system.response.ResultEnum;
 import sm.system.helper.SM4Helper;
 import sm.system.storage.FileStorageConfig;
 import sm.system.storage.FileStorageConfigProvider;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 
 import java.util.List;
 import java.util.Objects;

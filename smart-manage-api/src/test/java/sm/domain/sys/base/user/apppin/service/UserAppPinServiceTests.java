@@ -3,7 +3,7 @@ package sm.domain.sys.base.user.apppin.service;
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.app.model.vo.AppVO;
 import sm.domain.sys.base.app.service.AppService;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.user.apppin.mapper.UserAppPinMapper;
 
 import static org.mockito.Mockito.mock;

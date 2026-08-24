@@ -7,7 +7,7 @@ import sm.domain.sys.base.basicdata.model.entity.BasicDataItemEntity;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataCategoryVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataItemDetailVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataListVO;
-import sm.framework.mapping.SmMapperConfig;
+import sm.infrastructure.mapping.SmMapperConfig;
 
 @Mapper(config = SmMapperConfig.class)
 interface BasicDataConverter {

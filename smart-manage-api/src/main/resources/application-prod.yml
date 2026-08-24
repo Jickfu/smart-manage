@@ -84,7 +84,7 @@ logging:
 
 smart-manage:
   instance-id: ${SMART_MANAGE_INSTANCE_ID}
-  framework:
+  infrastructure:
     cors:
       allowed-origins:
         - ${SMART_MANAGE_CORS_ALLOWED_ORIGIN}

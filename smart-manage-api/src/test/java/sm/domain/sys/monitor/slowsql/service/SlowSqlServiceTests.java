@@ -3,7 +3,7 @@ package sm.domain.sys.monitor.slowsql.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.monitor.common.service.MonitorInstanceRegistry;
 import sm.domain.sys.monitor.common.service.MonitorRoutingGateway;
 import sm.domain.sys.monitor.slowsql.model.form.SlowSqlCommandForm;

@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.BaseRedisKey;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.login.model.TemporaryLoginGrant;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.user.model.form.TemporaryLoginGrantForm;

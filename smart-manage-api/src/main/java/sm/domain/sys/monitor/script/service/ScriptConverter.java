@@ -7,7 +7,7 @@ import sm.domain.sys.monitor.script.model.vo.ScriptDetailVO;
 import sm.domain.sys.monitor.script.model.vo.ScriptLogDetailVO;
 import sm.domain.sys.monitor.script.model.vo.ScriptLogListVO;
 import sm.domain.sys.monitor.script.model.vo.ScriptListVO;
-import sm.framework.mapping.SmMapperConfig;
+import sm.infrastructure.mapping.SmMapperConfig;
 
 /** 脚本元数据纯字段转换器。 */
 @Mapper(config = SmMapperConfig.class)

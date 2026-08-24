@@ -1,11 +1,11 @@
 package sm.domain.sys.base.numberrule.service;
 
 import org.junit.jupiter.api.Test;
-import sm.domain.sys.base.numberrule.model.NumberGenerationContext;
-import sm.domain.sys.base.numberrule.model.NumberReferenceDefinition;
-import sm.domain.sys.base.numberrule.model.NumberScopeType;
-import sm.domain.sys.base.numberrule.model.NumberSegmentType;
-import sm.domain.sys.base.numberrule.model.NumberVariableDefinition;
+import sm.domain.sys.base.numberrule.contract.model.NumberGenerationContext;
+import sm.domain.sys.base.numberrule.contract.model.NumberReferenceDefinition;
+import sm.domain.sys.base.numberrule.contract.model.NumberScopeType;
+import sm.domain.sys.base.numberrule.contract.model.NumberSegmentType;
+import sm.domain.sys.base.numberrule.contract.model.NumberVariableDefinition;
 import sm.domain.sys.base.numberrule.model.entity.NumberRuleSegmentEntity;
 import sm.system.exception.BizException;
 

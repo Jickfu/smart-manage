@@ -95,7 +95,7 @@ management:
       show-components: always
 
 smart-manage:
-  framework:
+  infrastructure:
     cors:
       allowed-origins:
         - "http://localhost:*"

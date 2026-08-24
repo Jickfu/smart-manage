@@ -3,7 +3,7 @@ package sm.domain.sys.monitor.cache.service;
 import com.alicp.jetcache.Cache;
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.common.constant.BaseCacheName;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryListForm;
 import sm.system.exception.BizException;

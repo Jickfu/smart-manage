@@ -2,7 +2,7 @@ package sm.domain.sys.base.org.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import sm.domain.sys.base.numberrule.model.NumberGenerationContext;
+import sm.domain.sys.base.numberrule.contract.model.NumberGenerationContext;
 import sm.domain.sys.base.numberrule.service.NumberVariableResolver;
 import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.org.model.entity.OrgEntity;

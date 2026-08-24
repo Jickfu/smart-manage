@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import sm.domain.sys.base.numberrule.mapper.NumberRuleMapper;
 import sm.domain.sys.base.numberrule.mapper.NumberReferenceMapper;
 import sm.domain.sys.base.numberrule.mapper.NumberRuleSegmentMapper;
-import sm.domain.sys.base.numberrule.model.NumberReferenceDefinition;
+import sm.domain.sys.base.numberrule.contract.model.NumberReferenceDefinition;
 import sm.domain.sys.base.numberrule.model.entity.NumberRuleEntity;
 import sm.domain.sys.base.numberrule.model.entity.NumberReferenceEntity;
 import sm.domain.sys.base.numberrule.model.entity.NumberRuleSegmentEntity;
@@ -77,7 +77,7 @@ public class NumberRuleService {
             }
             reference.setAllowedScopes(definition.allowedScopes().stream().map(Enum::name)
                     .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new)));
-            List<sm.domain.sys.base.numberrule.model.NumberVariableDefinition> variables =
+            List<sm.domain.sys.base.numberrule.contract.model.NumberVariableDefinition> variables =
                     new ArrayList<>(definition.variables());
             variables.add(NumberRuleBuiltInVariables.SYSTEM_DATE);
             reference.setVariables(variables.stream()

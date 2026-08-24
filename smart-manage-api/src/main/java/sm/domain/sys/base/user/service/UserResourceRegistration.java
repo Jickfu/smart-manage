@@ -4,7 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import sm.domain.sys.base.user.mapper.UserMapper;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.system.exception.BizException;
 import sm.system.resource.BusinessResourceAccessPolicy;
 import sm.system.resource.BusinessResourceAction;

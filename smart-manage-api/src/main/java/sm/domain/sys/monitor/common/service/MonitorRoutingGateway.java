@@ -3,7 +3,7 @@ package sm.domain.sys.monitor.common.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.monitor.common.config.MonitorClusterProperties;
 import sm.system.exception.BizException;
 import sm.system.http.HttpClientHelper;

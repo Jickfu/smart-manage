@@ -3,7 +3,7 @@ package sm.domain.sys.base.user.service;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.permission.service.PermissionService;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;

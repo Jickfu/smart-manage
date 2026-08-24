@@ -21,7 +21,7 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.system.query.ListQueryUtil;
 import java.util.LinkedHashMap;
 import java.util.List;

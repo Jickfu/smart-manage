@@ -2,7 +2,7 @@ package sm.domain.sys.base.login.service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.RedisTemplate;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.login.model.TemporaryLoginGrant;
 import sm.domain.sys.base.user.service.UserService;
 import sm.domain.sys.monitor.common.service.LogWriteService;

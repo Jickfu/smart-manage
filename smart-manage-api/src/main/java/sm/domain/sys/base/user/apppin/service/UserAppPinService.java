@@ -6,7 +6,7 @@ import sm.domain.sys.base.app.model.vo.AppVO;
 import sm.domain.sys.base.user.apppin.mapper.UserAppPinMapper;
 import sm.domain.sys.base.user.apppin.model.vo.PinnedAppVO;
 import sm.domain.sys.base.app.service.AppService;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 
 import java.util.List;
 

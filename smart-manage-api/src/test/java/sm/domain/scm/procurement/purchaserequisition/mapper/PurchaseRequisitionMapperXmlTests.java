@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.mapping.BoundSql;
 import org.junit.jupiter.api.Test;
-import sm.domain.sys.base.datascope.model.DataScope;
+import sm.system.datascope.DataScope;
 
 import java.io.InputStream;
 import java.util.Map;

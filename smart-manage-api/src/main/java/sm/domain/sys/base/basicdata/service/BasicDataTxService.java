@@ -21,9 +21,9 @@ import sm.system.helper.CacheHelper;
 import sm.system.response.ResultEnum;
 import sm.system.util.EnabledCommandUtil;
 import sm.system.util.TransactionUtil;
-import sm.domain.sys.base.numberrule.model.NumberGenerationContext;
-import sm.domain.sys.base.numberrule.model.NumberScopeType;
-import sm.domain.sys.base.numberrule.constant.NumberRuleKeys;
+import sm.domain.sys.base.numberrule.contract.model.NumberGenerationContext;
+import sm.domain.sys.base.numberrule.contract.model.NumberScopeType;
+import sm.domain.sys.base.numberrule.contract.NumberRuleKeys;
 import sm.domain.sys.base.numberrule.service.NumberGeneratorAccessor;
 
 import java.util.HashMap;

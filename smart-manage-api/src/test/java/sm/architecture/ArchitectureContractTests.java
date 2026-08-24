@@ -31,29 +31,39 @@ class ArchitectureContractTests {
     }
 
     @Test
-    void frameworkAndSystemMustRespectDependencyDirection() {
-        noClasses().that().resideInAPackage("sm.framework..")
+    void topLevelLayersMustRespectDependencyDirection() {
+        noClasses().that().resideInAPackage("sm.infrastructure..")
                 .should().dependOnClassesThat().resideInAnyPackage("sm.system..", "sm.domain..")
-                .because("framework 是最底层技术基础设施，不得依赖 system 或 domain")
+                .because("infrastructure 是最底层第三方技术与外部设施适配，不得依赖 system 或 domain")
                 .check(productionClasses);
 
         noClasses().that().resideInAPackage("sm.system..")
                 .should().dependOnClassesThat().resideInAPackage("sm.domain..")
-                .because("system 可以依赖 framework，但不得反向依赖业务领域")
+                .because("system 可以依赖 infrastructure，但不得反向依赖业务领域")
+                .check(productionClasses);
+
+        classes().that().resideInAPackage("sm.domain..")
+                .should(onlyDependOnExplicitInfrastructureContracts())
+                .because("领域只能依赖明确开放的技术 Contract，不能任意耦合 infrastructure 实现")
+                .check(productionClasses);
+
+        noClasses().should().resideInAPackage("sm.framework..")
+                .because("framework 顶层包已正式替换为 infrastructure，不保留兼容包")
                 .check(productionClasses);
     }
 
     @Test
-    void systemDomainMustNotDependOnOptionalBusinessDomains() {
-        noClasses().that().resideInAPackage("sm.domain.sys..")
-                .should().dependOnClassesThat().resideInAPackage("sm.domain.scm..")
-                .because("系统内核不得反向依赖可选业务领域")
+    void businessDomainsMustOnlyUseExplicitCrossDomainContracts() {
+        classes().that().resideInAPackage("sm.domain..")
+                .should(onlyUseExplicitCrossDomainContracts())
+                .because("跨领域只能依赖目标领域显式稳定 contract，禁止 Mapper、Entity、TxService 等实现级耦合")
                 .check(productionClasses);
 
-        classes().that().resideInAPackage("sm.domain..")
-                .and().resideOutsideOfPackage("sm.domain.sys..")
-                .should(notDependOnOtherBusinessDomains())
-                .because("业务领域只能依赖自身与系统内核，不得耦合其他可选业务领域的实现")
+        noClasses().that().resideInAPackage("sm.domain..contract..")
+                .should().haveSimpleNameEndingWith("Mapper")
+                .orShould().haveSimpleNameEndingWith("Entity")
+                .orShould().haveSimpleNameEndingWith("TxService")
+                .because("跨领域 contract 只能暴露稳定 API 和边界模型，不得容纳持久化或事务实现")
                 .check(productionClasses);
     }
 
@@ -145,7 +155,7 @@ class ArchitectureContractTests {
                 .check(productionClasses);
         noClasses().that().haveSimpleNameEndingWith("Converter")
                 .should().dependOnClassesThat().resideInAnyPackage(
-                        "sm.system.helper..", "sm.domain.sys.base.common.helper..",
+                        "sm.system.helper..", "sm.system.security.context..",
                         "org.springframework.cache..", "com.alicp.jetcache..")
                 .because("Converter 不得读取缓存、安全上下文或外部资源")
                 .check(productionClasses);
@@ -209,8 +219,8 @@ class ArchitectureContractTests {
         };
     }
 
-    private static ArchCondition<JavaClass> notDependOnOtherBusinessDomains() {
-        return new ArchCondition<>("不依赖其他可选业务领域") {
+    private static ArchCondition<JavaClass> onlyUseExplicitCrossDomainContracts() {
+        return new ArchCondition<>("跨领域只依赖显式 contract") {
             @Override
             public void check(JavaClass origin, ConditionEvents events) {
                 String originDomain = topLevelDomain(origin);
@@ -220,9 +230,13 @@ class ArchitectureContractTests {
                         continue;
                     }
                     String targetDomain = topLevelDomain(target);
-                    boolean valid = targetDomain.equals(originDomain) || targetDomain.equals("sys");
+                    boolean sameDomain = targetDomain.equals(originDomain);
+                    boolean explicitContract = target.getPackageName().contains(".contract.")
+                            || target.getPackageName().endsWith(".contract");
+                    boolean valid = sameDomain || !"sys".equals(originDomain)
+                            && "sys".equals(targetDomain) && explicitContract;
                     events.add(new SimpleConditionEvent(dependency, valid,
-                            dependency.getDescription() + "；业务领域不得依赖其他可选业务领域"));
+                            dependency.getDescription() + "；跨领域只允许依赖 domain.sys 的显式稳定 contract"));
                 }
             }
 
@@ -230,6 +244,24 @@ class ArchitectureContractTests {
                 String remainder = javaClass.getPackageName().substring("sm.domain.".length());
                 int separatorIndex = remainder.indexOf('.');
                 return separatorIndex < 0 ? remainder : remainder.substring(0, separatorIndex);
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> onlyDependOnExplicitInfrastructureContracts() {
+        return new ArchCondition<>("只依赖明确开放的 infrastructure 技术 Contract") {
+            @Override
+            public void check(JavaClass origin, ConditionEvents events) {
+                for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
+                    JavaClass target = dependency.getTargetClass();
+                    if (!target.getPackageName().startsWith("sm.infrastructure.")) {
+                        continue;
+                    }
+                    boolean valid = target.getName().equals("sm.infrastructure.mapping.SmMapperConfig");
+                    events.add(new SimpleConditionEvent(dependency, valid,
+                            dependency.getDescription()
+                                    + "；Domain 目前只允许依赖 infrastructure.mapping 中的 SmMapperConfig"));
+                }
             }
         };
     }

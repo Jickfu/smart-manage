@@ -9,7 +9,7 @@ import sm.domain.sys.base.app.model.form.AppListForm;
 import sm.domain.sys.base.app.model.form.AppSaveForm;
 import sm.domain.sys.base.app.model.vo.*;
 import sm.domain.sys.base.app.mapper.AppMapper;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;

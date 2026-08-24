@@ -8,7 +8,7 @@ import sm.domain.sys.base.domain.mapper.DomainMapper;
 import sm.domain.sys.base.domain.model.entity.DomainEntity;
 import sm.domain.sys.base.app.model.entity.AppEntity;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.menu.mapper.MenuMapper;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuTreeListForm;

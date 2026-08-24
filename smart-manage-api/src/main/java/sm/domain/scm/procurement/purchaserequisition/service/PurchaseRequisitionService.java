@@ -16,20 +16,20 @@ import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitio
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionEntryVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionListVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionHomeSummaryVO;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.system.aop.log.BizLog;
 import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.system.query.ListQueryUtil;
-import sm.domain.sys.base.attachment.service.AttachmentService;
+import sm.domain.sys.base.attachment.contract.AttachmentGateway;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
-import sm.domain.sys.base.datascope.model.DataScope;
+import sm.system.datascope.DataScope;
 
 /** 采购申请聚合的唯一公开服务。 */
 @Service
@@ -47,7 +47,7 @@ public class PurchaseRequisitionService {
     private final PurchaseRequisitionEntryMapper entryMapper;
     private final PurchaseRequisitionTxService txService;
     private final PurchaseRequisitionConverter converter;
-    private final AttachmentService attachmentService;
+    private final AttachmentGateway attachmentGateway;
     private final PurchaseRequisitionDataScope dataScope;
 
     public PageData<PurchaseRequisitionListVO> listPage(PurchaseRequisitionListForm form) {
@@ -79,7 +79,7 @@ public class PurchaseRequisitionService {
                         .orderByAsc(PurchaseRequisitionEntryEntity::getSort)
                         .orderByAsc(PurchaseRequisitionEntryEntity::getId))
                 .stream().map(converter::toEntryVO).toList());
-        detailVO.setAttachments(attachmentService.listByBiz(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE,
+        detailVO.setAttachments(attachmentGateway.listByBiz(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE,
                 String.valueOf(id)));
         return detailVO;
     }

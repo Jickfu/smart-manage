@@ -6,7 +6,7 @@ import sm.domain.sys.base.attachmentconfig.mapper.AttachmentConfigMapper;
 import sm.domain.sys.base.attachmentconfig.model.entity.AttachmentConfigEntity;
 import sm.domain.sys.base.attachmentconfig.model.form.AttachmentConfigSaveForm;
 import sm.domain.sys.base.attachmentconfig.model.vo.AttachmentConfigDetailVO;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;

@@ -7,7 +7,7 @@ import sm.domain.scm.procurement.purchaserequisition.model.entity.PurchaseRequis
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionDetailVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionEntryVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionListVO;
-import sm.framework.mapping.SmMapperConfig;
+import sm.infrastructure.mapping.SmMapperConfig;
 
 /** 采购申请纯字段转换器，不承担聚合查询和业务规则。 */
 @Mapper(config = SmMapperConfig.class)

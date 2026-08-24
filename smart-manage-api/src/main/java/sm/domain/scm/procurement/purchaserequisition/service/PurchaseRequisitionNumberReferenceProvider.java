@@ -1,12 +1,12 @@
 package sm.domain.scm.procurement.purchaserequisition.service;
 
 import org.springframework.stereotype.Component;
-import sm.domain.sys.base.numberrule.constant.NumberRuleKeys;
-import sm.domain.sys.base.numberrule.model.NumberReferenceDefinition;
-import sm.domain.sys.base.numberrule.model.NumberScopeType;
-import sm.domain.sys.base.numberrule.model.NumberSegmentType;
-import sm.domain.sys.base.numberrule.model.NumberVariableDefinition;
-import sm.domain.sys.base.numberrule.service.NumberReferenceProvider;
+import sm.domain.sys.base.numberrule.contract.NumberRuleKeys;
+import sm.domain.sys.base.numberrule.contract.model.NumberReferenceDefinition;
+import sm.domain.sys.base.numberrule.contract.model.NumberScopeType;
+import sm.domain.sys.base.numberrule.contract.model.NumberSegmentType;
+import sm.domain.sys.base.numberrule.contract.model.NumberVariableDefinition;
+import sm.domain.sys.base.numberrule.contract.NumberReferenceProvider;
 
 import java.util.List;
 import java.util.Set;

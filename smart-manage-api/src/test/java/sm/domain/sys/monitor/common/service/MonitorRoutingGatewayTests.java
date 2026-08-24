@@ -7,11 +7,11 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.monitor.common.config.MonitorClusterProperties;
 import sm.domain.sys.monitor.common.model.vo.MonitorInstanceVO;
 import sm.system.http.HttpClientHelper;
-import sm.system.http.HttpClientProperties;
+import sm.infrastructure.http.HttpClientProperties;
 import sm.system.security.CsrfTokenManager;
 import tools.jackson.databind.json.JsonMapper;
 

@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.fileconfig.mapper.FileConfigMapper;
 import sm.domain.sys.base.fileconfig.model.entity.FileConfigEntity;
 import sm.system.helper.SM4Helper;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

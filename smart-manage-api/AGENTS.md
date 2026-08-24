@@ -7,7 +7,8 @@
 ## 分层与依赖
 
 - 根包为 `sm`。
-- `sm.framework` 只放第三方框架配置；`sm.system` 只放系统公共基础设施；业务代码按 `sm.domain.{领域}.{应用}.{模块}` 组织。
+- `sm.infrastructure` 只放第三方技术、外部设施和技术适配；`sm.system` 只放跨领域共享的系统内核 Contract 与平台能力；具有独立业务生命周期的功能按 `sm.domain.{领域}.{应用}.{模块}` 组织。
+- 顶层依赖方向为 `domain -> system -> infrastructure`。领域对 infrastructure 仅允许依赖明确开放的技术 Contract；不同领域之间仅允许依赖目标领域 `contract` 包中的稳定 API。
 - 领域或应用公共能力放在对应 `common` 包，不额外拆分 Application、Domain、Infrastructure 层。
 - Controller 禁止依赖 Mapper 或 `*TxService`。
 - 每个模块只有一个公开 `*Service`；包级可见的 `*TxService` 只允许同模块 Service 委托调用。

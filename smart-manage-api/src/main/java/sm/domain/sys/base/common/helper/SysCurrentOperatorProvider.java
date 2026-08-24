@@ -1,5 +1,7 @@
 package sm.domain.sys.base.common.helper;
 
+import sm.system.security.context.CurrentUserContext;
+
 import cn.dev33.satoken.exception.SaTokenContextException;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;

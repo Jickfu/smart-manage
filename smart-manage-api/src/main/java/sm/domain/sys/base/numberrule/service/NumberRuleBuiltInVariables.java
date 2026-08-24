@@ -1,7 +1,7 @@
 package sm.domain.sys.base.numberrule.service;
 
-import sm.domain.sys.base.numberrule.model.NumberSegmentType;
-import sm.domain.sys.base.numberrule.model.NumberVariableDefinition;
+import sm.domain.sys.base.numberrule.contract.model.NumberSegmentType;
+import sm.domain.sys.base.numberrule.contract.model.NumberVariableDefinition;
 
 /** 编号规则内置变量，不依赖具体业务模块的编号引用注册。 */
 final class NumberRuleBuiltInVariables {

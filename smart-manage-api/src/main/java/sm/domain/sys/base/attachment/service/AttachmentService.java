@@ -4,13 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import sm.system.aop.log.BizLog;
+import sm.domain.sys.base.attachment.contract.AttachmentGateway;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.entity.BizAttachmentEntity;
-import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
-import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.contract.model.vo.AttachmentVO;
 import sm.domain.sys.base.attachment.model.vo.AttachmentDownloadAccessVO;
 import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
@@ -39,7 +40,7 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class AttachmentService {
+public class AttachmentService implements AttachmentGateway {
     private static final Set<String> PREVIEWABLE_IMAGE_TYPES = Set.of(
             "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp");
     private final AttachmentMapper mapper;
@@ -76,6 +77,7 @@ public class AttachmentService {
      * 供已经完成自身权限、状态和目标 ID 校验的业务命令内部确认附件，避免嵌套记录第二条业务日志。
      * 新聚合保存前目标记录尚不存在，因此这里校验注册类型和临时附件所有权，不反查目标记录。
      */
+    @Override
     public void promoteForAggregate(AttachmentPromoteForm form) throws IOException {
         requireTemporaryAttachmentOwnership(form.getAttachmentIds(), form.getUploadSessions());
         resourceRegistry.requireRegistered(form.getBizType());
@@ -95,6 +97,7 @@ public class AttachmentService {
     }
 
     /** 已完成主聚合删除权限校验后，清理其全部正式附件。 */
+    @Override
     public void deleteForAggregate(String bizType, String bizId) throws IOException {
         for (AttachmentEntity entity : mapper.selectByBiz(bizType, bizId)) {
             txService.delete(entity.getId());
@@ -102,6 +105,7 @@ public class AttachmentService {
     }
 
     /** 按业务单据查询附件列表 */
+    @Override
     public List<AttachmentVO> listByBiz(String bizType, String bizId) {
         resourceRegistry.requireAllowed(bizType, bizId, BusinessResourceAction.READ);
         List<AttachmentEntity> entities = mapper.selectByBiz(bizType, bizId);

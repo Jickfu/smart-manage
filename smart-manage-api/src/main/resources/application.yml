@@ -125,14 +125,15 @@ sa-token:
 
 smart-manage:
   instance-id: ${SMART_MANAGE_INSTANCE_ID:instance1}
-  framework:
-    no-need-login: /sys/base/login,/sys/base/captcha/challenge,/sys/base/captcha/verify
+  system:
+    security:
+      no-need-login: /sys/base/login,/sys/base/captcha/challenge,/sys/base/captcha/verify
   security:
     argon2:
       iterations: 2
       memory: 65536
       parallelism: 1
-  system:
+  infrastructure:
     http:
       connect-timeout: 3s
       request-timeout: 10s

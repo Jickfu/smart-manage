@@ -15,7 +15,7 @@ import sm.domain.sys.base.app.model.form.AppOpenByNumberForm;
 import sm.domain.sys.base.app.model.form.AppSaveForm;
 import sm.domain.sys.base.app.model.vo.*;
 import sm.domain.sys.base.app.service.AppService;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.system.form.IdForm;
 import sm.system.form.IdsForm;
 import sm.system.response.PageData;

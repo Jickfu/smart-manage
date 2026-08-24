@@ -4,7 +4,7 @@ import org.mapstruct.Mapper;
 import sm.domain.sys.monitor.loginlog.model.entity.LoginLogEntity;
 import sm.domain.sys.monitor.loginlog.model.vo.LoginLogDetailVO;
 import sm.domain.sys.monitor.loginlog.model.vo.LoginLogListVO;
-import sm.framework.mapping.SmMapperConfig;
+import sm.infrastructure.mapping.SmMapperConfig;
 
 /** 登录日志纯字段转换器。 */
 @Mapper(config = SmMapperConfig.class)

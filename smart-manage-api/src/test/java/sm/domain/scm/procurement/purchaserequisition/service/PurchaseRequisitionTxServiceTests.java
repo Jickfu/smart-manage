@@ -8,7 +8,7 @@ import sm.domain.scm.procurement.purchaserequisition.model.entity.PurchaseRequis
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionEntryForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSaveForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSubmitForm;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.numberrule.service.NumberGeneratorAccessor;
 import sm.system.enums.BillStatusEnum;

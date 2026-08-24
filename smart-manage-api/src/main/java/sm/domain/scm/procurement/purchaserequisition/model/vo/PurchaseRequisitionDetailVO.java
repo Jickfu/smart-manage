@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.contract.model.vo.AttachmentVO;
 
 @Data
 public class PurchaseRequisitionDetailVO {

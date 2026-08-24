@@ -6,7 +6,7 @@ import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.base.user.model.vo.UserDetailVO;
 import sm.domain.sys.base.user.model.vo.UserListVO;
-import sm.framework.mapping.SmMapperConfig;
+import sm.infrastructure.mapping.SmMapperConfig;
 
 /** 用户模块纯字段转换器，不承担角色和菜单查询。 */
 @Mapper(config = SmMapperConfig.class)

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import sm.domain.sys.base.common.constant.BaseCacheCatalog;
 import sm.domain.sys.base.common.constant.BaseCacheDefinition;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryListForm;
 import sm.domain.sys.monitor.cache.model.vo.*;

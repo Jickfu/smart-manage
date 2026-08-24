@@ -2,7 +2,7 @@ package sm.domain.sys.base.uiconfig.service;
 
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
-import sm.domain.sys.base.attachment.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.contract.model.vo.AttachmentVO;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.uiconfig.mapper.UiConfigMapper;
 import sm.domain.sys.base.uiconfig.model.entity.UiConfigEntity;

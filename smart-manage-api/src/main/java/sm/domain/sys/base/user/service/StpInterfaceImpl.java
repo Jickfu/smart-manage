@@ -3,7 +3,7 @@ package sm.domain.sys.base.user.service;
 import cn.dev33.satoken.stp.StpInterface;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.common.helper.UserAuthorizationCacheAccessor;
 
 import java.util.List;

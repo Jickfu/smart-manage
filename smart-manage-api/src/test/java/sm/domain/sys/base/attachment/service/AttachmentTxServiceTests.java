@@ -9,7 +9,7 @@ import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.entity.BizAttachmentEntity;
-import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
 import sm.system.exception.BizException;
 import sm.system.storage.FileStorageService;
 import sm.system.storage.FileStorageServiceFactory;

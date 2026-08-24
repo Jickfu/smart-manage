@@ -12,16 +12,16 @@ import sm.domain.scm.procurement.purchaserequisition.model.entity.PurchaseRequis
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionEntryForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSaveForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSubmitForm;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.util.BillStatusUtil;
-import sm.domain.sys.base.attachment.model.form.AttachmentPromoteForm;
-import sm.domain.sys.base.attachment.service.AttachmentService;
-import sm.domain.sys.base.numberrule.constant.NumberRuleKeys;
-import sm.domain.sys.base.numberrule.model.NumberGenerationContext;
-import sm.domain.sys.base.numberrule.service.NumberGeneratorAccessor;
+import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.contract.AttachmentGateway;
+import sm.domain.sys.base.numberrule.contract.NumberRuleKeys;
+import sm.domain.sys.base.numberrule.contract.model.NumberGenerationContext;
+import sm.domain.sys.base.numberrule.contract.NumberGenerator;
 
 import java.util.Objects;
 
@@ -33,8 +33,8 @@ class PurchaseRequisitionTxService {
 	private final CurrentUserContext currentUserContext;
     private final PurchaseRequisitionMapper mapper;
     private final PurchaseRequisitionEntryMapper entryMapper;
-    private final AttachmentService attachmentService;
-    private final NumberGeneratorAccessor numberGeneratorAccessor;
+    private final AttachmentGateway attachmentGateway;
+    private final NumberGenerator numberGenerator;
     private final PurchaseRequisitionDataScope dataScope;
 
     public Long save(PurchaseRequisitionSaveForm form) {
@@ -49,7 +49,7 @@ class PurchaseRequisitionTxService {
             entity.setOrgId(orgId);
             entity.setApplicantId(currentUserContext.getUserId());
             entity.setBillStatus(BillStatusEnum.SAVED.getValue());
-            entity.setNumber(numberGeneratorAccessor.nextNumber(NumberRuleKeys.PURCHASE_REQUISITION_REFERENCE,
+            entity.setNumber(numberGenerator.nextNumber(NumberRuleKeys.PURCHASE_REQUISITION_REFERENCE,
                     NumberGenerationContext.forOrganization(orgId, form.getBizDate())));
         } else {
             entity = requireEntity(form.getId());
@@ -118,7 +118,7 @@ class PurchaseRequisitionTxService {
         BillStatusUtil.requireCanSave(entity.getBillStatus());
         requireVersion(entity, version);
         try {
-            attachmentService.deleteForAggregate(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE,
+            attachmentGateway.deleteForAggregate(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE,
                     String.valueOf(id));
         } catch (java.io.IOException exception) {
             throw new BizException(ResultEnum.PERSISTENCE_ERROR, "采购申请附件删除失败: " + exception.getMessage());
@@ -165,7 +165,7 @@ class PurchaseRequisitionTxService {
         attachmentForm.setBizId(String.valueOf(purchaseRequisitionId));
         try {
             // 与采购申请写操作加入同一数据库事务；对象键不因 TEMP 提升而移动。
-            attachmentService.promoteForAggregate(attachmentForm);
+            attachmentGateway.promoteForAggregate(attachmentForm);
         } catch (java.io.IOException exception) {
             throw new BizException(ResultEnum.PERSISTENCE_ERROR, "采购申请附件确认失败: " + exception.getMessage());
         }

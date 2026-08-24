@@ -7,15 +7,16 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import sm.domain.sys.base.numberrule.mapper.NumberReferenceMapper;
 import sm.domain.sys.base.numberrule.mapper.NumberRuleMapper;
 import sm.domain.sys.base.numberrule.mapper.NumberRuleSegmentMapper;
-import sm.domain.sys.base.numberrule.model.NumberGenerationContext;
-import sm.domain.sys.base.numberrule.model.NumberReferenceDefinition;
+import sm.domain.sys.base.numberrule.contract.model.NumberGenerationContext;
+import sm.domain.sys.base.numberrule.contract.model.NumberReferenceDefinition;
 import sm.domain.sys.base.numberrule.model.NumberResetPeriod;
-import sm.domain.sys.base.numberrule.model.NumberScopeType;
+import sm.domain.sys.base.numberrule.contract.model.NumberScopeType;
 import sm.domain.sys.base.numberrule.model.entity.NumberReferenceEntity;
 import sm.domain.sys.base.numberrule.model.entity.NumberRuleEntity;
 import sm.domain.sys.base.numberrule.model.entity.NumberRuleSegmentEntity;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
+import sm.domain.sys.base.numberrule.contract.NumberGenerator;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -24,7 +25,7 @@ import java.util.List;
 /** 业务模块正式取号入口。业务只引用稳定 referenceKey，不接触表名或字段名。 */
 @Component
 @RequiredArgsConstructor
-public class NumberGeneratorAccessor {
+public class NumberGeneratorAccessor implements NumberGenerator {
     private static final String GLOBAL_SCOPE_KEY = "GLOBAL";
     private static final String NEVER_PERIOD_KEY = "NEVER";
 
@@ -34,6 +35,7 @@ public class NumberGeneratorAccessor {
     private final NumberReferenceRegistry referenceRegistry;
     private final NumberVariableResolverRegistry variableResolvers;
 
+    @Override
     public String nextNumber(String referenceKey, NumberGenerationContext context) {
         NumberReferenceEntity reference = requireReference(referenceKey);
         if (reference.getDefaultRuleKey() == null || reference.getDefaultRuleKey().isBlank()) {

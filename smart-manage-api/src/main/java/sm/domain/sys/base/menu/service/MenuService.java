@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import sm.domain.sys.base.app.model.entity.AppEntity;
 import sm.domain.sys.base.app.mapper.AppMapper;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.feature.mapper.FeatureMapper;
 import sm.domain.sys.base.feature.model.entity.FeatureEntity;
 import sm.domain.sys.base.domain.mapper.DomainMapper;

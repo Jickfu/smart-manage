@@ -1,7 +1,7 @@
 package sm.domain.sys.base.datascope.service;
 
 import org.junit.jupiter.api.Test;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.datascope.mapper.RoleDataScopeMapper;
 import sm.domain.sys.base.datascope.mapper.RoleDataScopeOrgMapper;
 import sm.domain.sys.base.datascope.model.entity.RoleDataScopeEntity;

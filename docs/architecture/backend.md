@@ -2,14 +2,32 @@
 
 ## 分层边界
 
-- `sm.framework`：CORS、Sa-Token、JSON、Redis、MyBatis-Plus、请求加解密和 Trace ID 等第三方框架配置。
-- `sm.system`：自定义注解、全局异常、实体基类、拦截器、监听器、存储抽象和工具等系统公共能力。
+- `sm.infrastructure`：第三方技术、外部设施和技术适配，例如 CORS、JSON、Redis、MyBatis-Plus、数据源与出站 HTTP 客户端配置。
+- `sm.system`：不属于任何具体业务领域、供多个领域共享的 Smart Manage 系统内核能力，例如统一响应、异常体系、安全上下文、认证授权公共能力、DataScope Contract、通用事务辅助及稳定 SPI。
 - `sm.domain.{领域}`：领域模块。
 - `sm.domain.{领域}.{应用}`：领域内应用。
 - `sm.domain.{领域}.{应用}.{模块}`：应用内最小的内聚能力模块，可以是业务聚合、主数据、配置、查询记录或监控能力。
 - 领域或应用内的公共能力放在对应 `common` 包。
 
-公共层不得吸收具体领域语义。可选业务领域可以依赖系统公共能力，系统内核禁止反向依赖可选业务领域。
+`sm.domain.sys` 是系统管理业务领域，与 `sm.domain.scm` 同级；用户、组织、角色、权限、菜单、应用、功能、调度、消息、基础资料和系统参数等具有完整业务生命周期的模块都保留在该领域。不得因名称中的 `sys` 将这些业务迁入 `sm.system`。
+
+顶层依赖方向为 `domain -> system -> infrastructure`：Domain 可以依赖 System；System 可以依赖 Infrastructure；Infrastructure 不得依赖 System 或 Domain，System 不得依赖 Domain。Domain 不得任意依赖 Infrastructure，目前只开放 `sm.infrastructure.mapping.SmMapperConfig` 这一明确技术 Contract。
+
+不同业务领域之间不开放整体依赖。跨领域调用只能依赖目标领域 `contract` 包中的稳定 API，禁止依赖 Mapper、Entity、TxService 或具体 Service 实现。当前附件和编号规则仍属于 `sm.domain.sys`，仅其跨领域接口与边界模型位于模块 `contract` 包。
+
+DataScope 的角色配置、Entity、Mapper 和规则解析实现保留在 `sm.domain.sys.base.datascope`；跨领域消费的 `DataScope` 与 `DataScopeResolver` 位于 `sm.system.datascope`，由 `DataScopeService` 实现。业务领域只依赖该系统内核 Contract。
+
+当前技术类归属如下：
+
+| 原职责 | 正式位置 |
+| --- | --- |
+| CORS 配置与属性 | `sm.infrastructure.web` |
+| Druid、MyBatis-Plus 配置 | `sm.infrastructure.persistence` |
+| Redis 配置 | `sm.infrastructure.cache` |
+| Jackson 配置与 Long 序列化 | `sm.infrastructure.json` |
+| MapStruct 公共配置 | `sm.infrastructure.mapping` |
+| 出站 HTTP 客户端配置 | `sm.infrastructure.http` |
+| Sa-Token 配置、浏览器请求安全 | `sm.system.security` 子包 |
 
 ## 接口基础设施
 
@@ -79,8 +97,10 @@
 
 后端 `mvn test` 通过 ArchUnit 对编译后的生产类强制执行以下 Java 架构边界，不建立历史违规基线，也不忽略真实依赖：
 
-- `domain -> system -> framework` 的分层依赖方向：`domain` 可以依赖 `system` 和 `framework`，`system` 可以依赖 `framework`，`framework` 不得依赖 `system`，且 `framework`、`system` 都不得依赖 `domain`；
-- 系统内核领域 `sm.domain.sys` 不得依赖可选业务领域 `sm.domain.scm`；
+- `domain -> system -> infrastructure` 的顶层依赖方向，禁止遗留 `sm.framework` 包；
+- Domain 对 Infrastructure 仅允许依赖显式开放的技术 Contract，当前为 `SmMapperConfig`；
+- `sm.domain.sys` 不得依赖其他业务领域，其他领域只能依赖 `sm.domain.sys..contract` 稳定 API，禁止跨领域实现级耦合；
+- DataScope 跨领域消费者只依赖 `sm.system.datascope` Contract，解析实现与角色配置仍属于系统管理领域；
 - Controller 不得依赖 Mapper 或 TxService；
 - 公开 Service 不得声明事务，`@BizLog` 只允许标注公开 Service 的公开方法；
 - TxService 位于模块 `service` 包、保持包级可见、声明类级

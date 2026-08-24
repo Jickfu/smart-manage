@@ -2,7 +2,7 @@ package sm.domain.sys.base.menu.service;
 
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.menu.mapper.MenuMapper;
 import sm.domain.sys.base.permission.mapper.PermissionMapper;
 import sm.domain.sys.base.feature.mapper.FeatureMapper;

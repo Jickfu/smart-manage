@@ -2,7 +2,7 @@ package sm.domain.sys.monitor.thread.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.monitor.common.service.MonitorInstanceRegistry;
 import sm.domain.sys.monitor.common.service.MonitorRoutingGateway;
 import sm.domain.sys.monitor.thread.model.form.ThreadCollectForm;

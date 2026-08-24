@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import sm.system.interceptor.TraceIdInterceptor;
 import sm.system.response.Result;
-import sm.system.security.BrowserRequestSecurity;
+import sm.system.security.web.BrowserRequestSecurity;
+import sm.system.security.config.SaTokenConfig;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Map;

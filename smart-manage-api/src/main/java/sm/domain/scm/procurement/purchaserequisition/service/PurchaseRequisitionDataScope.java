@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import sm.domain.scm.procurement.purchaserequisition.model.entity.PurchaseRequisitionEntity;
-import sm.domain.sys.base.datascope.model.DataScope;
-import sm.domain.sys.base.datascope.service.DataScopeService;
+import sm.system.datascope.DataScope;
+import sm.system.datascope.DataScopeResolver;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -13,14 +13,14 @@ import sm.system.response.ResultEnum;
 @Component
 @RequiredArgsConstructor
 final class PurchaseRequisitionDataScope {
-    private final DataScopeService dataScopeService;
+    private final DataScopeResolver dataScopeResolver;
 
     void apply(LambdaQueryWrapper<PurchaseRequisitionEntity> query, String action) {
         apply(query, resolve(action));
     }
 
     DataScope resolve(String action) {
-        return dataScopeService.resolve(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE, action);
+        return dataScopeResolver.resolve(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE, action);
     }
 
     void apply(LambdaQueryWrapper<PurchaseRequisitionEntity> query, DataScope scope) {
@@ -41,7 +41,7 @@ final class PurchaseRequisitionDataScope {
     }
 
     void requireAllowed(PurchaseRequisitionEntity entity, String action) {
-        DataScope scope = dataScopeService.resolve(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE, action);
+        DataScope scope = dataScopeResolver.resolve(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE, action);
         if (scope.all() || scope.orgIds().contains(entity.getOrgId())
                 || scope.selfIncluded() && scope.currentUserId().equals(entity.getApplicantId())) return;
         throw new BizException(ResultEnum.PERMISSION_ERROR, "无权访问该采购申请");

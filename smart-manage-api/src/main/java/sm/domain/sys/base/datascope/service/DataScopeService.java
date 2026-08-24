@@ -3,16 +3,17 @@ package sm.domain.sys.base.datascope.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.common.helper.CurrentUserContext;
+import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.datascope.mapper.RoleDataScopeMapper;
 import sm.domain.sys.base.datascope.mapper.RoleDataScopeOrgMapper;
-import sm.domain.sys.base.datascope.model.DataScope;
+import sm.system.datascope.DataScope;
 import sm.domain.sys.base.datascope.model.DataScopeType;
 import sm.domain.sys.base.datascope.model.entity.RoleDataScopeEntity;
 import sm.domain.sys.base.datascope.model.entity.RoleDataScopeOrgEntity;
 import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.org.model.entity.OrgEntity;
 import sm.system.resource.BusinessResourceRegistry;
+import sm.system.datascope.DataScopeResolver;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -25,13 +26,14 @@ import java.util.Set;
 /** 解析角色默认、资源默认和操作覆盖，并将多个角色的 Allow 结果合并。 */
 @Service
 @RequiredArgsConstructor
-public class DataScopeService {
+public class DataScopeService implements DataScopeResolver {
     private final CurrentUserContext currentUserContext;
     private final BusinessResourceRegistry resourceRegistry;
     private final RoleDataScopeMapper ruleMapper;
     private final RoleDataScopeOrgMapper ruleOrgMapper;
     private final OrgMapper orgMapper;
 
+    @Override
     public DataScope resolve(String resourceType, String action) {
         resourceRegistry.requireDataScopeAction(resourceType, action);
         Long userId = currentUserContext.getUserId();

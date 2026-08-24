@@ -7,7 +7,7 @@ import sm.domain.sys.base.menu.model.vo.MenuDetailVO;
 import sm.domain.sys.base.menu.model.vo.MenuListVO;
 import sm.domain.sys.base.menu.model.vo.MenuSelectVO;
 import sm.domain.sys.base.menu.model.vo.MenuTreeVO;
-import sm.framework.mapping.SmMapperConfig;
+import sm.infrastructure.mapping.SmMapperConfig;
 
 /** 菜单持久化字段转换器，父菜单与用户菜单树由 Service 组装。 */
 @Mapper(config = SmMapperConfig.class)
