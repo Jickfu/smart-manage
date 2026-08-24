@@ -1,14 +1,15 @@
 import { Card, Empty, Result, Statistic, Table } from 'antd';
 import { useQuery } from '@tanstack/react-query';
+import { BillStatus } from '@/domain/common/page/types';
 import { purchaseRequisitionApi } from '../purchaseRequisition/api';
 import type { PurchaseRequisitionListVO } from '../purchaseRequisition/types';
 import './ProcurementHome.css';
 
 const statusLabels: Record<string, string> = {
-  A: '暂存',
-  B: '已提交',
-  C: '审核通过',
-  D: '已关闭',
+  [BillStatus.SAVED]: '暂存',
+  [BillStatus.SUBMITTED]: '已提交',
+  [BillStatus.AUDITED]: '审核通过',
+  [BillStatus.CLOSED]: '已关闭',
 };
 
 const ProcurementHome = () => {
