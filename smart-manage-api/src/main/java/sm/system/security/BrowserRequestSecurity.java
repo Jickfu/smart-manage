@@ -1,4 +1,4 @@
-package sm.framework.security;
+package sm.system.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -7,7 +7,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import sm.framework.config.CorsProperties;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
-import sm.system.security.CsrfTokenManager;
 import sm.system.util.ServletUtil;
 
 import java.util.Set;

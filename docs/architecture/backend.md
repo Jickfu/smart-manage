@@ -79,7 +79,7 @@
 
 后端 `mvn test` 通过 ArchUnit 对编译后的生产类强制执行以下 Java 架构边界，不建立历史违规基线，也不忽略真实依赖：
 
-- `framework -> system` 的公共层依赖方向，以及 `framework`、`system` 不得反向依赖 `domain`；
+- `domain -> system -> framework` 的分层依赖方向：`domain` 可以依赖 `system` 和 `framework`，`system` 可以依赖 `framework`，`framework` 不得依赖 `system`，且 `framework`、`system` 都不得依赖 `domain`；
 - 系统内核领域 `sm.domain.sys` 不得依赖可选业务领域 `sm.domain.scm`；
 - Controller 不得依赖 Mapper 或 TxService；
 - 公开 Service 不得声明事务，`@BizLog` 只允许标注公开 Service 的公开方法；

@@ -1,4 +1,4 @@
-package sm.framework.config;
+package sm.system.config;
 
 import cn.dev33.satoken.annotation.SaIgnore;
 import cn.dev33.satoken.context.SaHolder;
@@ -18,7 +18,7 @@ import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import sm.system.exception.ExceptionResultResolver;
 import sm.system.response.ResultEnum;
-import sm.framework.security.BrowserRequestSecurity;
+import sm.system.security.BrowserRequestSecurity;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.lang.reflect.Method;

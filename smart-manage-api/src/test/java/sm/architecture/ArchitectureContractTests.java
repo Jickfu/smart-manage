@@ -32,14 +32,14 @@ class ArchitectureContractTests {
 
     @Test
     void frameworkAndSystemMustRespectDependencyDirection() {
-        noClasses().that().resideInAnyPackage("sm.system..", "sm.framework..")
-                .should().dependOnClassesThat().resideInAPackage("sm.domain..")
-                .because("framework 与 system 是领域无关的公共层，禁止反向依赖业务领域")
+        noClasses().that().resideInAPackage("sm.framework..")
+                .should().dependOnClassesThat().resideInAnyPackage("sm.system..", "sm.domain..")
+                .because("framework 是最底层技术基础设施，不得依赖 system 或 domain")
                 .check(productionClasses);
 
         noClasses().that().resideInAPackage("sm.system..")
-                .should().dependOnClassesThat().resideInAPackage("sm.framework..")
-                .because("依赖方向固定为 framework -> system，system 不得依赖框架配置层")
+                .should().dependOnClassesThat().resideInAPackage("sm.domain..")
+                .because("system 可以依赖 framework，但不得反向依赖业务领域")
                 .check(productionClasses);
     }
 

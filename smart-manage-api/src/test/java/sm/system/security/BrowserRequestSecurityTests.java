@@ -1,4 +1,4 @@
-package sm.framework.security;
+package sm.system.security;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

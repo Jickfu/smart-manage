@@ -1,4 +1,4 @@
-package sm.framework.config;
+package sm.system.config;
 
 import cn.dev33.satoken.filter.SaServletFilter;
 import cn.dev33.satoken.filter.SaTokenContextFilterForJakartaServlet;
@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import sm.system.interceptor.TraceIdInterceptor;
 import sm.system.response.Result;
-import sm.framework.security.BrowserRequestSecurity;
+import sm.system.security.BrowserRequestSecurity;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Map;
