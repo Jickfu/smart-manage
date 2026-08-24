@@ -20,6 +20,8 @@ smart-manage/
 
 后端顶层语义固定为 Infrastructure、System、Domain：Infrastructure 承担第三方技术与外部设施适配；System 承担跨所有领域共享且不具有独立业务生命周期的系统内核能力；Domain 承担具有独立业务语义和生命周期的模块，其中 `sm.domain.sys`（系统管理）与 `sm.domain.scm`（供应链）是同级领域。依赖方向为 `domain -> system -> infrastructure`，跨领域只允许显式稳定 Contract。
 
+跨领域 Contract 不在创建 Domain 时预先设计。只有真实业务首次需要跨领域协作时，才由能力提供方根据当前用例提取最小稳定 Contract；调用方依赖该 Contract，不穿透目标领域内部实现。项目遵循“先实现领域，后发现协作，再提取 Contract”。
+
 ## 已生效的架构结论
 
 | 事项 | 当前结论 |

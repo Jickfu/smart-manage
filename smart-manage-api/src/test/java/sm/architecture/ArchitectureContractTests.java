@@ -233,10 +233,9 @@ class ArchitectureContractTests {
                     boolean sameDomain = targetDomain.equals(originDomain);
                     boolean explicitContract = target.getPackageName().contains(".contract.")
                             || target.getPackageName().endsWith(".contract");
-                    boolean valid = sameDomain || !"sys".equals(originDomain)
-                            && "sys".equals(targetDomain) && explicitContract;
+                    boolean valid = sameDomain || explicitContract;
                     events.add(new SimpleConditionEvent(dependency, valid,
-                            dependency.getDescription() + "；跨领域只允许依赖 domain.sys 的显式稳定 contract"));
+                            dependency.getDescription() + "；跨领域只允许依赖目标 Domain 的显式稳定 contract"));
                 }
             }
 

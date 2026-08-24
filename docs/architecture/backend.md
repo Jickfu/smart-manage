@@ -13,7 +13,20 @@
 
 顶层依赖方向为 `domain -> system -> infrastructure`：Domain 可以依赖 System；System 可以依赖 Infrastructure；Infrastructure 不得依赖 System 或 Domain，System 不得依赖 Domain。Domain 不得任意依赖 Infrastructure，目前只开放 `sm.infrastructure.mapping.SmMapperConfig` 这一明确技术 Contract。
 
-不同业务领域之间不开放整体依赖。跨领域调用只能依赖目标领域 `contract` 包中的稳定 API，禁止依赖 Mapper、Entity、TxService 或具体 Service 实现。当前附件和编号规则仍属于 `sm.domain.sys`，仅其跨领域接口与边界模型位于模块 `contract` 包。
+## 跨领域协作原则
+
+本文中的 `A -> B` 表示 A 依赖 B。不同顶级 Domain 默认相互隔离，不允许直接依赖其他 Domain 的内部实现。`sm.domain.sys` 与其他顶级 Domain 适用完全相同的规则，不具有特殊的公共领域地位。
+
+当真实业务首次产生跨领域协作需求时，由能力提供方基于该实际用例按需暴露最小稳定 Contract，调用方只能依赖目标 Domain 的 `contract` 包。Contract 可以包含公开接口、当前用例必要的 Command、Query、边界 DTO、稳定枚举和值对象；不得暴露具体 Service、Mapper、Entity、TxService、持久化 Wrapper 或 MyBatis 类型。
+
+```text
+Domain A
+    -> Domain B.contract
+```
+
+Smart Manage 遵循：**先实现领域，后发现协作，再提取 Contract。** Contract 由真实消费者和真实用例塑造，而不是由对未来需求的猜测产生。没有真实跨领域消费者的 Domain 不需要 `contract` 包；同一顶级 Domain 内的应用和模块也不因潜在复用而提前升级为独立边界。
+
+当前附件和编号规则存在采购领域这一真实消费者，因此其最小跨领域接口和边界模型位于 `sm.domain.sys` 对应模块的 `contract` 包。不得据此给用户、组织、角色、菜单、库存等尚无真实跨领域调用方的模块提前建设 Contract。
 
 DataScope 的角色配置、Entity、Mapper 和规则解析实现保留在 `sm.domain.sys.base.datascope`；跨领域消费的 `DataScope` 与 `DataScopeResolver` 位于 `sm.system.datascope`，由 `DataScopeService` 实现。业务领域只依赖该系统内核 Contract。
 
@@ -99,7 +112,7 @@ DataScope 的角色配置、Entity、Mapper 和规则解析实现保留在 `sm.d
 
 - `domain -> system -> infrastructure` 的顶层依赖方向，禁止遗留 `sm.framework` 包；
 - Domain 对 Infrastructure 仅允许依赖显式开放的技术 Contract，当前为 `SmMapperConfig`；
-- `sm.domain.sys` 不得依赖其他业务领域，其他领域只能依赖 `sm.domain.sys..contract` 稳定 API，禁止跨领域实现级耦合；
+- 任意不同顶级 Domain 之间只能依赖目标 Domain 的显式稳定 `contract` API，所有 Domain 一视同仁，禁止跨领域实现级耦合；
 - DataScope 跨领域消费者只依赖 `sm.system.datascope` Contract，解析实现与角色配置仍属于系统管理领域；
 - Controller 不得依赖 Mapper 或 TxService；
 - 公开 Service 不得声明事务，`@BizLog` 只允许标注公开 Service 的公开方法；
