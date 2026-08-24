@@ -27,5 +27,5 @@ public class PurchaseRequisitionSaveForm {
     private Map<Long, String> attachmentUploadSessions = Map.of();
     @Valid
     @NotEmpty(message = "采购申请至少需要一条明细")
-    private List<PurchaseRequisitionEntryForm> entrys;
+    private List<PurchaseRequisitionEntryForm> entries;
 }

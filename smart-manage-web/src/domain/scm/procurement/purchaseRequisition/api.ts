@@ -8,11 +8,16 @@ import type {
   PurchaseRequisitionListVO,
   PurchaseRequisitionSaveForm,
   PurchaseRequisitionSubmitForm,
+  PurchaseRequisitionHomeSummaryVO,
 } from './types';
 
 const baseUrl = '/scm/procurement/purchase-requisition';
 
 export const purchaseRequisitionApi = {
+  homeSummary: () =>
+    request
+      .get<Result<PurchaseRequisitionHomeSummaryVO>>(`${baseUrl}/home-summary`)
+      .then((response) => response.data.data),
   listPage: (form: PurchaseRequisitionListForm) =>
     request
       .post<Result<PageData<PurchaseRequisitionListVO>>>(`${baseUrl}/listPage`, form)

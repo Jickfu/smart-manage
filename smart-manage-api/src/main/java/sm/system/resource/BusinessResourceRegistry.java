@@ -105,6 +105,32 @@ public class BusinessResourceRegistry {
         return registration.objectPrefix();
     }
 
+    public void requireDataScopeAction(String resourceType, String action) {
+        BusinessResourceRegistration registration = registrationByType.get(resourceType);
+        if (registration == null || !registration.supportsDataScope()
+                || action == null || !registration.dataScopeActions().contains(action)) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "业务资源未声明该数据权限操作");
+        }
+    }
+
+    public Set<String> dataScopeActions(String resourceType) {
+        BusinessResourceRegistration registration = registrationByType.get(resourceType);
+        if (registration == null || !registration.supportsDataScope()) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "业务资源未启用数据权限");
+        }
+        return registration.dataScopeActions();
+    }
+
+    public Map<String, Set<String>> dataScopeCatalog() {
+        Map<String, Set<String>> catalog = new java.util.TreeMap<>();
+        for (BusinessResourceRegistration registration : registrationByType.values()) {
+            if (registration.supportsDataScope()) {
+                catalog.put(registration.resourceType(), Set.copyOf(registration.dataScopeActions()));
+            }
+        }
+        return Map.copyOf(catalog);
+    }
+
     private String detectMime(MultipartFile file) {
         try (java.io.InputStream inputStream = file.getInputStream()) {
             // Tika 同时参考文件内容和原始文件名，可扩展识别类型而无需修改注册表代码。

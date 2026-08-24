@@ -18,6 +18,8 @@ import sm.domain.sys.base.role.model.vo.RoleCreateNewDataVO;
 import sm.domain.sys.base.role.model.vo.RoleDetailVO;
 import sm.domain.sys.base.role.model.vo.RoleListVO;
 import sm.domain.sys.base.role.model.vo.RoleSelectVO;
+import sm.domain.sys.base.role.model.form.RoleDataScopeAssignForm;
+import sm.domain.sys.base.role.model.vo.RoleDataScopeWorkspaceVO;
 import sm.domain.sys.base.role.service.RoleService;
 import sm.system.form.IdForm;
 import sm.system.response.PageData;
@@ -82,6 +84,19 @@ public class RoleController {
 	@SaCheckPermission(RolePermission.ASSIGN_PERMISSIONS)
 	public Result<String> assignPermissions(@RequestBody @Valid RolePermissionAssignForm form) {
 		service.assignPermissions(form);
+		return Result.success();
+	}
+
+	@PostMapping("/sys/base/role/dataScopeWorkspace")
+	@SaCheckPermission(RolePermission.ASSIGN_DATA_SCOPES)
+	public Result<RoleDataScopeWorkspaceVO> dataScopeWorkspace(@RequestBody @Valid IdForm form) {
+		return Result.success(service.dataScopeWorkspace(form.getId()));
+	}
+
+	@PostMapping("/sys/base/role/assignDataScopes")
+	@SaCheckPermission(RolePermission.ASSIGN_DATA_SCOPES)
+	public Result<String> assignDataScopes(@RequestBody @Valid RoleDataScopeAssignForm form) {
+		service.assignDataScopes(form);
 		return Result.success();
 	}
 }

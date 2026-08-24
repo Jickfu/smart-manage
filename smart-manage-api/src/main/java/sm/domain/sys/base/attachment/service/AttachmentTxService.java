@@ -84,7 +84,8 @@ class AttachmentTxService {
             }
             log.info("附件上传: id={}, name={}, temp={}", entity.getId(), originalName, isTemp);
             return assembleAttachmentVO(entity);
-        } catch (RuntimeException exception) {
+        } catch (IOException | RuntimeException exception) {
+            // 对象已经写入外部存储后，摘要读取等 IOException 与数据库异常具有相同补偿义务。
             deleteForCompensation(storage, result.getStoredPath(), "附件上传数据库写入失败");
             throw exception;
         }

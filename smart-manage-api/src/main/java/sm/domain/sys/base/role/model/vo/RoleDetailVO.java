@@ -26,6 +26,7 @@ public class RoleDetailVO {
 
 	@Schema(description = "描述")
 	private String description;
+	private String defaultDataScope;
 
 	@Schema(description = "创建时间")
 	private LocalDateTime createTime;

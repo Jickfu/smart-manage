@@ -17,6 +17,7 @@ import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisit
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionCreateNewDataVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionDetailVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionListVO;
+import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionHomeSummaryVO;
 import sm.domain.scm.procurement.purchaserequisition.service.PurchaseRequisitionService;
 import sm.system.form.IdForm;
 import sm.system.response.PageData;
@@ -45,6 +46,12 @@ public class PurchaseRequisitionController {
     @SaCheckPermission(PurchaseRequisitionPermission.SAVE)
     public Result<PurchaseRequisitionCreateNewDataVO> createNewData() {
         return Result.success(service.createNewData());
+    }
+
+    @GetMapping("/scm/procurement/purchase-requisition/home-summary")
+    @SaCheckPermission(PurchaseRequisitionPermission.LIST)
+    public Result<PurchaseRequisitionHomeSummaryVO> homeSummary() {
+        return Result.success(service.homeSummary());
     }
 
     @PostMapping("/scm/procurement/purchase-requisition/save")

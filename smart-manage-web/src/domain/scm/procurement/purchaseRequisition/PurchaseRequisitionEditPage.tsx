@@ -105,7 +105,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
             requiredDate: detail?.requiredDate ?? '',
             reason: detail?.reason ?? '',
             billStatus: source.billStatus,
-            entrys: source.entrys ?? [],
+            entries: source.entries ?? [],
           }
         : {},
     [detail, source],
@@ -124,7 +124,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
       attachmentUploadSessions: values.attachmentUploadSessions as
         | Record<string, string>
         | undefined,
-      entrys: (values.entrys as PurchaseRequisitionEntry[]).map((entry, index) => ({
+      entries: (values.entries as PurchaseRequisitionEntry[]).map((entry, index) => ({
         ...entry,
         materialName: entry.materialName.trim(),
         unit: entry.unit.trim(),
@@ -159,13 +159,13 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
     successMessage: '提交成功',
   });
 
-  const renderEntrys = (editable: boolean) => (
+  const renderEntries = (editable: boolean) => (
     <Form.List
-      name="entrys"
+      name="entries"
       rules={[
         {
-          validator: async (_rule, entrys: PurchaseRequisitionEntry[] | undefined) => {
-            if (!entrys?.length) throw new Error('至少需要一条明细');
+          validator: async (_rule, entries: PurchaseRequisitionEntry[] | undefined) => {
+            if (!entries?.length) throw new Error('至少需要一条明细');
           },
         },
       ]}
@@ -254,7 +254,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
           },
         ];
         return (
-          <div className="sm-purchase-requisition-entrys">
+          <div className="sm-purchase-requisition-entries">
             <EditableDetailTable
               editable={editable}
               rowKey={(field) => field.key}
@@ -307,7 +307,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
       onSave={saveMutation.mutateAsync}
       onSubmit={submitMutation.mutateAsync}
       saving={saveMutation.isPending || submitMutation.isPending}
-      detailContent={renderEntrys}
+      detailContent={renderEntries}
       detailExtra={renderEntryActions}
       attachmentResource={{
         resourceType: ATTACHMENT_RESOURCE_TYPE,

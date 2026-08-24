@@ -1,6 +1,14 @@
 import request from '@/api/request';
 import type { PageData, Result } from '@/types/api';
-import type { RoleDetailVO, RoleListForm, RoleListVO, RoleSaveForm, RoleSelectVO } from './types';
+import type {
+  RoleDataScopeRule,
+  RoleDataScopeWorkspace,
+  RoleDetailVO,
+  RoleListForm,
+  RoleListVO,
+  RoleSaveForm,
+  RoleSelectVO,
+} from './types';
 
 export const roleApi = {
   listPage: (form: RoleListForm) =>
@@ -37,5 +45,20 @@ export const roleApi = {
   assignPermissions: (roleId: string, permissionIds: string[]) =>
     request
       .post<Result<string>>('/sys/base/role/assignPermissions', { roleId, permissionIds })
+      .then((response) => response.data.data),
+
+  dataScopeWorkspace: (roleId: string) =>
+    request
+      .post<Result<RoleDataScopeWorkspace>>('/sys/base/role/dataScopeWorkspace', { id: roleId })
+      .then((response) => response.data.data),
+
+  assignDataScopes: (form: {
+    roleId: string;
+    version: number;
+    defaultDataScope: string;
+    rules: RoleDataScopeRule[];
+  }) =>
+    request
+      .post<Result<string>>('/sys/base/role/assignDataScopes', form)
       .then((response) => response.data.data),
 };

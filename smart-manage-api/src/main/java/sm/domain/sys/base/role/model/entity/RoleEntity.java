@@ -29,6 +29,7 @@ public class RoleEntity extends BaseEntity {
 	 * 角色描述
 	 */
 	private String description;
+	private String defaultDataScope;
 
 	@Version
 	private Integer version;

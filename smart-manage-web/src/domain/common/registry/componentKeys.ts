@@ -6,6 +6,7 @@ export const componentKeys = {
   role: 'sys/base/role',
   roleEdit: 'sys/base/role/edit',
   rolePermissionAssignment: 'sys/base/role/permission-assignment',
+  roleDataScopeAssignment: 'sys/base/role/data-scope-assignment',
   sysParam: 'sys/base/sys-param',
   sysParamEdit: 'sys/base/sys-param/edit',
   numberRule: 'sys/base/number-rule',

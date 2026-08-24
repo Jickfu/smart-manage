@@ -8,6 +8,7 @@ public final class RolePermission {
     public static final String SAVE = "sys:base:role:save";
     public static final String DELETE = "sys:base:role:delete";
     public static final String ASSIGN_PERMISSIONS = "sys:base:role:assignPermissions";
+    public static final String ASSIGN_DATA_SCOPES = "sys:base:role:assignDataScopes";
 
     private RolePermission() {
     }

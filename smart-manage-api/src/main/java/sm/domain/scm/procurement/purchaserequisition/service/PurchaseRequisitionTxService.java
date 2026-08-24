@@ -35,8 +35,13 @@ class PurchaseRequisitionTxService {
     private final PurchaseRequisitionEntryMapper entryMapper;
     private final AttachmentService attachmentService;
     private final NumberGeneratorAccessor numberGeneratorAccessor;
+    private final PurchaseRequisitionDataScope dataScope;
 
     public Long save(PurchaseRequisitionSaveForm form) {
+        return save(form, PurchaseRequisitionResourceRegistration.ACTION_SAVE);
+    }
+
+    private Long save(PurchaseRequisitionSaveForm form, String action) {
         PurchaseRequisitionEntity entity;
         if (form.getId() == null) {
             entity = new PurchaseRequisitionEntity();
@@ -48,6 +53,7 @@ class PurchaseRequisitionTxService {
                     NumberGenerationContext.forOrganization(orgId, form.getBizDate())));
         } else {
             entity = requireEntity(form.getId());
+            dataScope.requireAllowed(entity, action);
             BillStatusUtil.requireCanSave(entity.getBillStatus());
             requireVersion(entity, form.getVersion());
         }
@@ -64,11 +70,11 @@ class PurchaseRequisitionTxService {
             throw new BizException(ResultEnum.DATA_CONFLICT, "采购申请已被其他用户修改，请刷新后重试");
         }
 
-        // 明细属于采购申请聚合，保存时按请求中的 entrys 整体替换。
+        // 明细属于采购申请聚合，保存时按请求中的 entries 整体替换。
         entryMapper.delete(new LambdaQueryWrapper<PurchaseRequisitionEntryEntity>()
                 .eq(PurchaseRequisitionEntryEntity::getParentId, entity.getId()));
         int sort = 1;
-        for (PurchaseRequisitionEntryForm entryForm : form.getEntrys()) {
+        for (PurchaseRequisitionEntryForm entryForm : form.getEntries()) {
             PurchaseRequisitionEntryEntity entry = new PurchaseRequisitionEntryEntity();
             entry.setParentId(entity.getId());
             entry.setMaterialName(entryForm.getMaterialName().trim());
@@ -89,8 +95,9 @@ class PurchaseRequisitionTxService {
 
     public Long submit(PurchaseRequisitionSubmitForm form) {
         // 保存聚合与推进状态必须处于同一事务，支持新增页和未保存修改直接提交。
-        Long id = save(form);
+        Long id = save(form, PurchaseRequisitionResourceRegistration.ACTION_SUBMIT);
         PurchaseRequisitionEntity entity = requireEntity(id);
+        dataScope.requireAllowed(entity, PurchaseRequisitionResourceRegistration.ACTION_DELETE);
         Integer version = entity.getVersion();
         String nextStatus = BillStatusUtil.submit(entity.getBillStatus());
         entity.setBillStatus(nextStatus);

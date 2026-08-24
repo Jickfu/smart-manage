@@ -9,5 +9,6 @@ import lombok.Data;
 @Data
 @Schema(title = "角色新增默认值")
 public class RoleCreateNewDataVO {
+	private String defaultDataScope = "SELF";
 }
 

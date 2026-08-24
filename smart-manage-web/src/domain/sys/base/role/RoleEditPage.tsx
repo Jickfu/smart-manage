@@ -31,6 +31,18 @@ const fields: EditField[] = [
     type: 'textarea',
     fullWidth: true,
   },
+  {
+    label: '默认数据范围',
+    dataIndex: 'defaultDataScope',
+    type: 'select',
+    options: [
+      { label: '全部数据', value: 'ALL' },
+      { label: '本组织及下级', value: 'ORG_AND_CHILDREN' },
+      { label: '本组织', value: 'ORG' },
+      { label: '本人相关', value: 'SELF' },
+    ],
+    rules: [{ required: true, message: '请选择默认数据范围' }],
+  },
 ];
 
 /** 角色编辑页只维护角色资料，权限关系由专用分配页面处理。 */
@@ -54,8 +66,9 @@ const RoleEditPage = (props: PageComponentProps) => {
             number: detail.number ?? '',
             name: detail.name ?? '',
             description: detail.description ?? '',
+            defaultDataScope: detail.defaultDataScope,
           }
-        : {},
+        : { defaultDataScope: 'SELF' },
     [detail],
   );
   const saveMutation = useCommandMutation({
@@ -67,6 +80,7 @@ const RoleEditPage = (props: PageComponentProps) => {
         name,
         number: (values.number as string).trim(),
         description: String(values.description ?? '').trim(),
+        defaultDataScope: values.defaultDataScope as 'ALL' | 'ORG_AND_CHILDREN' | 'ORG' | 'SELF',
       });
       if (isAddNew) {
         const nextKey = createBillTabKey(props.componentKey, savedId);

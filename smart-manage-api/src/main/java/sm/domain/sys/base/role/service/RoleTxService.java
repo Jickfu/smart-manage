@@ -13,6 +13,12 @@ import sm.domain.sys.base.role.mapper.RolePermissionMapper;
 import sm.domain.sys.base.role.model.entity.RolePermissionEntity;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
+import sm.domain.sys.base.datascope.mapper.RoleDataScopeMapper;
+import sm.domain.sys.base.datascope.mapper.RoleDataScopeOrgMapper;
+import sm.domain.sys.base.datascope.model.entity.RoleDataScopeEntity;
+import sm.domain.sys.base.datascope.model.entity.RoleDataScopeOrgEntity;
+import sm.domain.sys.base.role.model.form.RoleDataScopeAssignForm;
+import sm.system.resource.BusinessResourceRegistry;
 
 import java.util.Objects;
 
@@ -28,6 +34,9 @@ import java.util.Objects;
 class RoleTxService {
     private final RoleMapper mapper;
     private final RolePermissionMapper permissionMapper;
+    private final RoleDataScopeMapper dataScopeMapper;
+    private final RoleDataScopeOrgMapper dataScopeOrgMapper;
+    private final BusinessResourceRegistry resourceRegistry;
 
     public Long save(RoleSaveForm form) {
         // 检查角色编码唯一性
@@ -57,6 +66,8 @@ class RoleTxService {
         }
         entity.setName(form.getName());
         entity.setNumber(form.getNumber());
+        entity.setDescription(form.getDescription());
+        entity.setDefaultDataScope("admin".equals(entity.getNumber()) ? "ALL" : form.getDefaultDataScope());
 
         if (form.getId() == null) {
             if (mapper.insert(entity) != 1) {
@@ -98,6 +109,50 @@ class RoleTxService {
             permissionEntity.setPermissionId(permissionId);
             if (permissionMapper.insert(permissionEntity) != 1) {
                 throw new BizException(sm.system.response.ResultEnum.PERSISTENCE_ERROR, "聚合明细写入失败");
+            }
+        }
+    }
+
+    public void assignDataScopes(RoleDataScopeAssignForm form) {
+        RoleEntity role = mapper.selectById(form.getRoleId());
+        if (role == null) throw new BizException(ResultEnum.NOT_FOUND, "角色不存在");
+        if (!Objects.equals(role.getVersion(), form.getVersion())) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "角色已被其他用户修改，请刷新后重试");
+        }
+        if ("admin".equals(role.getNumber())) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "系统管理员固定拥有全部数据范围");
+        }
+        role.setDefaultDataScope(form.getDefaultDataScope());
+        if (mapper.updateById(role) != 1) throw new BizException(ResultEnum.DATA_CONFLICT, "角色已被其他用户修改");
+
+        var oldRules = dataScopeMapper.selectList(new LambdaQueryWrapper<RoleDataScopeEntity>()
+                .eq(RoleDataScopeEntity::getRoleId, role.getId()));
+        if (!oldRules.isEmpty()) {
+            dataScopeOrgMapper.delete(new LambdaQueryWrapper<RoleDataScopeOrgEntity>()
+                    .in(RoleDataScopeOrgEntity::getScopeRuleId, oldRules.stream().map(RoleDataScopeEntity::getId).toList()));
+        }
+        dataScopeMapper.delete(new LambdaQueryWrapper<RoleDataScopeEntity>().eq(RoleDataScopeEntity::getRoleId, role.getId()));
+        for (var ruleForm : form.getRules()) {
+            var actions = resourceRegistry.dataScopeActions(ruleForm.getResourceType());
+            if (ruleForm.getAction() != null && !actions.contains(ruleForm.getAction())) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "业务资源未声明数据操作: " + ruleForm.getAction());
+            }
+            if ("CUSTOM_ORGS".equals(ruleForm.getScopeType()) && ruleForm.getOrgIds().isEmpty()) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "自定义组织范围不能为空");
+            }
+            RoleDataScopeEntity rule = new RoleDataScopeEntity();
+            rule.setRoleId(role.getId());
+            rule.setResourceType(ruleForm.getResourceType());
+            rule.setAction(ruleForm.getAction());
+            rule.setScopeType(ruleForm.getScopeType());
+            if (dataScopeMapper.insert(rule) != 1) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "数据范围规则写入失败");
+            if ("CUSTOM_ORGS".equals(ruleForm.getScopeType())) {
+                for (Long orgId : ruleForm.getOrgIds().stream().distinct().toList()) {
+                    RoleDataScopeOrgEntity relation = new RoleDataScopeOrgEntity();
+                    relation.setScopeRuleId(rule.getId());
+                    relation.setOrgId(orgId);
+                    if (dataScopeOrgMapper.insert(relation) != 1) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "自定义组织写入失败");
+                }
             }
         }
     }

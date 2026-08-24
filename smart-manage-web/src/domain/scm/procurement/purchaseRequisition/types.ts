@@ -46,7 +46,7 @@ export interface PurchaseRequisitionDetailVO {
   billStatus: string;
   createTime?: string;
   updateTime?: string;
-  entrys: PurchaseRequisitionEntry[];
+  entries: PurchaseRequisitionEntry[];
   attachments: BusinessAttachment[];
 }
 
@@ -55,7 +55,7 @@ export interface PurchaseRequisitionCreateNewDataVO {
   applicantId: string;
   bizDate: string;
   billStatus: string;
-  entrys: PurchaseRequisitionEntry[];
+  entries: PurchaseRequisitionEntry[];
   attachments: BusinessAttachment[];
 }
 
@@ -69,7 +69,12 @@ export interface PurchaseRequisitionSaveForm {
   reason?: string;
   attachmentIds?: string[];
   attachmentUploadSessions?: Record<string, string>;
-  entrys: PurchaseRequisitionEntry[];
+  entries: PurchaseRequisitionEntry[];
 }
 
 export type PurchaseRequisitionSubmitForm = PurchaseRequisitionSaveForm;
+
+export interface PurchaseRequisitionHomeSummaryVO {
+  statusCounts: Record<string, number>;
+  recent: PurchaseRequisitionListVO[];
+}

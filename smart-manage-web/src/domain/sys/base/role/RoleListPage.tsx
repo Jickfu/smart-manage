@@ -19,6 +19,7 @@ import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 /** 角色编辑页 componentKey */
 const ROLE_EDIT_KEY = componentKeys.roleEdit;
 const ROLE_PERMISSION_ASSIGNMENT_KEY = componentKeys.rolePermissionAssignment;
+const ROLE_DATA_SCOPE_ASSIGNMENT_KEY = componentKeys.roleDataScopeAssignment;
 
 const columnFeatures: ListColumnFeatures = {
   number: { label: '编码', filter: { type: 'string' }, sorter: true },
@@ -90,6 +91,19 @@ const RoleListPage = (props: PageComponentProps) => {
     });
   }, [addContentTab, props.appNumber, selectedRowKeys]);
 
+  const handleAssignDataScopes = useCallback(() => {
+    if (selectedRowKeys.length !== 1) return;
+    const roleId = String(selectedRowKeys[0]);
+    addContentTab(props.appNumber, {
+      key: `assignment:${ROLE_DATA_SCOPE_ASSIGNMENT_KEY}:${roleId}`,
+      label: getRegisteredTabTitle(ROLE_DATA_SCOPE_ASSIGNMENT_KEY, 'CUSTOM'),
+      closable: true,
+      componentKey: ROLE_DATA_SCOPE_ASSIGNMENT_KEY,
+      pageType: 'CUSTOM',
+      billId: roleId,
+    });
+  }, [addContentTab, props.appNumber, selectedRowKeys]);
+
   const columns: ColumnsType<RoleListVO> = [
     {
       title: '编码',
@@ -128,6 +142,13 @@ const RoleListPage = (props: PageComponentProps) => {
           permission: roleAccess.permissions.assignPermissions,
           disabled: selectedRowKeys.length !== 1,
           onClick: handleAssignPermissions,
+        },
+        {
+          key: 'assignDataScopes',
+          label: '分配数据范围',
+          permission: roleAccess.permissions.assignDataScopes,
+          disabled: selectedRowKeys.length !== 1,
+          onClick: handleAssignDataScopes,
         },
       ]}
       onQuickSearch={onSearch}

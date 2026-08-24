@@ -22,6 +22,6 @@ public class PurchaseRequisitionDetailVO {
     private String billStatus;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
-    private List<PurchaseRequisitionEntryVO> entrys = new ArrayList<>();
+    private List<PurchaseRequisitionEntryVO> entries = new ArrayList<>();
     private List<AttachmentVO> attachments = new ArrayList<>();
 }

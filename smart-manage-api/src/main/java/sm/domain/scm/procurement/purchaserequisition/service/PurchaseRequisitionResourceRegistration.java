@@ -12,13 +12,19 @@ import sm.system.resource.BusinessResourceAccessPolicy;
 import sm.system.resource.BusinessResourceAction;
 import sm.system.resource.BusinessResourceRegistration;
 import sm.system.response.ResultEnum;
+import java.util.Set;
 
 /** 采购申请附件资源注册，附件权限继承采购申请的单据权限和暂存状态。 */
 @Component
 @RequiredArgsConstructor
 final class PurchaseRequisitionResourceRegistration implements BusinessResourceRegistration, BusinessResourceAccessPolicy {
     static final String RESOURCE_TYPE = "scm.procurement.purchase-requisition";
+    static final String ACTION_VIEW = "VIEW";
+    static final String ACTION_SAVE = "SAVE";
+    static final String ACTION_DELETE = "DELETE";
+    static final String ACTION_SUBMIT = "SUBMIT";
     private final PurchaseRequisitionMapper mapper;
+    private final PurchaseRequisitionDataScope dataScope;
 
     @Override
     public String resourceType() {
@@ -28,6 +34,16 @@ final class PurchaseRequisitionResourceRegistration implements BusinessResourceR
     @Override
     public BusinessResourceAccessPolicy accessPolicy() {
         return this;
+    }
+
+    @Override
+    public boolean supportsDataScope() {
+        return true;
+    }
+
+    @Override
+    public Set<String> dataScopeActions() {
+        return Set.of(ACTION_VIEW, ACTION_SAVE, ACTION_DELETE, ACTION_SUBMIT);
     }
 
     @Override
@@ -49,9 +65,11 @@ final class PurchaseRequisitionResourceRegistration implements BusinessResourceR
         }
         if (action == BusinessResourceAction.READ) {
             StpUtil.checkPermission(PurchaseRequisitionPermission.DETAIL);
+            dataScope.requireAllowed(entity, ACTION_VIEW);
             return;
         }
         StpUtil.checkPermission(PurchaseRequisitionPermission.SAVE);
+        dataScope.requireAllowed(entity, ACTION_SAVE);
         if (!BillStatusEnum.SAVED.getValue().equals(entity.getBillStatus())) {
             throw new BizException(ResultEnum.BILL_STATUS_ERROR, "非暂存采购申请不允许维护附件");
         }

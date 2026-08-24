@@ -24,4 +24,11 @@ export default definePageRegistrations([
     pageType: 'CUSTOM',
     component: lazy(() => import('./RolePermissionAssignmentPage')),
   },
+  {
+    componentKey: componentKeys.roleDataScopeAssignment,
+    featureKey: 'sys/base/role',
+    title: '角色数据范围',
+    pageType: 'CUSTOM',
+    component: lazy(() => import('./RoleDataScopeAssignmentPage')),
+  },
 ]);

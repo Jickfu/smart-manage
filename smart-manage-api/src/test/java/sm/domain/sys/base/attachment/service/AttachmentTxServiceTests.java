@@ -22,6 +22,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -57,6 +59,23 @@ class AttachmentTxServiceTests {
 		assertThrows(BizException.class, () -> txService.upload(file, "sys.base.ui-config", "asset/sys/base/ui-config", 24));
 
 		verify(storage).delete("asset/sys/stored.txt");
+	}
+
+	@Test
+	void uploadDeletesStoredFileWhenHashReadFails() throws IOException {
+		MultipartFile file = mock(MultipartFile.class);
+		when(file.getOriginalFilename()).thenReturn("broken.txt");
+		when(file.getContentType()).thenReturn("text/plain");
+		when(file.getInputStream()).thenThrow(new IOException("read failed"));
+		when(storageFactory.getService()).thenReturn(storage);
+		when(storage.store(anyString(), same(file)))
+				.thenReturn(FileStoreResult.of("broken.txt", "biz/scm/broken.txt", 10L));
+
+		assertThrows(IOException.class, () -> txService.upload(file, "scm.procurement.purchase-requisition",
+				"biz/scm/procurement", 24));
+
+		verify(storage).delete("biz/scm/broken.txt");
+		verify(mapper, never()).insert(any(AttachmentEntity.class));
 	}
 
 	@Test

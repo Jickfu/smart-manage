@@ -1,0 +1,71 @@
+import { Card, Empty, Result, Statistic, Table } from 'antd';
+import { useQuery } from '@tanstack/react-query';
+import { purchaseRequisitionApi } from '../purchaseRequisition/api';
+import type { PurchaseRequisitionListVO } from '../purchaseRequisition/types';
+import './ProcurementHome.css';
+
+const statusLabels: Record<string, string> = {
+  SAVED: '暂存',
+  SUBMITTED: '已提交',
+  APPROVED: '已审核',
+  CLOSED: '已关闭',
+};
+
+const ProcurementHome = () => {
+  const summaryQuery = useQuery({
+    queryKey: ['scm', 'procurement', 'home', 'summary'],
+    queryFn: purchaseRequisitionApi.homeSummary,
+  });
+  if (summaryQuery.error) {
+    return (
+      <div className="sm-app-home">
+        <Card className="sm-app-home-card">
+          <Result status="error" title="采购概览加载失败" subTitle={summaryQuery.error.message} />
+        </Card>
+      </div>
+    );
+  }
+  const summary = summaryQuery.data;
+  return (
+    <div className="sm-app-home">
+      <header className="sm-app-home-header">
+        <div>
+          <h1>采购管理</h1>
+          <p>掌握当前数据范围内的采购需求与处理状态</p>
+        </div>
+      </header>
+      <section className="sm-procurement-home-statistics">
+        {Object.entries(statusLabels).map(([status, label]) => (
+          <Card key={status} className="sm-app-home-card" loading={summaryQuery.isLoading}>
+            <Statistic title={label} value={summary?.statusCounts[status] ?? 0} />
+          </Card>
+        ))}
+      </section>
+      <Card className="sm-app-home-card" title="最近采购申请" loading={summaryQuery.isLoading}>
+        {summary?.recent.length ? (
+          <Table<PurchaseRequisitionListVO>
+            rowKey="id"
+            pagination={false}
+            size="small"
+            dataSource={summary.recent}
+            columns={[
+              { title: '编号', dataIndex: 'number', width: 190 },
+              { title: '主题', dataIndex: 'subject' },
+              {
+                title: '状态',
+                dataIndex: 'billStatus',
+                width: 100,
+                render: (value: string) => statusLabels[value] ?? value,
+              },
+              { title: '业务日期', dataIndex: 'bizDate', width: 120 },
+            ]}
+          />
+        ) : (
+          <Empty description="当前数据范围内暂无采购申请" />
+        )}
+      </Card>
+    </div>
+  );
+};
+
+export default ProcurementHome;
