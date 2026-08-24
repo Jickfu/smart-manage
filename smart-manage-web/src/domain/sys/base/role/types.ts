@@ -35,7 +35,6 @@ export interface RoleSaveForm {
   name: string;
   number: string;
   description?: string;
-  defaultDataScope: Exclude<DataScopeType, 'CUSTOM_ORGS'>;
 }
 
 /** 角色选择器列表项 */

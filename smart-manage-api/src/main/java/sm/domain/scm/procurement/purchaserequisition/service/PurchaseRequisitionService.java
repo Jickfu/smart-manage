@@ -29,6 +29,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import sm.domain.sys.base.datascope.model.DataScope;
 
 /** 采购申请聚合的唯一公开服务。 */
 @Service
@@ -94,15 +95,23 @@ public class PurchaseRequisitionService {
 
     /** 首页只查询当前用户 VIEW 数据范围内的轻量统计与最近记录。 */
     public PurchaseRequisitionHomeSummaryVO homeSummary() {
+        DataScope viewScope = dataScope.resolve(PurchaseRequisitionResourceRegistration.ACTION_VIEW);
         Map<String, Long> statusCounts = new LinkedHashMap<>();
         for (String status : List.of("SAVED", "SUBMITTED", "APPROVED", "CLOSED")) {
-            LambdaQueryWrapper<PurchaseRequisitionEntity> countQuery = new LambdaQueryWrapper<>();
-            countQuery.eq(PurchaseRequisitionEntity::getBillStatus, status);
-            dataScope.apply(countQuery, PurchaseRequisitionResourceRegistration.ACTION_VIEW);
-            statusCounts.put(status, mapper.selectCount(countQuery));
+            statusCounts.put(status, 0L);
+        }
+        for (Map<String, Object> row : mapper.selectStatusCounts(viewScope)) {
+            String statusKey = switch ((String) row.get("billStatus")) {
+                case "A" -> "SAVED";
+                case "B" -> "SUBMITTED";
+                case "C" -> "APPROVED";
+                case "D" -> "CLOSED";
+                default -> throw new BizException(ResultEnum.BILL_STATUS_ERROR, "采购申请状态非法");
+            };
+            statusCounts.put(statusKey, ((Number) row.get("total")).longValue());
         }
         LambdaQueryWrapper<PurchaseRequisitionEntity> recentQuery = new LambdaQueryWrapper<>();
-        dataScope.apply(recentQuery, PurchaseRequisitionResourceRegistration.ACTION_VIEW);
+        dataScope.apply(recentQuery, viewScope);
         recentQuery.orderByDesc(PurchaseRequisitionEntity::getCreateTime)
                 .orderByDesc(PurchaseRequisitionEntity::getId).last("LIMIT 5");
         PurchaseRequisitionHomeSummaryVO summary = new PurchaseRequisitionHomeSummaryVO();
@@ -113,15 +122,11 @@ public class PurchaseRequisitionService {
 
     @BizLog("保存采购申请")
     public Long save(PurchaseRequisitionSaveForm form) {
-        if (form.getId() != null) dataScope.requireAllowed(requireEntity(form.getId()),
-                PurchaseRequisitionResourceRegistration.ACTION_SAVE);
         return txService.save(form);
     }
 
     @BizLog("提交采购申请")
     public Long submit(PurchaseRequisitionSubmitForm form) {
-        if (form.getId() != null) dataScope.requireAllowed(requireEntity(form.getId()),
-                PurchaseRequisitionResourceRegistration.ACTION_SUBMIT);
         return txService.submit(form);
     }
 

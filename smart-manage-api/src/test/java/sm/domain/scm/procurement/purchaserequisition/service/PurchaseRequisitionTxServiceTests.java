@@ -28,6 +28,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 
 class PurchaseRequisitionTxServiceTests {
 
@@ -54,8 +55,9 @@ class PurchaseRequisitionTxServiceTests {
         AttachmentService attachmentService = mock(AttachmentService.class);
         NumberGeneratorAccessor numberGeneratorAccessor = mock(NumberGeneratorAccessor.class);
         when(numberGeneratorAccessor.nextNumber(any(), any())).thenReturn("PR-20260728-00001");
+        PurchaseRequisitionDataScope dataScope = mock(PurchaseRequisitionDataScope.class);
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(currentUserContext, mapper, entryMapper,
-                attachmentService, numberGeneratorAccessor, mock(PurchaseRequisitionDataScope.class));
+                attachmentService, numberGeneratorAccessor, dataScope);
         PurchaseRequisitionSubmitForm form = submitForm(null, null);
         form.setAttachmentIds(List.of(99L));
         form.setAttachmentUploadSessions(Map.of(99L, "upload-session"));
@@ -66,6 +68,30 @@ class PurchaseRequisitionTxServiceTests {
         verify(entryMapper).insert(any(PurchaseRequisitionEntryEntity.class));
         verify(mapper).update(any(PurchaseRequisitionEntity.class), any());
         verify(attachmentService).promoteForAggregate(any());
+        verify(dataScope, times(1)).requireAllowed(any(PurchaseRequisitionEntity.class),
+                org.mockito.ArgumentMatchers.eq(PurchaseRequisitionResourceRegistration.ACTION_SUBMIT));
+        verify(dataScope, never()).requireAllowed(any(PurchaseRequisitionEntity.class),
+                org.mockito.ArgumentMatchers.eq(PurchaseRequisitionResourceRegistration.ACTION_DELETE));
+    }
+
+    @Test
+    void newBillChecksSaveScopeBeforeInsert() {
+        PurchaseRequisitionMapper mapper = mock(PurchaseRequisitionMapper.class);
+        CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
+        when(currentUserContext.getOrgId()).thenReturn(10L);
+        when(currentUserContext.getUserId()).thenReturn(20L);
+        NumberGeneratorAccessor numberGeneratorAccessor = mock(NumberGeneratorAccessor.class);
+        when(numberGeneratorAccessor.nextNumber(any(), any())).thenReturn("PR-001");
+        PurchaseRequisitionDataScope dataScope = mock(PurchaseRequisitionDataScope.class);
+        org.mockito.Mockito.doThrow(new BizException(ResultEnum.PERMISSION_ERROR, "无权访问该采购申请"))
+                .when(dataScope).requireAllowed(any(PurchaseRequisitionEntity.class),
+                        org.mockito.ArgumentMatchers.eq(PurchaseRequisitionResourceRegistration.ACTION_SAVE));
+        PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(currentUserContext, mapper,
+                mock(PurchaseRequisitionEntryMapper.class), mock(AttachmentService.class), numberGeneratorAccessor, dataScope);
+
+        assertThrows(BizException.class, () -> service.save(submitForm(null, null)));
+
+        verify(mapper, never()).insert(any(PurchaseRequisitionEntity.class));
     }
 
     @Test

@@ -53,6 +53,8 @@ try {
         '-c', "SELECT count(*) AS menu_count FROM t_sys_menu;",
         '-c', "SELECT count(*) AS flyway_version_count FROM flyway_schema_history WHERE success;"
     )
+    $dataScopeVerificationFile = Join-Path $PSScriptRoot 'verify-data-scope.sql'
+    Invoke-Psql $verifyDatabase @('-v', 'ON_ERROR_STOP=1', '-f', $dataScopeVerificationFile)
     $menuFeatureMismatchCount = & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
         -v ON_ERROR_STOP=1 -A -t -c 'SELECT count(*) FROM t_sys_menu menu JOIN t_sys_permission permission ON permission.id = menu.permission_id WHERE menu.feature_id <> permission.feature_id'
     if ($LASTEXITCODE -ne 0 -or [int]$menuFeatureMismatchCount -ne 0) {

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.scm.procurement.purchaserequisition.mapper.PurchaseRequisitionMapper">
+    <select id="selectStatusCounts" resultType="java.util.Map">
+        SELECT a.bill_status AS "billStatus", count(*) AS total
+        FROM t_scm_purchase_requisition a
+        <if test="!scope.all">
+            WHERE
+            <choose>
+                <when test="!scope.orgIds.isEmpty() and scope.selfIncluded">
+                    (a.org_id IN
+                    <foreach collection="scope.orgIds" item="orgId" open="(" separator="," close=")">#{orgId}</foreach>
+                    OR a.applicant_id = #{scope.currentUserId})
+                </when>
+                <when test="!scope.orgIds.isEmpty()">
+                    a.org_id IN
+                    <foreach collection="scope.orgIds" item="orgId" open="(" separator="," close=")">#{orgId}</foreach>
+                </when>
+                <when test="scope.selfIncluded">
+                    a.applicant_id = #{scope.currentUserId}
+                </when>
+                <otherwise>1 = 0</otherwise>
+            </choose>
+        </if>
+        GROUP BY a.bill_status
+    </select>
+</mapper>

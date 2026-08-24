@@ -53,7 +53,6 @@ class PurchaseRequisitionTxService {
                     NumberGenerationContext.forOrganization(orgId, form.getBizDate())));
         } else {
             entity = requireEntity(form.getId());
-            dataScope.requireAllowed(entity, action);
             BillStatusUtil.requireCanSave(entity.getBillStatus());
             requireVersion(entity, form.getVersion());
         }
@@ -61,6 +60,9 @@ class PurchaseRequisitionTxService {
         entity.setBizDate(form.getBizDate());
         entity.setRequiredDate(form.getRequiredDate());
         entity.setReason(form.getReason());
+
+        // 新增与修改遵守同一 SAVE/SUBMIT Contract；归属事实确定后、写库前统一校验。
+        dataScope.requireAllowed(entity, action);
 
         if (form.getId() == null) {
             if (mapper.insert(entity) != 1) {
@@ -97,7 +99,6 @@ class PurchaseRequisitionTxService {
         // 保存聚合与推进状态必须处于同一事务，支持新增页和未保存修改直接提交。
         Long id = save(form, PurchaseRequisitionResourceRegistration.ACTION_SUBMIT);
         PurchaseRequisitionEntity entity = requireEntity(id);
-        dataScope.requireAllowed(entity, PurchaseRequisitionResourceRegistration.ACTION_DELETE);
         Integer version = entity.getVersion();
         String nextStatus = BillStatusUtil.submit(entity.getBillStatus());
         entity.setBillStatus(nextStatus);

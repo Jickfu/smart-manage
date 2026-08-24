@@ -13,5 +13,5 @@ public class RoleDataScopeAssignForm {
     @NotNull
     @Pattern(regexp = "ALL|ORG_AND_CHILDREN|ORG|SELF")
     private String defaultDataScope;
-    @Valid private List<RoleDataScopeRuleForm> rules = List.of();
+    @NotNull @Valid private List<RoleDataScopeRuleForm> rules = List.of();
 }

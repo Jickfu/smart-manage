@@ -98,7 +98,7 @@ const DataScopeEditor = ({ appNumber, tabKey, workspace, organizations, refresh 
                 />
                 <Select
                   allowClear
-                  placeholder="资源默认（继承角色）"
+                  placeholder="资源默认（覆盖角色默认）"
                   value={rule.action}
                   options={actions.map((value) => ({ value, label: value }))}
                   onChange={(action) => updateRule(index, { action })}

@@ -21,6 +21,7 @@ import sm.domain.sys.base.role.model.form.RoleDataScopeAssignForm;
 import sm.system.resource.BusinessResourceRegistry;
 
 import java.util.Objects;
+import java.util.HashSet;
 
 /**
  * 角色事务服务 —— 所有写操作在类级别事务中执行
@@ -67,7 +68,10 @@ class RoleTxService {
         entity.setName(form.getName());
         entity.setNumber(form.getNumber());
         entity.setDescription(form.getDescription());
-        entity.setDefaultDataScope("admin".equals(entity.getNumber()) ? "ALL" : form.getDefaultDataScope());
+        // 角色资料保存不能修改数据权限；新角色从最小范围开始，后续仅由专用命令调整。
+        if (form.getId() == null) {
+            entity.setDefaultDataScope("admin".equals(entity.getNumber()) ? "ALL" : "SELF");
+        }
 
         if (form.getId() == null) {
             if (mapper.insert(entity) != 1) {
@@ -121,6 +125,13 @@ class RoleTxService {
         }
         if ("admin".equals(role.getNumber())) {
             throw new BizException(ResultEnum.PERMISSION_ERROR, "系统管理员固定拥有全部数据范围");
+        }
+        var uniqueRules = new HashSet<String>();
+        for (var ruleForm : form.getRules()) {
+            String ruleKey = ruleForm.getResourceType() + "\u0000" + Objects.toString(ruleForm.getAction(), "");
+            if (!uniqueRules.add(ruleKey)) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "同一资源操作只能配置一条数据范围规则");
+            }
         }
         role.setDefaultDataScope(form.getDefaultDataScope());
         if (mapper.updateById(role) != 1) throw new BizException(ResultEnum.DATA_CONFLICT, "角色已被其他用户修改");

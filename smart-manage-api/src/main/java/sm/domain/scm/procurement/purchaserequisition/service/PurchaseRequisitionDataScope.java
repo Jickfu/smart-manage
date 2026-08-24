@@ -16,7 +16,14 @@ final class PurchaseRequisitionDataScope {
     private final DataScopeService dataScopeService;
 
     void apply(LambdaQueryWrapper<PurchaseRequisitionEntity> query, String action) {
-        DataScope scope = dataScopeService.resolve(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE, action);
+        apply(query, resolve(action));
+    }
+
+    DataScope resolve(String action) {
+        return dataScopeService.resolve(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE, action);
+    }
+
+    void apply(LambdaQueryWrapper<PurchaseRequisitionEntity> query, DataScope scope) {
         if (scope.all()) return;
         query.and(condition -> {
             boolean hasCondition = false;

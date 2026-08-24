@@ -2,7 +2,6 @@ package sm.domain.sys.base.role.model.form;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 
@@ -31,9 +30,5 @@ public class RoleSaveForm {
 
 	@Schema(description = "描述")
 	private String description;
-
-	@NotBlank(message = "默认数据范围不能为空")
-	@Pattern(regexp = "ALL|ORG_AND_CHILDREN|ORG|SELF", message = "默认数据范围非法")
-	private String defaultDataScope;
 
 }
