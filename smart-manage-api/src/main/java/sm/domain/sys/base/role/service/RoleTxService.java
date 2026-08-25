@@ -18,7 +18,6 @@ import sm.domain.sys.base.datascope.mapper.RoleDataScopeOrgMapper;
 import sm.domain.sys.base.datascope.model.entity.RoleDataScopeEntity;
 import sm.domain.sys.base.datascope.model.entity.RoleDataScopeOrgEntity;
 import sm.domain.sys.base.role.model.form.RoleDataScopeAssignForm;
-import sm.system.resource.BusinessResourceRegistry;
 
 import java.util.Objects;
 import java.util.HashSet;
@@ -37,7 +36,6 @@ class RoleTxService {
     private final RolePermissionMapper permissionMapper;
     private final RoleDataScopeMapper dataScopeMapper;
     private final RoleDataScopeOrgMapper dataScopeOrgMapper;
-    private final BusinessResourceRegistry resourceRegistry;
 
     public Long save(RoleSaveForm form) {
         // 检查角色编码唯一性
@@ -144,10 +142,6 @@ class RoleTxService {
         }
         dataScopeMapper.delete(new LambdaQueryWrapper<RoleDataScopeEntity>().eq(RoleDataScopeEntity::getRoleId, role.getId()));
         for (var ruleForm : form.getRules()) {
-            var actions = resourceRegistry.dataScopeActions(ruleForm.getResourceType());
-            if (ruleForm.getAction() != null && !actions.contains(ruleForm.getAction())) {
-                throw new BizException(ResultEnum.PARAM_ERROR, "业务资源未声明数据操作: " + ruleForm.getAction());
-            }
             if ("CUSTOM_ORGS".equals(ruleForm.getScopeType()) && ruleForm.getOrgIds().isEmpty()) {
                 throw new BizException(ResultEnum.PARAM_ERROR, "自定义组织范围不能为空");
             }

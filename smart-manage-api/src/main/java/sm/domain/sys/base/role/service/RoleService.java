@@ -174,6 +174,13 @@ public class RoleService {
 
 	@BizLog("分配角色数据范围")
 	public void assignDataScopes(RoleDataScopeAssignForm form) {
+		// 外部配置写入前校验资源身份和数据权限动作；运行期解析只消费业务已声明的稳定常量。
+		for (var rule : form.getRules()) {
+			resourceRegistry.dataScopeActions(rule.getResourceType());
+			if (rule.getAction() != null) {
+				resourceRegistry.requireDataScopeAction(rule.getResourceType(), rule.getAction());
+			}
+		}
 		txService.assignDataScopes(form);
 		authorizationStateHelper.refreshRoleUsers(form.getRoleId());
 	}

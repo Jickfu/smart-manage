@@ -128,6 +128,12 @@ smart-manage:
   system:
     security:
       no-need-login: /sys/base/login,/sys/base/captcha/challenge,/sys/base/captcha/verify
+    log:
+      core-pool-size: 10
+      max-pool-size: 20
+      queue-capacity: 1000
+      keep-alive-seconds: 60
+      thread-name-prefix: biz-log-
   security:
     argon2:
       iterations: 2
@@ -137,9 +143,3 @@ smart-manage:
     http:
       connect-timeout: 3s
       request-timeout: 10s
-    log:
-      core-pool-size: 10
-      max-pool-size: 20
-      queue-capacity: 1000
-      keep-alive-seconds: 60
-      thread-name-prefix: biz-log-

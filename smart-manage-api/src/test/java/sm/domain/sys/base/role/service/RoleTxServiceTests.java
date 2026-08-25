@@ -7,7 +7,6 @@ import sm.domain.sys.base.role.mapper.RoleMapper;
 import sm.domain.sys.base.role.mapper.RolePermissionMapper;
 import sm.domain.sys.base.role.model.entity.RoleEntity;
 import sm.domain.sys.base.role.model.form.RoleSaveForm;
-import sm.system.resource.BusinessResourceRegistry;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -53,7 +52,7 @@ class RoleTxServiceTests {
 
     private RoleTxService service(RoleMapper mapper) {
         return new RoleTxService(mapper, mock(RolePermissionMapper.class), mock(RoleDataScopeMapper.class),
-                mock(RoleDataScopeOrgMapper.class), mock(BusinessResourceRegistry.class));
+                mock(RoleDataScopeOrgMapper.class));
     }
 
     private RoleSaveForm form(Long id, Integer version) {

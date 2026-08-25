@@ -6,7 +6,6 @@ import sm.domain.sys.base.datascope.mapper.RoleDataScopeMapper;
 import sm.domain.sys.base.datascope.mapper.RoleDataScopeOrgMapper;
 import sm.domain.sys.base.datascope.model.entity.RoleDataScopeEntity;
 import sm.domain.sys.base.org.mapper.OrgMapper;
-import sm.system.resource.BusinessResourceRegistry;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -17,8 +16,8 @@ class DataScopeServiceTests {
         CurrentUserContext context = mock(CurrentUserContext.class);
         when(context.getUserId()).thenReturn(1L);
         when(context.isAdministrator()).thenReturn(true);
-        DataScopeService service = new DataScopeService(context, mock(BusinessResourceRegistry.class),
-                mock(RoleDataScopeMapper.class), mock(RoleDataScopeOrgMapper.class), mock(OrgMapper.class));
+        DataScopeService service = new DataScopeService(context, mock(RoleDataScopeMapper.class),
+                mock(RoleDataScopeOrgMapper.class), mock(OrgMapper.class));
 
         var scope = service.resolve("scm.procurement.purchase-requisition", "VIEW");
 
@@ -36,8 +35,8 @@ class DataScopeServiceTests {
         RoleDataScopeEntity selfRule = rule(-2L, "SELF");
         when(mapper.selectEffectiveRules(10L, 20L, "scm.procurement.purchase-requisition", "VIEW"))
                 .thenReturn(List.of(orgRule, selfRule));
-        DataScopeService service = new DataScopeService(context, mock(BusinessResourceRegistry.class),
-                mapper, mock(RoleDataScopeOrgMapper.class), mock(OrgMapper.class));
+        DataScopeService service = new DataScopeService(context, mapper,
+                mock(RoleDataScopeOrgMapper.class), mock(OrgMapper.class));
 
         var scope = service.resolve("scm.procurement.purchase-requisition", "VIEW");
 

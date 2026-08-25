@@ -12,7 +12,6 @@ import sm.domain.sys.base.datascope.model.entity.RoleDataScopeEntity;
 import sm.domain.sys.base.datascope.model.entity.RoleDataScopeOrgEntity;
 import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.org.model.entity.OrgEntity;
-import sm.system.resource.BusinessResourceRegistry;
 import sm.system.datascope.DataScopeResolver;
 
 import java.util.ArrayDeque;
@@ -28,14 +27,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class DataScopeService implements DataScopeResolver {
     private final CurrentUserContext currentUserContext;
-    private final BusinessResourceRegistry resourceRegistry;
     private final RoleDataScopeMapper ruleMapper;
     private final RoleDataScopeOrgMapper ruleOrgMapper;
     private final OrgMapper orgMapper;
 
     @Override
     public DataScope resolve(String resourceType, String action) {
-        resourceRegistry.requireDataScopeAction(resourceType, action);
         Long userId = currentUserContext.getUserId();
         if (currentUserContext.isAdministrator()) {
             return new DataScope(true, true, Set.of(), userId);
