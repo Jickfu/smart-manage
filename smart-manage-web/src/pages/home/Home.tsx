@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { Card, Empty, Spin } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { fetchApps } from '@/domain/sys/base/app/api';
@@ -11,8 +11,10 @@ import './Home.css';
 
 const Home = () => {
   const user = useUserStore((state) => state.userInfo);
-  const pinnedNumbers = useHeaderTabsStore((state) =>
-    state.tabs.filter((tab) => tab.type === 'app' && tab.pinned).map((tab) => tab.key),
+  const headerTabs = useHeaderTabsStore((state) => state.tabs);
+  const pinnedNumbers = useMemo(
+    () => headerTabs.filter((tab) => tab.type === 'app' && tab.pinned).map((tab) => tab.key),
+    [headerTabs],
   );
   const workspaces = useWorkbenchStore((state) => state.workspaces);
   const appsQuery = useQuery({ queryKey: appQueryKeys.domainApps(), queryFn: fetchApps });
