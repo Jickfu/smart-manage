@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 public class MonitorInstanceVO {
     private String instanceId;
+    private String hostId;
     private String applicationVersion;
     private String startTime;
     private String lastSeenTime;

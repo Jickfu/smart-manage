@@ -1,4 +1,4 @@
-import type { MonitorInstance } from '../node/types';
+import type { MonitorInstance } from '../runtime/types';
 
 export type { MonitorInstance };
 

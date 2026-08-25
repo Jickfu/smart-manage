@@ -1,10 +1,10 @@
 import request from '@/api/request';
 import type { Result } from '@/types/api';
-import { nodeMonitorApi } from '../node/api';
+import { runtimeMonitorApi } from '../runtime/api';
 import type { SlowSqlSnapshot } from './types';
 
 export const slowSqlApi = {
-  instances: nodeMonitorApi.instances,
+  instances: runtimeMonitorApi.instances,
   snapshot: (instanceId?: string) =>
     request
       .get<Result<SlowSqlSnapshot>>('/sys/monitor/slow-sql/snapshot', {

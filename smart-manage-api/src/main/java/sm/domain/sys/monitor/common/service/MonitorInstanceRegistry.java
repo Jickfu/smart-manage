@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Locale;
+import oshi.SystemInfo;
 
 /** Redis 在线实例注册表；实例详情独立 TTL，索引只用于发现候选实例。 */
 @Component
@@ -39,6 +41,8 @@ public class MonitorInstanceRegistry {
     private final StringRedisTemplate redisTemplate;
     private final JsonMapper jsonMapper;
     private final MonitorClusterProperties properties;
+    private final MonitorCatalogAccessor catalogAccessor;
+    private final SystemInfo systemInfo = new SystemInfo();
 
     @Value("${smart-manage.instance-id}")
     private String instanceId;
@@ -49,17 +53,31 @@ public class MonitorInstanceRegistry {
     @Value("${spring.application.version:unknown}")
     private String applicationVersion;
 
+    @Value("${smart-manage.monitor.host-id:}")
+    private String configuredHostId;
+
     @EventListener(ApplicationReadyEvent.class)
     public void registerWhenReady() {
+        // Redis 是系统基础设施，启动阶段注册失败必须中止启动，禁止伪装成可用实例。
         heartbeat();
     }
 
     @Scheduled(fixedDelayString = "${smart-manage.monitor.cluster.heartbeat-interval-ms:10000}")
+    public void scheduledHeartbeat() {
+        // 运行中断连时保留进程以便健康检查、告警和连接池自动恢复，但心跳失败不得吞掉。
+        heartbeat();
+    }
+
     public void heartbeat() {
         validateInternalBaseUrl(properties.getInternalBaseUrl());
         long now = System.currentTimeMillis();
         RegisteredInstance registeredInstance = new RegisteredInstance();
         registeredInstance.setInstanceId(instanceId);
+        registeredInstance.setHostId(resolveHostId());
+        registeredInstance.setHostName(systemInfo.getOperatingSystem().getNetworkParams().getHostName());
+        registeredInstance.setOsName(systemInfo.getOperatingSystem().getFamily());
+        registeredInstance.setOsVersion(systemInfo.getOperatingSystem().getVersionInfo().getVersion());
+        registeredInstance.setArch(System.getProperty("os.arch"));
         registeredInstance.setApplicationName(applicationName);
         registeredInstance.setApplicationVersion(applicationVersion);
         registeredInstance.setInternalBaseUrl(normalizeBaseUrl(properties.getInternalBaseUrl()));
@@ -71,8 +89,9 @@ public class MonitorInstanceRegistry {
                     Duration.ofMillis(properties.getInstanceTtlMs()));
             redisTemplate.opsForZSet().add(INDEX_KEY, instanceId, now);
             redisTemplate.opsForZSet().removeRangeByScore(INDEX_KEY, 0, now - properties.getInstanceTtlMs());
+            catalogAccessor.touch(registeredInstance);
         } catch (Exception exception) {
-            throw new BizException(ResultEnum.CONFIG_ERROR, "在线实例注册失败");
+            throw new BizException(ResultEnum.CONFIG_ERROR, "在线实例注册失败", exception);
         }
     }
 
@@ -116,6 +135,10 @@ public class MonitorInstanceRegistry {
         return instanceId;
     }
 
+    public String currentHostId() {
+        return resolveHostId();
+    }
+
     @PreDestroy
     public void unregister() {
         try {
@@ -131,13 +154,14 @@ public class MonitorInstanceRegistry {
             String json = redisTemplate.opsForValue().get(instanceKey(targetInstanceId));
             return json == null ? null : jsonMapper.readValue(json, RegisteredInstance.class);
         } catch (Exception exception) {
-            throw new BizException(ResultEnum.CONFIG_ERROR, "读取在线实例注册信息失败");
+            throw new BizException(ResultEnum.CONFIG_ERROR, "读取在线实例注册信息失败", exception);
         }
     }
 
     private MonitorInstanceVO toVO(RegisteredInstance registeredInstance) {
         MonitorInstanceVO result = new MonitorInstanceVO();
         result.setInstanceId(registeredInstance.getInstanceId());
+        result.setHostId(registeredInstance.getHostId());
         result.setApplicationVersion(registeredInstance.getApplicationVersion());
         result.setStartTime(TIME_FORMATTER.format(Instant.ofEpochMilli(registeredInstance.getStartTime())));
         result.setLastSeenTime(TIME_FORMATTER.format(Instant.ofEpochMilli(registeredInstance.getLastSeenTime())));
@@ -162,9 +186,24 @@ public class MonitorInstanceRegistry {
         }
     }
 
+    private String resolveHostId() {
+        String candidate = configuredHostId == null || configuredHostId.isBlank()
+                ? systemInfo.getOperatingSystem().getNetworkParams().getHostName()
+                : configuredHostId.trim();
+        if (candidate == null || !candidate.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,99}")) {
+            throw new BizException(ResultEnum.CONFIG_ERROR, "监控主机标识格式不合法");
+        }
+        return candidate.toLowerCase(Locale.ROOT);
+    }
+
     @Data
     public static class RegisteredInstance {
         private String instanceId;
+        private String hostId;
+        private String hostName;
+        private String osName;
+        private String osVersion;
+        private String arch;
         private String applicationName;
         private String applicationVersion;
         private String internalBaseUrl;

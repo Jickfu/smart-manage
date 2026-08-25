@@ -73,6 +73,14 @@ server:
     accept-count: 10
     connection-timeout: 20000
 
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.95,0.99
+
 logging:
   pattern:
     dateformat: yyyy-MM-dd HH:mm:ss.SSS
@@ -125,6 +133,14 @@ sa-token:
 
 smart-manage:
   instance-id: ${SMART_MANAGE_INSTANCE_ID:instance1}
+  monitor:
+    # host-id 表示 Smart Manage 认知中的运行主机；缺省时使用稳定 hostname。
+    host-id: ${SMART_MANAGE_HOST_ID:}
+    sample-interval-ms: 10000
+    snapshot-ttl-seconds: 40
+    history-interval-ms: 60000
+    history:
+      retention-days: ${SMART_MANAGE_MONITOR_RETENTION_DAYS:7}
   system:
     security:
       no-need-login: /sys/base/login,/sys/base/captcha/challenge,/sys/base/captcha/verify

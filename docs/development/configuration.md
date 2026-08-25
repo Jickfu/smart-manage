@@ -51,6 +51,8 @@ Spring Data Redis 与 JetCache 使用两套配置入口，本机文件中的两�
 | `SMART_MANAGE_SM2_PRIVATE_KEY` | SM2 私钥 |
 | `SMART_MANAGE_SM2_PUBLIC_KEY` | SM2 公钥 |
 | `SMART_MANAGE_INSTANCE_ID` | 集群内唯一的应用实例 ID，例如 `instance1`、`instance2` |
+| `SMART_MANAGE_HOST_ID` | 可选的运行主机稳定标识；同一 OS Host 上的多个实例必须一致，缺省使用 hostname |
+| `SMART_MANAGE_MONITOR_RETENTION_DAYS` | 内建监控历史保留天数，默认 7 天 |
 | `SMART_MANAGE_INTERNAL_BASE_URL` | 当前实例供其他应用实例定向调用的内部基础地址 |
 | `SMART_MANAGE_TRUSTED_PROXY_CIDRS` | 允许提供转发头的受信代理网段 |
 
@@ -85,6 +87,7 @@ Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
 - `SMART_MANAGE_CORS_ALLOWED_ORIGIN`；
 - `SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD`，且不能为 `admin`。
 - `SMART_MANAGE_INSTANCE_ID`，且每个应用实例必须唯一。
+- 可选 `SMART_MANAGE_HOST_ID`；显式配置时只能包含字母、数字、点、下划线和连字符。同一主机上的实例必须配置为相同值。
 - `SMART_MANAGE_INTERNAL_BASE_URL`，且必须是其他应用实例可直接访问的 HTTPS 内部地址。
 - `SMART_MANAGE_TRUSTED_PROXY_CIDRS`，且只能包含实际 Nginx 或负载均衡器网段。
 

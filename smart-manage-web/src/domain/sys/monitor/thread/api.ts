@@ -1,10 +1,10 @@
 import request from '@/api/request';
 import type { Result } from '@/types/api';
-import { nodeMonitorApi } from '../node/api';
+import { runtimeMonitorApi } from '../runtime/api';
 import type { ThreadCollectForm, ThreadDiagnosticResult } from './types';
 
 export const threadDiagnosticApi = {
-  instances: nodeMonitorApi.instances,
+  instances: runtimeMonitorApi.instances,
   list: (instanceId?: string) =>
     request
       .get<Result<ThreadDiagnosticResult>>('/sys/monitor/thread/list', { params: { instanceId } })

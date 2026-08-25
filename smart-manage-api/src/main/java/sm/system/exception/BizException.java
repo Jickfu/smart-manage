@@ -34,6 +34,13 @@ public class BizException extends RuntimeException {
         this.msg = buildMessage(resultEnum, detail);
     }
 
+    /** 保留基础设施或外部系统异常链，便于启动失败和后台任务日志定位真实根因。 */
+    public BizException(ResultEnum resultEnum, String detail, Throwable cause) {
+        super(buildMessage(resultEnum, detail), cause);
+        this.code = resultEnum.getCode();
+        this.msg = buildMessage(resultEnum, detail);
+    }
+
     private static String buildMessage(ResultEnum resultEnum, String detail) {
         if (detail == null || detail.isBlank()) {
             return resultEnum.getMsg();

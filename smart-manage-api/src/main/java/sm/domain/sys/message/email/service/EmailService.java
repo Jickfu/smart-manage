@@ -23,6 +23,8 @@ import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.system.util.TraceIdUtil;
 import sm.system.query.ListQueryUtil;
+import sm.domain.sys.message.email.contract.EmailNotificationCommand;
+import sm.domain.sys.message.email.contract.EmailNotificationSender;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -33,7 +35,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class EmailService {
+public class EmailService implements EmailNotificationSender {
     private static final Set<String> SECURITY_MODES = Set.of("NONE", "STARTTLS", "SSL_TLS");
     private static final Set<String> TASK_STATUSES = Set.of("PENDING","SENDING","SUCCESS","RETRY_WAIT","FAILED","UNKNOWN","CANCELLED");
     private static final Pattern DANGEROUS_HTML = Pattern.compile("(?is)<\\s*(script|iframe|object|embed|form|base)\\b|on[a-z]+\\s*=|javascript\\s*:");
@@ -118,6 +120,41 @@ public class EmailService {
         task.setSubject(form.subject().trim()); task.setHtmlBody(form.htmlBody()); task.setTextBody(form.textBody());
         task.setStatus("PENDING"); task.setAttemptCount(0); task.setMaxAttempts(3); task.setNextAttemptTime(LocalDateTime.now()); task.setTraceId(TraceIdUtil.getTraceId());
         return txService.insertTask(task);
+    }
+
+    /** 系统场景邮件只使用启用的全局默认账号，并以调用方提供的稳定键保证任务幂等。 */
+    @Override
+    public Long enqueue(EmailNotificationCommand command) {
+        if (command == null || !StringUtils.hasText(command.sceneKey())
+                || !StringUtils.hasText(command.idempotencyKey())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "系统邮件场景和幂等键不能为空");
+        }
+        validateRecipientCount(command.recipientUserIds(), List.of(), List.of());
+        if (command.recipientUserIds() == null || command.recipientUserIds().isEmpty()) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "系统邮件接收人不能为空");
+        }
+        if (DANGEROUS_HTML.matcher(command.htmlBody()).find()) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "邮件正文包含脚本、事件处理器或危险链接");
+        }
+        EmailAccountEntity account = resolveManualAccount(null);
+        EmailTaskEntity task = new EmailTaskEntity();
+        task.setSceneKey(command.sceneKey().trim());
+        task.setIdempotencyKey(command.idempotencyKey().trim());
+        task.setAccountId(account.getId()); task.setAccountNumber(account.getNumber());
+        task.setFromAddress(account.getFromAddress()); task.setFromName(account.getFromName());
+        task.setToAddresses(json(resolveUserAddresses(command.recipientUserIds())));
+        task.setCcAddresses("[]"); task.setBccAddresses("[]");
+        task.setSubject(command.subject().trim()); task.setHtmlBody(command.htmlBody()); task.setTextBody(command.textBody());
+        task.setStatus("PENDING"); task.setAttemptCount(0); task.setMaxAttempts(3);
+        task.setNextAttemptTime(LocalDateTime.now()); task.setTraceId(TraceIdUtil.getTraceId());
+        try {
+            return txService.insertTask(task);
+        } catch (DuplicateKeyException exception) {
+            EmailTaskEntity existing = taskMapper.selectOne(new LambdaQueryWrapper<EmailTaskEntity>()
+                    .eq(EmailTaskEntity::getIdempotencyKey, command.idempotencyKey().trim()));
+            if (existing == null) throw exception;
+            return existing.getId();
+        }
     }
 
     public PageData<Map<String, Object>> recordList(RecordListForm form) {

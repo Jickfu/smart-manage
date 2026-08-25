@@ -1,0 +1,29 @@
+package sm.domain.sys.monitor.alert.service;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
+import sm.domain.sys.monitor.alert.model.form.MonitorAlertRuleSaveForm;
+import sm.system.security.context.CurrentUserContext;
+import java.math.BigDecimal;
+import java.util.List;
+import static org.mockito.Mockito.*;
+
+class MonitorAlertServiceTests {
+    @Test
+    void saveRuleChecksAdministratorBeforeEnteringTransaction() {
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        MonitorAlertTxService txService = mock(MonitorAlertTxService.class);
+        CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
+        when(currentUserContext.getUserId()).thenReturn(1L);
+        MonitorAlertService service = new MonitorAlertService(jdbcTemplate, txService,
+                mock(MonitorAlertStateTxService.class), currentUserContext);
+        MonitorAlertRuleSaveForm form = new MonitorAlertRuleSaveForm(1L, 0, true, "WARNING",
+                BigDecimal.valueOf(0.9), 300, BigDecimal.valueOf(0.8), 1800, false, List.of(), null);
+
+        service.saveRule(form);
+
+        var order = inOrder(currentUserContext, txService);
+        order.verify(currentUserContext).checkAdministrator();
+        order.verify(txService).saveRule(form, 1L);
+    }
+}
