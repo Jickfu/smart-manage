@@ -20,10 +20,10 @@ import sm.domain.sys.base.user.service.UserAuthenticationService;
 import sm.domain.sys.base.user.service.UserProfileService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.system.exception.BizException;
-import sm.system.helper.SM2Helper;
-import sm.system.helper.Sm2DecryptionException;
 import sm.system.response.ResultEnum;
 import sm.system.security.CsrfTokenManager;
+import sm.system.security.crypto.BrowserPasswordCipher;
+import sm.system.security.crypto.Sm2CiphertextException;
 import sm.system.util.ServletUtil;
 import sm.system.web.ClientIpResolver;
 
@@ -54,6 +54,7 @@ class LoginServiceTests {
     private final SliderCaptchaGateway sliderCaptchaGateway = mock(SliderCaptchaGateway.class);
     private final LoginProtectionService loginProtectionService = mock(LoginProtectionService.class);
     private final LoginRedisAccessor loginRedisAccessor = mock(LoginRedisAccessor.class);
+    private final BrowserPasswordCipher browserPasswordCipher = mock(BrowserPasswordCipher.class);
     private LoginService loginService;
 
     @BeforeEach
@@ -61,9 +62,10 @@ class LoginServiceTests {
         loginService = new LoginService(userAuthenticationService, userProfileService, userSessionService,
                 logWriteService, redisTemplate, clientIpResolver,
                 temporaryLoginService, csrfTokenManager, sliderCaptchaGateway, loginProtectionService,
-                loginRedisAccessor);
+                loginRedisAccessor, browserPasswordCipher);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(clientIpResolver.resolveCurrentRequest()).thenReturn("127.0.0.1");
+        when(browserPasswordCipher.decrypt("encrypted-password")).thenReturn("password");
     }
 
     @Test
@@ -123,14 +125,10 @@ class LoginServiceTests {
         when(userAuthenticationService.authenticate("administrator", "password")).thenReturn(authentication);
         when(userSessionService.completeLogin(authentication)).thenReturn(expected);
 
-        try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
-            sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password")).thenReturn("password");
+        assertSame(expected, loginService.login(form));
 
-            assertSame(expected, loginService.login(form));
-
-            verify(loginProtectionService).consumeCaptchaTicket("administrator", "127.0.0.1", "captcha-ticket");
-            verify(loginProtectionService).clearAfterSuccess("administrator", "127.0.0.1");
-        }
+        verify(loginProtectionService).consumeCaptchaTicket("administrator", "127.0.0.1", "captcha-ticket");
+        verify(loginProtectionService).clearAfterSuccess("administrator", "127.0.0.1");
     }
 
     @Test
@@ -141,14 +139,11 @@ class LoginServiceTests {
         when(temporaryLoginService.supports("SMTL1.credential")).thenReturn(true);
         when(temporaryLoginService.consume("administrator", "SMTL1.credential")).thenReturn(expected);
 
-        try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
-            sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password"))
-                    .thenReturn("SMTL1.credential");
+        when(browserPasswordCipher.decrypt("encrypted-password")).thenReturn("SMTL1.credential");
 
-            assertSame(expected, loginService.login(form));
-            verify(loginProtectionService).clearAfterSuccess("administrator", "127.0.0.1");
-            verify(userAuthenticationService, never()).authenticate("administrator", "SMTL1.credential");
-        }
+        assertSame(expected, loginService.login(form));
+        verify(loginProtectionService).clearAfterSuccess("administrator", "127.0.0.1");
+        verify(userAuthenticationService, never()).authenticate("administrator", "SMTL1.credential");
     }
 
     @Test
@@ -159,9 +154,7 @@ class LoginServiceTests {
         when(userAuthenticationService.authenticate("administrator", "password")).thenReturn(failed);
         when(request.getHeader("User-Agent")).thenReturn("test-agent");
 
-        try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class);
-             MockedStatic<ServletUtil> servletUtil = mockStatic(ServletUtil.class)) {
-            sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password")).thenReturn("password");
+        try (MockedStatic<ServletUtil> servletUtil = mockStatic(ServletUtil.class)) {
             servletUtil.when(ServletUtil::getRequest).thenReturn(request);
 
             LoginVO actual = loginService.login(form);
@@ -179,13 +172,9 @@ class LoginServiceTests {
         when(userAuthenticationService.authenticate("administrator", "password"))
                 .thenReturn(UserAuthentication.failed("用户已被禁用"));
 
-        try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
-            sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password")).thenReturn("password");
+        LoginVO actual = loginService.login(form);
 
-            LoginVO actual = loginService.login(form);
-
-            assertEquals("用户已被禁用", actual.getMsg());
-        }
+        assertEquals("用户已被禁用", actual.getMsg());
     }
 
     @Test
@@ -195,16 +184,12 @@ class LoginServiceTests {
                 new UserAuthentication(9L, "reset-user", "待改密用户", true, false, 10L, null);
         when(userAuthenticationService.authenticate("administrator", "password")).thenReturn(authentication);
 
-        try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
-            sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password")).thenReturn("password");
+        LoginVO actual = loginService.login(form);
 
-            LoginVO actual = loginService.login(form);
-
-            assertEquals(true, actual.getPasswordReset());
-            verify(userSessionService, never()).completeLogin(authentication);
-            verify(valueOperations).set(startsWith(BaseRedisKey.PASSWORD_CHANGE_TICKET), eq("9"), eq(5L),
-                    eq(TimeUnit.MINUTES));
-        }
+        assertEquals(true, actual.getPasswordReset());
+        verify(userSessionService, never()).completeLogin(authentication);
+        verify(valueOperations).set(startsWith(BaseRedisKey.PASSWORD_CHANGE_TICKET), eq("9"), eq(5L),
+                eq(TimeUnit.MINUTES));
     }
 
     @Test
@@ -214,29 +199,24 @@ class LoginServiceTests {
         form.setNewPassword("encrypted-new-password");
         when(loginRedisAccessor.getAndDelete(BaseRedisKey.PASSWORD_CHANGE_TICKET + "ticket")).thenReturn("9");
 
-        try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
-            sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-new-password"))
-                    .thenReturn("new-password");
+        when(browserPasswordCipher.decrypt("encrypted-new-password")).thenReturn("new-password");
 
-            loginService.changePassword(form);
+        loginService.changePassword(form);
 
-            verify(userAuthenticationService).changeResetPassword(9L, "new-password");
-        }
+        verify(userAuthenticationService).changeResetPassword(9L, "new-password");
     }
 
     @Test
     void invalidSm2CiphertextIsAControlledLoginFailure() {
         LoginForm form = loginForm();
 
-        try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
-            sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password"))
-                    .thenThrow(new Sm2DecryptionException("SM2 密文格式无效", null));
+        when(browserPasswordCipher.decrypt("encrypted-password"))
+                .thenThrow(new Sm2CiphertextException("SM2 密文格式无效"));
 
-            BizException exception = assertThrows(BizException.class, () -> loginService.login(form));
+        BizException exception = assertThrows(BizException.class, () -> loginService.login(form));
 
-            assertEquals(ResultEnum.PARAM_ERROR.getCode(), exception.getCode());
-            verify(userAuthenticationService, never()).authenticate("administrator", "password");
-        }
+        assertEquals(ResultEnum.PARAM_ERROR.getCode(), exception.getCode());
+        verify(userAuthenticationService, never()).authenticate("administrator", "password");
     }
 
     private LoginForm loginForm() {

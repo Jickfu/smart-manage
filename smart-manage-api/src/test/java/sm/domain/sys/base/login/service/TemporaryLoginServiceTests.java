@@ -8,6 +8,7 @@ import sm.domain.sys.base.user.service.UserAuthenticationService;
 import sm.domain.sys.base.user.service.UserCacheAccessor;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.system.exception.BizException;
+import sm.system.security.crypto.BrowserPasswordCipher;
 import sm.system.web.ClientIpResolver;
 
 import java.time.LocalDateTime;
@@ -37,7 +38,8 @@ class TemporaryLoginServiceTests {
             mock(LogWriteService.class),
             mock(ClientIpResolver.class),
             loginRedisAccessor,
-            cacheJsonCodec);
+            cacheJsonCodec,
+            mock(BrowserPasswordCipher.class));
 
     @Test
     void recognizesOnlyVersionedTemporaryCredential() {

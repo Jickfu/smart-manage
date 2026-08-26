@@ -20,9 +20,9 @@ import sm.domain.sys.base.user.service.UserProfileService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
 import sm.system.exception.BizException;
-import sm.system.helper.SM2Helper;
-import sm.system.helper.Sm2DecryptionException;
 import sm.system.response.ResultEnum;
+import sm.system.security.crypto.BrowserPasswordCipher;
+import sm.system.security.crypto.Sm2CiphertextException;
 import sm.system.util.ServletUtil;
 import sm.system.web.ClientIpResolver;
 import sm.system.security.CsrfTokenManager;
@@ -49,6 +49,7 @@ public class LoginService {
 	private final SliderCaptchaGateway sliderCaptchaGateway;
 	private final LoginProtectionService loginProtectionService;
 	private final LoginRedisAccessor loginRedisAccessor;
+	private final BrowserPasswordCipher browserPasswordCipher;
 
 	public SessionVO session() {
 		return new SessionVO(userProfileService.current(), csrfTokenManager.getCurrentToken());
@@ -137,8 +138,8 @@ public class LoginService {
 
 	private String decryptLoginPayload(String ciphertext, String username) {
 		try {
-			return SM2Helper.decryptJsCiphertext(ciphertext);
-		} catch (Sm2DecryptionException exception) {
+			return browserPasswordCipher.decrypt(ciphertext);
+		} catch (Sm2CiphertextException exception) {
 			log.warn("登录请求 SM2 密文无效: {}", exception.getMessage());
 			if (StringUtils.hasText(username)) {
 				writeLoginFailure(username, "登录加密数据无效");

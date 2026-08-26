@@ -29,7 +29,6 @@ import sm.domain.sys.base.user.model.form.TemporaryLoginGrantForm;
 import sm.domain.sys.base.user.model.form.TemporaryLoginSafeForm;
 import sm.domain.sys.base.user.model.vo.TemporaryLoginGrantVO;
 import sm.domain.sys.base.login.service.TemporaryLoginService;
-import sm.system.helper.SM2Helper;
 import sm.domain.sys.base.user.service.UserService;
 import sm.domain.sys.base.user.service.UserAuthenticationService;
 import sm.domain.sys.base.user.service.UserAuthorizationService;
@@ -48,6 +47,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.system.storage.FileStorageService;
 import sm.system.storage.FileStorageServiceFactory;
+import sm.system.security.crypto.BrowserPasswordCipher;
 
 /**
  * 用户管理
@@ -64,6 +64,7 @@ public class UserController {
 	private final UserProfileService userProfileService;
 	private final FileStorageServiceFactory storageFactory;
 	private final TemporaryLoginService temporaryLoginService;
+	private final BrowserPasswordCipher browserPasswordCipher;
 
 	@GetMapping("/sys/base/user/avatar/{userId}")
 	public ResponseEntity<StreamingResponseBody> avatar(@PathVariable Long userId) {
@@ -184,7 +185,7 @@ public class UserController {
 	@GetMapping("/sys/base/user/current/password/publicKey")
 	@Operation(summary = "个人改密公钥")
 	public Result<String> currentPasswordPublicKey() {
-		return Result.success(SM2Helper.getPublicKey());
+		return Result.success(browserPasswordCipher.publicKey());
 	}
 
 	@PostMapping("/sys/base/user/current/password")
@@ -205,7 +206,7 @@ public class UserController {
 	@SaCheckPermission(UserPermission.TEMPORARY_LOGIN)
 	public Result<String> temporaryLoginPublicKey() {
 		temporaryLoginService.checkAdministrator();
-		return Result.success(SM2Helper.getPublicKey());
+		return Result.success(browserPasswordCipher.publicKey());
 	}
 
 	@GetMapping("/sys/base/user/temporaryLogin/safe")

@@ -19,9 +19,9 @@ import sm.domain.sys.base.user.service.UserCacheAccessor;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
 import sm.system.exception.BizException;
-import sm.system.helper.SM2Helper;
-import sm.system.helper.Sm2DecryptionException;
 import sm.system.response.ResultEnum;
+import sm.system.security.crypto.BrowserPasswordCipher;
+import sm.system.security.crypto.Sm2CiphertextException;
 import sm.system.util.ServletUtil;
 import sm.system.web.ClientIpResolver;
 
@@ -55,6 +55,7 @@ public class TemporaryLoginService {
     private final ClientIpResolver clientIpResolver;
     private final LoginRedisAccessor loginRedisAccessor;
     private final LoginCacheJsonCodec cacheJsonCodec;
+    private final BrowserPasswordCipher browserPasswordCipher;
 
     @AdministratorOnly
     public boolean isSafe() {
@@ -69,8 +70,8 @@ public class TemporaryLoginService {
     public void openSafe(String encryptedPassword) {
         String password;
         try {
-            password = SM2Helper.decryptJsCiphertext(encryptedPassword);
-        } catch (Sm2DecryptionException exception) {
+            password = browserPasswordCipher.decrypt(encryptedPassword);
+        } catch (Sm2CiphertextException exception) {
             throw new BizException(ResultEnum.PARAM_ERROR, "认证数据无效，请刷新页面后重试");
         }
         if (!userAuthenticationService.verifyAdministratorPassword(currentUserContext.getUserId(), password)) {

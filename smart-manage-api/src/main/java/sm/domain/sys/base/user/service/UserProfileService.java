@@ -28,6 +28,8 @@ import sm.system.aop.log.BizLog;
 import sm.system.auth.SessionTerminationReason;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
+import sm.system.security.crypto.BrowserPasswordCipher;
+import sm.system.security.crypto.Sm2CiphertextException;
 import sm.system.security.context.CurrentUserContext;
 
 import java.io.IOException;
@@ -52,6 +54,7 @@ public class UserProfileService {
     private final UserCacheAccessor userCacheAccessor;
     private final UserConverter converter;
     private final CurrentUserContext currentUserContext;
+    private final BrowserPasswordCipher browserPasswordCipher;
 
     public AttachmentEntity requireAvatar(Long userId) {
         UserEntity user = userMapper.selectById(userId);
@@ -119,8 +122,8 @@ public class UserProfileService {
     public void updateCurrentContact(CurrentUserContactForm form) {
         String password;
         try {
-            password = sm.system.helper.SM2Helper.decryptJsCiphertext(form.getPassword());
-        } catch (RuntimeException exception) {
+            password = browserPasswordCipher.decrypt(form.getPassword());
+        } catch (Sm2CiphertextException exception) {
             throw new BizException(ResultEnum.PARAM_ERROR, "密码加密数据无效");
         }
         txService.updateCurrentContact(currentUserContext.getUserId(), password, form.getType(), form.getValue());
@@ -131,9 +134,9 @@ public class UserProfileService {
         String currentPassword;
         String newPassword;
         try {
-            currentPassword = sm.system.helper.SM2Helper.decryptJsCiphertext(form.getCurrentPassword());
-            newPassword = sm.system.helper.SM2Helper.decryptJsCiphertext(form.getNewPassword());
-        } catch (RuntimeException exception) {
+            currentPassword = browserPasswordCipher.decrypt(form.getCurrentPassword());
+            newPassword = browserPasswordCipher.decrypt(form.getNewPassword());
+        } catch (Sm2CiphertextException exception) {
             throw new BizException(ResultEnum.PARAM_ERROR, "密码加密数据无效");
         }
         if (newPassword.length() < 8) {

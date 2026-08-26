@@ -13,6 +13,7 @@ import sm.system.auth.SessionTerminationReason;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.security.context.CurrentUserContext;
+import sm.system.security.crypto.BrowserPasswordCipher;
 
 import java.util.List;
 
@@ -94,6 +95,6 @@ class UserProfileServiceTests {
             OrgMapper orgMapper, CurrentUserContext context, AuthorizationStateHelper stateHelper) {
         return new UserProfileService(mapper, assignmentMapper, orgMapper, mock(AttachmentService.class),
                 mock(UserTxService.class), stateHelper, mock(UserCacheAccessor.class),
-                mock(UserConverter.class), context);
+                mock(UserConverter.class), context, mock(BrowserPasswordCipher.class));
     }
 }

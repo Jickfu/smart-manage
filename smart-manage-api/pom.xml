@@ -240,10 +240,10 @@
             <version>${tika.version}</version>
         </dependency>
 
-        <!-- 工具类：Hutool -->
+        <!-- 通用工具：只引入 Core，密码能力统一直接使用受控密码库 -->
         <dependency>
             <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
+            <artifactId>hutool-core</artifactId>
             <version>${hutool.version}</version>
         </dependency>
 
