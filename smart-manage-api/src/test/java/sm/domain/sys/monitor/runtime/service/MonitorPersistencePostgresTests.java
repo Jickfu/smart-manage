@@ -46,8 +46,8 @@ class MonitorPersistencePostgresTests {
             System.getProperty("smartManage.testDbUser"),
             System.getProperty("smartManage.testDbPassword"));
     jdbcTemplate = new JdbcTemplate(dataSource);
-    store = new MonitorSnapshotStore();
     properties = new MonitorProperties();
+    store = new MonitorSnapshotStore(properties);
     sampler =
         new MonitorSnapshotSampler(
             mock(OshiHostMetricsProvider.class),
@@ -67,13 +67,18 @@ class MonitorPersistencePostgresTests {
         INSTANCE_B);
     jdbcTemplate.update("DELETE FROM t_sys_monitor_host_history WHERE host_id=?", HOST_ID);
     jdbcTemplate.update(
+        "DELETE FROM t_sys_monitor_alert_notification WHERE incident_id IN (SELECT id FROM"
+            + " t_sys_monitor_alert_incident WHERE scope_id LIKE 'verify-topology-%')");
+    jdbcTemplate.update(
+        "DELETE FROM t_sys_monitor_alert_incident WHERE scope_id LIKE 'verify-topology-%'");
+    jdbcTemplate.update(
         "DELETE FROM t_sys_monitor_instance WHERE instance_id LIKE 'verify-topology-%'");
     jdbcTemplate.update("DELETE FROM t_sys_monitor_host WHERE host_id LIKE 'verify-topology-%'");
   }
 
   @Test
   void historyUpsertKeepsNewestSampleAndSeparatesInstancesOnOneHost() {
-    Instant bucket = Instant.now().truncatedTo(ChronoUnit.MINUTES).minusSeconds(20);
+    Instant bucket = Instant.now();
     store.publishHost(host(bucket, .8, "/new", .8));
     store.publishInstance(instance(INSTANCE_A, bucket, .8));
     sampler.persistHistory();
@@ -113,8 +118,9 @@ class MonitorPersistencePostgresTests {
 
   @Test
   void historyQueryUsesNumericRatiosMatchingWorstMountAndWorstMinuteLatency() {
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     OffsetDateTime bucketStart =
-        OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.HOURS).minusMinutes(10);
+        now.truncatedTo(ChronoUnit.HOURS).plusMinutes((now.getMinute() / 5L) * 5L).minusMinutes(10);
     insertHost(bucketStart.plusMinutes(1), 5, 10, .95, "/data");
     insertHost(bucketStart.plusMinutes(2), 5, 10, .70, "/backup");
     insertInstance(bucketStart.plusMinutes(1), 768, 1024, 8, 10, 120, 180);
@@ -157,6 +163,61 @@ class MonitorPersistencePostgresTests {
             "SELECT count(*) FROM t_sys_monitor_instance_history WHERE instance_id=?",
             Integer.class,
             INSTANCE_A));
+  }
+
+  @Test
+  void retirementClosesIncidentAndSkipsPendingFaultOutboxInPostgres() {
+    String instanceId = "verify-topology-retire-notification";
+    long incidentId = IDS.decrementAndGet();
+    long notificationId = IDS.decrementAndGet();
+    long ruleId =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM t_sys_monitor_alert_rule WHERE rule_code='INSTANCE_HEAP_HIGH'",
+            Long.class);
+    jdbcTemplate.update(
+        """
+INSERT INTO t_sys_monitor_instance
+(id,instance_id,host_id,application_name,first_seen_time,last_seen_time,last_start_time,lifecycle)
+VALUES(?,?,?,?,now(),now(),now(),'ACTIVE')
+""",
+        IDS.decrementAndGet(),
+        instanceId,
+        "verify-topology-host-notification",
+        "verify-app");
+    jdbcTemplate.update(
+        """
+        INSERT INTO t_sys_monitor_alert_incident
+        (id,rule_id,rule_code,scope_type,scope_id,status,cycle_key,started_at,last_evaluated_at,
+         last_value,peak_value,threshold,notification_count,summary,version)
+        VALUES(?,?,'INSTANCE_HEAP_HIGH','INSTANCE',?,'FIRING',?,now(),now(),.95,.95,.9,1,'待发送',0)
+        """,
+        incidentId,
+        ruleId,
+        instanceId,
+        "verify-cycle-" + incidentId);
+    jdbcTemplate.update(
+        """
+INSERT INTO t_sys_monitor_alert_notification
+(id,incident_id,notification_type,sequence_no,status,attempt_count,next_attempt_time,create_time)
+VALUES(?,?,'FIRING',1,'PENDING',0,now(),now())
+""",
+        notificationId,
+        incidentId);
+
+    new MonitorInstanceLifecycleTxService(jdbcTemplate).retire(instanceId);
+
+    assertEquals(
+        "CLOSED",
+        jdbcTemplate.queryForObject(
+            "SELECT status FROM t_sys_monitor_alert_incident WHERE id=?",
+            String.class,
+            incidentId));
+    assertEquals(
+        "SKIPPED",
+        jdbcTemplate.queryForObject(
+            "SELECT status FROM t_sys_monitor_alert_notification WHERE id=?",
+            String.class,
+            notificationId));
   }
 
   @Test
@@ -257,6 +318,7 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?)
     cpuInfo.setUsage(cpu);
     value.setCpu(cpuInfo);
     HostSnapshotVO.MemoryInfo memory = new HostSnapshotVO.MemoryInfo();
+    memory.setCollectorAvailable(true);
     memory.setTotal(10);
     memory.setAvailable(5);
     value.setMemory(memory);
@@ -266,6 +328,7 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?)
     filesystem.setUsed(Math.round(usage * 10));
     filesystem.setUsage(usage);
     value.setFilesystems(List.of(filesystem));
+    value.setFilesystemsAvailable(true);
     value.setIo(new HostSnapshotVO.IoInfo());
     return value;
   }
@@ -279,16 +342,21 @@ VALUES(?,?,?,?,?,?,?,?,?,?,?)
     cpuInfo.setProcessUsage(cpu);
     value.setCpu(cpuInfo);
     InstanceSnapshotVO.MemoryInfo memory = new InstanceSnapshotVO.MemoryInfo();
+    memory.setCollectorAvailable(true);
     memory.setHeapUsed(768);
     memory.setHeapMax(1024);
     value.setMemory(memory);
     InstanceSnapshotVO.ThreadInfo threads = new InstanceSnapshotVO.ThreadInfo();
+    threads.setCollectorAvailable(true);
     threads.setStateCounts(Map.of());
     value.setThreads(threads);
     value.setGc(List.of());
-    value.setDataSource(new InstanceSnapshotVO.DataSourceInfo());
+    InstanceSnapshotVO.DataSourceInfo dataSource = new InstanceSnapshotVO.DataSourceInfo();
+    dataSource.setCollectorAvailable(true);
+    value.setDataSource(dataSource);
     value.setHttp(new InstanceSnapshotVO.HttpInfo());
     InstanceSnapshotVO.HealthInfo health = new InstanceSnapshotVO.HealthInfo();
+    health.setCollectorAvailable(true);
     health.setStatus("UP");
     health.setComponents(List.of());
     value.setHealth(health);

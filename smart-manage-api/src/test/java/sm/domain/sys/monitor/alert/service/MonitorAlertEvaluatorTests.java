@@ -1,7 +1,9 @@
 package sm.domain.sys.monitor.alert.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,6 +13,8 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import sm.domain.sys.monitor.common.service.MonitorInstanceRegistry;
+import sm.domain.sys.monitor.runtime.model.vo.HostSnapshotVO;
 import sm.domain.sys.monitor.runtime.model.vo.InstanceSnapshotVO;
 import sm.domain.sys.monitor.runtime.service.MonitorSnapshotService;
 import sm.domain.sys.monitor.runtime.service.MonitorTopologyService;
@@ -27,6 +31,7 @@ class MonitorAlertEvaluatorTests {
     redis.setName("redis");
     redis.setStatus("DOWN");
     InstanceSnapshotVO.HealthInfo health = new InstanceSnapshotVO.HealthInfo();
+    health.setCollectorAvailable(true);
     health.setComponents(List.of(redis));
     instance.setHealth(health);
     when(snapshotService.currentInstance()).thenReturn(instance);
@@ -50,6 +55,7 @@ class MonitorAlertEvaluatorTests {
         new MonitorAlertEvaluator(
             jdbcTemplate,
             snapshotService,
+            mock(MonitorInstanceRegistry.class),
             mock(MonitorTopologyService.class),
             alertService,
             new MonitorMetricValueFormatter());
@@ -62,5 +68,54 @@ class MonitorAlertEvaluatorTests {
     assertEquals("REDIS_HEALTH_DOWN", evaluation.getValue().ruleCode());
     assertEquals(0, BigDecimal.ONE.compareTo(evaluation.getValue().value()));
     assertEquals("Redis 健康异常：instance-a 当前值 异常，阈值 异常", evaluation.getValue().summary());
+  }
+
+  @Test
+  void unavailableCollectorsNeverBecomeZeroOrRecoveryEvaluations() {
+    JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+    MonitorSnapshotService snapshotService = mock(MonitorSnapshotService.class);
+    MonitorAlertService alertService = mock(MonitorAlertService.class);
+    MonitorInstanceRegistry registry = mock(MonitorInstanceRegistry.class);
+    HostSnapshotVO host = new HostSnapshotVO();
+    host.setHostId("host-a");
+    host.setCpu(new HostSnapshotVO.CpuInfo());
+    InstanceSnapshotVO instance = new InstanceSnapshotVO();
+    instance.setInstanceId("instance-a");
+    instance.setDataSource(new InstanceSnapshotVO.DataSourceInfo());
+    when(snapshotService.currentHost()).thenReturn(host);
+    when(snapshotService.currentInstance()).thenReturn(instance);
+    when(jdbcTemplate.queryForList(
+            "SELECT * FROM t_sys_monitor_alert_rule WHERE enabled=true ORDER BY id"))
+        .thenReturn(
+            List.of(rule(1L, "HOST_CPU_HIGH", "HOST"), rule(2L, "DB_POOL_HIGH", "INSTANCE")));
+    MonitorAlertEvaluator evaluator =
+        new MonitorAlertEvaluator(
+            jdbcTemplate,
+            snapshotService,
+            registry,
+            mock(MonitorTopologyService.class),
+            alertService,
+            new MonitorMetricValueFormatter());
+
+    evaluator.evaluate();
+
+    verify(alertService).metricUnavailable(1L, "HOST", "host-a");
+    verify(alertService).metricUnavailable(2L, "INSTANCE", "instance-a");
+    verify(alertService, times(0)).evaluateInternal(any());
+  }
+
+  private Map<String, Object> rule(long id, String code, String scope) {
+    return Map.ofEntries(
+        Map.entry("id", id),
+        Map.entry("rule_code", code),
+        Map.entry("name", code),
+        Map.entry("scope_type", scope),
+        Map.entry("threshold", BigDecimal.ONE),
+        Map.entry("recovery_threshold", BigDecimal.ZERO),
+        Map.entry("duration_seconds", 0),
+        Map.entry("repeat_interval_seconds", 1800),
+        Map.entry("email_enabled", true),
+        Map.entry("value_kind", "RATIO"),
+        Map.entry("display_unit", "%"));
   }
 }

@@ -24,21 +24,30 @@ class OshiHostMetricsProvider {
   synchronized HostSnapshotVO collect(Instant sampleTime) {
     HostSnapshotVO snapshot = new HostSnapshotVO();
     snapshot.setHostId(instanceRegistry.currentHostId());
-    var operatingSystem = systemInfo.getOperatingSystem();
-    snapshot.setHostname(operatingSystem.getNetworkParams().getHostName());
     snapshot.setSampleTime(sampleTime);
-    snapshot.setUptimeMs(operatingSystem.getSystemUptime() * 1000L);
     HostSnapshotVO.OsInfo os = new HostSnapshotVO.OsInfo();
-    os.setName(operatingSystem.getFamily());
-    os.setVersion(operatingSystem.getVersionInfo().getVersion());
-    os.setArch(System.getProperty("os.arch"));
     snapshot.setOs(os);
     String hostId = snapshot.getHostId();
+    try {
+      var operatingSystem = systemInfo.getOperatingSystem();
+      snapshot.setHostname(operatingSystem.getNetworkParams().getHostName());
+      snapshot.setUptimeMs(operatingSystem.getSystemUptime() * 1000L);
+      os.setName(operatingSystem.getFamily());
+      os.setVersion(operatingSystem.getVersionInfo().getVersion());
+      os.setArch(System.getProperty("os.arch"));
+    } catch (Exception exception) {
+      warningLogger.warn("host.metadata", hostId, exception);
+    }
     snapshot.setCpu(safely("host.cpu", hostId, this::cpu, new HostSnapshotVO.CpuInfo()));
     snapshot.setMemory(
         safely("host.memory", hostId, this::memory, new HostSnapshotVO.MemoryInfo()));
-    snapshot.setFilesystems(
-        safely("host.filesystem", hostId, this::filesystems, java.util.List.of()));
+    try {
+      snapshot.setFilesystems(filesystems());
+      snapshot.setFilesystemsAvailable(true);
+    } catch (Exception exception) {
+      warningLogger.warn("host.filesystem", hostId, exception);
+      snapshot.setFilesystems(java.util.List.of());
+    }
     snapshot.setIo(safely("host.io", hostId, () -> io(hostId), new HostSnapshotVO.IoInfo()));
     return snapshot;
   }
@@ -57,6 +66,7 @@ class OshiHostMetricsProvider {
   private HostSnapshotVO.MemoryInfo memory() {
     var hardwareMemory = systemInfo.getHardware().getMemory();
     HostSnapshotVO.MemoryInfo result = new HostSnapshotVO.MemoryInfo();
+    result.setCollectorAvailable(true);
     result.setTotal(hardwareMemory.getTotal());
     result.setAvailable(hardwareMemory.getAvailable());
     result.setSwapTotal(hardwareMemory.getVirtualMemory().getSwapTotal());
@@ -122,6 +132,7 @@ class OshiHostMetricsProvider {
     }
     long nanoTime = System.nanoTime();
     HostSnapshotVO.IoInfo result = new HostSnapshotVO.IoInfo();
+    result.setCollectorAvailable(true);
     result.setDiskReadBytes(read);
     result.setDiskWriteBytes(write);
     result.setNetworkReceiveBytes(receive);

@@ -29,7 +29,11 @@ class MonitorSnapshotServiceTests {
     when(jdbc.queryForObject(anyString(), eq(Integer.class), eq("offline-a"))).thenReturn(1);
     MonitorSnapshotService service =
         new MonitorSnapshotService(
-            registry, redis, JsonMapper.builder().build(), new MonitorSnapshotStore(), jdbc);
+            registry,
+            redis,
+            JsonMapper.builder().build(),
+            new MonitorSnapshotStore(new sm.domain.sys.monitor.common.config.MonitorProperties()),
+            jdbc);
 
     var telemetry = service.instance("offline-a");
 

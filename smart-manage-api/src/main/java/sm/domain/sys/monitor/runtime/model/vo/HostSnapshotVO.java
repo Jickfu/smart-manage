@@ -14,6 +14,7 @@ public class HostSnapshotVO {
   private OsInfo os;
   private CpuInfo cpu;
   private MemoryInfo memory;
+  private boolean filesystemsAvailable;
   private List<FilesystemInfo> filesystems;
   private IoInfo io;
 
@@ -32,6 +33,7 @@ public class HostSnapshotVO {
 
   @Data
   public static class MemoryInfo {
+    private boolean collectorAvailable;
     private long total;
     private long available;
     private long swapTotal;
@@ -51,6 +53,7 @@ public class HostSnapshotVO {
 
   @Data
   public static class IoInfo {
+    private boolean collectorAvailable;
     private long diskReadBytes;
     private long diskWriteBytes;
     private Double diskReadBytesPerSecond;

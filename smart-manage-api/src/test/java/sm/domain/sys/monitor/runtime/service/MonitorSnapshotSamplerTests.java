@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -22,7 +23,7 @@ class MonitorSnapshotSamplerTests {
     ApplicationMetricsProvider applicationProvider = mock(ApplicationMetricsProvider.class);
     when(hostProvider.collect(any())).thenThrow(new IllegalStateException("disk unsupported"));
     when(applicationProvider.collect(any())).thenReturn(instance());
-    MonitorSnapshotStore store = new MonitorSnapshotStore();
+    MonitorSnapshotStore store = new MonitorSnapshotStore(new MonitorProperties());
     sampler(hostProvider, applicationProvider, store).sampleCurrent();
 
     assertNull(store.currentHost());
@@ -35,11 +36,39 @@ class MonitorSnapshotSamplerTests {
     ApplicationMetricsProvider applicationProvider = mock(ApplicationMetricsProvider.class);
     when(hostProvider.collect(any())).thenReturn(host());
     when(applicationProvider.collect(any())).thenThrow(new IllegalStateException("health failed"));
-    MonitorSnapshotStore store = new MonitorSnapshotStore();
+    MonitorSnapshotStore store = new MonitorSnapshotStore(new MonitorProperties());
     sampler(hostProvider, applicationProvider, store).sampleCurrent();
 
     assertNotNull(store.currentHost());
     assertNull(store.currentInstance());
+  }
+
+  @Test
+  void staleSnapshotsAreUnavailableAndAreNotPersistedAgain() {
+    MonitorProperties properties = new MonitorProperties();
+    properties.getSampling().setSnapshotTtlSeconds(1);
+    MonitorSnapshotStore store = new MonitorSnapshotStore(properties);
+    HostSnapshotVO host = host();
+    host.setSampleTime(Instant.now().minusSeconds(2));
+    InstanceSnapshotVO instance = instance();
+    instance.setSampleTime(Instant.now().minusSeconds(2));
+    store.publishHost(host);
+    store.publishInstance(instance);
+    JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+    MonitorSnapshotSampler sampler =
+        new MonitorSnapshotSampler(
+            mock(OshiHostMetricsProvider.class),
+            mock(ApplicationMetricsProvider.class),
+            store,
+            mock(StringRedisTemplate.class),
+            JsonMapper.builder().build(),
+            jdbcTemplate,
+            properties);
+
+    assertNull(store.currentHost());
+    assertNull(store.currentInstance());
+    sampler.persistHistory();
+    verifyNoInteractions(jdbcTemplate);
   }
 
   private MonitorSnapshotSampler sampler(

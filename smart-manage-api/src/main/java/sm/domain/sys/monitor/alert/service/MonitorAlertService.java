@@ -122,6 +122,10 @@ JOIN t_sys_monitor_alert_rule b ON b.id=a.rule_id
     stateTxService.evaluate(evaluation);
   }
 
+  void metricUnavailable(long ruleId, String scopeType, String scopeId) {
+    stateTxService.metricUnavailable(ruleId, scopeType, scopeId);
+  }
+
   private void append(StringBuilder where, List<Object> arguments, String column, String value) {
     if (StringUtils.hasText(value)) {
       where.append(" AND ").append(column).append("=?");

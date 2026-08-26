@@ -16,6 +16,7 @@ class MonitorAlertStateTxServiceTests {
   @Test
   void firstViolationCreatesPendingIncidentWithoutSendingEarlyEmail() {
     JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+    allowEvaluation(jdbcTemplate);
     when(jdbcTemplate.queryForList(anyString(), any(Object[].class))).thenReturn(List.of());
     MonitorAlertStateTxService service = new MonitorAlertStateTxService(jdbcTemplate);
 
@@ -33,6 +34,7 @@ class MonitorAlertStateTxServiceTests {
   @Test
   void firingIncidentRecoveryCreatesExactlyOneRecoveryOutboxEntry() {
     JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+    allowEvaluation(jdbcTemplate);
     Map<String, Object> active = new HashMap<>();
     active.put("id", 10L);
     active.put("status", "FIRING");
@@ -57,6 +59,7 @@ class MonitorAlertStateTxServiceTests {
   @Test
   void pendingStopsWhenTriggerConditionClearsEvenAboveRecoveryThreshold() {
     JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+    allowEvaluation(jdbcTemplate);
     when(jdbcTemplate.queryForList(anyString(), any(Object[].class)))
         .thenReturn(List.of(active("PENDING", null, 0)));
     MonitorAlertStateTxService service = new MonitorAlertStateTxService(jdbcTemplate);
@@ -83,6 +86,7 @@ class MonitorAlertStateTxServiceTests {
   void binaryZeroAndExactThresholdRecoverFiringIncident() {
     for (BigDecimal value : List.of(BigDecimal.ZERO, BigDecimal.valueOf(.8))) {
       JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+      allowEvaluation(jdbcTemplate);
       when(jdbcTemplate.queryForList(anyString(), any(Object[].class)))
           .thenReturn(List.of(active("FIRING", Instant.now(), 1)));
       new MonitorAlertStateTxService(jdbcTemplate)
@@ -109,6 +113,7 @@ class MonitorAlertStateTxServiceTests {
   @Test
   void repeatNotificationOnlyOccursAfterConfiguredInterval() {
     JdbcTemplate early = mock(JdbcTemplate.class);
+    allowEvaluation(early);
     when(early.queryForList(anyString(), any(Object[].class)))
         .thenReturn(List.of(active("FIRING", Instant.now().minusSeconds(60), 1)));
     new MonitorAlertStateTxService(early).evaluate(evaluation(true, true, 0));
@@ -117,6 +122,7 @@ class MonitorAlertStateTxServiceTests {
             .anyMatch(statement -> statement.contains("t_sys_monitor_alert_notification")));
 
     JdbcTemplate due = mock(JdbcTemplate.class);
+    allowEvaluation(due);
     when(due.queryForList(anyString(), any(Object[].class)))
         .thenReturn(List.of(active("FIRING", Instant.now().minusSeconds(1900), 1)));
     new MonitorAlertStateTxService(due).evaluate(evaluation(true, true, 0));
@@ -125,6 +131,19 @@ class MonitorAlertStateTxServiceTests {
                 .filter(statement -> statement.contains("t_sys_monitor_alert_notification"))
                 .count()
             == 1);
+  }
+
+  @Test
+  void unavailableMetricClosesPendingButKeepsFiringWithoutRecovery() {
+    JdbcTemplate pending = mock(JdbcTemplate.class);
+    new MonitorAlertStateTxService(pending).metricUnavailable(1, "HOST", "server-a");
+    assertTrue(
+        updateSql(pending).stream()
+            .anyMatch(
+                statement ->
+                    statement.contains("METRIC_UNAVAILABLE")
+                        && statement.contains("status='PENDING'")));
+    assertFalse(updateSql(pending).stream().anyMatch(statement -> statement.contains("RECOVERED")));
   }
 
   private Map<String, Object> active(String status, Instant lastNotified, int count) {
@@ -136,6 +155,13 @@ class MonitorAlertStateTxServiceTests {
     value.put("last_notified_at", lastNotified == null ? null : Timestamp.from(lastNotified));
     value.put("notification_count", count);
     return value;
+  }
+
+  private void allowEvaluation(JdbcTemplate jdbcTemplate) {
+    when(jdbcTemplate.queryForList(contains("SELECT enabled"), eq(Boolean.class), anyLong()))
+        .thenReturn(List.of(true));
+    when(jdbcTemplate.queryForList(contains("SELECT lifecycle"), eq(String.class), anyString()))
+        .thenReturn(List.of("ACTIVE"));
   }
 
   private MonitorAlertEvaluation evaluation(boolean violation, boolean emailEnabled, int duration) {

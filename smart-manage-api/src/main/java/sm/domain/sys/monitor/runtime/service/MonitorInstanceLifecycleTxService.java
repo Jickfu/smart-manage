@@ -30,5 +30,14 @@ class MonitorInstanceLifecycleTxService {
                 WHERE scope_type='INSTANCE' AND scope_id=? AND status IN ('PENDING','FIRING')
         """,
         instanceId);
+    jdbcTemplate.update(
+        """
+        UPDATE t_sys_monitor_alert_notification SET status='SKIPPED',completed_time=now(),
+        error_message='应用实例已退役',claimed_time=NULL
+        WHERE notification_type IN ('FIRING','REPEAT') AND status IN ('PENDING','PROCESSING')
+        AND incident_id IN (SELECT id FROM t_sys_monitor_alert_incident
+                            WHERE scope_type='INSTANCE' AND scope_id=?)
+        """,
+        instanceId);
   }
 }

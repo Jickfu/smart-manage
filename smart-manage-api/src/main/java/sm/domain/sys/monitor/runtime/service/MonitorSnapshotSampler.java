@@ -87,14 +87,14 @@ class MonitorSnapshotSampler {
   private void persistHost(HostSnapshotVO snapshot) {
     OffsetDateTime sample = OffsetDateTime.ofInstant(snapshot.getSampleTime(), ZoneOffset.UTC);
     OffsetDateTime bucket = sample.truncatedTo(ChronoUnit.MINUTES);
+    java.util.List<HostSnapshotVO.FilesystemInfo> filesystems =
+        snapshot.isFilesystemsAvailable() ? snapshot.getFilesystems() : java.util.List.of();
     HostSnapshotVO.FilesystemInfo worst =
-        snapshot.getFilesystems().stream()
+        filesystems.stream()
             .max(Comparator.comparing(item -> item.getUsage() == null ? 0d : item.getUsage()))
             .orElse(null);
-    long total =
-        snapshot.getFilesystems().stream().mapToLong(HostSnapshotVO.FilesystemInfo::getTotal).sum();
-    long used =
-        snapshot.getFilesystems().stream().mapToLong(HostSnapshotVO.FilesystemInfo::getUsed).sum();
+    long total = filesystems.stream().mapToLong(HostSnapshotVO.FilesystemInfo::getTotal).sum();
+    long used = filesystems.stream().mapToLong(HostSnapshotVO.FilesystemInfo::getUsed).sum();
     jdbcTemplate.update(
         """
 INSERT INTO t_sys_monitor_host_history(id,host_id,sample_bucket,sample_time,cpu_usage,load_average,memory_total,memory_used,
@@ -113,12 +113,14 @@ WHERE EXCLUDED.sample_time>=t_sys_monitor_host_history.sample_time
         sample,
         snapshot.getCpu().getUsage(),
         snapshot.getCpu().getLoadAverage(),
-        snapshot.getMemory().getTotal(),
-        snapshot.getMemory().getTotal() - snapshot.getMemory().getAvailable(),
-        snapshot.getMemory().getSwapTotal(),
-        snapshot.getMemory().getSwapUsed(),
-        total,
-        used,
+        snapshot.getMemory().isCollectorAvailable() ? snapshot.getMemory().getTotal() : null,
+        snapshot.getMemory().isCollectorAvailable()
+            ? snapshot.getMemory().getTotal() - snapshot.getMemory().getAvailable()
+            : null,
+        snapshot.getMemory().isCollectorAvailable() ? snapshot.getMemory().getSwapTotal() : null,
+        snapshot.getMemory().isCollectorAvailable() ? snapshot.getMemory().getSwapUsed() : null,
+        snapshot.isFilesystemsAvailable() ? total : null,
+        snapshot.isFilesystemsAvailable() ? used : null,
         snapshot.getIo().getDiskReadBytesPerSecond(),
         snapshot.getIo().getDiskWriteBytesPerSecond(),
         snapshot.getIo().getNetworkReceiveBytesPerSecond(),
@@ -159,10 +161,12 @@ WHERE EXCLUDED.sample_time>=t_sys_monitor_instance_history.sample_time
         bucket,
         sample,
         snapshot.getCpu().getProcessUsage(),
-        snapshot.getMemory().getHeapUsed(),
-        snapshot.getMemory().getHeapMax(),
-        snapshot.getThreads().getLive(),
-        snapshot.getThreads().getStateCounts().getOrDefault("BLOCKED", 0),
+        snapshot.getMemory().isCollectorAvailable() ? snapshot.getMemory().getHeapUsed() : null,
+        snapshot.getMemory().isCollectorAvailable() ? snapshot.getMemory().getHeapMax() : null,
+        snapshot.getThreads().isCollectorAvailable() ? snapshot.getThreads().getLive() : null,
+        snapshot.getThreads().isCollectorAvailable()
+            ? snapshot.getThreads().getStateCounts().getOrDefault("BLOCKED", 0)
+            : null,
         gcCount,
         gcDuration,
         snapshot.getHttp().getRequestRate(),
@@ -170,10 +174,16 @@ WHERE EXCLUDED.sample_time>=t_sys_monitor_instance_history.sample_time
         snapshot.getHttp().getServerErrorRate(),
         snapshot.getHttp().getP95Ms(),
         snapshot.getHttp().getP99Ms(),
-        snapshot.getDataSource().getActive(),
-        snapshot.getDataSource().getMaxActive(),
-        snapshot.getDataSource().getWaiting(),
-        snapshot.getHealth().getStatus(),
+        snapshot.getDataSource().isCollectorAvailable()
+            ? snapshot.getDataSource().getActive()
+            : null,
+        snapshot.getDataSource().isCollectorAvailable()
+            ? snapshot.getDataSource().getMaxActive()
+            : null,
+        snapshot.getDataSource().isCollectorAvailable()
+            ? snapshot.getDataSource().getWaiting()
+            : null,
+        snapshot.getHealth().isCollectorAvailable() ? snapshot.getHealth().getStatus() : "UNKNOWN",
         component(snapshot, "db"),
         component(snapshot, "redis"));
   }

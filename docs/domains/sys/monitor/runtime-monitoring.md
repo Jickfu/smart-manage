@@ -23,6 +23,10 @@
 
 每个实例只由本机唯一采样器推进 Host 和 Instance 快照；Host Redis key 只保存 Host Snapshot，Instance key 只保存 JVM/应用 Snapshot。两类采集独立降级，单个 OSHI/JVM collector 失败不阻断其他指标。历史通过 `(host_id, sample_bucket)` 与 `(instance_id, sample_bucket)` 唯一约束收敛多实例并发。
 
+重要 Collector 明确携带可用性：内存、线程、连接池、健康、IO 和整体文件系统采集失败时为 `UNAVAILABLE`，对应数值为未知而非零。主机静态元数据采集失败仍保留 `hostId` 与采样时间，应用快照也始终保留 `instanceId`、`hostId` 与采样时间。历史未知值写为 SQL `NULL`，前端实时区显示“-”，趋势图保留断点。
+
+本地 Snapshot Store 按 `smart-manage.monitor.sampling.snapshot-ttl-seconds` 检查采样时间，语义与 Redis TTL 一致；过期快照不会继续用于告警或被历史任务重复写入。
+
 Host Catalog 是历史目录；Current Topology 只展示仍有 `ACTIVE` 实例的 Host。实例选择来自持久化目录，明确区分在线、离线和已退役；离线或退役实例的实时遥测显示不可用，但历史趋势仍可查询。较长范围的历史 P95/P99 取查询桶内最差一分钟值。
 
 当关联实例全部离线时，只能表达“主机遥测不可用”，不能断言物理主机宕机。整个 Smart Manage 集群全部不可达时无法自我告警，该场景属于外部 HTTP 可用性监控职责。

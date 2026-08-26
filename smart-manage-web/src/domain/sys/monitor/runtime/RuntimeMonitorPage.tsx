@@ -21,6 +21,7 @@ import { runtimeMonitorQueryKeys as keys } from './queryKeys';
 import type { HistoryPoint, HostSnapshot, InstanceSnapshot, MonitorHost } from './types';
 import {
   monitorBytes as bytes,
+  monitorHistoryValues,
   monitorPercent as percent,
   monitorRatio as ratio,
 } from './formatters';
@@ -292,11 +293,18 @@ function TopologyCard({
     </Card>
   );
 }
-function Metric({ title, value }: { title: string; value: number }) {
+function Metric({ title, value }: { title: string; value?: number | null }) {
   return (
     <Card size="small">
       <Typography.Text type="secondary">{title}</Typography.Text>
-      <Progress percent={Number(value.toFixed(1))} status={value >= 90 ? 'exception' : 'normal'} />
+      {value == null ? (
+        <Typography.Text>-</Typography.Text>
+      ) : (
+        <Progress
+          percent={Number(value.toFixed(1))}
+          status={value >= 90 ? 'exception' : 'normal'}
+        />
+      )}
     </Card>
   );
 }
@@ -309,13 +317,28 @@ function SnapshotSummary({ host, instance }: { host?: HostSnapshot; instance: In
         {host && (
           <Metric
             title="物理内存"
-            value={ratio(host.memory.total - host.memory.available, host.memory.total)}
+            value={
+              host.memory.collectorAvailable
+                ? ratio(host.memory.total - host.memory.available, host.memory.total)
+                : null
+            }
           />
         )}
-        <Metric title="JVM 堆" value={ratio(instance.memory.heapUsed, instance.memory.heapMax)} />
+        <Metric
+          title="JVM 堆"
+          value={
+            instance.memory.collectorAvailable
+              ? ratio(instance.memory.heapUsed, instance.memory.heapMax)
+              : null
+          }
+        />
         <Metric
           title="连接池"
-          value={ratio(instance.dataSource.active, instance.dataSource.maxActive)}
+          value={
+            instance.dataSource.collectorAvailable
+              ? ratio(instance.dataSource.active, instance.dataSource.maxActive)
+              : null
+          }
         />
       </div>
       <Card
@@ -341,7 +364,9 @@ function SnapshotSummary({ host, instance }: { host?: HostSnapshot; instance: In
             {
               key: 'threads',
               label: '活动/阻塞线程',
-              children: `${instance.threads.live} / ${instance.threads.stateCounts.BLOCKED ?? 0}`,
+              children: instance.threads.collectorAvailable
+                ? `${instance.threads.live} / ${instance.threads.stateCounts.BLOCKED ?? 0}`
+                : '-',
             },
             {
               key: 'http',
@@ -367,6 +392,9 @@ function SnapshotSummary({ host, instance }: { host?: HostSnapshot; instance: In
   );
 }
 function FilesystemCard({ snapshot }: { snapshot: HostSnapshot }) {
+  if (!snapshot.filesystemsAvailable) {
+    return <Alert showIcon type="warning" title="文件系统指标暂不可用" />;
+  }
   return (
     <Card title="文件系统">
       <Table
@@ -383,12 +411,17 @@ function FilesystemCard({ snapshot }: { snapshot: HostSnapshot }) {
           {
             title: '使用率',
             width: 200,
-            render: (_, item) => (
-              <Progress
-                percent={Number(ratio(item.used, item.total).toFixed(1))}
-                status={ratio(item.used, item.total) >= 90 ? 'exception' : 'normal'}
-              />
-            ),
+            render: (_, item) => {
+              const usage = ratio(item.used, item.total);
+              return usage == null ? (
+                '-'
+              ) : (
+                <Progress
+                  percent={Number(usage.toFixed(1))}
+                  status={usage >= 90 ? 'exception' : 'normal'}
+                />
+              );
+            },
           },
         ]}
       />
@@ -477,10 +510,7 @@ function historyOptions(
         type: 'line',
         smooth: true,
         showSymbol: false,
-        data: points.map((item) => {
-          const value = Number(item[key] ?? 0);
-          return multiplier ? value * Number(multiplier) : value;
-        }),
+        data: monitorHistoryValues(points, key, multiplier),
       })),
     },
   }));

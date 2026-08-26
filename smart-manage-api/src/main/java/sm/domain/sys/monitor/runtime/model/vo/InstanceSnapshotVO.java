@@ -22,6 +22,7 @@ public class InstanceSnapshotVO {
 
   @Data
   public static class RuntimeInfo {
+    private boolean collectorAvailable;
     private String javaVersion;
     private String javaVendor;
     private String vmName;
@@ -37,6 +38,7 @@ public class InstanceSnapshotVO {
 
   @Data
   public static class MemoryInfo {
+    private boolean collectorAvailable;
     private long heapUsed;
     private long heapCommitted;
     private long heapMax;
@@ -46,6 +48,7 @@ public class InstanceSnapshotVO {
 
   @Data
   public static class ThreadInfo {
+    private boolean collectorAvailable;
     private int live;
     private int daemon;
     private int peak;
@@ -61,6 +64,7 @@ public class InstanceSnapshotVO {
 
   @Data
   public static class DataSourceInfo {
+    private boolean collectorAvailable;
     private int active;
     private int idle;
     private int maxActive;
@@ -80,6 +84,7 @@ public class InstanceSnapshotVO {
 
   @Data
   public static class HealthInfo {
+    private boolean collectorAvailable;
     private String status;
     private List<HealthComponent> components;
   }

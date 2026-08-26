@@ -15,6 +15,7 @@ import sm.domain.sys.message.email.contract.*;
 class MonitorAlertNotifier {
   private final JdbcTemplate jdbcTemplate;
   private final EmailNotificationSender emailSender;
+  private final MonitorMetricValueFormatter valueFormatter;
 
   @Scheduled(fixedDelayString = "${smart-manage.monitor.alert.notification-interval-ms}")
   void dispatch() {
@@ -33,17 +34,28 @@ ORDER BY id FOR UPDATE SKIP LOCKED LIMIT ?) RETURNING id
         limit);
   }
 
-  private void dispatchOne(Long notificationId) {
+  void dispatchOne(Long notificationId) {
     try {
       Map<String, Object> notification =
           jdbcTemplate.queryForMap(
               """
 SELECT a.*,b.rule_code,b.scope_type,b.scope_id,b.status incident_status,b.summary,b.started_at,b.fired_at,
-b.recovered_at,b.last_value,b.peak_value,c.name rule_name,c.severity
+b.recovered_at,b.last_value,b.peak_value,c.name rule_name,c.severity,c.value_kind,c.display_unit
 FROM t_sys_monitor_alert_notification a JOIN t_sys_monitor_alert_incident b ON b.id=a.incident_id
 JOIN t_sys_monitor_alert_rule c ON c.id=b.rule_id WHERE a.id=?
 """,
               notificationId);
+      String type = (String) notification.get("notification_type");
+      String incidentStatus = (String) notification.get("incident_status");
+      boolean dispatchable =
+          "PROCESSING".equals(notification.get("status"))
+              && ("RECOVERY".equals(type)
+                  ? "RECOVERED".equals(incidentStatus)
+                  : "FIRING".equals(incidentStatus));
+      if (!dispatchable) {
+        markSkipped(notificationId, "告警事件状态已不允许发送该通知");
+        return;
+      }
       List<Long> recipients =
           jdbcTemplate.queryForList(
               """
@@ -56,7 +68,8 @@ JOIN t_sys_monitor_alert_rule c ON c.id=b.rule_id WHERE a.id=?
         markSkipped(notificationId, "告警规则未配置邮件接收人");
         return;
       }
-      String type = (String) notification.get("notification_type");
+      String lastValue = formatted(notification, "last_value");
+      String peakValue = formatted(notification, "peak_value");
       String subject =
           "[Smart Manage]["
               + notification.get("severity")
@@ -71,8 +84,10 @@ JOIN t_sys_monitor_alert_rule c ON c.id=b.rule_id WHERE a.id=?
               + notification.get("scope_id")
               + "\n开始时间："
               + notification.get("started_at")
+              + "\n当前值："
+              + lastValue
               + "\n峰值："
-              + notification.get("peak_value");
+              + peakValue;
       String html =
           "<p>"
               + escape((String) notification.get("summary"))
@@ -80,9 +95,26 @@ JOIN t_sys_monitor_alert_rule c ON c.id=b.rule_id WHERE a.id=?
               + escape(notification.get("scope_type") + "/" + notification.get("scope_id"))
               + "</p><p>开始时间："
               + escape(String.valueOf(notification.get("started_at")))
+              + "</p><p>当前值："
+              + escape(lastValue)
               + "</p><p>峰值："
-              + escape(String.valueOf(notification.get("peak_value")))
+              + escape(peakValue)
               + "</p>";
+      Integer stillDispatchable =
+          jdbcTemplate.queryForObject(
+              """
+SELECT count(*) FROM t_sys_monitor_alert_notification notification
+JOIN t_sys_monitor_alert_incident incident ON incident.id=notification.incident_id
+WHERE notification.id=? AND notification.status='PROCESSING'
+AND ((notification.notification_type='RECOVERY' AND incident.status='RECOVERED')
+  OR (notification.notification_type IN ('FIRING','REPEAT') AND incident.status='FIRING'))
+""",
+              Integer.class,
+              notificationId);
+      if (stillDispatchable == null || stillDispatchable != 1) {
+        markSkipped(notificationId, "告警事件状态已不允许发送该通知");
+        return;
+      }
       Long taskId =
           emailSender.enqueue(
               new EmailNotificationCommand(
@@ -112,6 +144,18 @@ next_attempt_time=now()+interval '5 minutes',error_message=?,claimed_time=NULL W
           notificationId);
       log.warn("监控告警邮件入队失败: notificationId={}", notificationId, exception);
     }
+  }
+
+  private String formatted(Map<String, Object> notification, String column) {
+    Object raw = notification.get(column);
+    java.math.BigDecimal value =
+        raw == null
+            ? null
+            : raw instanceof java.math.BigDecimal decimal
+                ? decimal
+                : new java.math.BigDecimal(raw.toString());
+    return valueFormatter.format(
+        value, (String) notification.get("value_kind"), (String) notification.get("display_unit"));
   }
 
   private void recoverClaims() {

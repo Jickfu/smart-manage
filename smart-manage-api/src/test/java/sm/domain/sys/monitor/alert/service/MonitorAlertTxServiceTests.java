@@ -16,7 +16,7 @@ import sm.domain.sys.monitor.alert.model.form.MonitorAlertRuleSaveForm;
 
 class MonitorAlertTxServiceTests {
   @Test
-  void disablingRuleClosesActiveIncidentsWithoutRecoveryNotification() {
+  void disablingRuleClosesIncidentsAndSkipsUnsentFaultNotifications() {
     JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
     when(jdbcTemplate.queryForMap(anyString(), any(Object[].class)))
         .thenReturn(
@@ -52,6 +52,8 @@ class MonitorAlertTxServiceTests {
             .map(invocation -> String.valueOf((Object) invocation.getArgument(0)))
             .toList();
     assertTrue(statements.stream().anyMatch(sql -> sql.contains("close_reason='RULE_DISABLED'")));
-    assertTrue(statements.stream().noneMatch(sql -> sql.contains("alert_notification")));
+    assertTrue(
+        statements.stream()
+            .anyMatch(sql -> sql.contains("alert_notification") && sql.contains("SKIPPED")));
   }
 }

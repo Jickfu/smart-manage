@@ -8,6 +8,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import sm.domain.sys.monitor.common.service.MonitorInstanceRegistry;
 import sm.domain.sys.monitor.runtime.model.vo.HostSnapshotVO;
 import sm.domain.sys.monitor.runtime.model.vo.InstanceSnapshotVO;
 import sm.domain.sys.monitor.runtime.service.MonitorSnapshotService;
@@ -20,6 +21,7 @@ import sm.domain.sys.monitor.runtime.service.MonitorTopologyService;
 class MonitorAlertEvaluator {
   private final JdbcTemplate jdbcTemplate;
   private final MonitorSnapshotService snapshotService;
+  private final MonitorInstanceRegistry instanceRegistry;
   private final MonitorTopologyService topologyService;
   private final MonitorAlertService alertService;
   private final MonitorMetricValueFormatter valueFormatter;
@@ -80,15 +82,24 @@ class MonitorAlertEvaluator {
     String code = (String) rule.get("rule_code");
     String scopeType = (String) rule.get("scope_type");
     if ("INSTANCE_OFFLINE".equals(code)) return; // 由在线注册 TTL 和持久化目录的独立检查处理。
+    String scopeId =
+        "HOST".equals(scopeType)
+            ? host == null ? instanceRegistry.currentHostId() : host.getHostId()
+            : instance == null ? instanceRegistry.currentInstanceId() : instance.getInstanceId();
     if (("HOST".equals(scopeType) && host == null)
-        || ("INSTANCE".equals(scopeType) && instance == null)) return;
+        || ("INSTANCE".equals(scopeType) && instance == null)) {
+      alertService.metricUnavailable(((Number) rule.get("id")).longValue(), scopeType, scopeId);
+      return;
+    }
     Double metric = metric(code, host, instance);
-    if (metric == null) return;
+    if (metric == null) {
+      alertService.metricUnavailable(((Number) rule.get("id")).longValue(), scopeType, scopeId);
+      return;
+    }
     BigDecimal value = BigDecimal.valueOf(metric);
     BigDecimal threshold = decimal(rule.get("threshold"));
     BigDecimal recovery = decimal(rule.get("recovery_threshold"));
     boolean violation = value.compareTo(threshold) >= 0;
-    String scopeId = "HOST".equals(scopeType) ? host.getHostId() : instance.getInstanceId();
     MonitorAlertEvaluation evaluation =
         new MonitorAlertEvaluation(
             ((Number) rule.get("id")).longValue(),
@@ -114,40 +125,61 @@ class MonitorAlertEvaluator {
     return switch (code) {
       case "HOST_CPU_HIGH" -> host.getCpu().getUsage();
       case "HOST_MEMORY_HIGH" ->
-          ratio(
-              host.getMemory().getTotal() - host.getMemory().getAvailable(),
-              host.getMemory().getTotal());
+          host.getMemory().isCollectorAvailable()
+              ? ratio(
+                  host.getMemory().getTotal() - host.getMemory().getAvailable(),
+                  host.getMemory().getTotal())
+              : null;
       case "HOST_SWAP_HIGH" ->
-          ratio(host.getMemory().getSwapUsed(), host.getMemory().getSwapTotal());
+          host.getMemory().isCollectorAvailable()
+              ? ratio(host.getMemory().getSwapUsed(), host.getMemory().getSwapTotal())
+              : null;
       case "HOST_DISK_HIGH" ->
-          host.getFilesystems().stream()
-              .mapToDouble(item -> item.getUsage() == null ? 0 : item.getUsage())
-              .max()
-              .orElse(0);
+          !host.isFilesystemsAvailable()
+              ? null
+              : host.getFilesystems().stream()
+                  .map(HostSnapshotVO.FilesystemInfo::getUsage)
+                  .filter(Objects::nonNull)
+                  .mapToDouble(Double::doubleValue)
+                  .max()
+                  .stream()
+                  .boxed()
+                  .findFirst()
+                  .orElse(null);
       case "INSTANCE_HEAP_HIGH" ->
-          ratio(instance.getMemory().getHeapUsed(), instance.getMemory().getHeapMax());
+          instance.getMemory().isCollectorAvailable()
+              ? ratio(instance.getMemory().getHeapUsed(), instance.getMemory().getHeapMax())
+              : null;
       case "INSTANCE_BLOCKED_THREADS" ->
-          instance.getThreads().getStateCounts().getOrDefault("BLOCKED", 0).doubleValue();
+          instance.getThreads().isCollectorAvailable()
+              ? instance.getThreads().getStateCounts().getOrDefault("BLOCKED", 0).doubleValue()
+              : null;
       case "HTTP_ERROR_RATE_HIGH" -> instance.getHttp().getServerErrorRate();
       case "HTTP_LATENCY_HIGH" -> instance.getHttp().getP95Ms();
       case "DB_POOL_HIGH" ->
-          ratio(instance.getDataSource().getActive(), instance.getDataSource().getMaxActive());
-      case "DB_POOL_WAITING" -> (double) instance.getDataSource().getWaiting();
+          instance.getDataSource().isCollectorAvailable()
+              ? ratio(instance.getDataSource().getActive(), instance.getDataSource().getMaxActive())
+              : null;
+      case "DB_POOL_WAITING" ->
+          instance.getDataSource().isCollectorAvailable()
+              ? (double) instance.getDataSource().getWaiting()
+              : null;
       case "REDIS_HEALTH_DOWN" -> healthDown(instance, "redis");
       default -> null;
     };
   }
 
-  private double healthDown(InstanceSnapshotVO snapshot, String name) {
+  private Double healthDown(InstanceSnapshotVO snapshot, String name) {
+    if (!snapshot.getHealth().isCollectorAvailable()) return null;
     return snapshot.getHealth().getComponents().stream()
         .filter(item -> item.getName().equalsIgnoreCase(name))
         .findFirst()
         .map(item -> "UP".equals(item.getStatus()) ? 0d : 1d)
-        .orElse(1d);
+        .orElse(null);
   }
 
-  private double ratio(long used, long total) {
-    return total > 0 ? (double) used / total : 0;
+  private Double ratio(long used, long total) {
+    return total > 0 ? (double) used / total : null;
   }
 
   private BigDecimal decimal(Object value) {

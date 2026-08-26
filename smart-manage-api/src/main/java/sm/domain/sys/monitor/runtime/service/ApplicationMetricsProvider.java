@@ -49,6 +49,7 @@ class ApplicationMetricsProvider {
   private InstanceSnapshotVO.RuntimeInfo runtime() {
     RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
     var result = new InstanceSnapshotVO.RuntimeInfo();
+    result.setCollectorAvailable(true);
     result.setJavaVersion(System.getProperty("java.version"));
     result.setJavaVendor(System.getProperty("java.vendor"));
     result.setVmName(bean.getVmName());
@@ -69,6 +70,7 @@ class ApplicationMetricsProvider {
   private InstanceSnapshotVO.MemoryInfo memory() {
     MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
     var result = new InstanceSnapshotVO.MemoryInfo();
+    result.setCollectorAvailable(true);
     result.setHeapUsed(bean.getHeapMemoryUsage().getUsed());
     result.setHeapCommitted(bean.getHeapMemoryUsage().getCommitted());
     result.setHeapMax(bean.getHeapMemoryUsage().getMax());
@@ -84,6 +86,7 @@ class ApplicationMetricsProvider {
     for (java.lang.management.ThreadInfo info : bean.getThreadInfo(bean.getAllThreadIds(), 0))
       if (info != null) counts.merge(info.getThreadState().name(), 1, Integer::sum);
     var result = new InstanceSnapshotVO.ThreadInfo();
+    result.setCollectorAvailable(true);
     result.setLive(bean.getThreadCount());
     result.setDaemon(bean.getDaemonThreadCount());
     result.setPeak(bean.getPeakThreadCount());
@@ -105,6 +108,7 @@ class ApplicationMetricsProvider {
 
   private InstanceSnapshotVO.DataSourceInfo pool() {
     var result = new InstanceSnapshotVO.DataSourceInfo();
+    result.setCollectorAvailable(true);
     result.setActive(dataSource.getActiveCount());
     result.setIdle(dataSource.getPoolingCount());
     result.setMaxActive(dataSource.getMaxActive());
@@ -148,6 +152,7 @@ class ApplicationMetricsProvider {
   private InstanceSnapshotVO.HealthInfo health() {
     var descriptor = healthEndpoint.health();
     var result = new InstanceSnapshotVO.HealthInfo();
+    result.setCollectorAvailable(true);
     result.setStatus(descriptor.getStatus().getCode());
     List<InstanceSnapshotVO.HealthComponent> components = new ArrayList<>();
     if (descriptor instanceof CompositeHealthDescriptor composite)

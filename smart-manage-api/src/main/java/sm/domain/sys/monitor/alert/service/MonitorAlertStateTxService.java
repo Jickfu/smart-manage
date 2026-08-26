@@ -16,6 +16,7 @@ class MonitorAlertStateTxService {
   private final JdbcTemplate jdbcTemplate;
 
   void evaluate(MonitorAlertEvaluation evaluation) {
+    if (!eligible(evaluation)) return;
     Instant now = Instant.now();
     List<Map<String, Object>> active =
         jdbcTemplate.queryForList(
@@ -108,6 +109,36 @@ last_notified_at=?,notification_count=?,version=version+1 WHERE id=?
         incidentId);
     if (repeat)
       enqueue(incidentId, lastNotifiedAt == null ? "FIRING" : "REPEAT", notificationCount + 1, now);
+  }
+
+  /** UNKNOWN 打断连续异常，仅关闭 PENDING；FIRING 保持原状且不产生恢复通知。 */
+  void metricUnavailable(long ruleId, String scopeType, String scopeId) {
+    jdbcTemplate.update(
+        """
+        UPDATE t_sys_monitor_alert_incident SET status='CLOSED',close_reason='METRIC_UNAVAILABLE',
+        last_evaluated_at=now(),version=version+1
+        WHERE rule_id=? AND scope_type=? AND scope_id=? AND status='PENDING'
+        """,
+        ruleId,
+        scopeType,
+        scopeId);
+  }
+
+  /** 与停用、退役命令在同一数据库行上加锁，保证创建事件时前置条件仍成立。 */
+  private boolean eligible(MonitorAlertEvaluation evaluation) {
+    List<Boolean> enabled =
+        jdbcTemplate.queryForList(
+            "SELECT enabled FROM t_sys_monitor_alert_rule WHERE id=? FOR SHARE",
+            Boolean.class,
+            evaluation.ruleId());
+    if (enabled.isEmpty() || !Boolean.TRUE.equals(enabled.getFirst())) return false;
+    if (!"INSTANCE".equals(evaluation.scopeType())) return true;
+    List<String> lifecycle =
+        jdbcTemplate.queryForList(
+            "SELECT lifecycle FROM t_sys_monitor_instance WHERE instance_id=? FOR SHARE",
+            String.class,
+            evaluation.scopeId());
+    return !lifecycle.isEmpty() && "ACTIVE".equals(lifecycle.getFirst());
   }
 
   private void createPending(MonitorAlertEvaluation evaluation, Instant now) {

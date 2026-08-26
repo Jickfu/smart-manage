@@ -38,7 +38,14 @@ export interface HostSnapshot {
   uptimeMs: number;
   os: { name: string; version: string; arch: string };
   cpu: { usage?: number; loadAverage?: number };
-  memory: { total: number; available: number; swapTotal: number; swapUsed: number };
+  memory: {
+    collectorAvailable: boolean;
+    total: number;
+    available: number;
+    swapTotal: number;
+    swapUsed: number;
+  };
+  filesystemsAvailable: boolean;
   filesystems: Array<{
     name: string;
     mount: string;
@@ -49,6 +56,7 @@ export interface HostSnapshot {
     usage?: number;
   }>;
   io: {
+    collectorAvailable: boolean;
     diskReadBytes: number;
     diskWriteBytes: number;
     diskReadBytesPerSecond?: number;
@@ -64,6 +72,7 @@ export interface InstanceSnapshot {
   hostId: string;
   sampleTime: string;
   runtime: {
+    collectorAvailable: boolean;
     javaVersion: string;
     javaVendor: string;
     vmName: string;
@@ -73,15 +82,23 @@ export interface InstanceSnapshot {
   };
   cpu: { processUsage?: number };
   memory: {
+    collectorAvailable: boolean;
     heapUsed: number;
     heapCommitted: number;
     heapMax: number;
     nonHeapUsed: number;
     nonHeapCommitted: number;
   };
-  threads: { live: number; daemon: number; peak: number; stateCounts: Record<string, number> };
+  threads: {
+    collectorAvailable: boolean;
+    live: number;
+    daemon: number;
+    peak: number;
+    stateCounts: Record<string, number>;
+  };
   gc: Array<{ name: string; collectionCount: number; collectionTimeMs: number }>;
   dataSource: {
+    collectorAvailable: boolean;
     active: number;
     idle: number;
     maxActive: number;
@@ -96,7 +113,11 @@ export interface InstanceSnapshot {
     p95Ms?: number;
     p99Ms?: number;
   };
-  health: { status: string; components: Array<{ name: string; status: string }> };
+  health: {
+    collectorAvailable: boolean;
+    status: string;
+    components: Array<{ name: string; status: string }>;
+  };
 }
 export interface HistoryPoint {
   sampleTime: string;

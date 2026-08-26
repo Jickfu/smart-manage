@@ -60,6 +60,14 @@ WHERE id=? AND version=?
           WHERE rule_id=? AND status IN ('PENDING','FIRING')
           """,
           form.id());
+      jdbcTemplate.update(
+          """
+          UPDATE t_sys_monitor_alert_notification SET status='SKIPPED',completed_time=now(),
+          error_message='告警规则已停用',claimed_time=NULL
+          WHERE notification_type IN ('FIRING','REPEAT') AND status IN ('PENDING','PROCESSING')
+          AND incident_id IN (SELECT id FROM t_sys_monitor_alert_incident WHERE rule_id=?)
+          """,
+          form.id());
     }
     jdbcTemplate.update(
         "DELETE FROM t_sys_monitor_alert_rule_recipient WHERE rule_id=?", form.id());
