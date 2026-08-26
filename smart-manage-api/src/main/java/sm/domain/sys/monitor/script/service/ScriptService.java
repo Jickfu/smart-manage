@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import sm.system.security.context.CurrentUserContext;
+import sm.system.security.authorization.AdministratorOnly;
 import sm.domain.sys.base.sysparam.service.SysParamService;
 import sm.domain.sys.monitor.script.mapper.ScriptLogMapper;
 import sm.domain.sys.monitor.script.mapper.ScriptMapper;
@@ -27,6 +28,7 @@ import java.util.Map;
 
 /** 脚本控制台与脚本管理的唯一公开业务入口。 */
 @Service
+@AdministratorOnly
 @RequiredArgsConstructor
 public class ScriptService {
     static final String TIMEOUT_PARAMETER = "SCRIPT_CONSOLE_TIMEOUT_SECONDS";
@@ -65,7 +67,6 @@ public class ScriptService {
 
     @BizLog(value = "执行脚本", recordRequest = false, recordResponse = false)
     public ScriptResultVO execute(ScriptExecuteForm form) {
-        currentUserContext.checkAdministrator();
         String content = form.getContent().trim();
         ScriptExecutionConfig config = resolveExecutionConfig(content, form.getTransactionMode());
         ScriptEntity savedScript = form.getScriptId() == null ? null : requireScript(form.getScriptId());
@@ -85,7 +86,6 @@ public class ScriptService {
     }
 
     public PageData<ScriptListVO> listPage(ScriptListForm form) {
-        currentUserContext.checkAdministrator();
         LambdaQueryWrapper<ScriptEntity> query = new LambdaQueryWrapper<>();
         query.and(StringUtil.isNotBlank(form.getKeyword()), wrapper -> wrapper
                         .like(ScriptEntity::getNumber, form.getKeyword())
@@ -99,37 +99,31 @@ public class ScriptService {
     }
 
     public ScriptDetailVO detail(Long id) {
-        currentUserContext.checkAdministrator();
         return converter.toDetailVO(requireScript(id));
     }
 
     public ScriptDetailVO createNewData() {
-        currentUserContext.checkAdministrator();
         ScriptDetailVO result = new ScriptDetailVO();
         result.setContent("console.log('Hello Smart Manage');\nreturn { success: true };");
         return result;
     }
 
     public List<ScriptApiServiceVO> apiMetadata() {
-        currentUserContext.checkAdministrator();
         return serviceCatalog.metadata();
     }
 
     @BizLog(value = "保存脚本", recordRequest = false)
     public Long save(ScriptSaveForm form) {
-        currentUserContext.checkAdministrator();
         validateSourceLength(form.getContent());
         return scriptTxService.save(form);
     }
 
     @BizLog("删除脚本")
     public void delete(ScriptDeleteForm form) {
-        currentUserContext.checkAdministrator();
         scriptTxService.delete(form);
     }
 
     public PageData<ScriptLogListVO> logListPage(ScriptLogListForm form) {
-        currentUserContext.checkAdministrator();
         validateLogForm(form);
         LambdaQueryWrapper<ScriptLogEntity> query = new LambdaQueryWrapper<>();
         // 源码、输出和错误正文仅在详情加载。
@@ -155,7 +149,6 @@ public class ScriptService {
     }
 
     public ScriptLogDetailVO logDetail(Long id) {
-        currentUserContext.checkAdministrator();
         ScriptLogEntity entity = scriptLogMapper.selectById(id);
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "脚本执行日志不存在");

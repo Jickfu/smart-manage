@@ -5,6 +5,7 @@ import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaModifier;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
@@ -14,10 +15,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 import sm.system.aop.log.BizLog;
+import sm.system.security.authorization.AdministratorOnly;
+import sm.system.security.context.CurrentUserContext;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ArchitectureContractTests {
 
@@ -95,6 +99,44 @@ class ArchitectureContractTests {
                 .because("业务日志只允许位于公开 Service 的命令入口")
                 .allowEmptyShould(true)
                 .check(productionClasses);
+    }
+
+    @Test
+    void administratorOnlyMustBeAServiceBoundary() {
+        classes().that().areAnnotatedWith(AdministratorOnly.class)
+                .should().resideInAPackage("sm.domain..service")
+                .andShould().haveSimpleNameEndingWith("Service")
+                .andShould().bePublic()
+                .because("类级管理员身份保护只允许标记公开业务 Service")
+                .allowEmptyShould(true)
+                .check(productionClasses);
+
+        methods().that().areAnnotatedWith(AdministratorOnly.class)
+                .should().beDeclaredInClassesThat().resideInAPackage("sm.domain..service")
+                .andShould().beDeclaredInClassesThat().haveSimpleNameEndingWith("Service")
+                .andShould().bePublic()
+                .because("方法级管理员身份保护只允许标记公开业务 Service 入口")
+                .allowEmptyShould(true)
+                .check(productionClasses);
+
+        noClasses().that().resideInAPackage("sm.domain..")
+                .should().callMethod(CurrentUserContext.class, "checkAdministrator")
+                .because("管理员身份校验必须由 @AdministratorOnly 切面统一执行，领域代码不得散落直接调用")
+                .check(productionClasses);
+
+        classes().that().resideInAPackage("sm.domain..")
+                .should(notCallMethodLevelAdministratorEntryOnSelf())
+                .because("同类调用不会经过 Spring AOP 代理，方法级 @AdministratorOnly 将被绕过")
+                .check(productionClasses);
+    }
+
+    @Test
+    void administratorOnlySelfInvocationRuleMustDetectProxyBypass() {
+        JavaClasses fixtureClasses = new ClassFileImporter().importClasses(SelfInvokingFixture.class);
+
+        assertThrows(AssertionError.class, () -> classes()
+                .should(notCallMethodLevelAdministratorEntryOnSelf())
+                .check(fixtureClasses));
     }
 
     @Test
@@ -263,6 +305,33 @@ class ArchitectureContractTests {
                 }
             }
         };
+    }
+
+    private static ArchCondition<JavaClass> notCallMethodLevelAdministratorEntryOnSelf() {
+        return new ArchCondition<>("不在同类内部调用方法级 @AdministratorOnly 入口") {
+            @Override
+            public void check(JavaClass javaClass, ConditionEvents events) {
+                for (JavaMethodCall methodCall : javaClass.getMethodCallsFromSelf()) {
+                    boolean sameClass = methodCall.getOriginOwner().equals(methodCall.getTargetOwner());
+                    boolean methodLevelProtected = methodCall.getTarget().resolveMember().stream()
+                            .anyMatch(method -> method.isAnnotatedWith(AdministratorOnly.class));
+                    boolean valid = !sameClass || !methodLevelProtected;
+                    events.add(new SimpleConditionEvent(methodCall, valid,
+                            methodCall.getDescription()
+                                    + "；方法级 @AdministratorOnly 入口不得通过同类调用绕过代理"));
+                }
+            }
+        };
+    }
+
+    private static class SelfInvokingFixture {
+        void unprotectedEntry() {
+            protectedEntry();
+        }
+
+        @AdministratorOnly
+        public void protectedEntry() {
+        }
     }
 
     private static <TYPE> ArchCondition<TYPE> notExist(String message) {

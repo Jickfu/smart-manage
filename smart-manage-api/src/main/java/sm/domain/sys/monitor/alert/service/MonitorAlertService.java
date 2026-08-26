@@ -10,6 +10,7 @@ import sm.domain.sys.monitor.alert.model.vo.*;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.security.context.CurrentUserContext;
+import sm.system.security.authorization.AdministratorOnly;
 
 @Service
 @RequiredArgsConstructor
@@ -57,8 +58,8 @@ public class MonitorAlertService {
   }
 
   @BizLog("保存监控告警规则")
+  @AdministratorOnly
   public void saveRule(MonitorAlertRuleSaveForm form) {
-    currentUserContext.checkAdministrator();
     txService.saveRule(form, currentUserContext.getUserId());
   }
 

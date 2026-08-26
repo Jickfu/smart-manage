@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.BaseRedisKey;
 import sm.system.security.context.CurrentUserContext;
+import sm.system.security.authorization.AdministratorOnly;
 import sm.domain.sys.base.login.model.TemporaryLoginGrant;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.user.model.form.TemporaryLoginGrantForm;
@@ -55,17 +56,17 @@ public class TemporaryLoginService {
     private final LoginRedisAccessor loginRedisAccessor;
     private final LoginCacheJsonCodec cacheJsonCodec;
 
+    @AdministratorOnly
     public boolean isSafe() {
-        currentUserContext.checkAdministrator();
         return StpUtil.isSafe(SAFE_SERVICE);
     }
 
+    @AdministratorOnly
     public void checkAdministrator() {
-        currentUserContext.checkAdministrator();
     }
 
+    @AdministratorOnly
     public void openSafe(String encryptedPassword) {
-        currentUserContext.checkAdministrator();
         String password;
         try {
             password = SM2Helper.decryptJsCiphertext(encryptedPassword);
@@ -78,8 +79,8 @@ public class TemporaryLoginService {
         StpUtil.openSafe(SAFE_SERVICE, SAFE_SECONDS);
     }
 
+    @AdministratorOnly
     public TemporaryLoginGrantVO createGrant(TemporaryLoginGrantForm form) {
-        currentUserContext.checkAdministrator();
         StpUtil.checkSafe(SAFE_SERVICE);
         UserCacheSnapshot target = userCacheAccessor.requireUser(form.getUserId());
         UserAuthentication authentication = userAuthenticationService.authenticateTemporaryLogin(

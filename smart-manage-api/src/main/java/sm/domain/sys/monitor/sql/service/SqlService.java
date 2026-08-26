@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import sm.system.security.context.CurrentUserContext;
+import sm.system.security.authorization.AdministratorOnly;
 import sm.domain.sys.base.sysparam.service.SysParamService;
 import sm.domain.sys.monitor.sql.mapper.SqlLogMapper;
 import sm.domain.sys.monitor.sql.model.entity.SqlLogEntity;
@@ -28,6 +29,7 @@ import java.util.Map;
 
 /** SQL 控制台公开业务入口。 */
 @Service
+@AdministratorOnly
 @RequiredArgsConstructor
 public class SqlService {
     static final String MAX_ROWS_PARAMETER = "SQL_CONSOLE_MAX_ROWS";
@@ -53,7 +55,6 @@ public class SqlService {
 
     @BizLog(value = "执行SQL", recordRequest = false, recordResponse = false)
     public SqlResultVO execute(SqlExecuteForm form) {
-        currentUserContext.checkAdministrator();
         String sql = form.getSql().trim();
         SqlExecutionPlan plan = SqlExecutionPlan.parse(sql);
         SqlLogEntity logEntity = new SqlLogEntity();
@@ -64,7 +65,6 @@ public class SqlService {
     }
 
     public PageData<SqlLogListVO> listPage(SqlLogListForm form) {
-        currentUserContext.checkAdministrator();
         validateListForm(form);
         LambdaQueryWrapper<SqlLogEntity> query = new LambdaQueryWrapper<>();
         query.select(SqlLogEntity::getId, SqlLogEntity::getSqlText, SqlLogEntity::getExecuteDuration,
@@ -83,7 +83,6 @@ public class SqlService {
     }
 
     public SqlLogDetailVO detail(Long id) {
-        currentUserContext.checkAdministrator();
         SqlLogEntity entity = sqlLogMapper.selectById(id);
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "执行日志不存在");

@@ -76,7 +76,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 
 - 架构边界：架构测试或静态检查。
 - Java 类型、包、注解、可见性和依赖边界：优先扩展 `ArchitectureContractTests`，不得新增 regex/import 源码扫描与其重复校验。
-- 认证、权限和安全：单元/集成测试及必要浏览器验证。
+- 认证、权限和安全：优先用行为测试验证拒绝路径和副作用顺序，用 ArchUnit 验证注解、类型和依赖边界；源码扫描只保留无法结构化表达的少量机械约束。
 - 状态、事务和乐观锁：覆盖成功、非法状态、过期版本和回滚。
 - 文件存储：覆盖上传、授权下载、删除失败后的补偿。
 - 前端生命周期：覆盖缓存失效、临时页签替换、只读状态和脏数据关闭。

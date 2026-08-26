@@ -3,7 +3,6 @@ package sm.domain.sys.monitor.cache.service;
 import com.alicp.jetcache.Cache;
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.common.constant.BaseCacheName;
-import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryListForm;
 import sm.system.exception.BizException;
@@ -20,10 +19,9 @@ import static org.mockito.Mockito.*;
 
 class CacheServiceTests {
     private final CacheHelper cacheHelper = mock(CacheHelper.class);
-    private final CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
     private final RedisCacheAccessor redisCacheAccessor = mock(RedisCacheAccessor.class);
     private final CacheService service = new CacheService(
-            cacheHelper, currentUserContext, redisCacheAccessor, JsonMapper.builder().build());
+            cacheHelper, redisCacheAccessor, JsonMapper.builder().build());
 
     @Test
     void overviewMustNotCreateCacheInstances() {

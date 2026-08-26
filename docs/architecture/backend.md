@@ -126,4 +126,4 @@ DataScope 的角色配置、Entity、Mapper 和规则解析实现保留在 `sm.d
 - Entity、Form、VO 不得反向依赖 Controller、Service 或 Mapper；
 - 公开 Service 的标准详情方法使用 `detail`，不得暴露通用 `getById` 入口。
 
-这些规则集中在 `sm.architecture.ArchitectureContractTests`，随 Maven Surefire 自动进入本地测试和 CI quality gate。文件、配置、Flyway、文档、前端源码和生成文件等仓库级约束继续由专用测试或脚本承担。高风险方法必须把真实 `administrator` 身份校验作为方法首个动作，这属于方法体执行顺序和安全语义，继续由独立安全契约测试验证，不使用 ArchUnit 的依赖图近似替代。
+这些规则集中在 `sm.architecture.ArchitectureContractTests`，随 Maven Surefire 自动进入本地测试和 CI quality gate。文件、配置、Flyway、文档、前端源码和生成文件等仓库级约束继续由专用测试或脚本承担。高风险公开入口使用运行时 `@AdministratorOnly`，由统一切面在进入目标方法前校验真实 `administrator` 身份；ArchUnit 只约束注解位置并禁止领域代码散落直接校验，切面的拒绝顺序和运行时语义由行为测试验证，不读取 Java 源码或用正则匹配方法体。

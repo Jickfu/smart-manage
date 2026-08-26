@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import sm.system.security.context.CurrentUserContext;
+import sm.system.security.authorization.AdministratorOnly;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.message.email.mapper.*;
@@ -53,7 +53,6 @@ public class EmailService implements EmailNotificationSender {
             "status", ListQueryUtil.enumeration(EmailTaskEntity::getStatus, true),
             "attemptCount", ListQueryUtil.number(EmailTaskEntity::getAttemptCount, false),
             "createTime", ListQueryUtil.dateTime(EmailTaskEntity::getCreateTime, true));
-    private final CurrentUserContext currentUserContext;
     private final EmailAccountMapper accountMapper;
     private final UserMapper userMapper;
     private final EmailTaskMapper taskMapper;
@@ -63,8 +62,8 @@ public class EmailService implements EmailNotificationSender {
     private final JsonMapper jsonMapper;
     @Value("${smart-manage.instance-id:unknown}") private String instanceId;
 
+    @AdministratorOnly
     public PageData<Map<String, Object>> accountList(AccountListForm form) {
-        currentUserContext.checkAdministrator();
         LambdaQueryWrapper<EmailAccountEntity> query = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(form.getKeyword())) query.and(w -> w.like(EmailAccountEntity::getNumber, form.getKeyword().trim()).or().like(EmailAccountEntity::getName, form.getKeyword().trim()));
         if (form.getEnabled() != null) query.eq(EmailAccountEntity::getEnabled, form.getEnabled());
@@ -74,28 +73,29 @@ public class EmailService implements EmailNotificationSender {
         return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(), page.getRecords().stream().map(this::accountMap).toList());
     }
 
-    public Map<String, Object> accountDetail(Long id) { currentUserContext.checkAdministrator(); return accountMap(txService.requireAccount(id)); }
+    @AdministratorOnly
+    public Map<String, Object> accountDetail(Long id) { return accountMap(txService.requireAccount(id)); }
 
     @BizLog(value="保存发信账号", recordRequest=false)
+    @AdministratorOnly
     public Long saveAccount(AccountSaveForm form) {
-        currentUserContext.checkAdministrator();
         if (!SECURITY_MODES.contains(form.securityMode())) throw new BizException(ResultEnum.PARAM_ERROR, "不支持的 SMTP 安全模式");
         try { return txService.saveAccount(form); }
         catch (DuplicateKeyException exception) { throw new BizException(ResultEnum.DATA_CONFLICT, "账号编码已存在或默认账号发生冲突"); }
     }
 
-    @BizLog("启停发信账号") public void enableAccount(AccountEnableForm form) { currentUserContext.checkAdministrator(); txService.enable(form.id(), form.version(), form.enabled()); }
-    @BizLog("删除发信账号") public void deleteAccount(Long id, Integer version) { currentUserContext.checkAdministrator(); txService.delete(id, version); }
+    @BizLog("启停发信账号") @AdministratorOnly public void enableAccount(AccountEnableForm form) { txService.enable(form.id(), form.version(), form.enabled()); }
+    @BizLog("删除发信账号") @AdministratorOnly public void deleteAccount(Long id, Integer version) { txService.delete(id, version); }
 
+    @AdministratorOnly
     public List<Map<String, Object>> manualAccountOptions() {
-        currentUserContext.checkAdministrator();
         return accountMapper.selectList(new LambdaQueryWrapper<EmailAccountEntity>().eq(EmailAccountEntity::getEnabled, true).eq(EmailAccountEntity::getAllowManual, true).orderByDesc(EmailAccountEntity::getDefaultAccount).orderByAsc(EmailAccountEntity::getName))
                 .stream().map(account -> map("id", account.getId(), "number", account.getNumber(), "name", account.getName(), "defaultAccount", account.getDefaultAccount(), "fromAddress", account.getFromAddress())).toList();
     }
 
     @BizLog(value="测试发信账号", recordRequest=false)
+    @AdministratorOnly
     public String testAccount(AccountTestForm form) {
-        currentUserContext.checkAdministrator();
         EmailAccountEntity account = txService.requireAccount(form.accountId());
         if (StringUtils.hasText(form.recipient())) {
             sendSmtp(account, List.of(form.recipient().trim()), List.of(), List.of(), "Smart Manage 邮件配置测试", "<p>这是一封来自 Smart Manage 的 SMTP 配置测试邮件。</p>", "这是一封来自 Smart Manage 的 SMTP 配置测试邮件。");
@@ -106,8 +106,8 @@ public class EmailService implements EmailNotificationSender {
     }
 
     @BizLog(value="管理员发送邮件", recordRequest=false)
+    @AdministratorOnly
     public Long compose(ComposeForm form) {
-        currentUserContext.checkAdministrator();
         validateRecipientCount(form.toUserIds(), form.ccUserIds(), form.bccUserIds());
         if (DANGEROUS_HTML.matcher(form.htmlBody()).find()) throw new BizException(ResultEnum.PARAM_ERROR, "邮件正文包含脚本、事件处理器或危险链接");
         EmailAccountEntity account = resolveManualAccount(form.accountId());
@@ -157,8 +157,8 @@ public class EmailService implements EmailNotificationSender {
         }
     }
 
+    @AdministratorOnly
     public PageData<Map<String, Object>> recordList(RecordListForm form) {
-        currentUserContext.checkAdministrator();
         LambdaQueryWrapper<EmailTaskEntity> query = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(form.getKeyword())) query.and(w -> w.like(EmailTaskEntity::getSubject, form.getKeyword().trim()).or().like(EmailTaskEntity::getToAddresses, form.getKeyword().trim()));
         if (StringUtils.hasText(form.getStatus())) {
@@ -173,8 +173,8 @@ public class EmailService implements EmailNotificationSender {
         return PageData.of(page.getTotal(), form.getPageNum(), form.getPageSize(), page.getRecords().stream().map(this::taskListMap).toList());
     }
 
+    @AdministratorOnly
     public Map<String, Object> recordDetail(Long id) {
-        currentUserContext.checkAdministrator();
         EmailTaskEntity task = txService.requireTask(id);
         List<Map<String,Object>> attempts = attemptMapper.selectList(new LambdaQueryWrapper<EmailAttemptEntity>().eq(EmailAttemptEntity::getTaskId, id).orderByAsc(EmailAttemptEntity::getAttemptNo)).stream().map(this::attemptMap).toList();
         Map<String,Object> result = new LinkedHashMap<>(taskListMap(task));
@@ -183,8 +183,8 @@ public class EmailService implements EmailNotificationSender {
     }
 
     @BizLog("重新发送邮件")
+    @AdministratorOnly
     public Long retry(Long id) {
-        currentUserContext.checkAdministrator();
         EmailTaskEntity source = txService.requireTask(id);
         if (!"FAILED".equals(source.getStatus()) && !"UNKNOWN".equals(source.getStatus()) && !"CANCELLED".equals(source.getStatus())) throw new BizException(ResultEnum.DATA_CONFLICT, "只有失败、未知或已取消的邮件可以重新发送");
         EmailAccountEntity account = txService.requireAccount(source.getAccountId());
@@ -193,7 +193,7 @@ public class EmailService implements EmailNotificationSender {
         return txService.insertTask(task);
     }
 
-    @BizLog("取消邮件发送") public void cancel(Long id, Integer version) { currentUserContext.checkAdministrator(); txService.cancel(id, version); }
+    @BizLog("取消邮件发送") @AdministratorOnly public void cancel(Long id, Integer version) { txService.cancel(id, version); }
 
     /** Quartz 集群任务入口；任务领取 SQL 使用 SKIP LOCKED，确保多实例不会正常重复领取。 */
     public int dispatchPending(int batchSize) {

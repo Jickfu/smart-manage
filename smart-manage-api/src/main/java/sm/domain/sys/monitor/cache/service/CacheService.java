@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import sm.domain.sys.base.common.constant.BaseCacheCatalog;
 import sm.domain.sys.base.common.constant.BaseCacheDefinition;
-import sm.system.security.context.CurrentUserContext;
+import sm.system.security.authorization.AdministratorOnly;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryKeyForm;
 import sm.domain.sys.monitor.cache.model.form.CacheEntryListForm;
 import sm.domain.sys.monitor.cache.model.vo.*;
@@ -31,6 +31,7 @@ import java.util.Set;
 
 /** 缓存状态和受控管理的唯一公开业务入口。 */
 @Service
+@AdministratorOnly
 @RequiredArgsConstructor
 public class CacheService {
     private static final String ALL = "ALL";
@@ -41,7 +42,6 @@ public class CacheService {
     private static final Set<String> SCOPE_TYPES = Set.of(ALL, APPLICATION, CACHE, INFRASTRUCTURE);
 
     private final CacheHelper cacheHelper;
-    private final CurrentUserContext currentUserContext;
     private final RedisCacheAccessor redisCacheAccessor;
     private final JsonMapper jsonMapper;
 
@@ -49,20 +49,17 @@ public class CacheService {
     private String instanceId;
 
     public CacheOverviewVO overview() {
-        currentUserContext.checkAdministrator();
         return CacheOverviewVO.builder().instanceId(instanceId)
                 .caches(BaseCacheCatalog.ALL.stream().map(this::assembleCache).toList())
                 .collectedAt(LocalDateTime.now()).build();
     }
 
     public CacheRuntimeVO runtime() {
-        currentUserContext.checkAdministrator();
         return redisCacheAccessor.runtime();
     }
 
     /** 只公开可预知、受控的应用缓存和基础设施资源。 */
     public List<CacheScopeVO> scopeTree() {
-        currentUserContext.checkAdministrator();
         List<CacheScopeVO> applicationCaches = BaseCacheCatalog.ALL.stream()
                 .map(definition -> scope(CACHE, definition.displayName(), definition.name(), List.of())).toList();
         List<CacheScopeVO> infrastructure = List.of(
@@ -76,7 +73,6 @@ public class CacheService {
     }
 
     public PageData<CacheEntryVO> listPage(CacheEntryListForm form) {
-        currentUserContext.checkAdministrator();
         String scopeType = normalizeScopeType(form.getScopeType());
         List<CacheEntryVO> entries = new ArrayList<>();
         if (ALL.equals(scopeType) || APPLICATION.equals(scopeType)) {
@@ -100,7 +96,6 @@ public class CacheService {
     }
 
     public CacheValueVO value(CacheEntryKeyForm form) {
-        currentUserContext.checkAdministrator();
         // 基础设施条目没有应用缓存名；Map.ofEntries 生成的不可变 Map 不接受 null 查询键。
         BaseCacheDefinition definition = form.getCacheName() == null
                 ? null
@@ -114,7 +109,6 @@ public class CacheService {
 
     @BizLog(value = "删除应用缓存条目", recordRequest = false, recordResponse = false)
     public long delete(List<CacheEntryKeyForm> entries) {
-        currentUserContext.checkAdministrator();
         if (entries == null || entries.isEmpty() || entries.size() > 100) {
             throw new BizException(ResultEnum.PARAM_ERROR, "单次只能删除 1 至 100 个应用缓存条目");
         }
@@ -131,13 +125,11 @@ public class CacheService {
 
     @BizLog("清理应用缓存")
     public void clear(String cacheName) {
-        currentUserContext.checkAdministrator();
         redisCacheAccessor.clearByPrefix(requireDefinition(cacheName).name());
     }
 
     @BizLog("清理全部应用缓存")
     public void clearAll() {
-        currentUserContext.checkAdministrator();
         BaseCacheCatalog.ALL.forEach(definition -> redisCacheAccessor.clearByPrefix(definition.name()));
     }
 

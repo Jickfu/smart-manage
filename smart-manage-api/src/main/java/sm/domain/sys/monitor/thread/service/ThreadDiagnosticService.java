@@ -2,7 +2,7 @@ package sm.domain.sys.monitor.thread.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import sm.system.security.context.CurrentUserContext;
+import sm.system.security.authorization.AdministratorOnly;
 import sm.domain.sys.monitor.common.service.MonitorInstanceRegistry;
 import sm.domain.sys.monitor.common.service.MonitorRoutingGateway;
 import sm.domain.sys.monitor.thread.model.form.ThreadCollectForm;
@@ -11,15 +11,14 @@ import sm.system.aop.log.BizLog;
 
 /** 多实例线程诊断的唯一公开业务入口。 */
 @Service
+@AdministratorOnly
 @RequiredArgsConstructor
 public class ThreadDiagnosticService {
-    private final CurrentUserContext currentUserContext;
     private final MonitorInstanceRegistry instanceRegistry;
     private final MonitorRoutingGateway routingGateway;
     private final ThreadDiagnosticAccessor accessor;
 
     public ThreadDiagnosticVO list(String instanceId) {
-        currentUserContext.checkAdministrator();
         MonitorInstanceRegistry.RegisteredInstance instance = instanceRegistry.require(instanceId);
         return instanceRegistry.isCurrent(instance.getInstanceId())
                 ? accessor.list()
@@ -27,7 +26,6 @@ public class ThreadDiagnosticService {
     }
 
     public ThreadDiagnosticVO detail(String instanceId, long threadId, int maxDepth) {
-        currentUserContext.checkAdministrator();
         MonitorInstanceRegistry.RegisteredInstance instance = instanceRegistry.require(instanceId);
         return instanceRegistry.isCurrent(instance.getInstanceId())
                 ? accessor.detail(threadId, maxDepth)
@@ -38,7 +36,6 @@ public class ThreadDiagnosticService {
 
     @BizLog(value = "采集热点线程", recordRequest = false, recordResponse = false)
     public ThreadDiagnosticVO hot(ThreadCollectForm form) {
-        currentUserContext.checkAdministrator();
         int sampleMillis = form.getSampleMillis() == null ? 1000 : form.getSampleMillis();
         int limit = form.getLimit() == null ? 10 : form.getLimit();
         int maxDepth = form.getMaxDepth() == null ? 64 : form.getMaxDepth();
@@ -50,7 +47,6 @@ public class ThreadDiagnosticService {
 
     @BizLog(value = "采集全量线程快照", recordRequest = false, recordResponse = false)
     public ThreadDiagnosticVO dump(ThreadCollectForm form) {
-        currentUserContext.checkAdministrator();
         int maxDepth = form.getMaxDepth() == null ? 64 : form.getMaxDepth();
         MonitorInstanceRegistry.RegisteredInstance instance = instanceRegistry.require(form.getInstanceId());
         return instanceRegistry.isCurrent(instance.getInstanceId())
@@ -60,7 +56,6 @@ public class ThreadDiagnosticService {
 
     @BizLog(value = "检测线程死锁", recordRequest = false, recordResponse = false)
     public ThreadDiagnosticVO deadlocks(ThreadCollectForm form) {
-        currentUserContext.checkAdministrator();
         int maxDepth = form.getMaxDepth() == null ? 128 : form.getMaxDepth();
         MonitorInstanceRegistry.RegisteredInstance instance = instanceRegistry.require(form.getInstanceId());
         return instanceRegistry.isCurrent(instance.getInstanceId())
@@ -70,29 +65,24 @@ public class ThreadDiagnosticService {
     }
 
     public ThreadDiagnosticVO localList() {
-        currentUserContext.checkAdministrator();
         return accessor.list();
     }
 
     public ThreadDiagnosticVO localDetail(long threadId, int maxDepth) {
-        currentUserContext.checkAdministrator();
         return accessor.detail(threadId, maxDepth);
     }
 
     public ThreadDiagnosticVO localHot(ThreadCollectForm form) {
-        currentUserContext.checkAdministrator();
         return accessor.hot(form.getSampleMillis() == null ? 1000 : form.getSampleMillis(),
                 form.getLimit() == null ? 10 : form.getLimit(),
                 form.getMaxDepth() == null ? 64 : form.getMaxDepth());
     }
 
     public ThreadDiagnosticVO localDump(ThreadCollectForm form) {
-        currentUserContext.checkAdministrator();
         return accessor.dump(form.getMaxDepth() == null ? 64 : form.getMaxDepth());
     }
 
     public ThreadDiagnosticVO localDeadlocks(ThreadCollectForm form) {
-        currentUserContext.checkAdministrator();
         return accessor.deadlocks(form.getMaxDepth() == null ? 128 : form.getMaxDepth());
     }
 }

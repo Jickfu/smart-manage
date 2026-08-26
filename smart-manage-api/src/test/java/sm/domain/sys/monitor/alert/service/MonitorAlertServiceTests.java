@@ -11,7 +11,7 @@ import sm.system.security.context.CurrentUserContext;
 
 class MonitorAlertServiceTests {
   @Test
-  void saveRuleChecksAdministratorBeforeEnteringTransaction() {
+  void saveRulePassesCurrentUserToTransaction() {
     JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
     MonitorAlertTxService txService = mock(MonitorAlertTxService.class);
     CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
@@ -39,8 +39,6 @@ class MonitorAlertServiceTests {
 
     service.saveRule(form);
 
-    var order = inOrder(currentUserContext, txService);
-    order.verify(currentUserContext).checkAdministrator();
-    order.verify(txService).saveRule(form, 1L);
+    verify(txService).saveRule(form, 1L);
   }
 }

@@ -3,7 +3,6 @@ package sm.domain.sys.monitor.slowsql.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
-import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.monitor.common.service.MonitorInstanceRegistry;
 import sm.domain.sys.monitor.common.service.MonitorRoutingGateway;
 import sm.domain.sys.monitor.slowsql.model.form.SlowSqlCommandForm;
@@ -16,18 +15,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SlowSqlServiceTests {
-    private CurrentUserContext currentUserContext;
     private MonitorInstanceRegistry instanceRegistry;
     private SlowSqlStatAccessor accessor;
     private SlowSqlService service;
 
     @BeforeEach
     void setUp() {
-        currentUserContext = mock(CurrentUserContext.class);
         instanceRegistry = mock(MonitorInstanceRegistry.class);
         accessor = mock(SlowSqlStatAccessor.class);
-        service = new SlowSqlService(currentUserContext, instanceRegistry,
-                mock(MonitorRoutingGateway.class), accessor);
+        service = new SlowSqlService(instanceRegistry, mock(MonitorRoutingGateway.class), accessor);
         ReflectionTestUtils.setField(service, "currentInstanceId", "instance1");
         MonitorInstanceRegistry.RegisteredInstance instance = new MonitorInstanceRegistry.RegisteredInstance();
         instance.setInstanceId("instance1");
@@ -36,7 +32,7 @@ class SlowSqlServiceTests {
     }
 
     @Test
-    void updateThresholdChecksAdministratorBeforeChangingLocalStatFilter() {
+    void updateThresholdChangesLocalStatFilter() {
         SlowSqlCommandForm form = new SlowSqlCommandForm();
         form.setInstanceId("instance1");
         form.setThresholdMs(1500L);
@@ -46,12 +42,11 @@ class SlowSqlServiceTests {
         SlowSqlSnapshotVO result = service.updateThreshold(form);
 
         assertSame(expected, result);
-        verify(currentUserContext).checkAdministrator();
         verify(accessor).updateThreshold("instance1", 1500L);
     }
 
     @Test
-    void clearChecksAdministratorBeforeClearingLocalStatistics() {
+    void clearClearsLocalStatistics() {
         SlowSqlTargetForm form = new SlowSqlTargetForm();
         form.setInstanceId("instance1");
         SlowSqlSnapshotVO expected = new SlowSqlSnapshotVO();
@@ -60,7 +55,6 @@ class SlowSqlServiceTests {
         SlowSqlSnapshotVO result = service.clear(form);
 
         assertSame(expected, result);
-        verify(currentUserContext).checkAdministrator();
         verify(accessor).clear("instance1");
     }
 }

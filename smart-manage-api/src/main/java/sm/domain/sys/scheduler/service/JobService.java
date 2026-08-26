@@ -21,7 +21,7 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
-import sm.system.security.context.CurrentUserContext;
+import sm.system.security.authorization.AdministratorOnly;
 import sm.system.query.ListQueryUtil;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,8 +38,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class JobService {
-    private final CurrentUserContext currentUserContext;
-
     private static final String MANAGED_JOB_ID_KEY = "smartManageJobId";
     private static final Map<String, ListQueryUtil.Field<JobEntity>> LIST_FIELDS = Map.of(
             "number", ListQueryUtil.string(JobEntity::getNumber, true),
@@ -95,8 +93,8 @@ public class JobService {
     // ==================== 增删改 ====================
 
     @BizLog("保存定时任务")
+    @AdministratorOnly
     public Long save(JobSaveForm form) {
-        currentUserContext.checkAdministrator();
         definitionValidator.validate(form);
         JobEntity previous = form.getId() == null ? null : mapper.selectById(form.getId());
         Long id = txService.save(form);
@@ -110,8 +108,8 @@ public class JobService {
     }
 
     @BizLog("删除定时任务")
+    @AdministratorOnly
     public void deleteById(Long id, Integer version) {
-        currentUserContext.checkAdministrator();
         JobEntity entity = requireEntity(id);
         txService.deleteById(id, version);
         removeQuartzJob(entity.getJobName(), entity.getJobGroup());
@@ -120,15 +118,15 @@ public class JobService {
     // ==================== 任务操作 ====================
 
     @BizLog("暂停定时任务")
+    @AdministratorOnly
     public void pause(List<JobCommandForm> jobs) {
-        currentUserContext.checkAdministrator();
         txService.pause(jobs);
         jobs.forEach(job -> synchronize(requireEntity(job.getId())));
     }
 
     @BizLog("恢复定时任务")
+    @AdministratorOnly
     public void resume(List<JobCommandForm> jobs) {
-        currentUserContext.checkAdministrator();
         txService.resume(jobs);
         jobs.forEach(job -> synchronize(requireEntity(job.getId())));
     }
@@ -138,8 +136,8 @@ public class JobService {
      * 该入口用于 Quartz 临时故障恢复，可安全重复执行。
      */
     @BizLog("重新同步定时任务")
+    @AdministratorOnly
     public void syncAll() {
-        currentUserContext.checkAdministrator();
         List<JobEntity> entities = mapper.selectList(new LambdaQueryWrapper<>());
         Map<Long, JobKey> expectedKeys = new java.util.HashMap<>();
         for (JobEntity entity : entities) {
@@ -164,8 +162,8 @@ public class JobService {
     }
 
     @BizLog("立即执行定时任务")
+    @AdministratorOnly
     public void trigger(Long id) {
-        currentUserContext.checkAdministrator();
         JobEntity entity = requireEntity(id);
         try {
             JobKey jobKey = JobKey.jobKey(entity.getJobName(), entity.getJobGroup());
@@ -180,16 +178,16 @@ public class JobService {
     /**
      * 获取所有可用的 Job 实现类（Spring 容器中所有 Job 类型的 Bean）
      */
+    @AdministratorOnly
     public List<Map<String, String>> getAvailableJobClasses() {
-        currentUserContext.checkAdministrator();
         return definitionValidator.availableJobClasses();
     }
 
     /**
      * 新建任务时的默认值
      */
+    @AdministratorOnly
     public Map<String, Object> createNewData() {
-        currentUserContext.checkAdministrator();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("jobGroup", "DEFAULT");
         data.put("status", JobStatus.PAUSED.name());

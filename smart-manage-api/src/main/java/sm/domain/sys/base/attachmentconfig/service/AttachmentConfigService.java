@@ -6,7 +6,7 @@ import sm.domain.sys.base.attachmentconfig.mapper.AttachmentConfigMapper;
 import sm.domain.sys.base.attachmentconfig.model.entity.AttachmentConfigEntity;
 import sm.domain.sys.base.attachmentconfig.model.form.AttachmentConfigSaveForm;
 import sm.domain.sys.base.attachmentconfig.model.vo.AttachmentConfigDetailVO;
-import sm.system.security.context.CurrentUserContext;
+import sm.system.security.authorization.AdministratorOnly;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
@@ -23,7 +23,6 @@ import java.util.Locale;
 public class AttachmentConfigService implements AttachmentUploadPolicyProvider {
     private final AttachmentConfigMapper mapper;
     private final AttachmentConfigTxService txService;
-    private final CurrentUserContext currentUserContext;
 
     public AttachmentConfigDetailVO singleton() {
         return toDetail(requireSingleton());
@@ -37,8 +36,8 @@ public class AttachmentConfigService implements AttachmentUploadPolicyProvider {
     }
 
     @BizLog("保存附件全局限制配置")
+    @AdministratorOnly
     public Long save(AttachmentConfigSaveForm form) {
-        currentUserContext.checkAdministrator();
         AttachmentUploadPolicy policy = normalize(form);
         return txService.save(form, policy);
     }

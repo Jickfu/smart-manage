@@ -16,7 +16,8 @@ import sm.system.response.ResultEnum;
 import sm.system.helper.SM4Helper;
 import sm.system.storage.FileStorageConfig;
 import sm.system.storage.FileStorageConfigProvider;
-import sm.system.security.context.CurrentUserContext;
+import sm.system.security.authorization.AdministratorOnly;
+import sm.system.security.authorization.AdministratorOnly;
 
 import java.util.List;
 import java.util.Objects;
@@ -31,7 +32,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 @RequiredArgsConstructor
 public class FileConfigService implements FileStorageConfigProvider {
-    private final CurrentUserContext currentUserContext;
     private final FileConfigMapper mapper;
     private final FileConfigTxService txService;
     private final SM4Helper sm4Helper;
@@ -79,9 +79,8 @@ public class FileConfigService implements FileStorageConfigProvider {
     }
 
     @BizLog("保存文件存储配置")
+    @AdministratorOnly
     public Long save(FileConfigSaveForm form) {
-        // 存储目录和凭据影响全系统文件读写，除权限码外必须校验管理员身份。
-        currentUserContext.checkAdministrator();
         validateStorageConfig(form);
         validateStorageTopologyChange(form);
         return txService.save(form);
@@ -157,9 +156,8 @@ public class FileConfigService implements FileStorageConfigProvider {
      * 使用前端当前填写的参数测试 FTP 连通性，不读取也不保存文件配置。
      */
     @BizLog(value = "测试FTP连接", recordRequest = false)
+    @AdministratorOnly
     public String testFtp(FtpTestForm form) {
-        // FTP 连接可访问任意网络地址，除业务权限外还必须校验超级管理员账号身份。
-        currentUserContext.checkAdministrator();
         FTPClient ftpClient = new FTPClient();
         try {
             ftpClient.connect(form.getFtpHost(), form.getFtpPort());
