@@ -31,6 +31,9 @@ import sm.domain.sys.base.user.model.vo.TemporaryLoginGrantVO;
 import sm.domain.sys.base.login.service.TemporaryLoginService;
 import sm.system.helper.SM2Helper;
 import sm.domain.sys.base.user.service.UserService;
+import sm.domain.sys.base.user.service.UserAuthenticationService;
+import sm.domain.sys.base.user.service.UserAuthorizationService;
+import sm.domain.sys.base.user.service.UserProfileService;
 import sm.system.form.IdForm;
 import sm.system.form.IdsForm;
 import sm.system.response.PageData;
@@ -56,12 +59,15 @@ import sm.system.storage.FileStorageServiceFactory;
 @RequiredArgsConstructor
 public class UserController {
 	private final UserService service;
+	private final UserAuthenticationService userAuthenticationService;
+	private final UserAuthorizationService userAuthorizationService;
+	private final UserProfileService userProfileService;
 	private final FileStorageServiceFactory storageFactory;
 	private final TemporaryLoginService temporaryLoginService;
 
 	@GetMapping("/sys/base/user/avatar/{userId}")
 	public ResponseEntity<StreamingResponseBody> avatar(@PathVariable Long userId) {
-		AttachmentEntity attachment = service.requireAvatar(userId);
+		AttachmentEntity attachment = userProfileService.requireAvatar(userId);
 		FileStorageService storage = storageFactory.getService(attachment.getStorageType());
 		StreamingResponseBody body = outputStream -> {
 			try (java.io.InputStream inputStream = storage.openStream(attachment.getObjectKey())) {
@@ -86,14 +92,14 @@ public class UserController {
 	@PostMapping("/sys/base/user/current/theme")
 	@Operation(summary = "保存个人主题", description = "保存当前登录用户选择的预置主题色")
 	public Result<String> updateCurrentTheme(@RequestBody @Valid CurrentUserThemeForm form) {
-		service.updateCurrentTheme(form.getThemeColor());
+		userProfileService.updateCurrentTheme(form.getThemeColor());
 		return Result.success();
 	}
 
 	@PostMapping("/sys/base/user/permissions")
 	@Operation(summary = "用户权限", description = "按前缀获取当前用户权限编码列表")
 	public Result<List<String>> permissions(@RequestBody @Valid UserPermissionsForm form) {
-		return Result.success(service.permissions(form.getPrefix()));
+		return Result.success(userAuthorizationService.permissions(form.getPrefix()));
 	}
 
 	@Operation(summary = "用户详情", description = "按ID查询用户")
@@ -143,36 +149,36 @@ public class UserController {
 	@PostMapping("/sys/base/user/roleAssignment/workspace")
 	@SaCheckPermission(UserPermission.ASSIGN_ROLES)
 	public Result<UserRoleAssignmentWorkspaceVO> roleAssignmentWorkspace(@RequestBody @Valid IdForm form) {
-		return Result.success(service.roleAssignmentWorkspace(form.getId()));
+		return Result.success(userAuthorizationService.roleAssignmentWorkspace(form.getId()));
 	}
 
 	@Operation(summary = "保存用户角色分配", description = "整体替换用户全部任职组织下的精确角色关系")
 	@PostMapping("/sys/base/user/roleAssignment/save")
 	@SaCheckPermission(UserPermission.ASSIGN_ROLES)
 	public Result<String> saveRoleAssignment(@RequestBody @Valid UserRoleAssignmentSaveForm form) {
-		service.saveRoleAssignment(form);
+		userAuthorizationService.saveRoleAssignment(form);
 		return Result.success();
 	}
 
 	@PostMapping("/sys/base/user/current/organization")
 	@Operation(summary = "切换当前组织", description = "切换到当前用户有效任职范围内的组织")
 	public Result<String> switchCurrentOrganization(@RequestBody @Valid CurrentOrganizationForm form) {
-		service.switchCurrentOrganization(form.getOrgId());
+		userProfileService.switchCurrentOrganization(form.getOrgId());
 		return Result.success();
 	}
 
 	@PostMapping("/sys/base/user/current/profile")
 	@Operation(summary = "保存个人资料", description = "当前用户修改姓名和头像")
 	public Result<UserInfoVO> updateCurrentProfile(@RequestBody @Valid CurrentUserProfileForm form) {
-		service.updateCurrentProfile(form);
-		return Result.success(service.current());
+		userProfileService.updateCurrentProfile(form);
+		return Result.success(userProfileService.current());
 	}
 
 	@PostMapping("/sys/base/user/current/contact")
 	@Operation(summary = "修改个人联系方式", description = "当前用户通过密码二级认证修改手机或邮箱")
 	public Result<UserInfoVO> updateCurrentContact(@RequestBody @Valid CurrentUserContactForm form) {
-		service.updateCurrentContact(form);
-		return Result.success(service.current());
+		userProfileService.updateCurrentContact(form);
+		return Result.success(userProfileService.current());
 	}
 
 	@GetMapping("/sys/base/user/current/password/publicKey")
@@ -184,7 +190,7 @@ public class UserController {
 	@PostMapping("/sys/base/user/current/password")
 	@Operation(summary = "修改个人密码", description = "验证原密码后修改当前用户密码")
 	public Result<String> updateCurrentPassword(@RequestBody @Valid CurrentUserPasswordForm form) {
-		service.updateCurrentPassword(form);
+		userProfileService.updateCurrentPassword(form);
 		return Result.success();
 	}
 
@@ -192,13 +198,13 @@ public class UserController {
 	@PostMapping("/sys/base/user/resetPassword")
 	@SaCheckPermission(UserPermission.RESET_PASSWORD)
 	public Result<ResetPasswordVO> resetPassword(@RequestBody @Valid IdForm form) {
-		return Result.success(service.resetPassword(form.getId()));
+		return Result.success(userAuthenticationService.resetPassword(form.getId()));
 	}
 
 	@GetMapping("/sys/base/user/temporaryLogin/publicKey")
 	@SaCheckPermission(UserPermission.TEMPORARY_LOGIN)
 	public Result<String> temporaryLoginPublicKey() {
-		service.checkAdministrator();
+		temporaryLoginService.checkAdministrator();
 		return Result.success(SM2Helper.getPublicKey());
 	}
 

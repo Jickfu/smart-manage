@@ -16,7 +16,8 @@ import sm.domain.sys.base.login.model.vo.CaptchaChallengeVO;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.user.model.vo.UserAuthentication;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
-import sm.domain.sys.base.user.service.UserService;
+import sm.domain.sys.base.user.service.UserAuthenticationService;
+import sm.domain.sys.base.user.service.UserProfileService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.system.exception.BizException;
 import sm.system.helper.SM2Helper;
@@ -40,7 +41,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class LoginServiceTests {
-    private final UserService userService = mock(UserService.class);
+    private final UserAuthenticationService userAuthenticationService = mock(UserAuthenticationService.class);
+    private final UserProfileService userProfileService = mock(UserProfileService.class);
+    private final UserSessionService userSessionService = mock(UserSessionService.class);
     private final LogWriteService logWriteService = mock(LogWriteService.class);
     private final StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
     @SuppressWarnings("unchecked")
@@ -55,7 +58,8 @@ class LoginServiceTests {
 
     @BeforeEach
     void setUp() {
-        loginService = new LoginService(userService, logWriteService, redisTemplate, clientIpResolver,
+        loginService = new LoginService(userAuthenticationService, userProfileService, userSessionService,
+                logWriteService, redisTemplate, clientIpResolver,
                 temporaryLoginService, csrfTokenManager, sliderCaptchaGateway, loginProtectionService,
                 loginRedisAccessor);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
@@ -66,7 +70,7 @@ class LoginServiceTests {
     void sessionCombinesCurrentUserAndCsrfTokenWithoutNavigationData() {
         UserInfoVO user = new UserInfoVO();
         user.setId(1L);
-        when(userService.current()).thenReturn(user);
+        when(userProfileService.current()).thenReturn(user);
         when(csrfTokenManager.getCurrentToken()).thenReturn("0123456789abcdef0123456789abcdef");
 
         var session = loginService.session();
@@ -116,8 +120,8 @@ class LoginServiceTests {
         expected.setAuthenticated(true);
         UserAuthentication authentication =
                 new UserAuthentication(1L, "administrator", "管理员", false, true, 10L, null);
-        when(userService.authenticate("administrator", "password")).thenReturn(authentication);
-        when(userService.completeLogin(authentication)).thenReturn(expected);
+        when(userAuthenticationService.authenticate("administrator", "password")).thenReturn(authentication);
+        when(userSessionService.completeLogin(authentication)).thenReturn(expected);
 
         try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
             sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password")).thenReturn("password");
@@ -143,7 +147,7 @@ class LoginServiceTests {
 
             assertSame(expected, loginService.login(form));
             verify(loginProtectionService).clearAfterSuccess("administrator", "127.0.0.1");
-            verify(userService, never()).authenticate("administrator", "SMTL1.credential");
+            verify(userAuthenticationService, never()).authenticate("administrator", "SMTL1.credential");
         }
     }
 
@@ -152,7 +156,7 @@ class LoginServiceTests {
         LoginForm form = loginForm();
         UserAuthentication failed = UserAuthentication.failed("用户名或密码错误");
         HttpServletRequest request = mock(HttpServletRequest.class);
-        when(userService.authenticate("administrator", "password")).thenReturn(failed);
+        when(userAuthenticationService.authenticate("administrator", "password")).thenReturn(failed);
         when(request.getHeader("User-Agent")).thenReturn("test-agent");
 
         try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class);
@@ -172,7 +176,7 @@ class LoginServiceTests {
     @Test
     void accountStateFailureKeepsActionableMessageAfterPasswordWasValid() {
         LoginForm form = loginForm();
-        when(userService.authenticate("administrator", "password"))
+        when(userAuthenticationService.authenticate("administrator", "password"))
                 .thenReturn(UserAuthentication.failed("用户已被禁用"));
 
         try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
@@ -189,7 +193,7 @@ class LoginServiceTests {
         LoginForm form = loginForm();
         UserAuthentication authentication =
                 new UserAuthentication(9L, "reset-user", "待改密用户", true, false, 10L, null);
-        when(userService.authenticate("administrator", "password")).thenReturn(authentication);
+        when(userAuthenticationService.authenticate("administrator", "password")).thenReturn(authentication);
 
         try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
             sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-password")).thenReturn("password");
@@ -197,7 +201,7 @@ class LoginServiceTests {
             LoginVO actual = loginService.login(form);
 
             assertEquals(true, actual.getPasswordReset());
-            verify(userService, never()).completeLogin(authentication);
+            verify(userSessionService, never()).completeLogin(authentication);
             verify(valueOperations).set(startsWith(BaseRedisKey.PASSWORD_CHANGE_TICKET), eq("9"), eq(5L),
                     eq(TimeUnit.MINUTES));
         }
@@ -216,7 +220,7 @@ class LoginServiceTests {
 
             loginService.changePassword(form);
 
-            verify(userService).changeResetPassword(9L, "new-password");
+            verify(userAuthenticationService).changeResetPassword(9L, "new-password");
         }
     }
 
@@ -231,7 +235,7 @@ class LoginServiceTests {
             BizException exception = assertThrows(BizException.class, () -> loginService.login(form));
 
             assertEquals(ResultEnum.PARAM_ERROR.getCode(), exception.getCode());
-            verify(userService, never()).authenticate("administrator", "password");
+            verify(userAuthenticationService, never()).authenticate("administrator", "password");
         }
     }
 

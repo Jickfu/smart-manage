@@ -4,7 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.login.model.TemporaryLoginGrant;
-import sm.domain.sys.base.user.service.UserService;
+import sm.domain.sys.base.user.service.UserAuthenticationService;
+import sm.domain.sys.base.user.service.UserCacheAccessor;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.system.exception.BizException;
 import sm.system.web.ClientIpResolver;
@@ -22,13 +23,17 @@ import static org.mockito.Mockito.when;
 
 class TemporaryLoginServiceTests {
     private final StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
-    private final UserService userService = mock(UserService.class);
+    private final UserAuthenticationService userAuthenticationService = mock(UserAuthenticationService.class);
+    private final UserCacheAccessor userCacheAccessor = mock(UserCacheAccessor.class);
+    private final UserSessionService userSessionService = mock(UserSessionService.class);
     private final LoginRedisAccessor loginRedisAccessor = mock(LoginRedisAccessor.class);
     private final LoginCacheJsonCodec cacheJsonCodec = mock(LoginCacheJsonCodec.class);
     private final TemporaryLoginService service = new TemporaryLoginService(
             redisTemplate,
             mock(CurrentUserContext.class),
-            userService,
+            userAuthenticationService,
+            userCacheAccessor,
+            userSessionService,
             mock(LogWriteService.class),
             mock(ClientIpResolver.class),
             loginRedisAccessor,
@@ -50,6 +55,6 @@ class TemporaryLoginServiceTests {
         assertThrows(BizException.class, () -> service.consume("other-user", "SMTL1.random"));
 
         verify(loginRedisAccessor).getAndDelete(startsWith("sys:base:temporary-login:"));
-        verify(userService, never()).authenticateTemporaryLogin(9L, "target");
+        verify(userAuthenticationService, never()).authenticateTemporaryLogin(9L, "target");
     }
 }

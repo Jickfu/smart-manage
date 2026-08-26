@@ -13,7 +13,8 @@ import sm.domain.sys.base.user.model.form.TemporaryLoginGrantForm;
 import sm.domain.sys.base.user.model.vo.TemporaryLoginGrantVO;
 import sm.domain.sys.base.user.model.vo.UserAuthentication;
 import sm.domain.sys.base.user.model.UserCacheSnapshot;
-import sm.domain.sys.base.user.service.UserService;
+import sm.domain.sys.base.user.service.UserAuthenticationService;
+import sm.domain.sys.base.user.service.UserCacheAccessor;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
 import sm.system.exception.BizException;
@@ -46,7 +47,9 @@ public class TemporaryLoginService {
 
     private final StringRedisTemplate redisTemplate;
     private final CurrentUserContext currentUserContext;
-    private final UserService userService;
+    private final UserAuthenticationService userAuthenticationService;
+    private final UserCacheAccessor userCacheAccessor;
+    private final UserSessionService userSessionService;
     private final LogWriteService logWriteService;
     private final ClientIpResolver clientIpResolver;
     private final LoginRedisAccessor loginRedisAccessor;
@@ -57,6 +60,10 @@ public class TemporaryLoginService {
         return StpUtil.isSafe(SAFE_SERVICE);
     }
 
+    public void checkAdministrator() {
+        currentUserContext.checkAdministrator();
+    }
+
     public void openSafe(String encryptedPassword) {
         currentUserContext.checkAdministrator();
         String password;
@@ -65,7 +72,7 @@ public class TemporaryLoginService {
         } catch (Sm2DecryptionException exception) {
             throw new BizException(ResultEnum.PARAM_ERROR, "认证数据无效，请刷新页面后重试");
         }
-        if (!userService.verifyAdministratorPassword(currentUserContext.getUserId(), password)) {
+        if (!userAuthenticationService.verifyAdministratorPassword(currentUserContext.getUserId(), password)) {
             throw new BizException(ResultEnum.PARAM_ERROR, "管理员密码错误");
         }
         StpUtil.openSafe(SAFE_SERVICE, SAFE_SECONDS);
@@ -74,8 +81,9 @@ public class TemporaryLoginService {
     public TemporaryLoginGrantVO createGrant(TemporaryLoginGrantForm form) {
         currentUserContext.checkAdministrator();
         StpUtil.checkSafe(SAFE_SERVICE);
-        UserCacheSnapshot target = userService.requireUser(form.getUserId());
-        UserAuthentication authentication = userService.authenticateTemporaryLogin(target.getId(), target.getUsername());
+        UserCacheSnapshot target = userCacheAccessor.requireUser(form.getUserId());
+        UserAuthentication authentication = userAuthenticationService.authenticateTemporaryLogin(
+                target.getId(), target.getUsername());
         if (!authentication.successful()) {
             throw new BizException(ResultEnum.PARAM_ERROR, "目标用户当前不可登录");
         }
@@ -100,12 +108,12 @@ public class TemporaryLoginService {
         if (grant == null || !grant.getTargetUsername().equals(username)) {
             throw new BizException(ResultEnum.UNAUTHORIZED, "用户名或密码错误");
         }
-        UserAuthentication authentication = userService.authenticateTemporaryLogin(
+        UserAuthentication authentication = userAuthenticationService.authenticateTemporaryLogin(
                 grant.getTargetUserId(), grant.getTargetUsername());
         if (!authentication.successful()) {
             throw new BizException(ResultEnum.UNAUTHORIZED, "用户名或密码错误");
         }
-        LoginVO login = userService.completeTemporaryLogin(authentication, grant.getIssuerUserId(),
+        LoginVO login = userSessionService.completeTemporaryLogin(authentication, grant.getIssuerUserId(),
                 grant.getGrantId(), grant.getReason());
         RequestMeta requestMeta = requestMeta();
         logWriteService.writeTemporaryLoginEvent(authentication.userId(), authentication.username(),

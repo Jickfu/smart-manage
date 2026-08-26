@@ -12,10 +12,10 @@ import sm.system.response.ResultEnum;
 
 import java.util.concurrent.TimeUnit;
 
-/** 独立用户缓存访问器，避免 UserService 内部调用绕过缓存代理。 */
+/** 稳定的用户缓存摘要读取边界，供认证和审计等调用方使用。 */
 @Component
 @RequiredArgsConstructor
-class UserCacheAccessor {
+public class UserCacheAccessor {
     private final UserMapper mapper;
 
     @Cached(cacheType = CacheType.REMOTE, name = BaseCacheName.USER_INFO,

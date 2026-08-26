@@ -15,7 +15,8 @@ import sm.domain.sys.base.login.model.vo.CaptchaChallengeVO;
 import sm.domain.sys.base.login.model.vo.CaptchaTicketVO;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.login.model.vo.SessionVO;
-import sm.domain.sys.base.user.service.UserService;
+import sm.domain.sys.base.user.service.UserAuthenticationService;
+import sm.domain.sys.base.user.service.UserProfileService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
 import sm.system.exception.BizException;
@@ -37,7 +38,9 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class LoginService {
 	private static final long PASSWORD_CHANGE_TICKET_MINUTES = 5;
-	private final UserService userService;
+	private final UserAuthenticationService userAuthenticationService;
+	private final UserProfileService userProfileService;
+	private final UserSessionService userSessionService;
 	private final LogWriteService logWriteService;
 	private final StringRedisTemplate redisTemplate;
 	private final ClientIpResolver clientIpResolver;
@@ -48,7 +51,7 @@ public class LoginService {
 	private final LoginRedisAccessor loginRedisAccessor;
 
 	public SessionVO session() {
-		return new SessionVO(userService.current(), csrfTokenManager.getCurrentToken());
+		return new SessionVO(userProfileService.current(), csrfTokenManager.getCurrentToken());
 	}
 
 	public LoginVO login(LoginForm form) {
@@ -74,7 +77,7 @@ public class LoginService {
 				throw exception;
 			}
 		}
-		var authentication = userService.authenticate(form.getUsername(), decryptedPassword);
+		var authentication = userAuthenticationService.authenticate(form.getUsername(), decryptedPassword);
 		if (!authentication.successful()) {
 			loginProtectionService.recordAuthenticationFailure(form.getUsername(), clientIp);
 			String publicMessage = credentialFailure(authentication.message())
@@ -100,7 +103,7 @@ public class LoginService {
 			passwordReset.setPasswordChangeTicket(ticket);
 			return passwordReset;
 		}
-		LoginVO login = userService.completeLogin(authentication);
+		LoginVO login = userSessionService.completeLogin(authentication);
 		loginProtectionService.clearAfterSuccess(form.getUsername(), clientIp);
 		return login;
 	}
@@ -129,7 +132,7 @@ public class LoginService {
 		if (userIdValue == null) {
 			throw new BizException(ResultEnum.UNAUTHORIZED, "改密凭证已失效，请重新登录");
 		}
-		userService.changeResetPassword(Long.valueOf(userIdValue), newPassword);
+		userAuthenticationService.changeResetPassword(Long.valueOf(userIdValue), newPassword);
 	}
 
 	private String decryptLoginPayload(String ciphertext, String username) {
