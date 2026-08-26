@@ -1,15 +1,9 @@
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { TableProps } from 'antd';
 import { Button, Result, Spin, Table } from 'antd';
-import { FilterOutlined, SettingOutlined } from '@ant-design/icons';
-import type {
-  ColumnType,
-  ColumnsType,
-  FilterDropdownProps,
-  SorterResult,
-  TableRowSelection,
-} from 'antd/es/table/interface';
+import { SettingOutlined } from '@ant-design/icons';
+import type { ColumnsType, SorterResult, TableRowSelection } from 'antd/es/table/interface';
 import ListFilterBar from './ListFilterBar';
 import ListTableShell from './ListTableShell';
 import type { AccessResource, PermissionAction } from './access';
@@ -17,22 +11,11 @@ import { PermissionActions } from './PermissionActions';
 import './ListPage.css';
 import { usePageTabTitle } from './usePageTabTitle';
 import ColumnSettingsModal from './ColumnSettingsModal';
-import {
-  applyColumnSettings,
-  createColumnSettingsStorageKey,
-  createDefaultColumnSettings,
-  mergeColumnSettings,
-  resolveColumnSettings,
-  readStoredColumnSettings,
-  removeStoredColumnSettings,
-  writeStoredColumnSettings,
-} from './columnSettings';
-import type { ColumnSetting } from './columnSettings';
-import { useUserStore } from '@/stores/user';
-import ListColumnFilter from './ListColumnFilter';
 import ListFilterSummary from './ListFilterSummary';
 import ListExpandedFilters from './ListExpandedFilters';
 import type { ListColumnFeatures, ListFilterCondition, ListSortCondition } from './listQuery';
+import { createFilterSummaryLabel, useListColumnFeatures } from './useListColumnFeatures';
+import { useListColumnSettings } from './useListColumnSettings';
 
 interface StandardListPermissions {
   save: string;
@@ -40,42 +23,6 @@ interface StandardListPermissions {
   enable?: string;
   disable?: string;
 }
-
-const operatorLabels: Record<string, string> = {
-  CONTAINS: '包含',
-  NOT_CONTAINS: '不包含',
-  EQ: '等于',
-  NE: '不等于',
-  STARTS_WITH: '开头是',
-  ENDS_WITH: '结尾是',
-  EMPTY: '为空',
-  NOT_EMPTY: '不为空',
-  GT: '大于',
-  GE: '大于等于',
-  LT: '小于',
-  LE: '小于等于',
-  TODAY: '今天',
-  THIS_WEEK: '本周',
-  THIS_MONTH: '本月',
-  LAST_MONTH: '上月',
-  PAST_MONTH: '过去一个月',
-  PAST_THREE_MONTHS: '过去三个月',
-  BETWEEN: '从…到…',
-  IN: '是',
-};
-
-const filterSummaryLabel = (
-  condition: ListFilterCondition,
-  feature: ListColumnFeatures[string] | undefined,
-) => {
-  const values = condition.values ?? (condition.value == null ? [] : [condition.value]);
-  const displayValues = values.map((value) => {
-    const option = feature?.filter?.options?.find((item) => item.value === value);
-    return typeof option?.label === 'string' ? option.label : String(value);
-  });
-  const suffix = displayValues.length ? ` ${displayValues.join('、')}` : '';
-  return `${feature?.label ?? condition.field}：${operatorLabels[condition.operator] ?? condition.operator}${suffix}`;
-};
 
 interface ListPageProps<T> {
   title: string;
@@ -201,92 +148,14 @@ function ListPage<T>({
   isRowSelectable,
 }: ListPageProps<T>) {
   usePageTabTitle(title);
-  const userId = useUserStore((state) => state.userInfo?.id);
-  const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
-  const defaultColumnSettings = useMemo(() => createDefaultColumnSettings(columns), [columns]);
-  const storageKey =
-    columnSettingsKey && userId
-      ? createColumnSettingsStorageKey(userId, columnSettingsKey)
-      : undefined;
-  const loadedColumnSettings = useMemo(
-    () =>
-      mergeColumnSettings(
-        defaultColumnSettings,
-        storageKey ? readStoredColumnSettings(storageKey) : undefined,
-      ),
-    [defaultColumnSettings, storageKey],
-  );
-  const [columnSettingsOverride, setColumnSettingsOverride] = useState<{
-    storageKey?: string;
-    settings: ColumnSetting[] | null;
-  }>();
-  const columnSettings =
-    columnSettingsOverride && columnSettingsOverride.storageKey === storageKey
-      ? resolveColumnSettings(defaultColumnSettings, undefined, columnSettingsOverride.settings)
-      : loadedColumnSettings;
-
-  const configuredColumns = useMemo(
-    () =>
-      columns.map((column) => {
-        if ('children' in column) return column;
-        const typedColumn = column as ColumnType<T>;
-        const dataIndex = typedColumn.dataIndex;
-        const columnKey = String(
-          typedColumn.key ?? (Array.isArray(dataIndex) ? dataIndex.join('.') : (dataIndex ?? '')),
-        );
-        const feature = columnFeatures?.[columnKey];
-        if (!feature) return typedColumn;
-        const filter = columnFilters.find((item) => item.field === columnKey);
-        return {
-          ...typedColumn,
-          // antd 的服务端排序回调依赖 columnKey；业务列未显式声明 key 时使用稳定字段键补齐。
-          key: typedColumn.key ?? columnKey,
-          ...(feature.filter
-            ? {
-                filteredValue: filter ? [JSON.stringify(filter)] : null,
-                filterIcon: (filtered: boolean) => (
-                  <FilterOutlined className={filtered ? 'sm-list-filter-icon-active' : undefined} />
-                ),
-                filterDropdown: ({ confirm }: FilterDropdownProps) => (
-                  <ListColumnFilter
-                    key={`${columnKey}-${JSON.stringify(filter ?? null)}`}
-                    field={columnKey}
-                    type={feature.filter?.type ?? 'string'}
-                    options={feature.filter?.options}
-                    value={filter}
-                    onConfirm={(condition) => {
-                      const nextFilters = columnFilters.filter((item) => item.field !== columnKey);
-                      if (condition) nextFilters.push(condition);
-                      onColumnFiltersChange?.(nextFilters);
-                      confirm({ closeDropdown: true });
-                    }}
-                  />
-                ),
-              }
-            : {}),
-          ...(feature.sorter
-            ? {
-                sorter: true,
-                sortOrder:
-                  columnSort?.field === columnKey
-                    ? columnSort.order === 'ASC'
-                      ? ('ascend' as const)
-                      : ('descend' as const)
-                    : null,
-              }
-            : {}),
-        };
-      }) as ColumnsType<T>,
-    [columnFeatures, columnFilters, columnSort, columns, onColumnFiltersChange],
-  );
-
-  const displayedColumns = useMemo(
-    () =>
-      columnSettingsKey
-        ? applyColumnSettings(configuredColumns, columnSettings)
-        : configuredColumns,
-    [columnSettings, columnSettingsKey, configuredColumns],
-  );
+  const configuredColumns = useListColumnFeatures({
+    columns,
+    features: columnFeatures,
+    filters: columnFilters,
+    sort: columnSort,
+    onFiltersChange: onColumnFiltersChange,
+  });
+  const columnSettings = useListColumnSettings(configuredColumns, columnSettingsKey);
   const rowSelection: TableRowSelection<T> | undefined = useMemo(
     () =>
       selectMode
@@ -346,22 +215,25 @@ function ListPage<T>({
               render: (_text: unknown, _record: T, index: number) =>
                 (pageNum - 1) * pageSize + index + 1,
             },
-            ...displayedColumns,
+            ...columnSettings.displayedColumns,
           ]
-        : displayedColumns,
-    [displayedColumns, pageNum, pageSize, showSequence],
+        : columnSettings.displayedColumns,
+    [columnSettings.displayedColumns, pageNum, pageSize, showSequence],
   );
 
-  const resolvedTableHeaderExtra = columnSettingsKey ? (
-    <Button
-      type="text"
-      icon={<SettingOutlined />}
-      title="列设置"
-      aria-label="列设置"
-      onClick={() => setColumnSettingsOpen(true)}
-    />
-  ) : (
-    tableHeaderExtra
+  const resolvedTableHeaderExtra = (
+    <>
+      {tableHeaderExtra}
+      {columnSettings.enabled && (
+        <Button
+          type="text"
+          icon={<SettingOutlined />}
+          title="列设置"
+          aria-label="列设置"
+          onClick={() => columnSettings.setOpen(true)}
+        />
+      )}
+    </>
   );
 
   const resolvedFilterSummary = (
@@ -371,7 +243,7 @@ function ListPage<T>({
         <ListFilterSummary
           items={columnFilters.map((filter) => ({
             key: `column-${filter.field}`,
-            label: filterSummaryLabel(filter, columnFeatures?.[filter.field]),
+            label: createFilterSummaryLabel(filter, columnFeatures?.[filter.field]),
             onRemove: () =>
               onColumnFiltersChange?.(columnFilters.filter((item) => item.field !== filter.field)),
           }))}
@@ -541,29 +413,13 @@ function ListPage<T>({
           />
         </Spin>
       </div>
-      {columnSettingsKey && columnSettingsOpen && (
+      {columnSettings.enabled && columnSettings.open && (
         <ColumnSettingsModal
-          open={columnSettingsOpen}
-          settings={columnSettings}
-          defaults={defaultColumnSettings}
-          onCancel={() => setColumnSettingsOpen(false)}
-          onConfirm={(nextSettings) => {
-            const restoredToDefaults =
-              JSON.stringify(nextSettings) === JSON.stringify(defaultColumnSettings);
-            // 恢复出厂设置代表不存在用户覆盖，后续代码默认值变化必须立即生效。
-            setColumnSettingsOverride({
-              storageKey,
-              settings: restoredToDefaults ? null : nextSettings,
-            });
-            if (storageKey) {
-              if (restoredToDefaults) {
-                removeStoredColumnSettings(storageKey);
-              } else {
-                writeStoredColumnSettings(storageKey, nextSettings);
-              }
-            }
-            setColumnSettingsOpen(false);
-          }}
+          open={columnSettings.open}
+          settings={columnSettings.settings}
+          defaults={columnSettings.defaultSettings}
+          onCancel={() => columnSettings.setOpen(false)}
+          onConfirm={columnSettings.confirm}
         />
       )}
     </section>

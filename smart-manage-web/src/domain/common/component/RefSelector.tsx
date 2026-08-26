@@ -5,12 +5,11 @@ import { SearchOutlined, CloseOutlined } from '@ant-design/icons';
 import type { InputRef } from 'antd';
 import AppModal from './AppModal';
 import type { ColumnsType, TableRowSelection } from 'antd/es/table/interface';
-import type { DataNode } from 'antd/es/tree';
-import ListTree from '@/domain/common/page/ListTree';
-import ListTreePanel from '@/domain/common/page/ListTreePanel';
 import { useRefSelectorQuery } from './useRefSelectorQuery';
 import type { RefSelectorFetchFn } from './useRefSelectorQuery';
 import { formatRefSelectorDisplayText, isRefSelectorTextOverflowing } from './refSelectorDisplay';
+import { useRefSelection } from './useRefSelection';
+import { RefSelectorSelectedPanel, RefSelectorTreePanel } from './RefSelectorPanels';
 import './RefSelector.css';
 
 // ============================================================
@@ -119,12 +118,6 @@ function RefSelector<T extends Record<string, unknown>>({
   const triggerRef = useRef<HTMLDivElement>(null);
   const triggerInputRef = useRef<InputRef>(null);
   const selectionTotalRef = useRef<HTMLSpanElement>(null);
-  /**
-   * 多选选择池 — 用 Map<key, record> 维护，跨分页不丢失已选记录。
-   * 更新时返回新 Map 触发渲染，selectedRowKeys / 已选面板均由此派生。
-   */
-  const [selectionMap, setSelectionMap] = useState<Map<string, T>>(new Map());
-
   const query = useRefSelectorQuery({
     fetchFn,
     selectorKey,
@@ -136,34 +129,13 @@ function RefSelector<T extends Record<string, unknown>>({
 
   const isMultiple = mode === 'multiple' || mode === 'tree-table-multiple';
   const hasTree = mode === 'tree-table' || mode === 'tree-table-multiple';
+  const refSelection = useRefSelection(value, isMultiple, fieldNames.key);
 
   useEffect(() => {
     if (modalOpen && hasTree && defaultTreeKey && !query.parentId) {
       query.onTreeSelect(defaultTreeKey);
     }
   }, [defaultTreeKey, hasTree, modalOpen, query]);
-
-  /** 记录上次 selectedRowKeys，用于 onChange 差分同步 selectionMap */
-  const prevKeysRef = useRef<React.Key[]>([]);
-
-  /** 根据 selectionMap 计算 rowKey 数组，控制 Table 勾选态 */
-  const selectedRowKeys = useMemo(() => [...selectionMap.keys()], [selectionMap]);
-
-  /**
-   * 统一更新 selectionMap 并同步 prevKeysRef。
-   * 所有修改 selectionMap 的路径（onChange/行点击/面板删除/清空/open）均通过此函数，
-   * 确保 prevKeysRef 始终与 selectionMap 一致。
-   */
-  const updateSelectionMap = useCallback(
-    (updater: Map<string, T> | ((prev: Map<string, T>) => Map<string, T>)) => {
-      setSelectionMap((prev) => {
-        const next = typeof updater === 'function' ? updater(prev) : updater;
-        prevKeysRef.current = [...next.keys()];
-        return next;
-      });
-    },
-    [],
-  );
 
   /** Table rowKey 函数 */
   const rowKey = useCallback((record: T) => String(record[fieldNames.key]), [fieldNames.key]);
@@ -173,20 +145,9 @@ function RefSelector<T extends Record<string, unknown>>({
   /** 打开 Modal：重置查询状态 + 同步外部 value → selectionMap */
   const handleOpen = useCallback(() => {
     query.reset();
-    const next = new Map<string, T>();
-    if (value != null) {
-      if (isMultiple && Array.isArray(value)) {
-        for (const record of value) {
-          next.set(String(record[fieldNames.key]), record);
-        }
-      } else if (!isMultiple) {
-        const record = value as T;
-        next.set(String(record[fieldNames.key]), record);
-      }
-    }
-    updateSelectionMap(next);
+    refSelection.resetFromValue();
     setModalOpen(true);
-  }, [query, value, isMultiple, fieldNames.key, updateSelectionMap]);
+  }, [query, refSelection]);
 
   /** 取消：丢弃选择，关闭 Modal */
   const handleCancel = useCallback(() => {
@@ -195,14 +156,14 @@ function RefSelector<T extends Record<string, unknown>>({
 
   /** 确认：提交选择给 onChange */
   const handleConfirm = useCallback(() => {
-    const list = [...selectionMap.values()];
+    const list = [...refSelection.selection.values()];
     if (isMultiple) {
       onChange?.(list.length > 0 ? list : null);
     } else {
       onChange?.(list.length > 0 ? list[0]! : null);
     }
     setModalOpen(false);
-  }, [isMultiple, onChange, selectionMap]);
+  }, [isMultiple, onChange, refSelection.selection]);
 
   /** 双击行（单选模式）：选中 + 确认关闭 */
   const handleRowDoubleClick = useCallback(
@@ -290,7 +251,7 @@ function RefSelector<T extends Record<string, unknown>>({
   const rowSelection: TableRowSelection<T> = useMemo(() => {
     const base = {
       columnWidth: 36,
-      selectedRowKeys,
+      selectedRowKeys: refSelection.selectedKeys,
     };
 
     if (isMultiple) {
@@ -300,28 +261,7 @@ function RefSelector<T extends Record<string, unknown>>({
         // 保留跨页已选 key，避免 antd 过滤非当前页 key 导致差分误删
         preserveSelectedRowKeys: true,
         onChange: (newKeys: React.Key[], selectedRows: T[]) => {
-          const prevKeys = prevKeysRef.current;
-
-          updateSelectionMap((prev) => {
-            const next = new Map(prev);
-
-            // 删除反选的 key（prevKeys 有、newKeys 没有）
-            for (const key of prevKeys) {
-              if (!newKeys.includes(key)) {
-                next.delete(String(key));
-              }
-            }
-
-            // 添加新选的 key（newKeys 有、prevKeys 没有），从当前页 rows 取 record 快照
-            for (const key of newKeys) {
-              if (!prevKeys.includes(key)) {
-                const record = selectedRows.find((r) => String(r[fieldNames.key]) === String(key));
-                if (record) next.set(String(key), record);
-              }
-            }
-
-            return next;
-          });
+          refSelection.mergeTableChange(newKeys, selectedRows);
         },
       };
     }
@@ -330,14 +270,10 @@ function RefSelector<T extends Record<string, unknown>>({
       ...base,
       type: 'radio' as const,
       onChange: (_keys: React.Key[], rows: T[]) => {
-        updateSelectionMap(() => {
-          const next = new Map<string, T>();
-          if (rows.length > 0) next.set(String(rows[0]![fieldNames.key]), rows[0]!);
-          return next;
-        });
+        refSelection.replaceSingle(rows[0]);
       },
     };
-  }, [isMultiple, selectedRowKeys, fieldNames.key, updateSelectionMap]);
+  }, [isMultiple, refSelection]);
 
   /** 完整列定义：序号 + 用户列 */
   const fullColumns: ColumnsType<T> = useMemo(
@@ -368,21 +304,11 @@ function RefSelector<T extends Record<string, unknown>>({
   const onRow = useCallback(
     (record: T) => ({
       onClick: () => {
-        const key = String(record[fieldNames.key]);
-        if (isMultiple) {
-          updateSelectionMap((prev) => {
-            const next = new Map(prev);
-            if (next.has(key)) next.delete(key);
-            else next.set(key, record);
-            return next;
-          });
-        } else {
-          updateSelectionMap(new Map([[key, record]]));
-        }
+        refSelection.toggle(record);
       },
       onDoubleClick: () => handleRowDoubleClick(record),
     }),
-    [isMultiple, fieldNames.key, handleRowDoubleClick, updateSelectionMap],
+    [handleRowDoubleClick, refSelection],
   );
 
   /** 表格内容（meta 栏 + Table） */
@@ -427,64 +353,34 @@ function RefSelector<T extends Record<string, unknown>>({
   // ---- 渲染：多选右侧已选面板 ----
 
   function renderSelectedPanel(): ReactNode {
-    const list = [...selectionMap.values()];
     return (
-      <aside className="sm-ref-selector-selected-panel">
-        <div className="sm-ref-selector-selected-header">
-          <span>已选 {selectionMap.size} 项</span>
-          {selectionMap.size > 0 && (
-            <Button type="link" onClick={() => updateSelectionMap(new Map())}>
-              清空
-            </Button>
-          )}
-        </div>
-        <div className="sm-ref-selector-selected-list">
-          {list.map((record) => (
-            <div key={String(record[fieldNames.key])} className="sm-ref-selector-selected-item">
-              <span className="sm-ref-selector-selected-item-label">{displayRender(record)}</span>
-              <span
-                className="sm-ref-selector-selected-item-remove"
-                onClick={() => {
-                  updateSelectionMap((prev) => {
-                    const next = new Map(prev);
-                    next.delete(String(record[fieldNames.key]));
-                    return next;
-                  });
-                }}
-              >
-                <CloseOutlined />
-              </span>
-            </div>
-          ))}
-          {selectionMap.size === 0 && (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="暂未选择"
-              className="sm-ref-selector-empty"
-            />
-          )}
-        </div>
-      </aside>
+      <RefSelectorSelectedPanel
+        selection={refSelection.selection}
+        keyField={fieldNames.key}
+        displayRender={displayRender}
+        onClear={refSelection.clear}
+        onRemove={(key) =>
+          refSelection.setSelection((previous) => {
+            const next = new Map(previous);
+            next.delete(key);
+            return next;
+          })
+        }
+      />
     );
   }
 
   // ---- 渲染：树表模式的树面板 ----
 
   function renderTree(): ReactNode {
-    if (!treeData || treeData.length === 0) return null;
     return (
-      <ListTreePanel footer={treeFooter}>
-        <ListTree
-          treeData={treeData as unknown as DataNode[]}
-          fieldNames={treeFieldNames}
-          onSelect={(keys) => {
-            query.onTreeSelect(keys.length > 0 ? String(keys[0]) : undefined);
-          }}
-          selectedKeys={query.parentId ? [query.parentId] : []}
-          defaultExpandAll
-          blockNode
-        />
-      </ListTreePanel>
+      <RefSelectorTreePanel
+        treeData={treeData}
+        fieldNames={treeFieldNames}
+        footer={treeFooter}
+        selectedKey={query.parentId}
+        onSelect={query.onTreeSelect}
+      />
     );
   }
 

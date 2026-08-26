@@ -12,10 +12,8 @@ import { EditSectionCollapse } from './EditSectionCollapse';
 import { useBeforeCloseGuard } from './useBeforeCloseGuard';
 import { BusinessAttachmentPanel } from '@/domain/common/attachment/BusinessAttachmentPanel';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
-import type {
-  BusinessAttachment,
-  BusinessAttachmentFormValues,
-} from '@/domain/common/attachment/types';
+import type { BusinessAttachment } from '@/domain/common/attachment/types';
+import { useEditAttachments } from './useEditAttachments';
 import './EditPage.css';
 
 /** 编辑字段公共属性 */
@@ -191,41 +189,11 @@ const EditPage = ({
     ...(detailContent ? ['detail'] : []),
     ...(attachmentResource ? ['attachments'] : []),
   ]);
-  const [attachmentState, setAttachmentState] = useState<{
-    source: BusinessAttachment[] | undefined;
-    values: BusinessAttachment[];
-  }>({ source: undefined, values: [] });
   const editable = isEditable(operationType, billStatus);
-  const attachments =
-    attachmentState.source === attachmentResource?.initialAttachments
-      ? attachmentState.values
-      : (attachmentResource?.initialAttachments ?? []);
-
-  const withAttachmentValues = (
-    values: Record<string, unknown>,
-  ): Record<string, unknown> & Partial<BusinessAttachmentFormValues> => {
-    if (!attachmentResource) return values;
-    return {
-      ...values,
-      attachmentIds: attachments.map((attachment) => attachment.id),
-      attachmentUploadSessions: Object.fromEntries(
-        attachments
-          .filter((attachment) => attachment.isTemp && attachment.uploadSessionId)
-          .map((attachment) => [attachment.id, attachment.uploadSessionId!]),
-      ),
-    };
-  };
-
-  const updateAttachments = (
-    values: BusinessAttachment[],
-    changeType: 'upload' | 'delete' | 'metadata',
-  ) => {
-    if (changeType === 'upload') {
-      revisionRef.current += 1;
-      dirtyRef.current = true;
-    }
-    setAttachmentState({ source: attachmentResource?.initialAttachments, values });
-  };
+  const attachmentController = useEditAttachments(attachmentResource, () => {
+    revisionRef.current += 1;
+    dirtyRef.current = true;
+  });
 
   // 后端数据加载完成后同步到 Form
   useEffect(() => {
@@ -241,7 +209,7 @@ const EditPage = ({
     try {
       const values = await form.validateFields();
       const savedRevision = revisionRef.current;
-      const completed = await onSave(withAttachmentValues(values));
+      const completed = await onSave(attachmentController.withValues(values));
       if (completed !== false && revisionRef.current === savedRevision) {
         dirtyRef.current = false;
       }
@@ -265,7 +233,7 @@ const EditPage = ({
     try {
       const values = await form.validateFields();
       const submittedRevision = revisionRef.current;
-      await onSubmit(withAttachmentValues(values));
+      await onSubmit(attachmentController.withValues(values));
       if (revisionRef.current === submittedRevision) {
         dirtyRef.current = false;
       }
@@ -362,9 +330,9 @@ const EditPage = ({
                     children: (
                       <BusinessAttachmentPanel
                         resourceType={attachmentResource.resourceType}
-                        attachments={attachments}
+                        attachments={attachmentController.attachments}
                         editable={editable}
-                        onChange={updateAttachments}
+                        onChange={attachmentController.update}
                       />
                     ),
                   },
