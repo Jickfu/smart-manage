@@ -3,6 +3,8 @@ server:
 
 # 生产浏览器认证 Cookie 必须只通过 HTTPS 发送，不允许环境变量降级覆盖。
 sa-token:
+  # 防御性生产覆盖：禁止 Sa-Token 内置监听器把完整会话 token 写入日志。
+  is-log: false
   cookie:
     secure: true
 

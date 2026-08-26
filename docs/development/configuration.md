@@ -91,6 +91,9 @@ Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
 - `SMART_MANAGE_INTERNAL_BASE_URL`，且必须是其他应用实例可直接访问的 HTTPS 内部地址。
 - `SMART_MANAGE_TRUSTED_PROXY_CIDRS`，且只能包含实际 Nginx 或负载均衡器网段。
 
+公共配置和生产配置均固定关闭 `sa-token.is-log`。Sa-Token 内置事件日志会输出完整会话 token，
+因此 local、dev 和 prod 都不得重新开启；登录、退出和会话终止审计统一由项目受控的认证日志监听器记录。
+
 可选的生产调优变量：
 
 | 环境变量 | 默认值 |

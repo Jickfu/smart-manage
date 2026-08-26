@@ -116,7 +116,8 @@ sa-token:
   is-concurrent: true
   is-share: false
   token-style: random-64
-  is-log: true
+  # Sa-Token 内置事件日志会输出完整会话 token，所有环境统一关闭并使用项目受控认证审计日志。
+  is-log: false
   cookie:
     path: /
     secure: ${SMART_MANAGE_COOKIE_SECURE:false}
