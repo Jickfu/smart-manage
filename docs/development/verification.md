@@ -12,6 +12,31 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-
 
 该脚本检查文档与 skill 路由、页面注册字段、前端内联样式和 Controller 权限注解常量等文件或前端源码约束。Java 类型、包、注解和依赖边界统一由后端 ArchUnit 测试验证，脚本不重复扫描 Java import。业务状态、数据安全和交互语义仍必须通过评审及风险驱动测试验证。
 
+当前检查清单如下：
+
+| 分类 | 检查内容 | 违规后的修复方向 |
+| --- | --- | --- |
+| 治理文件 | 模块开发指南、模块模式目录、模块开发 skill 及其代理配置必须存在 | 恢复规定文件；规范调整时同步更新仓库治理入口 |
+| 文档与 skill 路由 | 根目录及前后端 `AGENTS.md` 必须指向模块开发指南，模块开发 skill 必须调用本脚本 | 补充明确的文档路由或校验步骤，不能仅依赖代理记忆 |
+| 前端样式 | `smart-manage-web/src/domain` 下的 TSX 文件不得使用内联 `style` | 使用项目既有样式文件、组件能力或设计 token |
+| 操作反馈 | 除统一封装自身外，前端不得直接调用 Ant Design `message` 的操作反馈方法 | 改用 `useOperationFeedback` |
+| 操作确认 | 前端不得直接调用 `Modal.confirm` 或使用 `Popconfirm` | 改用 `useOperationConfirm` |
+| 后端权限 | Controller 的 `@SaCheckPermission` 不得直接填写权限编码字符串 | 引用对应模块的权限常量 |
+| 页面注册 | 至少存在一个 `pageRegistration.ts` 或 `pageRegistration.tsx`，每个注册项都必须声明 `componentKey`、`featureKey` 和 `pageType`，且 `featureKey` 不得为空 | 补全显式注册字段，使页面与稳定功能身份建立关联 |
+
+脚本使用源码静态扫描完成这些适合机械判断的确定性检查，不等价于完整的架构或业务验证。以下内容不由该脚本负责：
+
+- Java 类型、包、注解、可见性和依赖边界，由后端 ArchUnit 测试验证。
+- Feature、权限、菜单、迁移和页面注册之间基于真实数据的完整一致性，由对应测试和 CI 校验验证。
+- 业务状态流转、事务、并发控制、数据安全及交互语义，由代码评审和风险驱动测试验证。
+- 编译、单元测试、静态检查、前端构建及 Flyway 空库迁移，仍需执行本文件后续章节列出的命令。
+
+新增、删除或调整脚本检查项时，必须同步更新脚本顶部帮助、本清单及相关成功或失败提示。可使用以下命令直接查看脚本内置说明：
+
+```powershell
+pwsh.exe -NoProfile -Command "Get-Help .\scripts\verify-module-conventions.ps1 -Detailed"
+```
+
 ## 后端
 
 修改后端代码至少执行：

@@ -1,3 +1,32 @@
+﻿<#
+.SYNOPSIS
+校验新增或显著扩展业务模块必须遵守的仓库级机械约束。
+
+.DESCRIPTION
+当前检查内容：
+1. 模块开发指南、模式目录及模块开发 skill 等治理文件必须存在。
+2. 根目录及前后端 AGENTS.md 必须正确路由到模块开发指南。
+3. 模块开发 skill 必须调用本脚本。
+4. 领域 TSX 文件禁止使用内联 style。
+5. 前端操作反馈必须统一使用 useOperationFeedback。
+6. 前端操作确认必须统一使用 useOperationConfirm。
+7. Controller 权限注解必须引用权限常量，禁止直接填写字符串。
+8. 页面注册文件必须存在，每个注册项必须声明非空 featureKey 和 pageType。
+
+本脚本只负责适合源码静态扫描的确定性约束。Java 架构边界由 ArchUnit 测试校验；
+业务状态、数据安全和交互语义仍需通过代码评审及风险驱动测试验证。
+
+详细验证策略参见 docs/development/verification.md。
+
+.PARAMETER RepositoryRoot
+待校验的仓库根目录。省略时自动使用本脚本所在目录的上一级目录。
+
+.EXAMPLE
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-conventions.ps1
+
+.EXAMPLE
+pwsh.exe -NoProfile -Command "Get-Help .\scripts\verify-module-conventions.ps1 -Detailed"
+#>
 [CmdletBinding()]
 param(
     [string]$RepositoryRoot
@@ -79,6 +108,7 @@ function Assert-NoFileMatch {
     }
 }
 
+# 治理文件和代理路由必须完整，确保模块开发流程具有稳定入口。
 $requiredFiles = @(
     'docs/development/module-development-guide.md',
     'docs/development/module-pattern-catalog.md',
@@ -94,12 +124,14 @@ Assert-FileContains 'smart-manage-api/AGENTS.md' 'module-development-guide\.md' 
 Assert-FileContains 'smart-manage-web/AGENTS.md' 'module-development-guide\.md' 'Frontend AGENTS.md does not route to the module development guide'
 Assert-FileContains '.agents/skills/smart-manage-module/SKILL.md' 'scripts\\verify-module-conventions\.ps1|scripts/verify-module-conventions\.ps1' 'Module skill does not invoke the convention verifier'
 
+# 领域页面样式必须通过样式文件和既有设计体系维护，禁止散落内联样式。
 Assert-NoFileMatch `
     -RelativeDirectory 'smart-manage-web/src/domain' `
     -Filter '*.tsx' `
     -Pattern '\bstyle\s*=' `
     -Message 'Domain TSX must not use inline style'
 
+# 操作结果反馈必须经过统一封装，保持反馈级别和交互语义一致。
 $frontendSourceRoot = Resolve-RepositoryPath 'smart-manage-web/src'
 $operationFeedbackImplementation = Resolve-RepositoryPath 'smart-manage-web/src/domain/common/component/useOperationFeedback.tsx'
 foreach ($frontendFile in Get-ChildItem -LiteralPath $frontendSourceRoot -Recurse -File -Include '*.ts', '*.tsx') {
@@ -113,18 +145,21 @@ foreach ($frontendFile in Get-ChildItem -LiteralPath $frontendSourceRoot -Recurs
     }
 }
 
+# 操作确认必须经过统一封装，避免各页面自行组合确认交互。
 Assert-NoFileMatch `
     -RelativeDirectory 'smart-manage-web/src' `
     -Filter '*.tsx' `
     -Pattern '\bModal\.confirm\s*\(|<Popconfirm\b' `
     -Message 'Frontend operation confirmation must use useOperationConfirm'
 
+# Controller 权限声明必须引用模块权限常量，禁止散落权限编码字面量。
 Assert-NoFileMatch `
     -RelativeDirectory 'smart-manage-api/src/main/java' `
     -Filter '*Controller.java' `
     -Pattern '@SaCheckPermission\s*\(\s*["'']' `
     -Message 'Controller permission annotations must reference permission constants'
 
+# 页面注册必须显式关联组件、功能和页面类型，不得通过命名或路径推断归属。
 $registrationRoot = Resolve-RepositoryPath 'smart-manage-web/src/domain'
 $registrationFiles = @(
     Get-ChildItem -LiteralPath $registrationRoot -Recurse -File |
