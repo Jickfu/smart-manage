@@ -1,7 +1,7 @@
 package sm.domain.sys.base.login.service;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.login.model.TemporaryLoginGrant;
 import sm.domain.sys.base.user.service.UserService;
@@ -21,17 +21,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TemporaryLoginServiceTests {
-    @SuppressWarnings("unchecked")
-    private final RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
+    private final StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
     private final UserService userService = mock(UserService.class);
     private final LoginRedisAccessor loginRedisAccessor = mock(LoginRedisAccessor.class);
+    private final LoginCacheJsonCodec cacheJsonCodec = mock(LoginCacheJsonCodec.class);
     private final TemporaryLoginService service = new TemporaryLoginService(
             redisTemplate,
             mock(CurrentUserContext.class),
             userService,
             mock(LogWriteService.class),
             mock(ClientIpResolver.class),
-            loginRedisAccessor);
+            loginRedisAccessor,
+            cacheJsonCodec);
 
     @Test
     void recognizesOnlyVersionedTemporaryCredential() {
@@ -43,7 +44,8 @@ class TemporaryLoginServiceTests {
     void usernameMismatchStillConsumesGrantAndCannotCreateSession() {
         TemporaryLoginGrant grant = new TemporaryLoginGrant("grant", 1L, 9L, "target",
                 "排障", LocalDateTime.now().plusMinutes(5));
-        when(loginRedisAccessor.getAndDelete(startsWith("sys:base:temporary-login:"))).thenReturn(grant);
+        when(loginRedisAccessor.getAndDelete(startsWith("sys:base:temporary-login:"))).thenReturn("grant-json");
+        when(cacheJsonCodec.read("grant-json", TemporaryLoginGrant.class)).thenReturn(grant);
 
         assertThrows(BizException.class, () -> service.consume("other-user", "SMTL1.random"));
 

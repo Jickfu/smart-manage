@@ -16,6 +16,8 @@ import sm.domain.sys.base.attachment.model.vo.AttachmentDownloadAccessVO;
 import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.system.storage.FileStorageServiceFactory;
+import sm.system.storage.FileStorageService;
+import sm.system.storage.FileStoreResult;
 import sm.system.helper.CurrentOperatorProvider;
 import sm.system.resource.BusinessResourceAction;
 import sm.system.resource.BusinessResourceRegistry;
@@ -24,7 +26,11 @@ import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -59,8 +65,23 @@ public class AttachmentService implements AttachmentGateway {
             throw new BizException(ResultEnum.PARAM_ERROR, "附件业务资源类型不能为空");
         }
         resourceRegistry.validateUpload(bizType, file);
-        AttachmentVO attachment = txService.upload(file, bizType, resourceRegistry.objectPrefix(bizType),
-                attachmentConfigService.uploadPolicy().tempExpireHours());
+        String originalName = sanitizeOriginalName(file.getOriginalFilename());
+        String fileExt = originalName.contains(".")
+                ? originalName.substring(originalName.lastIndexOf(".")) : "";
+        String sha256 = sha256(file);
+        FileStorageService storage = storageFactory.getService();
+        FileStoreResult storedObject = storage.store(resourceRegistry.objectPrefix(bizType), file);
+        AttachmentVO attachment;
+        try {
+            attachment = txService.persistUpload(
+                    originalName, storedObject.getStoredPath(), storedObject.getFileSize(), file.getContentType(),
+                    fileExt, storage.getType(), sha256, bizType,
+                    attachmentConfigService.uploadPolicy().tempExpireHours());
+        } catch (RuntimeException exception) {
+            deleteUploadForCompensation(storage, storedObject.getStoredPath(), exception);
+            throw exception;
+        }
+        log.info("附件上传: id={}, name={}, temp={}", attachment.getId(), originalName, attachment.getIsTemp());
         attachUploaderNames(List.of(attachment));
         return attachment;
     }
@@ -88,20 +109,44 @@ public class AttachmentService implements AttachmentGateway {
     @BizLog("删除附件")
     public void delete(Long id, String uploadSessionId) throws IOException {
         requireAttachmentAccess(id, BusinessResourceAction.DELETE, uploadSessionId);
-        txService.delete(id);
+        deleteStoredObject(txService.markPendingDelete(id));
     }
 
     /** 已完成自身权限和状态校验的业务命令内部清理附件。 */
     public void deleteForAggregate(Long id) throws IOException {
-        txService.delete(id);
+        deleteStoredObject(txService.markPendingDelete(id));
     }
 
     /** 已完成主聚合删除权限校验后，清理其全部正式附件。 */
     @Override
     public void deleteForAggregate(String bizType, String bizId) throws IOException {
         for (AttachmentEntity entity : mapper.selectByBiz(bizType, bizId)) {
-            txService.delete(entity.getId());
+            deleteStoredObject(txService.markPendingDelete(entity.getId()));
         }
+    }
+
+    /** Quartz 调用的幂等清理入口；失败记录保持 PENDING_DELETE，供下次继续重试。 */
+    public int cleanupExpiredAndPending() {
+        List<AttachmentEntity> candidates = mapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AttachmentEntity>()
+                        .and(wrapper -> wrapper
+                                .eq(AttachmentEntity::getStatus, "PENDING_DELETE")
+                                .or(expired -> expired.eq(AttachmentEntity::getStatus, "TEMP")
+                                        .lt(AttachmentEntity::getExpiresAt, LocalDateTime.now())))
+                        .orderByAsc(AttachmentEntity::getId));
+        int failed = 0;
+        for (AttachmentEntity candidate : candidates) {
+            try {
+                AttachmentDeletionTarget target = txService.markPendingDelete(candidate.getId());
+                if (!deleteStoredObject(target)) failed++;
+            } catch (RuntimeException exception) {
+                failed++;
+                log.warn("附件清理失败，等待下次幂等重试: id={}, storageType={}",
+                        candidate.getId(), candidate.getStorageType(), exception);
+            }
+        }
+        log.info("附件清理完成: candidates={}, failed={}", candidates.size(), failed);
+        return failed;
     }
 
     /** 按业务单据查询附件列表 */
@@ -304,5 +349,54 @@ public class AttachmentService implements AttachmentGateway {
             UserEntity uploader = users.get(attachment.getUploaderId());
             attachment.setUploaderName(uploader == null ? null : uploader.getName());
         }
+    }
+
+    private boolean deleteStoredObject(AttachmentDeletionTarget target) {
+        try {
+            storageFactory.getService(target.storageType()).delete(target.objectKey());
+            txService.markDeleted(target.attachmentId());
+            log.info("附件删除: id={}, path={}", target.attachmentId(), target.objectKey());
+            return true;
+        } catch (IOException | RuntimeException exception) {
+            log.error("附件物理删除或状态确认失败，等待后台重试: id={}, path={}",
+                    target.attachmentId(), target.objectKey(), exception);
+            return false;
+        }
+    }
+
+    private void deleteUploadForCompensation(
+            FileStorageService storage, String objectKey, RuntimeException persistenceException) {
+        try {
+            storage.delete(objectKey);
+        } catch (IOException | RuntimeException cleanupException) {
+            persistenceException.addSuppressed(cleanupException);
+            log.error("附件元数据事务失败且对象补偿删除失败: path={}", objectKey, cleanupException);
+        }
+    }
+
+    private String sha256(MultipartFile file) throws IOException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (java.io.InputStream inputStream = file.getInputStream()) {
+                byte[] buffer = new byte[8192];
+                int readLength;
+                while ((readLength = inputStream.read(buffer)) != -1) {
+                    digest.update(buffer, 0, readLength);
+                }
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("运行环境不支持 SHA-256", exception);
+        }
+    }
+
+    private String sanitizeOriginalName(String originalName) {
+        if (originalName == null || originalName.isBlank()) return "file";
+        String normalized = originalName.replace('\\', '/');
+        normalized = normalized.substring(normalized.lastIndexOf('/') + 1)
+                .replaceAll("[\\x00-\\x1f\\x7f]", "_")
+                .replace('"', '_').replace('\r', '_').replace('\n', '_');
+        if (normalized.isBlank()) return "file";
+        return normalized.length() > 255 ? normalized.substring(normalized.length() - 255) : normalized;
     }
 }

@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.entity.BizAttachmentEntity;
 import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
@@ -14,20 +13,12 @@ import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
-import sm.system.storage.FileStorageService;
-import sm.system.storage.FileStorageServiceFactory;
-import sm.system.storage.FileStoreResult;
-import sm.system.util.TransactionUtil;
 
-import java.io.IOException;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.util.UUID;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 
 /**
  * 附件事务服务 —— 所有写操作在类级别事务中执行
@@ -41,54 +32,39 @@ import java.util.HexFormat;
 class AttachmentTxService {
     private final AttachmentMapper mapper;
     private final BizAttachmentMapper bizMapper;
-    private final FileStorageServiceFactory storageFactory;
 
-    /** 上传附件：传 bizType 时存入临时目录（需 promote），否则直接存 sys 系统目录 */
-    public AttachmentVO upload(MultipartFile file, String bizType, String objectPrefix, int tempExpireHours) throws IOException {
-        FileStorageService storage = storageFactory.getService();
+    /** 在对象已经写入后，以短事务保存附件元数据和临时业务映射。 */
+    public AttachmentVO persistUpload(String originalName, String objectKey, long fileSize, String mimeType,
+            String fileExt, String storageType, String sha256, String bizType, int tempExpireHours) {
         boolean isTemp = bizType != null && !bizType.isBlank();
-        FileStoreResult result = storage.store(objectPrefix, file);
-        String originalName = sanitizeOriginalName(file.getOriginalFilename());
-        String ext = "";
-        if (originalName != null && originalName.contains(".")) {
-            ext = originalName.substring(originalName.lastIndexOf("."));
+        AttachmentEntity entity = new AttachmentEntity();
+        entity.setOriginalName(originalName);
+        entity.setObjectKey(objectKey);
+        entity.setFileSize(fileSize);
+        entity.setMimeType(mimeType);
+        entity.setFileExt(fileExt);
+        entity.setStorageType(storageType);
+        entity.setStatus(isTemp ? "TEMP" : "ACTIVE");
+        entity.setUploadSessionId(isTemp ? UUID.randomUUID().toString() : null);
+        entity.setExpiresAt(isTemp ? LocalDateTime.now().plusHours(tempExpireHours) : null);
+        entity.setSha256(sha256);
+        if (mapper.insert(entity) != 1) {
+            throw new BizException(ResultEnum.PERSISTENCE_ERROR, "新增数据失败");
         }
-        try {
-            AttachmentEntity entity = new AttachmentEntity();
-            entity.setOriginalName(originalName);
-            entity.setObjectKey(result.getStoredPath());
-            entity.setFileSize(result.getFileSize());
-            entity.setMimeType(file.getContentType());
-            entity.setFileExt(ext);
-            entity.setStorageType(storage.getType());
-            entity.setStatus(isTemp ? "TEMP" : "ACTIVE");
-            entity.setUploadSessionId(isTemp ? UUID.randomUUID().toString() : null);
-            entity.setExpiresAt(isTemp ? LocalDateTime.now().plusHours(tempExpireHours) : null);
-            entity.setSha256(sha256(file));
-            if (mapper.insert(entity) != 1) {
-                throw new BizException(ResultEnum.PERSISTENCE_ERROR, "新增数据失败");
+        if (isTemp) {
+            BizAttachmentEntity biz = new BizAttachmentEntity();
+            biz.setBizType(bizType);
+            biz.setBizId(null);
+            biz.setAttachmentId(entity.getId());
+            biz.setSort(0);
+            if (bizMapper.insert(biz) != 1) {
+                throw new BizException(ResultEnum.PERSISTENCE_ERROR, "聚合明细写入失败");
             }
-            if (isTemp) {
-                BizAttachmentEntity biz = new BizAttachmentEntity();
-                biz.setBizType(bizType);
-                biz.setBizId(null);
-                biz.setAttachmentId(entity.getId());
-                biz.setSort(0);
-                if (bizMapper.insert(biz) != 1) {
-                    throw new BizException(ResultEnum.PERSISTENCE_ERROR, "聚合明细写入失败");
-                }
-                AttachmentVO attachment = assembleAttachmentVO(entity);
-                attachment.setBusinessAttachmentId(biz.getId());
-                log.info("附件上传: id={}, name={}, temp=true", entity.getId(), originalName);
-                return attachment;
-            }
-            log.info("附件上传: id={}, name={}, temp={}", entity.getId(), originalName, isTemp);
-            return assembleAttachmentVO(entity);
-        } catch (IOException | RuntimeException exception) {
-            // 对象已经写入外部存储后，摘要读取等 IOException 与数据库异常具有相同补偿义务。
-            deleteForCompensation(storage, result.getStoredPath(), "附件上传数据库写入失败");
-            throw exception;
+            AttachmentVO attachment = assembleAttachmentVO(entity);
+            attachment.setBusinessAttachmentId(biz.getId());
+            return attachment;
         }
+        return assembleAttachmentVO(entity);
     }
 
     /** 提升附件：关联业务单据 + 移出临时目录 */
@@ -137,8 +113,8 @@ class AttachmentTxService {
         log.info("附件提升: ids={}, bizType={}, bizId={}", form.getAttachmentIds(), form.getBizType(), form.getBizId());
     }
 
-    /** 删除附件（物理文件 + 映射 + 元数据） */
-    public void delete(Long id) throws IOException {
+    /** 短事务解除业务映射并标记待删除；外部对象由事务提交后的调用方处理。 */
+    public AttachmentDeletionTarget markPendingDelete(Long id) {
         if (id == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "附件 id 不能为空");
         }
@@ -146,25 +122,32 @@ class AttachmentTxService {
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "附件不存在：" + id);
         }
+        if ("DELETED".equals(entity.getStatus())) {
+            return new AttachmentDeletionTarget(id, entity.getStorageType(), entity.getObjectKey());
+        }
+        if ("PENDING_DELETE".equals(entity.getStatus())) {
+            return new AttachmentDeletionTarget(id, entity.getStorageType(), entity.getObjectKey());
+        }
         bizMapper.delete(new LambdaQueryWrapper<BizAttachmentEntity>()
                 .eq(BizAttachmentEntity::getAttachmentId, id));
         entity.setStatus("PENDING_DELETE");
         if (mapper.updateById(entity) != 1) {
             throw new BizException(sm.system.response.ResultEnum.DATA_CONFLICT, "数据已被其他用户修改");
         }
-        FileStorageService storage = storageFactory.getService(entity.getStorageType());
-        String storedPath = entity.getObjectKey();
-        // 数据库提交后再删除外部文件；失败会保留包含附件 ID 与路径的可恢复告警。
-        TransactionUtil.afterCommit(() -> {
-            try {
-                storage.delete(storedPath);
-                entity.setStatus("DELETED");
-                mapper.updateById(entity);
-                log.info("附件删除: id={}, path={}", id, storedPath);
-            } catch (IOException exception) {
-                log.error("附件物理文件删除失败，需按附件ID和路径重试: id={}, path={}", id, storedPath, exception);
-            }
-        });
+        return new AttachmentDeletionTarget(id, entity.getStorageType(), entity.getObjectKey());
+    }
+
+    /** 对象已确认删除后，以独立短事务推进最终状态。 */
+    public void markDeleted(Long id) {
+        AttachmentEntity entity = mapper.selectById(id);
+        if (entity == null || "DELETED".equals(entity.getStatus())) return;
+        if (!"PENDING_DELETE".equals(entity.getStatus())) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "附件删除状态已变化");
+        }
+        entity.setStatus("DELETED");
+        if (mapper.updateById(entity) != 1) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "附件删除状态更新失败");
+        }
     }
 
     /** 更新附件在当前业务资源中的备注。 */
@@ -201,37 +184,7 @@ class AttachmentTxService {
         return vo;
     }
 
-    private void deleteForCompensation(FileStorageService storage, String storedPath, String reason) {
-        try {
-            storage.delete(storedPath);
-        } catch (IOException cleanupException) {
-            log.error("{}，且补偿删除失败: path={}", reason, storedPath, cleanupException);
-        }
-    }
+}
 
-    private String sha256(MultipartFile file) throws IOException {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            try (java.io.InputStream inputStream = file.getInputStream()) {
-                byte[] buffer = new byte[8192];
-                int readLength;
-                while ((readLength = inputStream.read(buffer)) != -1) {
-                    digest.update(buffer, 0, readLength);
-                }
-            }
-            return HexFormat.of().formatHex(digest.digest());
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("运行环境不支持 SHA-256", exception);
-        }
-    }
-
-    private String sanitizeOriginalName(String originalName) {
-        if (originalName == null || originalName.isBlank()) return "file";
-        String normalized = originalName.replace('\\', '/');
-        normalized = normalized.substring(normalized.lastIndexOf('/') + 1)
-                .replaceAll("[\\x00-\\x1f\\x7f]", "_")
-                .replace('"', '_').replace('\r', '_').replace('\n', '_');
-        if (normalized.isBlank()) return "file";
-        return normalized.length() > 255 ? normalized.substring(normalized.length() - 255) : normalized;
-    }
+record AttachmentDeletionTarget(Long attachmentId, String storageType, String objectKey) {
 }

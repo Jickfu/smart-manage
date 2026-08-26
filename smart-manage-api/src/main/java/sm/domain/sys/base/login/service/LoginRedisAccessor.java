@@ -1,7 +1,7 @@
 package sm.domain.sys.base.login.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
@@ -11,15 +11,15 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 class LoginRedisAccessor {
-    private static final DefaultRedisScript<Object> GET_AND_DELETE_SCRIPT = new DefaultRedisScript<>(
+    private static final DefaultRedisScript<String> GET_AND_DELETE_SCRIPT = new DefaultRedisScript<>(
             "local value = redis.call('GET', KEYS[1]); "
                     + "if value then redis.call('DEL', KEYS[1]); end; "
                     + "return value;",
-            Object.class);
+            String.class);
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
 
-    public Object getAndDelete(String key) {
+    public String getAndDelete(String key) {
         return redisTemplate.execute(GET_AND_DELETE_SCRIPT, List.of(key));
     }
 }

@@ -5,6 +5,8 @@ import com.alicp.jetcache.Cache;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
+import sm.system.auth.SessionTerminationContext;
+import sm.system.auth.SessionTerminationReason;
 import sm.system.helper.CacheHelper;
 
 import java.util.List;
@@ -46,5 +48,21 @@ class AuthorizationStateHelperTests {
         }
         verify(cache).remove(1L);
         verify(cache).remove(2L);
+    }
+
+    @Test
+    void terminateUsersExposesDeletionReasonWhileLoggingOutTokens() {
+        when(cacheHelper.<Long, Object>getCache(anyString(), any(), anyLong())).thenReturn(cache);
+        try (MockedStatic<StpUtil> stpUtil = mockStatic(StpUtil.class)) {
+            stpUtil.when(() -> StpUtil.logout(1L)).thenAnswer(invocation -> {
+                org.junit.jupiter.api.Assertions.assertEquals(
+                        SessionTerminationReason.ACCOUNT_DELETED, SessionTerminationContext.current());
+                return null;
+            });
+
+            helper.terminateUsers(List.of(1L), SessionTerminationReason.ACCOUNT_DELETED);
+
+            stpUtil.verify(() -> StpUtil.logout(1L));
+        }
     }
 }

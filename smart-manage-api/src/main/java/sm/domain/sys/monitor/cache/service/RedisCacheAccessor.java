@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.connection.DataType;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.data.redis.RedisSystemException;
 import org.springframework.data.redis.core.Cursor;
@@ -41,13 +41,13 @@ class RedisCacheAccessor {
             "satoken", "sa-token", "smtoken", "sp:login", "session", "captcha", "password-change", "ticket",
             "user-info", "credential", "secret", "private-key");
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
     private volatile boolean memoryUsageSupported = true;
 
     @Value("${spring.data.redis.database:0}")
     private int database;
 
-    RedisCacheAccessor(RedisTemplate<String, Object> redisTemplate) {
+    RedisCacheAccessor(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
@@ -103,7 +103,7 @@ class RedisCacheAccessor {
         return redisTemplate.execute((RedisCallback<List<RedisEntry>>) connection -> {
             LinkedHashSet<String> keys = new LinkedHashSet<>();
             keys.add(indexKey);
-            // 该索引由 StringRedisTemplate 写入，必须读取原始字节，不能使用业务 RedisTemplate 的 JSON Value Serializer。
+            // 监控索引使用字符串协议，直接读取原始字节以兼容不同 Redis 驱动的命令返回结构。
             var instanceIds = connection.zSetCommands().zRange(bytes(indexKey), 0, -1);
             if (instanceIds != null) {
                 instanceIds.forEach(instanceId -> keys.add("sm:monitor:instance:" + text(instanceId)));

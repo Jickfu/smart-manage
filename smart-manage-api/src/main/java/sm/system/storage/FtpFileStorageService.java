@@ -3,6 +3,8 @@ package sm.system.storage;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPFile;
+import org.apache.commons.net.ftp.FTPReply;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -142,7 +144,13 @@ public class FtpFileStorageService implements FileStorageService {
         FTPClient ftp = connect();
         try {
             if (!ftp.deleteFile(storedPath)) {
-                throw new IOException("FTP 文件删除失败: " + storedPath + ", " + ftp.getReplyString());
+                FTPFile[] remainingFiles = ftp.listFiles(storedPath);
+                if (!FTPReply.isPositiveCompletion(ftp.getReplyCode()) || remainingFiles.length > 0) {
+                    throw new IOException("FTP 文件删除失败: " + storedPath + ", " + ftp.getReplyString());
+                }
+                // 补偿任务可能在对象已删除、数据库状态尚未提交时重试，目标已不存在应视为删除成功。
+                log.info("FTP 文件已不存在，无需重复删除: {}", storedPath);
+                return;
             }
             log.info("FTP 文件删除: {}", storedPath);
         } finally {

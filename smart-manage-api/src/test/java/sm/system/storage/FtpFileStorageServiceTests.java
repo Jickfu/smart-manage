@@ -2,6 +2,7 @@ package sm.system.storage;
 
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPFile;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -34,8 +35,22 @@ class FtpFileStorageServiceTests {
 	void deleteFailureIsNotSilentlyIgnored() throws IOException {
 		prepareConnectedClient();
 		when(ftpClient.deleteFile("sys/file.txt")).thenReturn(false);
+		when(ftpClient.listFiles("sys/file.txt")).thenReturn(new FTPFile[0]);
+		when(ftpClient.getReplyCode()).thenReturn(550);
 
 		assertThrows(IOException.class, () -> storage.delete("sys/file.txt"));
+	}
+
+	@Test
+	void missingFileIsAcceptedForIdempotentCleanupRetry() throws IOException {
+		prepareConnectedClient();
+		when(ftpClient.deleteFile("sys/file.txt")).thenReturn(false);
+		when(ftpClient.listFiles("sys/file.txt")).thenReturn(new FTPFile[0]);
+		when(ftpClient.getReplyCode()).thenReturn(226);
+
+		storage.delete("sys/file.txt");
+
+		verify(ftpClient).listFiles("sys/file.txt");
 	}
 
 	private void prepareConnectedClient() throws IOException {

@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 import sm.system.query.ListSqlQuery;
 import sm.domain.sys.base.user.model.vo.UserAssignedRoleVO;
+import sm.domain.sys.base.user.model.UserCacheSnapshot;
 
 /**
  * @author Chekfu
@@ -21,4 +22,6 @@ public interface UserMapper extends BaseMapper<UserEntity> {
 			@Param("listQuery") ListSqlQuery listQuery);
 
 	List<UserAssignedRoleVO> selectAssignedRoles(@Param("userId") Long userId);
+
+	UserCacheSnapshot selectCacheSnapshotById(@Param("id") Long id);
 }

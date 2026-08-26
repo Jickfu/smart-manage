@@ -3,7 +3,7 @@ package sm.domain.sys.base.login.service;
 import cloud.tianai.captcha.cache.CacheStore;
 import cloud.tianai.captcha.common.AnyMap;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import sm.domain.sys.base.login.constant.LoginProtectionParam;
 import sm.domain.sys.base.sysparam.service.SysParamService;
@@ -21,24 +21,25 @@ import java.util.concurrent.TimeUnit;
 @Component
 @RequiredArgsConstructor
 class RedisCaptchaCacheStore implements CacheStore {
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
     private final SysParamService sysParamService;
     private final LoginRedisAccessor loginRedisAccessor;
+    private final LoginCacheJsonCodec cacheJsonCodec;
 
     @Override
     public AnyMap getCache(String key) {
-        return cast(redisTemplate.opsForValue().get(key));
+        return cacheJsonCodec.read(redisTemplate.opsForValue().get(key), AnyMap.class);
     }
 
     @Override
     public AnyMap getAndRemoveCache(String key) {
-        return cast(loginRedisAccessor.getAndDelete(key));
+        return cacheJsonCodec.read(loginRedisAccessor.getAndDelete(key), AnyMap.class);
     }
 
     @Override
     public boolean setCache(String key, AnyMap value, Long ignoredExpire, TimeUnit ignoredTimeUnit) {
         int expireSeconds = requiredPositiveInt(LoginProtectionParam.CAPTCHA_CHALLENGE_EXPIRE_SECONDS);
-        redisTemplate.opsForValue().set(key, value, expireSeconds, TimeUnit.SECONDS);
+        redisTemplate.opsForValue().set(key, cacheJsonCodec.write(value), expireSeconds, TimeUnit.SECONDS);
         return true;
     }
 
@@ -53,23 +54,13 @@ class RedisCaptchaCacheStore implements CacheStore {
 
     @Override
     public Long getLong(String key) {
-        Object value = redisTemplate.opsForValue().get(key);
-        return value == null ? null : Long.valueOf(String.valueOf(value));
+        String value = redisTemplate.opsForValue().get(key);
+        return value == null ? null : Long.valueOf(value);
     }
 
     @Override
     public void close() {
-        // RedisTemplate 生命周期由 Spring 管理。
-    }
-
-    private AnyMap cast(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof AnyMap anyMap) {
-            return anyMap;
-        }
-        throw new BizException(ResultEnum.SERVER_ERROR, "认证服务暂不可用");
+        // StringRedisTemplate 生命周期由 Spring 管理。
     }
 
     private int requiredPositiveInt(String number) {

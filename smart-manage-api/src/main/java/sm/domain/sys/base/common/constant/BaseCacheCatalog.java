@@ -9,7 +9,7 @@ import java.util.Map;
 /** 业务声明、主动失效和运维展示共同使用的缓存目录。 */
 public final class BaseCacheCatalog {
     public static final BaseCacheDefinition USER_INFO = new BaseCacheDefinition(
-            BaseCacheName.USER_INFO, "用户信息", CacheType.REMOTE, "认证流程按 ID 读取的用户快照", 3600, true);
+            BaseCacheName.USER_INFO, "用户信息", CacheType.REMOTE, "日志与用户查询按 ID 读取的非认证快照", 3600, true);
     public static final BaseCacheDefinition USER_AUTHORIZATION = new BaseCacheDefinition(
             BaseCacheName.USER_AUTHORIZATION, "用户授权", CacheType.REMOTE, "用户在指定组织下的角色与权限快照", 1800, true);
     public static final BaseCacheDefinition SYS_PARAM = new BaseCacheDefinition(

@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.domain.sys.base.user.mapper.UserMapper;
-import sm.domain.sys.base.user.model.entity.UserEntity;
+import sm.domain.sys.base.user.model.UserCacheSnapshot;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -20,9 +20,9 @@ class UserCacheAccessor {
 
     @Cached(cacheType = CacheType.REMOTE, name = BaseCacheName.USER_INFO,
             key = "#id", expire = 1, timeUnit = TimeUnit.HOURS)
-    public UserEntity requireUser(Long id) {
-        UserEntity entity = mapper.selectById(id);
-        if (entity == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
-        return entity;
+    public UserCacheSnapshot requireUser(Long id) {
+        UserCacheSnapshot snapshot = mapper.selectCacheSnapshotById(id);
+        if (snapshot == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+        return snapshot;
     }
 }

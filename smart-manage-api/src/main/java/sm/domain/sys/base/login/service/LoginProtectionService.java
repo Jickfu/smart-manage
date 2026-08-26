@@ -1,7 +1,7 @@
 package sm.domain.sys.base.login.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import sm.domain.sys.base.login.constant.LoginProtectionParam;
@@ -29,7 +29,7 @@ class LoginProtectionService {
     private static final String KEY_PREFIX = "sys:base:login-protection:";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
     private final SysParamService sysParamService;
     private final LoginRedisAccessor loginRedisAccessor;
 
@@ -64,11 +64,11 @@ class LoginProtectionService {
     public void consumeCaptchaTicket(String username, String clientIp, String ticket) {
         IdentityKeys identity = identity(username, clientIp);
         assertNotBlocked(identity);
-        Object boundAccount = loginRedisAccessor.getAndDelete(ticketKey(ticket));
+        String boundAccount = loginRedisAccessor.getAndDelete(ticketKey(ticket));
         if (boundAccount == null) {
             throw new BizException(ResultEnum.CAPTCHA_EXPIRE, "滑块验证已失效，请重新验证");
         }
-        if (!identity.accountDigest().equals(String.valueOf(boundAccount))) {
+        if (!identity.accountDigest().equals(boundAccount)) {
             throw new BizException(ResultEnum.CAPTCHA_ERROR, "滑块验证与当前账号不匹配");
         }
     }

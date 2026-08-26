@@ -44,9 +44,7 @@ class JobDefinitionValidatorTests {
     @Test
     void acceptsRegisteredJobAndJsonlessParameters() {
         CleanTempFileJob job = new CleanTempFileJob(
-                mock(sm.domain.sys.base.attachment.mapper.AttachmentMapper.class),
-                mock(sm.domain.sys.base.attachment.mapper.BizAttachmentMapper.class),
-                mock(sm.system.storage.FileStorageServiceFactory.class));
+                mock(sm.domain.sys.base.attachment.service.AttachmentService.class));
         when(applicationContext.getBeansOfType(Job.class)).thenReturn(Map.of("cleanTempFileJob", job));
 
         validator.validate(validForm());

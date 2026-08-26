@@ -3,7 +3,7 @@ package sm.domain.sys.base.login.service;
 import cn.dev33.satoken.stp.StpUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import sm.domain.sys.base.common.constant.BaseRedisKey;
@@ -39,7 +39,7 @@ public class LoginService {
 	private static final long PASSWORD_CHANGE_TICKET_MINUTES = 5;
 	private final UserService userService;
 	private final LogWriteService logWriteService;
-	private final RedisTemplate<String, Object> redisTemplate;
+	private final StringRedisTemplate redisTemplate;
 	private final ClientIpResolver clientIpResolver;
 	private final TemporaryLoginService temporaryLoginService;
 	private final CsrfTokenManager csrfTokenManager;
@@ -92,7 +92,7 @@ public class LoginService {
 			String ticket = UUID.randomUUID().toString();
 			redisTemplate.opsForValue().set(
 					BaseRedisKey.PASSWORD_CHANGE_TICKET + ticket,
-					authentication.userId(),
+					String.valueOf(authentication.userId()),
 					PASSWORD_CHANGE_TICKET_MINUTES,
 					TimeUnit.MINUTES);
 			LoginVO passwordReset = new LoginVO();
@@ -124,12 +124,12 @@ public class LoginService {
 	public void changePassword(PasswordChangeForm form) {
 		// 先验证并解密请求，再消费一次性凭证，避免畸形密文无意义地作废合法凭证。
 		String newPassword = decryptLoginPayload(form.getNewPassword(), null);
-		Object userIdValue = loginRedisAccessor.getAndDelete(
+		String userIdValue = loginRedisAccessor.getAndDelete(
 				BaseRedisKey.PASSWORD_CHANGE_TICKET + form.getTicket());
 		if (userIdValue == null) {
 			throw new BizException(ResultEnum.UNAUTHORIZED, "改密凭证已失效，请重新登录");
 		}
-		userService.changeResetPassword(Long.valueOf(String.valueOf(userIdValue)), newPassword);
+		userService.changeResetPassword(Long.valueOf(userIdValue), newPassword);
 	}
 
 	private String decryptLoginPayload(String ciphertext, String username) {

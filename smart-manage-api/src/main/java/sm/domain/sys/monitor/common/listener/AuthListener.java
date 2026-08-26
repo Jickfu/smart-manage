@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import sm.domain.sys.base.user.model.entity.UserEntity;
+import sm.domain.sys.base.user.model.UserCacheSnapshot;
 import sm.domain.sys.base.user.service.UserService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
@@ -42,7 +42,7 @@ public class AuthListener implements SaTokenListener {
                 try {
                     long uid = Long.parseLong(String.valueOf(loginId));
                     e.setUserId(uid);
-                    UserEntity u = userService.requireUser(uid);
+                    UserCacheSnapshot u = userService.requireUser(uid);
                     if (u != null) {
                         e.setUsername(u.getUsername());
                         e.setNickname(u.getName());
@@ -70,7 +70,7 @@ public class AuthListener implements SaTokenListener {
                 try {
                     long uid = Long.parseLong(String.valueOf(loginId));
                     e.setUserId(uid);
-                    UserEntity u = userService.requireUser(uid);
+                    UserCacheSnapshot u = userService.requireUser(uid);
                     if (u != null) {
                         e.setUsername(u.getUsername());
                         e.setNickname(u.getName());
@@ -195,7 +195,7 @@ public class AuthListener implements SaTokenListener {
         }
         long userId = Long.parseLong(String.valueOf(loginId));
         entity.setUserId(userId);
-        UserEntity user = userService.requireUser(userId);
+        UserCacheSnapshot user = userService.requireUser(userId);
         entity.setUsername(user.getUsername());
         entity.setNickname(user.getName());
     }

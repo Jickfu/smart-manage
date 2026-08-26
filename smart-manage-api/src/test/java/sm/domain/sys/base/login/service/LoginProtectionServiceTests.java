@@ -2,7 +2,7 @@ package sm.domain.sys.base.login.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import sm.domain.sys.base.login.constant.LoginProtectionParam;
 import sm.domain.sys.base.sysparam.service.SysParamService;
@@ -23,10 +23,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class LoginProtectionServiceTests {
+    private final StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
     @SuppressWarnings("unchecked")
-    private final RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
-    @SuppressWarnings("unchecked")
-    private final ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+    private final ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
     private final SysParamService sysParamService = mock(SysParamService.class);
     private final LoginRedisAccessor loginRedisAccessor = mock(LoginRedisAccessor.class);
     private LoginProtectionService service;

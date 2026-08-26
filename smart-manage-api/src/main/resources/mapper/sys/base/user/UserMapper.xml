@@ -64,4 +64,13 @@
         WHERE a.user_id = #{userId}
         ORDER BY a.org_id, b.number, b.id
     </select>
+
+    <select id="selectCacheSnapshotById" resultType="sm.domain.sys.base.user.model.UserCacheSnapshot">
+        SELECT a.id,
+               a.username,
+               a.name,
+               a.avatar_attachment_id
+        FROM t_sys_user a
+        WHERE a.id = #{id}
+    </select>
 </mapper>

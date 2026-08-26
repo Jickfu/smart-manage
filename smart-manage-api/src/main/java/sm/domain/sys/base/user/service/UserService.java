@@ -16,6 +16,7 @@ import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.permission.service.PermissionService;
 import sm.domain.sys.base.user.model.entity.UserEntity;
+import sm.domain.sys.base.user.model.UserCacheSnapshot;
 import sm.domain.sys.base.user.model.form.UserListForm;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserRoleAssignmentSaveForm;
@@ -118,7 +119,8 @@ public class UserService {
 		Long savedId;
 		try {
 			savedId = txService.save(form, userId);
-			deleteReplacedAvatar(previous, form.getAvatarAttachmentId());
+			deleteReplacedAvatar(
+					previous == null ? null : previous.getAvatarAttachmentId(), form.getAvatarAttachmentId());
 		} catch (RuntimeException exception) {
 			deleteAvatarForCompensation(temporaryAvatarId);
 			throw exception;
@@ -140,6 +142,7 @@ public class UserService {
 		UserEntity user = mapper.selectById(id);
 		txService.deleteById(id);
 		if (user != null) deleteAvatarForCompensation(user.getAvatarAttachmentId());
+		authorizationStateHelper.terminateUsers(List.of(id), SessionTerminationReason.ACCOUNT_DELETED);
 	}
 
 	@BizLog("启用用户")
@@ -406,10 +409,9 @@ public class UserService {
 				.map(AttachmentVO::getId).findFirst().orElse(null);
 	}
 
-	private void deleteReplacedAvatar(UserEntity previous, Long nextAvatarId) {
-		if (previous == null || previous.getAvatarAttachmentId() == null
-				|| previous.getAvatarAttachmentId().equals(nextAvatarId)) return;
-		deleteAvatarForCompensation(previous.getAvatarAttachmentId());
+	private void deleteReplacedAvatar(Long previousAvatarAttachmentId, Long nextAvatarId) {
+		if (previousAvatarAttachmentId == null || previousAvatarAttachmentId.equals(nextAvatarId)) return;
+		deleteAvatarForCompensation(previousAvatarAttachmentId);
 	}
 
 	private void deleteAvatarForCompensation(Long attachmentId) {
@@ -438,11 +440,24 @@ public class UserService {
 
 	public UserInfoVO current() {
 		// 直接走 mapper，避免自调用绕过缓存代理
-		UserEntity userEntity = mapper.selectById(currentUserContext.getUserId());
+		Long userId = currentUserContext.getUserId();
+		UserEntity userEntity = mapper.selectById(userId);
+		if (userEntity == null) {
+			invalidateCurrentSession(userId, SessionTerminationReason.ACCOUNT_DELETED);
+		}
+		if (!Boolean.TRUE.equals(userEntity.getEnabled())) {
+			invalidateCurrentSession(userId, SessionTerminationReason.ACCOUNT_DISABLED);
+		}
 		UserInfoVO vo = converter.toInfoVO(userEntity);
 		vo.setAvatar(avatarUrl(userEntity.getId(), userEntity.getAvatarAttachmentId()));
 		assembleCurrentOrganization(vo, userEntity.getId());
 		return vo;
+	}
+
+	/** 会话中的用户身份已不可用时，统一终止登录态且不向客户端暴露具体账号状态。 */
+	private void invalidateCurrentSession(Long userId, SessionTerminationReason reason) {
+		authorizationStateHelper.terminateUsers(List.of(userId), reason);
+		throw new BizException(ResultEnum.UNAUTHORIZED, "登录状态已失效，请重新登录");
 	}
 
 	/**
@@ -469,13 +484,13 @@ public class UserService {
 	@CacheInvalidate(name = BaseCacheName.USER_INFO, key = "@currentUserContext.getUserId()")
 	public void updateCurrentProfile(CurrentUserProfileForm form) {
 		Long userId = currentUserContext.getUserId();
-		UserEntity previous = requireUser(userId);
+		UserCacheSnapshot previous = requireUser(userId);
 		Long temporaryAvatarId = findTemporaryAvatarId(form.getAvatarAttachmentId());
 		promoteAvatar(form.getAvatarAttachmentId(), form.getAttachmentUploadSessions(), userId);
 		try {
 			txService.updateCurrentProfile(userId, form.getName(), form.getGender(), form.getBirthday(),
 					form.getAvatarAttachmentId());
-			deleteReplacedAvatar(previous, form.getAvatarAttachmentId());
+			deleteReplacedAvatar(previous.getAvatarAttachmentId(), form.getAvatarAttachmentId());
 		} catch (RuntimeException exception) {
 			deleteAvatarForCompensation(temporaryAvatarId);
 			throw exception;
@@ -590,7 +605,7 @@ public class UserService {
 	}
 
 	/** Redis 远程缓存读取；仅供其他 Spring Bean 外部调用，确保缓存代理生效。 */
-	public UserEntity requireUser(Long id) {
+	public UserCacheSnapshot requireUser(Long id) {
 		return userCacheAccessor.requireUser(id);
 	}
 

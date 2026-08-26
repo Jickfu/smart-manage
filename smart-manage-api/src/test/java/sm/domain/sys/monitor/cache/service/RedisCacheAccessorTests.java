@@ -5,7 +5,7 @@ import org.springframework.data.redis.connection.DataType;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisZSetCommands;
 import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -22,7 +22,7 @@ import static org.mockito.Mockito.when;
 
 class RedisCacheAccessorTests {
 
-    private final RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
+    private final StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
     private final RedisCacheAccessor accessor = new RedisCacheAccessor(redisTemplate);
 
     @Test

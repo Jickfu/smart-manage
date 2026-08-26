@@ -19,7 +19,10 @@ import sm.domain.sys.base.user.model.form.UserRoleAssignmentSaveForm;
 import sm.system.helper.Argon2Helper;
 import sm.system.exception.BizException;
 import sm.system.security.CsrfTokenManager;
+import sm.system.auth.SessionTerminationReason;
+import sm.system.response.ResultEnum;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,9 +32,105 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import java.util.List;
 
 class UserServiceAuthenticationTests {
+
+	@Test
+	void deletingUserTerminatesSessionsOnlyAfterDeleteSucceeds() {
+		UserMapper userMapper = mock(UserMapper.class);
+		UserEntity user = new UserEntity();
+		user.setId(10L);
+		when(userMapper.selectById(10L)).thenReturn(user);
+		UserTxService txService = mock(UserTxService.class);
+		AuthorizationStateHelper authorizationStateHelper = mock(AuthorizationStateHelper.class);
+		UserService service = createService(userMapper, txService, authorizationStateHelper,
+				mock(CurrentUserContext.class), mock(UserConverter.class));
+
+		service.deleteById(10L);
+
+		verify(txService).deleteById(10L);
+		verify(authorizationStateHelper).terminateUsers(
+				List.of(10L), SessionTerminationReason.ACCOUNT_DELETED);
+	}
+
+	@Test
+	void failedDeleteDoesNotTerminateSessions() {
+		UserTxService txService = mock(UserTxService.class);
+		doThrow(new BizException(ResultEnum.DATA_CONFLICT)).when(txService).deleteById(10L);
+		AuthorizationStateHelper authorizationStateHelper = mock(AuthorizationStateHelper.class);
+		UserService service = createService(mock(UserMapper.class), txService, authorizationStateHelper,
+				mock(CurrentUserContext.class), mock(UserConverter.class));
+
+		assertThrows(BizException.class, () -> service.deleteById(10L));
+
+		verify(authorizationStateHelper, never()).terminateUsers(any(), any());
+	}
+
+	@Test
+	void disablingUsersTerminatesSessionsOnlyAfterUpdateSucceeds() {
+		UserTxService txService = mock(UserTxService.class);
+		AuthorizationStateHelper authorizationStateHelper = mock(AuthorizationStateHelper.class);
+		UserService service = createService(mock(UserMapper.class), txService, authorizationStateHelper,
+				mock(CurrentUserContext.class), mock(UserConverter.class));
+
+		service.disable(List.of(10L));
+
+		verify(txService).updateEnabled(List.of(10L), false);
+		verify(authorizationStateHelper).terminateUsers(
+				List.of(10L), SessionTerminationReason.ACCOUNT_DISABLED);
+	}
+
+	@Test
+	void failedDisableDoesNotTerminateSessions() {
+		UserTxService txService = mock(UserTxService.class);
+		doThrow(new BizException(ResultEnum.DATA_CONFLICT))
+				.when(txService).updateEnabled(List.of(10L), false);
+		AuthorizationStateHelper authorizationStateHelper = mock(AuthorizationStateHelper.class);
+		UserService service = createService(mock(UserMapper.class), txService, authorizationStateHelper,
+				mock(CurrentUserContext.class), mock(UserConverter.class));
+
+		assertThrows(BizException.class, () -> service.disable(List.of(10L)));
+
+		verify(authorizationStateHelper, never()).terminateUsers(any(), any());
+	}
+
+	@Test
+	void missingCurrentUserTerminatesSessionAndReturnsUnauthorized() {
+		UserMapper userMapper = mock(UserMapper.class);
+		CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
+		when(currentUserContext.getUserId()).thenReturn(10L);
+		AuthorizationStateHelper authorizationStateHelper = mock(AuthorizationStateHelper.class);
+		UserService service = createService(userMapper, mock(UserTxService.class), authorizationStateHelper,
+				currentUserContext, mock(UserConverter.class));
+
+		BizException exception = assertThrows(BizException.class, service::current);
+
+		assertEquals(ResultEnum.UNAUTHORIZED.getCode(), exception.getCode());
+		verify(authorizationStateHelper).terminateUsers(
+				List.of(10L), SessionTerminationReason.ACCOUNT_DELETED);
+	}
+
+	@Test
+	void disabledCurrentUserTerminatesSessionAndReturnsUnauthorized() {
+		UserMapper userMapper = mock(UserMapper.class);
+		UserEntity user = new UserEntity();
+		user.setId(10L);
+		user.setEnabled(false);
+		when(userMapper.selectById(10L)).thenReturn(user);
+		CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
+		when(currentUserContext.getUserId()).thenReturn(10L);
+		AuthorizationStateHelper authorizationStateHelper = mock(AuthorizationStateHelper.class);
+		UserService service = createService(userMapper, mock(UserTxService.class), authorizationStateHelper,
+				currentUserContext, mock(UserConverter.class));
+
+		BizException exception = assertThrows(BizException.class, service::current);
+
+		assertEquals(ResultEnum.UNAUTHORIZED.getCode(), exception.getCode());
+		verify(authorizationStateHelper).terminateUsers(
+				List.of(10L), SessionTerminationReason.ACCOUNT_DISABLED);
+	}
 
 	@Test
 	void switchCurrentOrganizationOnlyAcceptsAvailableAssignment() {
@@ -88,6 +187,7 @@ class UserServiceAuthenticationTests {
 		organization.setEnabled(true);
 		organization.setArchived(false);
 		when(orgMapper.selectById(10L)).thenReturn(organization);
+		UserCacheAccessor userCacheAccessor = mock(UserCacheAccessor.class);
 		UserService service = new UserService(
 				userMapper,
 				mock(UserRoleMapper.class),
@@ -97,7 +197,7 @@ class UserServiceAuthenticationTests {
 				mock(UserTxService.class),
 				mock(PermissionService.class),
 				mock(AuthorizationStateHelper.class),
-				mock(UserCacheAccessor.class),
+				userCacheAccessor,
 				mock(UserConverter.class),
 				mock(CurrentUserContext.class),
 				mock(CsrfTokenManager.class));
@@ -110,6 +210,7 @@ class UserServiceAuthenticationTests {
 
 			assertTrue(authentication.successful());
 			assertFalse(authentication.administrator());
+			verify(userCacheAccessor, never()).requireUser(any());
 		}
 	}
 
@@ -153,6 +254,17 @@ class UserServiceAuthenticationTests {
 				mock(UserCacheAccessor.class),
 				mock(UserConverter.class),
 				currentUserContext,
+				mock(CsrfTokenManager.class));
+	}
+
+	private UserService createService(UserMapper userMapper, UserTxService txService,
+			AuthorizationStateHelper authorizationStateHelper, CurrentUserContext currentUserContext,
+			UserConverter converter) {
+		return new UserService(
+				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
+				mock(OrgMapper.class), mock(AttachmentService.class), txService,
+				mock(PermissionService.class), authorizationStateHelper,
+				mock(UserCacheAccessor.class), converter, currentUserContext,
 				mock(CsrfTokenManager.class));
 	}
 }

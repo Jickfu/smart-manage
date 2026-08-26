@@ -4,7 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import sm.domain.sys.base.common.constant.BaseRedisKey;
 import sm.domain.sys.base.login.model.form.CaptchaChallengeForm;
@@ -42,10 +42,9 @@ import static org.mockito.Mockito.when;
 class LoginServiceTests {
     private final UserService userService = mock(UserService.class);
     private final LogWriteService logWriteService = mock(LogWriteService.class);
+    private final StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
     @SuppressWarnings("unchecked")
-    private final RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
-    @SuppressWarnings("unchecked")
-    private final ValueOperations<String, Object> valueOperations = mock(ValueOperations.class);
+    private final ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
     private final ClientIpResolver clientIpResolver = mock(ClientIpResolver.class);
     private final TemporaryLoginService temporaryLoginService = mock(TemporaryLoginService.class);
     private final CsrfTokenManager csrfTokenManager = mock(CsrfTokenManager.class);
@@ -199,7 +198,7 @@ class LoginServiceTests {
 
             assertEquals(true, actual.getPasswordReset());
             verify(userService, never()).completeLogin(authentication);
-            verify(valueOperations).set(startsWith(BaseRedisKey.PASSWORD_CHANGE_TICKET), eq(9L), eq(5L),
+            verify(valueOperations).set(startsWith(BaseRedisKey.PASSWORD_CHANGE_TICKET), eq("9"), eq(5L),
                     eq(TimeUnit.MINUTES));
         }
     }
@@ -209,7 +208,7 @@ class LoginServiceTests {
         PasswordChangeForm form = new PasswordChangeForm();
         form.setTicket("ticket");
         form.setNewPassword("encrypted-new-password");
-        when(loginRedisAccessor.getAndDelete(BaseRedisKey.PASSWORD_CHANGE_TICKET + "ticket")).thenReturn(9L);
+        when(loginRedisAccessor.getAndDelete(BaseRedisKey.PASSWORD_CHANGE_TICKET + "ticket")).thenReturn("9");
 
         try (MockedStatic<SM2Helper> sm2Helper = mockStatic(SM2Helper.class)) {
             sm2Helper.when(() -> SM2Helper.decryptJsCiphertext("encrypted-new-password"))

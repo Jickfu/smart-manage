@@ -3,7 +3,7 @@ package sm.domain.sys.base.login.service;
 import cn.dev33.satoken.stp.StpUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.BaseRedisKey;
 import sm.system.security.context.CurrentUserContext;
@@ -12,7 +12,7 @@ import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.user.model.form.TemporaryLoginGrantForm;
 import sm.domain.sys.base.user.model.vo.TemporaryLoginGrantVO;
 import sm.domain.sys.base.user.model.vo.UserAuthentication;
-import sm.domain.sys.base.user.model.entity.UserEntity;
+import sm.domain.sys.base.user.model.UserCacheSnapshot;
 import sm.domain.sys.base.user.service.UserService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
@@ -44,12 +44,13 @@ public class TemporaryLoginService {
     private static final long GRANT_MINUTES = 5;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
     private final CurrentUserContext currentUserContext;
     private final UserService userService;
     private final LogWriteService logWriteService;
     private final ClientIpResolver clientIpResolver;
     private final LoginRedisAccessor loginRedisAccessor;
+    private final LoginCacheJsonCodec cacheJsonCodec;
 
     public boolean isSafe() {
         currentUserContext.checkAdministrator();
@@ -73,7 +74,7 @@ public class TemporaryLoginService {
     public TemporaryLoginGrantVO createGrant(TemporaryLoginGrantForm form) {
         currentUserContext.checkAdministrator();
         StpUtil.checkSafe(SAFE_SERVICE);
-        UserEntity target = userService.requireUser(form.getUserId());
+        UserCacheSnapshot target = userService.requireUser(form.getUserId());
         UserAuthentication authentication = userService.authenticateTemporaryLogin(target.getId(), target.getUsername());
         if (!authentication.successful()) {
             throw new BizException(ResultEnum.PARAM_ERROR, "目标用户当前不可登录");
@@ -84,7 +85,8 @@ public class TemporaryLoginService {
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(GRANT_MINUTES);
         TemporaryLoginGrant grant = new TemporaryLoginGrant(grantId, currentUserContext.getUserId(),
                 target.getId(), target.getUsername(), form.getReason().trim(), expiresAt);
-        redisTemplate.opsForValue().set(redisKey(credential), grant, GRANT_MINUTES, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(
+                redisKey(credential), cacheJsonCodec.write(grant), GRANT_MINUTES, TimeUnit.MINUTES);
         RequestMeta requestMeta = requestMeta();
         logWriteService.writeTemporaryLoginEvent(target.getId(), target.getUsername(), target.getName(),
                 grant.getIssuerUserId(), grantId, grant.getReason(), expiresAt,
@@ -93,8 +95,9 @@ public class TemporaryLoginService {
     }
 
     public LoginVO consume(String username, String credential) {
-        Object value = loginRedisAccessor.getAndDelete(redisKey(credential));
-        if (!(value instanceof TemporaryLoginGrant grant) || !grant.getTargetUsername().equals(username)) {
+        TemporaryLoginGrant grant = cacheJsonCodec.read(
+                loginRedisAccessor.getAndDelete(redisKey(credential)), TemporaryLoginGrant.class);
+        if (grant == null || !grant.getTargetUsername().equals(username)) {
             throw new BizException(ResultEnum.UNAUTHORIZED, "用户名或密码错误");
         }
         UserAuthentication authentication = userService.authenticateTemporaryLogin(
