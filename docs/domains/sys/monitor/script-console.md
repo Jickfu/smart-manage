@@ -10,7 +10,7 @@
 ## 脚本能力
 
 - 使用 `app.getService('beanName')` 获取允许访问的公开领域 Service；
-- 可用普通 JavaScript 对象传入 Service Form 参数，网关按公开方法的参数类型转换；
+- 可用普通 JavaScript 对象传入 Service Form 参数；网关按公开方法的参数类型转换后，在调用目标方法前统一执行 Jakarta Bean Validation，对象字段、嵌套 `@Valid` 和方法参数约束与 HTTP 入参共用同一套规则；
 - Service 返回值转换为 JSON 兼容的基础值、对象或数组后交给脚本，可继续判断、遍历或作为脚本返回值；
 - `console.log(...)` 和脚本 `return` 值都会展示在结果区域；
 - 控制台快捷键为 `Ctrl + E`：有选区时仅执行选区，无选区时执行全部内容。
@@ -42,6 +42,7 @@ return result;
 - 禁止 HostAccess、Java 类查找、反射、文件、网络、进程、本地能力和线程创建；
 - 每次执行创建独立 Context；同一时间只允许一个脚本执行的约束通过 PostgreSQL 会话级 advisory lock 跨实例生效，不依赖单实例 `Semaphore`；连接异常退出时数据库自动释放锁；超时后主动取消 Context；
 - 源码、输出和超时分别受系统参数限制；错误响应不包含服务端异常堆栈；
+- 参数类型转换或 Bean Validation 失败时统一返回参数错误，且不得进入目标 Service 方法；
 - 脚本正文、输出及错误只写入专用执行审计，不写入通用操作日志正文。
 
 ## 事务语义

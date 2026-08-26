@@ -1,11 +1,15 @@
 package sm.domain.sys.monitor.script.service;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.graalvm.polyglot.proxy.ProxyArray;
 import org.graalvm.polyglot.proxy.ProxyObject;
 import org.springframework.stereotype.Component;
+import sm.system.exception.BizException;
+import sm.system.response.ResultEnum;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.lang.reflect.InvocationTargetException;
@@ -22,6 +26,7 @@ import java.util.*;
 class ScriptServiceGateway {
     private final ScriptServiceCatalog serviceCatalog;
     private final JsonMapper jsonMapper;
+    private final Validator validator;
 
     ProxyObject createBinding() {
         Map<String, Object> members = new HashMap<>();
@@ -54,6 +59,7 @@ class ScriptServiceGateway {
         for (Method method : candidates) {
             try {
                 Object[] converted = convertArguments(method, arguments);
+                validateArguments(bean, method, converted);
                 Object result = method.invoke(bean, converted);
                 return toGuestValue(result == null ? null : jsonMapper.convertValue(result, Object.class));
             } catch (IllegalArgumentException exception) {
@@ -70,6 +76,28 @@ class ScriptServiceGateway {
         }
         throw new IllegalArgumentException("没有匹配的服务方法：" + targetClass.getSimpleName() + "." + methodName,
                 conversionFailure);
+    }
+
+    /** 参数转换成功后、进入目标方法前执行与 HTTP 表单一致的 Bean Validation。 */
+    private void validateArguments(Object bean, Method method, Object[] arguments) {
+        Set<ConstraintViolation<Object>> violations = new LinkedHashSet<>();
+        for (Object argument : arguments) {
+            if (argument != null) {
+                violations.addAll(validator.validate(argument));
+            }
+        }
+        violations.addAll(validator.forExecutables().validateParameters(bean, method, arguments));
+        if (violations.isEmpty()) {
+            return;
+        }
+        String message = violations.stream()
+                .map(ConstraintViolation::getMessage)
+                .filter(item -> item != null && !item.isBlank())
+                .distinct()
+                .sorted()
+                .reduce((left, right) -> left + "，" + right)
+                .orElse("脚本服务调用参数不合法");
+        throw new BizException(ResultEnum.PARAM_ERROR, message);
     }
 
     private Object[] convertArguments(Method method, Value[] arguments) {
