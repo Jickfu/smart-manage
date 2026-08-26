@@ -27,6 +27,8 @@
 
 本地 Snapshot Store 按 `smart-manage.monitor.sampling.snapshot-ttl-seconds` 检查采样时间，语义与 Redis TTL 一致；过期快照不会继续用于告警或被历史任务重复写入。
 
+Host 规则的当前观测不读取本地 Snapshot Store，而统一读取 `sm:monitor:snapshot:host:{hostId}`。Redis 值采用最后写入获胜，读取时必须同时校验 key 与值内 `hostId` 一致、`sampleTime` 未超过统一 TTL；否则按 Host 指标未知处理。Instance 规则仍读取当前 JVM 的本地新鲜 Instance Snapshot。Host 历史保持各 JVM 本地采样写入 PostgreSQL，并由 `(host_id, sample_bucket)` UPSERT 保留该分钟最新采样。
+
 Host Catalog 是历史目录；Current Topology 只展示仍有 `ACTIVE` 实例的 Host。实例选择来自持久化目录，明确区分在线、离线和已退役；离线或退役实例的实时遥测显示不可用，但历史趋势仍可查询。较长范围的历史 P95/P99 取查询桶内最差一分钟值。
 
 当关联实例全部离线时，只能表达“主机遥测不可用”，不能断言物理主机宕机。整个 Smart Manage 集群全部不可达时无法自我告警，该场景属于外部 HTTP 可用性监控职责。

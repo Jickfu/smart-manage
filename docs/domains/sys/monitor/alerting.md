@@ -14,6 +14,8 @@
 
 活动事件通过 `(rule_id, scope_type, scope_id)` 条件唯一索引保证同一对象同一规则只有一个 PENDING/FIRING 事件，状态评估在事务内锁定活动事件。多实例同时评估时由数据库唯一约束和行锁收敛，不使用 JVM 锁、分布式选主或 Redis 锁。
 
+Host 规则不使用各 JVM 的本地 Host Snapshot，而按 `hostId` 读取共享 Redis canonical Snapshot，并校验快照身份、采样时间和 TTL。同一 Host 上的多个 JVM 因而基于同一观测值参与数据库并发收敛；canonical Snapshot 不可用时进入既有指标未知语义。Instance 规则仍使用当前 JVM 的本地新鲜 Instance Snapshot。
+
 状态事务在创建新事件前以共享锁重新验证规则仍启用；INSTANCE 作用域同时验证实例仍为 ACTIVE。规则停用与实例退役的写锁因此能和已经读取旧状态的 Evaluator 收敛，最终不会留下新的活动事件。
 
 ## 邮件可靠性
@@ -23,6 +25,8 @@
 未配置邮件接收人、默认发信账号不可用或收件用户配置失效时，不回滚告警状态；错误保留在通知发件箱中供排查。
 
 规则停用、实例退役或 PENDING 非恢复性关闭后，尚未投递的 FIRING/REPEAT 通知会被标记为 `SKIPPED`；投递器领取后、调用邮件能力前再次检查 Incident 状态，避免关闭后的故障邮件继续入队。已经成功创建的 EmailTask 不在监控事务内撤回。
+
+投递前的事件状态复核与实际创建 EmailTask 之间仍存在极小的非原子窗口，这是 PostgreSQL 监控事务与邮件应用之间的既有 best-effort 边界；本阶段不引入跨模块分布式事务或补偿撤回协议。
 
 告警摘要、事件和邮件使用同一个指标展示格式：ratio 展示百分比，count/rate/duration 携带单位，boolean 展示“异常/正常”。数据库仍保存原始标准值。
 

@@ -29,7 +29,8 @@ class MonitorAlertEvaluator {
   @Scheduled(fixedDelayString = "${smart-manage.monitor.alert.evaluation-interval-ms}")
   void evaluate() {
     try {
-      HostSnapshotVO hostSnapshot = snapshotService.currentHost();
+      HostSnapshotVO hostSnapshot =
+          snapshotService.currentCanonicalHost(instanceRegistry.currentHostId());
       InstanceSnapshotVO instanceSnapshot = snapshotService.currentInstance();
       List<Map<String, Object>> rules = enabledRules();
       for (Map<String, Object> rule : rules) evaluateRule(rule, hostSnapshot, instanceSnapshot);

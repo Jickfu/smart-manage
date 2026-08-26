@@ -28,6 +28,8 @@ OshiHostMetricsProvider + ApplicationMetricsProvider
 
 Host Snapshot 只包含 OS、Host CPU/内存/交换区、文件系统、磁盘/网络 IO 和主机 uptime，写入 `sm:monitor:snapshot:host:{hostId}`。Instance Snapshot 只包含 JVM、进程 CPU、堆/非堆、线程、GC、HTTP、连接池和健康状态，写入 `sm:monitor:snapshot:instance:{instanceId}`。两类快照独立推进，一个 Provider 失败不能阻断另一类快照。所有 API 时间使用 ISO-8601。
 
+Host 作用域告警统一读取 `sm:monitor:snapshot:host:{hostId}` 作为同一 Host 的权威当前观测，采用最后写入获胜，并校验快照内 `hostId`、`sampleTime` 与统一 TTL；键值身份不一致、过期、缺失或损坏均视为指标未知。Instance 作用域告警继续读取当前 JVM 的本地新鲜 Instance Snapshot。Host 历史仍由各 JVM 持久化本地 Host Snapshot，通过一分钟唯一键 UPSERT 和采样时间比较保留最新样本；当前告警观测与历史写入职责不得混用。
+
 CPU、内存、文件系统、磁盘、网络、JVM、线程、GC、HTTP、连接池和健康组件按 collector 隔离。局部失败只令对应字段未知或集合缺失；同一 collector 的重复异常日志按时间限频，并携带 collector 与 Host/Instance 身份。
 
 HTTP P95/P99 来自无业务标签的实例级聚合 Timer，不对各 URI/status Timer 的分位数取最大值。

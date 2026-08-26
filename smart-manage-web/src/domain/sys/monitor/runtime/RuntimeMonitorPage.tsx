@@ -21,6 +21,7 @@ import { runtimeMonitorQueryKeys as keys } from './queryKeys';
 import type { HistoryPoint, HostSnapshot, InstanceSnapshot, MonitorHost } from './types';
 import {
   monitorBytes as bytes,
+  monitorHealthPresentation,
   monitorHistoryValues,
   monitorPercent as percent,
   monitorRatio as ratio,
@@ -309,6 +310,7 @@ function Metric({ title, value }: { title: string; value?: number | null }) {
   );
 }
 function SnapshotSummary({ host, instance }: { host?: HostSnapshot; instance: InstanceSnapshot }) {
+  const healthPresentation = monitorHealthPresentation(instance.health.status);
   return (
     <>
       <div className="sm-runtime-monitor-metrics">
@@ -343,11 +345,7 @@ function SnapshotSummary({ host, instance }: { host?: HostSnapshot; instance: In
       </div>
       <Card
         title={`${instance.instanceId} 实时快照`}
-        extra={
-          <Tag color={instance.health.status === 'UP' ? 'success' : 'error'}>
-            {instance.health.status}
-          </Tag>
-        }
+        extra={<Tag color={healthPresentation.color}>{healthPresentation.text}</Tag>}
       >
         <Descriptions
           size="small"

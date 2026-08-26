@@ -21,3 +21,9 @@ export const monitorHistoryValues = <T extends object>(
     if (value == null || typeof value !== 'number') return null;
     return multiplier ? value * multiplier : value;
   });
+
+export const monitorHealthPresentation = (status?: string | null) => {
+  if (status === 'UP') return { color: 'success', text: 'UP（健康）' } as const;
+  if (status === 'DOWN') return { color: 'error', text: 'DOWN（异常）' } as const;
+  return { color: 'warning', text: 'UNKNOWN（状态暂不可用）' } as const;
+};

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { monitorBytes, monitorHistoryValues, monitorPercent, monitorRatio } from './formatters';
+import {
+  monitorBytes,
+  monitorHealthPresentation,
+  monitorHistoryValues,
+  monitorPercent,
+  monitorRatio,
+} from './formatters';
 describe('monitor formatters', () => {
   it('formats ratios as percentages instead of raw bytes', () => {
     expect(monitorPercent(0.9)).toBe(90);
@@ -16,5 +22,13 @@ describe('monitor formatters', () => {
     expect(monitorBytes(null)).toBe('-');
     expect(monitorBytes(0)).toBe('0 B');
     expect(monitorHistoryValues([{ value: null }, { value: 0 }], 'value', 100)).toEqual([null, 0]);
+  });
+  it('distinguishes healthy, unhealthy and unavailable health states', () => {
+    expect(monitorHealthPresentation('UP')).toEqual({ color: 'success', text: 'UP（健康）' });
+    expect(monitorHealthPresentation('DOWN')).toEqual({ color: 'error', text: 'DOWN（异常）' });
+    expect(monitorHealthPresentation('UNKNOWN')).toEqual({
+      color: 'warning',
+      text: 'UNKNOWN（状态暂不可用）',
+    });
   });
 });

@@ -78,7 +78,10 @@ class MonitorPersistencePostgresTests {
 
   @Test
   void historyUpsertKeepsNewestSampleAndSeparatesInstancesOnOneHost() {
-    Instant bucket = Instant.now();
+    // 固定在同一分钟内，避免测试恰好跨分钟时把两次 UPSERT 写进不同 bucket。
+    Instant bucket = Instant.parse("2020-01-02T06:30:30Z");
+    // 本用例只验证历史 UPSERT；放宽本地新鲜度，避免固定时刻被当前快照 TTL 排除。
+    properties.getSampling().setSnapshotTtlSeconds(3_153_600_000L);
     store.publishHost(host(bucket, .8, "/new", .8));
     store.publishInstance(instance(INSTANCE_A, bucket, .8));
     sampler.persistHistory();
