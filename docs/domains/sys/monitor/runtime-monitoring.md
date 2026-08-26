@@ -25,7 +25,7 @@
 
 重要 Collector 明确携带可用性：内存、线程、连接池、健康、IO 和整体文件系统采集失败时为 `UNAVAILABLE`，对应数值为未知而非零。主机静态元数据采集失败仍保留 `hostId` 与采样时间，应用快照也始终保留 `instanceId`、`hostId` 与采样时间。历史未知值写为 SQL `NULL`，前端实时区显示“-”，趋势图保留断点。
 
-本地 Snapshot Store 按 `smart-manage.monitor.sampling.snapshot-ttl-seconds` 检查采样时间，语义与 Redis TTL 一致；过期快照不会继续用于告警或被历史任务重复写入。
+本地 Snapshot Store 按 `smart-manage.domain.sys.monitor.sampling.snapshot-ttl-seconds` 检查采样时间，语义与 Redis TTL 一致；过期快照不会继续用于告警或被历史任务重复写入。
 
 Host 规则和 Host Current Telemetry 不读取本地 Snapshot Store，而共同读取 `sm:monitor:snapshot:host-source:{hostId}:{instanceId}` 候选观测。系统按 metric 过滤 Collector 未知和过期 source，再选择 `sampleTime` 最新的有效值；不取最大值或平均值。读取时校验 source key 对应的 `hostId / instanceId`、值内身份和统一 TTL，只有所有新鲜 source 对该 metric 均不可用时才按未知处理。Instance 规则仍读取当前 JVM 的本地新鲜 Instance Snapshot。Host 历史保持各 JVM 本地采样写入 PostgreSQL，并由 `(host_id, sample_bucket)` UPSERT 保留该分钟最新采样。
 

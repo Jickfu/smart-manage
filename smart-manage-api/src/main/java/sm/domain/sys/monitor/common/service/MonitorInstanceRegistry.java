@@ -62,7 +62,7 @@ return 0
   private final String registrationToken = UUID.randomUUID().toString();
   private volatile long lastCatalogRefreshTime;
 
-  @Value("${smart-manage.instance-id}")
+  @Value("${smart-manage.system.runtime.instance-id}")
   private String instanceId;
 
   @Value("${spring.application.name}")
@@ -77,7 +77,7 @@ return 0
     heartbeat(true, true);
   }
 
-  @Scheduled(fixedDelayString = "${smart-manage.monitor.cluster.heartbeat-interval-ms:10000}")
+  @Scheduled(fixedDelayString = "${smart-manage.domain.sys.monitor.cluster.heartbeat-interval-ms:10000}")
   public void scheduledHeartbeat() {
     // 运行中断连时保留进程以便健康检查、告警和连接池自动恢复，但心跳失败不得吞掉。
     heartbeat(false, false);

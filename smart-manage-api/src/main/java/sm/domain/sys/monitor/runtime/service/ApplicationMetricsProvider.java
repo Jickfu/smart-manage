@@ -26,7 +26,7 @@ class ApplicationMetricsProvider {
   private final MonitorCollectorWarningLogger warningLogger;
   private HttpCounters previousHttpCounters;
 
-  @Value("${smart-manage.instance-id}")
+  @Value("${smart-manage.system.runtime.instance-id}")
   private String instanceId;
 
   synchronized InstanceSnapshotVO collect(Instant sampleTime) {

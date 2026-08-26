@@ -13,10 +13,10 @@ import sm.system.util.StringUtil;
  */
 @Component
 public class SM2Helper {
-	@Value("${smart-manage.sm2.js.private-key}")
+	@Value("${smart-manage.system.security.sm2.js.private-key}")
 	private String privateKey;
 
-	@Value("${smart-manage.sm2.js.public-key}")
+	@Value("${smart-manage.system.security.sm2.js.public-key}")
 	private String publicKey;
 
 	private static String staticPrivateKey;

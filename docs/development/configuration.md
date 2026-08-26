@@ -1,5 +1,19 @@
 # 环境与配置
 
+## 项目配置命名空间
+
+Spring Boot、Sa-Token、MyBatis-Plus、JetCache 等框架或第三方组件继续使用各自原生配置前缀。项目自定义配置统一放在 `smart-manage` 下，并以架构层级作为第一级命名空间：
+
+```yaml
+smart-manage:
+  infrastructure: # 第三方技术、外部设施和技术适配
+  system:         # 跨领域共享的系统内核与平台能力
+  domain:         # 具有独立业务生命周期的领域配置
+    sys:          # 系统管理业务领域
+```
+
+领域配置必须在 `domain` 下先声明具体领域，再按真实所有者细分应用或模块，例如监控配置使用 `smart-manage.domain.sys.monitor`。配置按能力所有权而不是读取类的位置归属，禁止在 `smart-manage` 下新增 `monitor`、`security` 等绕过架构层级的一级节点。该约束由 `SmartManageConfigurationNamespaceTests` 对所有内置环境配置执行自动化校验。
+
 ## 环境划分
 
 | Profile | 用途 | 主要配置来源 |

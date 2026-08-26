@@ -28,7 +28,7 @@ class ThreadDiagnosticAccessor {
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
 
-    @Value("${smart-manage.instance-id}")
+    @Value("${smart-manage.system.runtime.instance-id}")
     private String instanceId;
 
     ThreadDiagnosticVO list() {

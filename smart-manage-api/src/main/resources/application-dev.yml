@@ -107,20 +107,22 @@ smart-manage:
   system:
     upload:
       dir: ${SMART_MANAGE_UPLOAD_DIR:./upload/}
-  monitor:
-    cluster:
-      internal-base-url: ${SMART_MANAGE_INTERNAL_BASE_URL:http://127.0.0.1:8080/smart-manage-api}
-      require-https: false
-      heartbeat-interval-ms: 10000
-      catalog-refresh-interval-ms: 300000
-      instance-ttl-ms: 30000
-      request-timeout-ms: 10000
-  security:
-    sm4:
-      # 公开开发密钥，仅用于本地开发和演示；生产环境禁止复用。
-      key-base64: ${SMART_MANAGE_SM4_KEY:c21hcnQtbWFuYWdlLWRldg==}
-  sm2:
-    js:
-      # 开发密钥与 login.html 的公开开发公钥配套，禁止在生产环境复用。
-      private-key: ${SMART_MANAGE_SM2_PRIVATE_KEY:00dc349799de9b5a3beef8d3d77aa7e3655c5542a10c395cc86670580b6250dfeb}
-      public-key: ${SMART_MANAGE_SM2_PUBLIC_KEY:0405102042204d15e802522ea09eb609358e4c72295e0ca44727eef75faac9afb3eeaa3e9df5af87e205e6ce5cb351e4fb30c37602f32aad969d2b222f05f8fa99}
+    security:
+      sm4:
+        # 公开开发密钥，仅用于本地开发和演示；生产环境禁止复用。
+        key-base64: ${SMART_MANAGE_SM4_KEY:c21hcnQtbWFuYWdlLWRldg==}
+      sm2:
+        js:
+          # 开发密钥与 login.html 的公开开发公钥配套，禁止在生产环境复用。
+          private-key: ${SMART_MANAGE_SM2_PRIVATE_KEY:00dc349799de9b5a3beef8d3d77aa7e3655c5542a10c395cc86670580b6250dfeb}
+          public-key: ${SMART_MANAGE_SM2_PUBLIC_KEY:0405102042204d15e802522ea09eb609358e4c72295e0ca44727eef75faac9afb3eeaa3e9df5af87e205e6ce5cb351e4fb30c37602f32aad969d2b222f05f8fa99}
+  domain:
+    sys:
+      monitor:
+        cluster:
+          internal-base-url: ${SMART_MANAGE_INTERNAL_BASE_URL:http://127.0.0.1:8080/smart-manage-api}
+          require-https: false
+          heartbeat-interval-ms: 10000
+          catalog-refresh-interval-ms: 300000
+          instance-ttl-ms: 30000
+          request-timeout-ms: 10000

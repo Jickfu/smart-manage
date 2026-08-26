@@ -78,14 +78,13 @@ management:
 
 logging:
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [${smart-manage.instance-id}] [%X{traceId}] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [${smart-manage.instance-id}] [%X{traceId}] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [${smart-manage.system.runtime.instance-id}] [%X{traceId}] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [${smart-manage.system.runtime.instance-id}] [%X{traceId}] %-5level %logger{36} - %msg%n"
   level:
     root: INFO
     sm: INFO
 
 smart-manage:
-  instance-id: ${SMART_MANAGE_INSTANCE_ID}
   infrastructure:
     cors:
       allowed-origins:
@@ -93,24 +92,30 @@ smart-manage:
     trusted-proxy:
       # 生产必须设置为 Nginx/负载均衡器实际网段，禁止使用 0.0.0.0/0。
       cidrs: ${SMART_MANAGE_TRUSTED_PROXY_CIDRS}
-  security:
-    initial-administrator-password: ${SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD}
-    sm4:
-      key-base64: ${SMART_MANAGE_SM4_KEY}
   system:
+    runtime:
+      instance-id: ${SMART_MANAGE_INSTANCE_ID}
+    security:
+      sm4:
+        key-base64: ${SMART_MANAGE_SM4_KEY}
+      sm2:
+        js:
+          private-key: ${SMART_MANAGE_SM2_PRIVATE_KEY}
+          public-key: ${SMART_MANAGE_SM2_PUBLIC_KEY}
     upload:
       # 单实例使用 Local 时必须指向持久化并纳入备份的目录；S3/FTP 模式不会读取该目录。
       dir: ${SMART_MANAGE_UPLOAD_DIR:./upload/}
-  monitor:
-    cluster:
-      # 每个实例必须配置其他应用实例可直接访问的内部地址，禁止填写公网入口或负载均衡地址。
-      internal-base-url: ${SMART_MANAGE_INTERNAL_BASE_URL}
-      require-https: true
-      heartbeat-interval-ms: 10000
-      catalog-refresh-interval-ms: 300000
-      instance-ttl-ms: 30000
-      request-timeout-ms: 10000
-  sm2:
-    js:
-      private-key: ${SMART_MANAGE_SM2_PRIVATE_KEY}
-      public-key: ${SMART_MANAGE_SM2_PUBLIC_KEY}
+  domain:
+    sys:
+      base:
+        user:
+          initial-administrator-password: ${SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD}
+      monitor:
+        cluster:
+          # 每个实例必须配置其他应用实例可直接访问的内部地址，禁止填写公网入口或负载均衡地址。
+          internal-base-url: ${SMART_MANAGE_INTERNAL_BASE_URL}
+          require-https: true
+          heartbeat-interval-ms: 10000
+          catalog-refresh-interval-ms: 300000
+          instance-ttl-ms: 30000
+          request-timeout-ms: 10000

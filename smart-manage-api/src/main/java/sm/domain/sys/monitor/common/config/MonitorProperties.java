@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 /** 内建监控唯一配置入口。 */
 @Data
 @Component
-@ConfigurationProperties(prefix = "smart-manage.monitor")
+@ConfigurationProperties(prefix = "smart-manage.domain.sys.monitor")
 public class MonitorProperties {
   private String hostId;
   private final Sampling sampling = new Sampling();

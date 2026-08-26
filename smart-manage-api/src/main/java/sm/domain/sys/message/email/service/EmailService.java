@@ -60,7 +60,7 @@ public class EmailService implements EmailNotificationSender {
     private final EmailTxService txService;
     private final SM4Helper sm4Helper;
     private final JsonMapper jsonMapper;
-    @Value("${smart-manage.instance-id:unknown}") private String instanceId;
+    @Value("${smart-manage.system.runtime.instance-id:unknown}") private String instanceId;
 
     @AdministratorOnly
     public PageData<Map<String, Object>> accountList(AccountListForm form) {

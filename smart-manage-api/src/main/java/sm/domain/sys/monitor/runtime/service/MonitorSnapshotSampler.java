@@ -31,7 +31,7 @@ class MonitorSnapshotSampler {
   private final MonitorProperties properties;
   private final MonitorInstanceRegistry instanceRegistry;
 
-  @Scheduled(fixedDelayString = "${smart-manage.monitor.sampling.interval-ms}")
+  @Scheduled(fixedDelayString = "${smart-manage.domain.sys.monitor.sampling.interval-ms}")
   void sampleCurrent() {
     Instant sampleTime = Instant.now();
     HostSnapshotVO host = collectHost(sampleTime);
@@ -76,7 +76,7 @@ class MonitorSnapshotSampler {
     redisTemplate.expire(sourceIndexKey, ttl);
   }
 
-  @Scheduled(fixedDelayString = "${smart-manage.monitor.history.interval-ms}")
+  @Scheduled(fixedDelayString = "${smart-manage.domain.sys.monitor.history.interval-ms}")
   void persistHistory() {
     HostSnapshotVO host = store.currentHost();
     InstanceSnapshotVO instance = store.currentInstance();
@@ -188,7 +188,7 @@ WHERE EXCLUDED.sample_time>=t_sys_monitor_instance_history.sample_time
         component(snapshot, "redis"));
   }
 
-  @Scheduled(cron = "${smart-manage.monitor.history.cleanup-cron}")
+  @Scheduled(cron = "${smart-manage.domain.sys.monitor.history.cleanup-cron}")
   void cleanupHistory() {
     OffsetDateTime cutoff =
         OffsetDateTime.now(ZoneOffset.UTC).minusDays(properties.getHistory().getRetentionDays());

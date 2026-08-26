@@ -26,7 +26,7 @@ class MonitorAlertEvaluator {
   private final MonitorAlertService alertService;
   private final MonitorMetricValueFormatter valueFormatter;
 
-  @Scheduled(fixedDelayString = "${smart-manage.monitor.alert.evaluation-interval-ms}")
+  @Scheduled(fixedDelayString = "${smart-manage.domain.sys.monitor.alert.evaluation-interval-ms}")
   void evaluate() {
     try {
       HostSnapshotVO hostSnapshot =

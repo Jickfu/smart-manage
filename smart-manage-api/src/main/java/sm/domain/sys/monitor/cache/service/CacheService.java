@@ -45,7 +45,7 @@ public class CacheService {
     private final RedisCacheAccessor redisCacheAccessor;
     private final JsonMapper jsonMapper;
 
-    @Value("${smart-manage.instance-id}")
+    @Value("${smart-manage.system.runtime.instance-id}")
     private String instanceId;
 
     public CacheOverviewVO overview() {

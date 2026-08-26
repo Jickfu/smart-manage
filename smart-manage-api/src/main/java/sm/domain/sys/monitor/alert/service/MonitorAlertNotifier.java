@@ -17,7 +17,7 @@ class MonitorAlertNotifier {
   private final EmailNotificationSender emailSender;
   private final MonitorMetricValueFormatter valueFormatter;
 
-  @Scheduled(fixedDelayString = "${smart-manage.monitor.alert.notification-interval-ms}")
+  @Scheduled(fixedDelayString = "${smart-manage.domain.sys.monitor.alert.notification-interval-ms}")
   void dispatch() {
     recoverClaims();
     for (Long notificationId : claim(20)) dispatchOne(notificationId);

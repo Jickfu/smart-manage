@@ -19,17 +19,17 @@ public class Argon2Helper {
 	private static int memory = 65536;
 	private static int parallelism = 1;
 
-	@Value("${smart-manage.security.argon2.iterations:2}")
+	@Value("${smart-manage.system.security.argon2.iterations:2}")
 	public void setIterations(int val) {
 		Argon2Helper.iterations = val;
 	}
 
-	@Value("${smart-manage.security.argon2.memory:65536}")
+	@Value("${smart-manage.system.security.argon2.memory:65536}")
 	public void setMemory(int val) {
 		Argon2Helper.memory = val;
 	}
 
-	@Value("${smart-manage.security.argon2.parallelism:1}")
+	@Value("${smart-manage.system.security.argon2.parallelism:1}")
 	public void setParallelism(int val) {
 		Argon2Helper.parallelism = val;
 	}

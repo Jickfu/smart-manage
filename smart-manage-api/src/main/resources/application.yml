@@ -125,35 +125,37 @@ sa-token:
     same-site: Lax
 
 smart-manage:
-  instance-id: ${SMART_MANAGE_INSTANCE_ID:instance1}
-  monitor:
-    # host-id 表示 Smart Manage 认知中的运行主机；缺省时使用稳定 hostname。
-    host-id: ${SMART_MANAGE_HOST_ID:}
-    sampling:
-      interval-ms: 10000
-      snapshot-ttl-seconds: 40
-    history:
-      interval-ms: 60000
-      retention-days: ${SMART_MANAGE_MONITOR_RETENTION_DAYS:7}
-      cleanup-cron: "0 20 3 * * *"
-    alert:
-      evaluation-interval-ms: 10000
-      notification-interval-ms: 10000
+  infrastructure:
+    http:
+      connect-timeout: 3s
+      request-timeout: 10s
   system:
+    runtime:
+      instance-id: ${SMART_MANAGE_INSTANCE_ID:instance1}
     security:
       no-need-login: /sys/base/login,/sys/base/captcha/challenge,/sys/base/captcha/verify
+      argon2:
+        iterations: 2
+        memory: 65536
+        parallelism: 1
     log:
       core-pool-size: 10
       max-pool-size: 20
       queue-capacity: 1000
       keep-alive-seconds: 60
       thread-name-prefix: biz-log-
-  security:
-    argon2:
-      iterations: 2
-      memory: 65536
-      parallelism: 1
-  infrastructure:
-    http:
-      connect-timeout: 3s
-      request-timeout: 10s
+  domain:
+    sys:
+      monitor:
+        # host-id 表示 Smart Manage 认知中的运行主机；缺省时使用稳定 hostname。
+        host-id: ${SMART_MANAGE_HOST_ID:}
+        sampling:
+          interval-ms: 10000
+          snapshot-ttl-seconds: 40
+        history:
+          interval-ms: 60000
+          retention-days: ${SMART_MANAGE_MONITOR_RETENTION_DAYS:7}
+          cleanup-cron: "0 20 3 * * *"
+        alert:
+          evaluation-interval-ms: 10000
+          notification-interval-ms: 10000

@@ -20,7 +20,7 @@ public class SlowSqlService {
     private final MonitorRoutingGateway routingGateway;
     private final SlowSqlStatAccessor accessor;
 
-    @Value("${smart-manage.instance-id}")
+    @Value("${smart-manage.system.runtime.instance-id}")
     private String currentInstanceId;
 
     public SlowSqlSnapshotVO snapshot(String instanceId) {

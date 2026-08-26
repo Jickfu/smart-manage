@@ -30,7 +30,7 @@ class ProductionAdministratorCredentialInitializer implements ApplicationRunner 
 
     private final UserMapper userMapper;
 
-    @Value("${smart-manage.security.initial-administrator-password}")
+    @Value("${smart-manage.domain.sys.base.user.initial-administrator-password}")
     private String initialPassword;
 
     @Override

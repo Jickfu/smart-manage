@@ -12,7 +12,7 @@ import java.util.Base64;
  * <p>密钥只允许通过部署配置注入，不能来自数据库、系统参数或管理端页面。</p>
  */
 @Component
-@ConfigurationProperties(prefix = "smart-manage.security.sm4")
+@ConfigurationProperties(prefix = "smart-manage.system.security.sm4")
 public class Sm4Properties implements InitializingBean {
 
     private static final int KEY_LENGTH = 16;
@@ -32,7 +32,7 @@ public class Sm4Properties implements InitializingBean {
     @Override
     public void afterPropertiesSet() {
         if (keyBase64 == null || keyBase64.isBlank()) {
-            throw new IllegalStateException("必须配置 smart-manage.security.sm4.key-base64");
+            throw new IllegalStateException("必须配置 smart-manage.system.security.sm4.key-base64");
         }
         try {
             keyBytes = Base64.getDecoder().decode(keyBase64.trim());
