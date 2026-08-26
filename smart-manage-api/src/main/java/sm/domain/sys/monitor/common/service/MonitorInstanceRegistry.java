@@ -74,20 +74,20 @@ return 0
   @EventListener(ApplicationReadyEvent.class)
   public void registerWhenReady() {
     // Redis 是系统基础设施，启动阶段注册失败必须中止启动，禁止伪装成可用实例。
-    heartbeat(true);
+    heartbeat(true, true);
   }
 
   @Scheduled(fixedDelayString = "${smart-manage.monitor.cluster.heartbeat-interval-ms:10000}")
   public void scheduledHeartbeat() {
     // 运行中断连时保留进程以便健康检查、告警和连接池自动恢复，但心跳失败不得吞掉。
-    heartbeat(false);
+    heartbeat(false, false);
   }
 
   public void heartbeat() {
-    heartbeat(false);
+    heartbeat(false, false);
   }
 
-  private void heartbeat(boolean forceCatalogRefresh) {
+  private void heartbeat(boolean forceCatalogRefresh, boolean reactivateLifecycle) {
     MonitorProperties.Cluster cluster = properties.getCluster();
     validateInternalBaseUrl(cluster.getInternalBaseUrl());
     long now = System.currentTimeMillis();
@@ -118,8 +118,8 @@ return 0
       }
       redisTemplate.opsForZSet().add(INDEX_KEY, instanceId, now);
       redisTemplate.opsForZSet().removeRangeByScore(INDEX_KEY, 0, now - cluster.getInstanceTtlMs());
-      // 只有已退役记录会产生实际写入；普通心跳不再 UPSERT 目录。
-      catalogAccessor.reactivateIfRetired(instanceId);
+      // 生命周期恢复只在启动注册执行；普通 10 秒心跳严格保持为 Redis online-state 操作。
+      if (reactivateLifecycle) catalogAccessor.reactivateIfRetired(instanceId);
       if (forceCatalogRefresh
           || now - lastCatalogRefreshTime >= cluster.getCatalogRefreshIntervalMs()) {
         catalogAccessor.touch(registeredInstance);
@@ -208,7 +208,10 @@ return 0
     MonitorInstanceVO result = new MonitorInstanceVO();
     result.setInstanceId(registeredInstance.getInstanceId());
     result.setHostId(registeredInstance.getHostId());
+    result.setApplicationName(registeredInstance.getApplicationName());
     result.setApplicationVersion(registeredInstance.getApplicationVersion());
+    result.setLifecycle("ACTIVE");
+    result.setOnline(true);
     result.setStartTime(Instant.ofEpochMilli(registeredInstance.getStartTime()).toString());
     result.setLastSeenTime(Instant.ofEpochMilli(registeredInstance.getLastSeenTime()).toString());
     result.setCurrent(isCurrent(registeredInstance.getInstanceId()));

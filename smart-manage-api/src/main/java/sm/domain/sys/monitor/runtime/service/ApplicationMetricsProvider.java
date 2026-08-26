@@ -23,6 +23,7 @@ class ApplicationMetricsProvider {
   private final DruidDataSource dataSource;
   private final MeterRegistry meterRegistry;
   private final MonitorInstanceRegistry instanceRegistry;
+  private final MonitorCollectorWarningLogger warningLogger;
   private HttpCounters previousHttpCounters;
 
   @Value("${smart-manage.instance-id}")
@@ -33,14 +34,15 @@ class ApplicationMetricsProvider {
     result.setInstanceId(instanceId);
     result.setHostId(instanceRegistry.currentHostId());
     result.setSampleTime(sampleTime);
-    result.setRuntime(runtime());
-    result.setCpu(cpu());
-    result.setMemory(memory());
-    result.setThreads(threads());
-    result.setGc(gc());
-    result.setDataSource(pool());
-    result.setHttp(http());
-    result.setHealth(health());
+    result.setRuntime(safely("instance.runtime", this::runtime, runtimeUnavailable()));
+    result.setCpu(safely("instance.cpu", this::cpu, new InstanceSnapshotVO.CpuInfo()));
+    result.setMemory(safely("instance.memory", this::memory, new InstanceSnapshotVO.MemoryInfo()));
+    result.setThreads(safely("instance.threads", this::threads, threadsUnavailable()));
+    result.setGc(safely("instance.gc", this::gc, List.of()));
+    result.setDataSource(
+        safely("instance.datasource", this::pool, new InstanceSnapshotVO.DataSourceInfo()));
+    result.setHttp(safely("instance.http", this::http, new InstanceSnapshotVO.HttpInfo()));
+    result.setHealth(safely("instance.health", this::health, healthUnavailable()));
     return result;
   }
 
@@ -164,6 +166,36 @@ class ApplicationMetricsProvider {
 
   private Double valid(double value) {
     return Double.isFinite(value) && value >= 0 ? value : null;
+  }
+
+  private <T> T safely(String collector, java.util.function.Supplier<T> supplier, T fallback) {
+    try {
+      return supplier.get();
+    } catch (Exception exception) {
+      warningLogger.warn(collector, instanceId, exception);
+      return fallback;
+    }
+  }
+
+  private InstanceSnapshotVO.RuntimeInfo runtimeUnavailable() {
+    InstanceSnapshotVO.RuntimeInfo value = new InstanceSnapshotVO.RuntimeInfo();
+    value.setJavaVersion("unknown");
+    value.setJavaVendor("unknown");
+    value.setVmName("unknown");
+    return value;
+  }
+
+  private InstanceSnapshotVO.ThreadInfo threadsUnavailable() {
+    InstanceSnapshotVO.ThreadInfo value = new InstanceSnapshotVO.ThreadInfo();
+    value.setStateCounts(Map.of());
+    return value;
+  }
+
+  private InstanceSnapshotVO.HealthInfo healthUnavailable() {
+    InstanceSnapshotVO.HealthInfo value = new InstanceSnapshotVO.HealthInfo();
+    value.setStatus("UNKNOWN");
+    value.setComponents(List.of());
+    return value;
   }
 
   private record HttpCounters(long nanoTime, long requests, long clientErrors, long serverErrors) {}

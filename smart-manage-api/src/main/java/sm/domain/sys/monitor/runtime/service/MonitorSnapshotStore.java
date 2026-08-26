@@ -5,18 +5,25 @@ import org.springframework.stereotype.Component;
 import sm.domain.sys.monitor.runtime.model.vo.HostSnapshotVO;
 import sm.domain.sys.monitor.runtime.model.vo.InstanceSnapshotVO;
 
-/** 单个采样周期的 Host/Instance 快照必须成对原子发布。 */
+/** Host 与 Instance 独立发布，单个 collector 故障不能阻断另一类遥测。 */
 @Component
 class MonitorSnapshotStore {
-  record SnapshotPair(HostSnapshotVO host, InstanceSnapshotVO instance) {}
+  private final AtomicReference<HostSnapshotVO> currentHost = new AtomicReference<>();
+  private final AtomicReference<InstanceSnapshotVO> currentInstance = new AtomicReference<>();
 
-  private final AtomicReference<SnapshotPair> current = new AtomicReference<>();
-
-  void publish(HostSnapshotVO host, InstanceSnapshotVO instance) {
-    current.set(new SnapshotPair(host, instance));
+  void publishHost(HostSnapshotVO host) {
+    currentHost.set(host);
   }
 
-  SnapshotPair current() {
-    return current.get();
+  void publishInstance(InstanceSnapshotVO instance) {
+    currentInstance.set(instance);
+  }
+
+  HostSnapshotVO currentHost() {
+    return currentHost.get();
+  }
+
+  InstanceSnapshotVO currentInstance() {
+    return currentInstance.get();
   }
 }

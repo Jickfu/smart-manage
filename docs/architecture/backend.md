@@ -1,6 +1,7 @@
 # 后端架构
 
 内建监控的 Host/Instance 边界、唯一采样链、状态机和 Redis/PostgreSQL 职责见[内建监控架构](./monitoring.md)。
+监控 collector 按职责局部降级，当前遥测缺失通过明确状态表达，不使用业务异常伪装为页面整体失败。
 
 ## 分层边界
 

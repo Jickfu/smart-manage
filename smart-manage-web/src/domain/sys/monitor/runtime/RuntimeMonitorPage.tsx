@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import {
   Button,
+  Alert,
   Card,
   Descriptions,
   Progress,
@@ -68,7 +69,8 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
     enabled: active && Boolean(selectedId),
     refetchInterval: active ? 10000 : false,
   });
-  const selectedHostId = instanceSnapshot.data?.hostId;
+  const selectedInstance = instances.data?.find((item) => item.instanceId === selectedId);
+  const selectedHostId = selectedInstance?.hostId;
   const hostSnapshot = useQuery({
     queryKey: keys.hostSnapshot(selectedHostId),
     queryFn: () => runtimeMonitorApi.hostSnapshot(selectedHostId!),
@@ -94,8 +96,8 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
   return (
     <EditPageShell
       title="运行监控"
-      loading={topology.isLoading || instanceSnapshot.isLoading || hostSnapshot.isLoading}
-      error={topology.error ?? instanceSnapshot.error ?? hostSnapshot.error}
+      loading={topology.isLoading || instances.isLoading}
+      error={topology.error ?? instances.error}
       onRetry={() => {
         void topology.refetch();
         void instanceSnapshot.refetch();
@@ -108,7 +110,7 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
             placeholder="选择应用实例"
             options={(instances.data ?? []).map((item) => ({
               value: item.instanceId,
-              label: `${item.instanceId} · ${item.hostId}${item.current ? '（当前）' : ''}`,
+              label: `${item.instanceId} · ${item.hostId}（${item.lifecycle === 'RETIRED' ? '已退役' : item.online ? '在线' : '离线'}${item.current ? '，当前' : ''}）`,
               disabled: false,
             }))}
             onChange={setInstanceId}
@@ -160,19 +162,55 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
           selectedInstanceId={selectedLifecycleInstanceId}
           onSelectInstance={setSelectedLifecycleInstanceId}
         />
-        {instanceSnapshot.data && hostSnapshot.data && (
-          <>
-            <SnapshotSummary host={hostSnapshot.data} instance={instanceSnapshot.data} />
-            {charts.map((chart) => (
-              <Card key={chart.title} title={chart.title}>
-                <Suspense fallback={<div>正在加载图表</div>}>
-                  <SmChart option={chart.option} ariaLabel={chart.title} />
-                </Suspense>
-              </Card>
-            ))}
-            <FilesystemCard snapshot={hostSnapshot.data} />
-          </>
+        {selectedInstance && (
+          <Alert
+            showIcon
+            type={
+              selectedInstance.lifecycle === 'RETIRED'
+                ? 'info'
+                : selectedInstance.online
+                  ? 'success'
+                  : 'warning'
+            }
+            title={
+              selectedInstance.lifecycle === 'RETIRED'
+                ? '当前实例已退役，仍可查看历史趋势'
+                : selectedInstance.online
+                  ? '当前实例在线'
+                  : '当前实例离线，实时遥测不可用，历史趋势仍可查询'
+            }
+          />
         )}
+        {selectedHostId && hostSnapshot.data?.status === 'UNAVAILABLE' && (
+          <Alert
+            showIcon
+            type="warning"
+            title="当前主机遥测不可用"
+            description="这不等同于主机宕机；仍可查看该主机已经持久化的历史趋势。"
+          />
+        )}
+        {instanceSnapshot.data?.snapshot && (
+          <SnapshotSummary
+            host={hostSnapshot.data?.snapshot}
+            instance={instanceSnapshot.data.snapshot}
+          />
+        )}
+        {history.error && (
+          <Alert
+            showIcon
+            type="error"
+            title="历史趋势加载失败"
+            description={history.error.message}
+          />
+        )}
+        {charts.map((chart) => (
+          <Card key={chart.title} title={chart.title} loading={history.isLoading}>
+            <Suspense fallback={<div>正在加载图表</div>}>
+              <SmChart option={chart.option} ariaLabel={chart.title} />
+            </Suspense>
+          </Card>
+        ))}
+        {hostSnapshot.data?.snapshot && <FilesystemCard snapshot={hostSnapshot.data.snapshot} />}
       </div>
     </EditPageShell>
   );
@@ -262,16 +300,18 @@ function Metric({ title, value }: { title: string; value: number }) {
     </Card>
   );
 }
-function SnapshotSummary({ host, instance }: { host: HostSnapshot; instance: InstanceSnapshot }) {
+function SnapshotSummary({ host, instance }: { host?: HostSnapshot; instance: InstanceSnapshot }) {
   return (
     <>
       <div className="sm-runtime-monitor-metrics">
-        <Metric title="主机 CPU" value={percent(host.cpu.usage)} />
+        {host && <Metric title="主机 CPU" value={percent(host.cpu.usage)} />}
         <Metric title="进程 CPU" value={percent(instance.cpu.processUsage)} />
-        <Metric
-          title="物理内存"
-          value={ratio(host.memory.total - host.memory.available, host.memory.total)}
-        />
+        {host && (
+          <Metric
+            title="物理内存"
+            value={ratio(host.memory.total - host.memory.available, host.memory.total)}
+          />
+        )}
         <Metric title="JVM 堆" value={ratio(instance.memory.heapUsed, instance.memory.heapMax)} />
         <Metric
           title="连接池"
@@ -290,12 +330,12 @@ function SnapshotSummary({ host, instance }: { host: HostSnapshot; instance: Ins
           size="small"
           column={4}
           items={[
-            { key: 'host', label: 'Host ID', children: host.hostId },
+            { key: 'host', label: 'Host ID', children: instance.hostId },
             { key: 'sample', label: '采样时间', children: instance.sampleTime },
             {
               key: 'os',
               label: '操作系统',
-              children: `${host.os.name} ${host.os.version}`,
+              children: host ? `${host.os.name} ${host.os.version}` : '当前主机遥测不可用',
             },
             { key: 'jvm', label: 'JVM', children: instance.runtime.vmName },
             {
@@ -316,7 +356,9 @@ function SnapshotSummary({ host, instance }: { host: HostSnapshot; instance: Ins
             {
               key: 'io',
               label: '磁盘读/写',
-              children: `${bytes(host.io.diskReadBytesPerSecond)}/s / ${bytes(host.io.diskWriteBytesPerSecond)}/s`,
+              children: host
+                ? `${bytes(host.io.diskReadBytesPerSecond)}/s / ${bytes(host.io.diskWriteBytesPerSecond)}/s`
+                : '-',
             },
           ]}
         />

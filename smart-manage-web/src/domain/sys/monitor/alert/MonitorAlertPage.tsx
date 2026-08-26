@@ -262,7 +262,7 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
               {
                 title: '最新 / 峰值',
                 width: 150,
-                render: (_, item) => `${item.lastValue ?? '-'} / ${item.peakValue ?? '-'}`,
+                render: (_, item) => `${item.lastValueDisplay} / ${item.peakValueDisplay}`,
               },
               { title: '摘要', dataIndex: 'summary' },
             ]}

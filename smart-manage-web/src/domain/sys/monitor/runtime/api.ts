@@ -2,6 +2,7 @@ import request from '@/api/request';
 import type { Result } from '@/types/api';
 import type {
   HistoryPoint,
+  CurrentTelemetry,
   HostSnapshot,
   InstanceSnapshot,
   MonitorHost,
@@ -17,12 +18,14 @@ export const runtimeMonitorApi = {
     request.get<Result<MonitorHost[]>>('/sys/monitor/runtime/topology').then((r) => r.data.data),
   hostSnapshot: (hostId: string) =>
     request
-      .get<Result<HostSnapshot>>('/sys/monitor/runtime/host-snapshot', { params: { hostId } })
+      .get<Result<CurrentTelemetry<HostSnapshot>>>('/sys/monitor/runtime/host-snapshot', {
+        params: { hostId },
+      })
       .then((r) => r.data.data),
   instanceSnapshot: (instanceId?: string) =>
     request
       .get<
-        Result<InstanceSnapshot>
+        Result<CurrentTelemetry<InstanceSnapshot>>
       >('/sys/monitor/runtime/instance-snapshot', { params: { instanceId } })
       .then((r) => r.data.data),
   retire: (instanceId: string) =>

@@ -39,6 +39,8 @@ export interface AlertIncident {
   recoveredAt?: string;
   lastValue?: number;
   peakValue?: number;
+  lastValueDisplay: string;
+  peakValueDisplay: string;
   summary: string;
 }
 export interface AlertRuleSave {

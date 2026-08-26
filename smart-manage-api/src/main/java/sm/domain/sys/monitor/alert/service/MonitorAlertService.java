@@ -18,6 +18,7 @@ public class MonitorAlertService {
   private final MonitorAlertTxService txService;
   private final MonitorAlertStateTxService stateTxService;
   private final CurrentUserContext currentUserContext;
+  private final MonitorMetricValueFormatter valueFormatter;
 
   public List<MonitorAlertRuleVO> rules() {
     return jdbcTemplate.query(
@@ -84,9 +85,9 @@ public class MonitorAlertService {
     List<MonitorAlertIncidentVO> records =
         jdbcTemplate.query(
             """
-            SELECT a.*,b.name rule_name,b.severity FROM t_sys_monitor_alert_incident a
-            JOIN t_sys_monitor_alert_rule b ON b.id=a.rule_id
-            """
+SELECT a.*,b.name rule_name,b.severity,b.value_kind,b.display_unit FROM t_sys_monitor_alert_incident a
+JOIN t_sys_monitor_alert_rule b ON b.id=a.rule_id
+"""
                 + where
                 + " ORDER BY a.started_at DESC,a.id DESC LIMIT ? OFFSET ?",
             (rs, row) ->
@@ -104,6 +105,14 @@ public class MonitorAlertService {
                     rs.getObject("recovered_at", java.time.OffsetDateTime.class),
                     rs.getBigDecimal("last_value"),
                     rs.getBigDecimal("peak_value"),
+                    valueFormatter.format(
+                        rs.getBigDecimal("last_value"),
+                        rs.getString("value_kind"),
+                        rs.getString("display_unit")),
+                    valueFormatter.format(
+                        rs.getBigDecimal("peak_value"),
+                        rs.getString("value_kind"),
+                        rs.getString("display_unit")),
                     rs.getString("summary")),
             arguments.toArray());
     return PageData.of(total == null ? 0 : total, form.getPageNum(), form.getPageSize(), records);

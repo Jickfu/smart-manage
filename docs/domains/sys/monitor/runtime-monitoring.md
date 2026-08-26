@@ -21,7 +21,9 @@
 
 后台默认每 10 秒采样并将当前快照以 TTL 写入 Redis，每分钟将固定结构历史 UPSERT 到 PostgreSQL。前端刷新频率只影响展示，不承担采样职责。历史默认保留 7 天并定时清理，查询范围必须受限并按范围聚合。
 
-每个实例只由本机唯一采样器推进 Host 和 Instance 快照；Host Redis key 只保存 Host Snapshot，Instance key 只保存 JVM/应用 Snapshot。历史通过 `(host_id, sample_bucket)` 与 `(instance_id, sample_bucket)` 唯一约束收敛多实例并发。
+每个实例只由本机唯一采样器推进 Host 和 Instance 快照；Host Redis key 只保存 Host Snapshot，Instance key 只保存 JVM/应用 Snapshot。两类采集独立降级，单个 OSHI/JVM collector 失败不阻断其他指标。历史通过 `(host_id, sample_bucket)` 与 `(instance_id, sample_bucket)` 唯一约束收敛多实例并发。
+
+Host Catalog 是历史目录；Current Topology 只展示仍有 `ACTIVE` 实例的 Host。实例选择来自持久化目录，明确区分在线、离线和已退役；离线或退役实例的实时遥测显示不可用，但历史趋势仍可查询。较长范围的历史 P95/P99 取查询桶内最差一分钟值。
 
 当关联实例全部离线时，只能表达“主机遥测不可用”，不能断言物理主机宕机。整个 Smart Manage 集群全部不可达时无法自我告警，该场景属于外部 HTTP 可用性监控职责。
 

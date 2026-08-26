@@ -1,6 +1,7 @@
 # 部署与多实例架构
 
 多实例必须配置唯一 `instanceId`。内建监控通过每 JVM `registrationToken` 原子拒绝重复活跃 ID，并使用稳定 `hostId` 归并同主机实例，见[内建监控架构](./monitoring.md)。
+PostgreSQL 完全不可用的告警必须由数据库平台或外部监控承担；应用内邮件链路不缓存解密后的 SMTP 凭据建立旁路。
 
 ## 目标拓扑
 

@@ -17,4 +17,6 @@ public record MonitorAlertIncidentVO(
     OffsetDateTime recoveredAt,
     BigDecimal lastValue,
     BigDecimal peakValue,
+    String lastValueDisplay,
+    String peakValueDisplay,
     String summary) {}

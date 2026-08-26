@@ -21,7 +21,7 @@ public class RuntimeMonitorController {
   @GetMapping("/instances")
   @SaCheckPermission(RuntimeMonitorPermission.VIEW)
   public Result<List<MonitorInstanceVO>> instances() {
-    return Result.success(topologyService.onlineInstances());
+    return Result.success(topologyService.catalogInstances());
   }
 
   @GetMapping("/topology")
@@ -32,13 +32,14 @@ public class RuntimeMonitorController {
 
   @GetMapping("/host-snapshot")
   @SaCheckPermission(RuntimeMonitorPermission.VIEW)
-  public Result<HostSnapshotVO> hostSnapshot(@RequestParam String hostId) {
+  public Result<MonitorCurrentTelemetryVO<HostSnapshotVO>> hostSnapshot(
+      @RequestParam String hostId) {
     return Result.success(snapshotService.host(hostId));
   }
 
   @GetMapping("/instance-snapshot")
   @SaCheckPermission(RuntimeMonitorPermission.VIEW)
-  public Result<InstanceSnapshotVO> instanceSnapshot(
+  public Result<MonitorCurrentTelemetryVO<InstanceSnapshotVO>> instanceSnapshot(
       @RequestParam(required = false) String instanceId) {
     return Result.success(snapshotService.instance(instanceId));
   }

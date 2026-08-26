@@ -1,10 +1,17 @@
 export interface MonitorInstance {
   instanceId: string;
   hostId: string;
+  applicationName: string;
   applicationVersion: string;
+  lifecycle: 'ACTIVE' | 'RETIRED';
+  online: boolean;
   startTime: string;
   lastSeenTime: string;
   current: boolean;
+}
+export interface CurrentTelemetry<T> {
+  status: 'AVAILABLE' | 'UNAVAILABLE';
+  snapshot?: T;
 }
 export interface TopologyInstance {
   instanceId: string;

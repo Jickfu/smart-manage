@@ -27,8 +27,7 @@ class MonitorInstanceLifecycleTxService {
         """
         UPDATE t_sys_monitor_alert_incident SET status='CLOSED',close_reason='INSTANCE_RETIRED',
         last_evaluated_at=now(),version=version+1
-        WHERE rule_code='INSTANCE_OFFLINE' AND scope_type='INSTANCE' AND scope_id=?
-          AND status IN ('PENDING','FIRING')
+                WHERE scope_type='INSTANCE' AND scope_id=? AND status IN ('PENDING','FIRING')
         """,
         instanceId);
   }

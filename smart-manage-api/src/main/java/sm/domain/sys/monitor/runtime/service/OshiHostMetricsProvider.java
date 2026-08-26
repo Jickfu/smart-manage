@@ -16,6 +16,7 @@ import sm.domain.sys.monitor.runtime.model.vo.HostSnapshotVO;
 @RequiredArgsConstructor
 class OshiHostMetricsProvider {
   private final MonitorInstanceRegistry instanceRegistry;
+  private final MonitorCollectorWarningLogger warningLogger;
   private final SystemInfo systemInfo = new SystemInfo();
   private long[] previousCpuTicks;
   private IoCounters previousIoCounters;
@@ -32,10 +33,13 @@ class OshiHostMetricsProvider {
     os.setVersion(operatingSystem.getVersionInfo().getVersion());
     os.setArch(System.getProperty("os.arch"));
     snapshot.setOs(os);
-    snapshot.setCpu(cpu());
-    snapshot.setMemory(memory());
-    snapshot.setFilesystems(filesystems());
-    snapshot.setIo(io());
+    String hostId = snapshot.getHostId();
+    snapshot.setCpu(safely("host.cpu", hostId, this::cpu, new HostSnapshotVO.CpuInfo()));
+    snapshot.setMemory(
+        safely("host.memory", hostId, this::memory, new HostSnapshotVO.MemoryInfo()));
+    snapshot.setFilesystems(
+        safely("host.filesystem", hostId, this::filesystems, java.util.List.of()));
+    snapshot.setIo(safely("host.io", hostId, () -> io(hostId), new HostSnapshotVO.IoInfo()));
     return snapshot;
   }
 
@@ -63,17 +67,24 @@ class OshiHostMetricsProvider {
   private List<HostSnapshotVO.FilesystemInfo> filesystems() {
     List<HostSnapshotVO.FilesystemInfo> result = new ArrayList<>();
     for (var store : systemInfo.getOperatingSystem().getFileSystem().getFileStores()) {
-      if (store.getTotalSpace() <= 0 || isSynthetic(store.getType())) continue;
-      HostSnapshotVO.FilesystemInfo item = new HostSnapshotVO.FilesystemInfo();
-      long used = Math.max(0, store.getTotalSpace() - store.getUsableSpace());
-      item.setName(store.getName());
-      item.setMount(store.getMount());
-      item.setType(store.getType());
-      item.setTotal(store.getTotalSpace());
-      item.setUsed(used);
-      item.setAvailable(store.getUsableSpace());
-      item.setUsage((double) used / store.getTotalSpace());
-      result.add(item);
+      try {
+        if (store.getTotalSpace() <= 0 || isSynthetic(store.getType())) continue;
+        HostSnapshotVO.FilesystemInfo item = new HostSnapshotVO.FilesystemInfo();
+        long used = Math.max(0, store.getTotalSpace() - store.getUsableSpace());
+        item.setName(store.getName());
+        item.setMount(store.getMount());
+        item.setType(store.getType());
+        item.setTotal(store.getTotalSpace());
+        item.setUsed(used);
+        item.setAvailable(store.getUsableSpace());
+        item.setUsage((double) used / store.getTotalSpace());
+        result.add(item);
+      } catch (Exception exception) {
+        warningLogger.warn(
+            "host.filesystem." + String.valueOf(store.getMount()),
+            instanceRegistry.currentHostId(),
+            exception);
+      }
     }
     return result;
   }
@@ -85,17 +96,29 @@ class OshiHostMetricsProvider {
         || normalized.equals("squashfs");
   }
 
-  private HostSnapshotVO.IoInfo io() {
+  private HostSnapshotVO.IoInfo io(String hostId) {
     long read = 0, write = 0, receive = 0, transmit = 0;
+    boolean diskComplete = true;
+    boolean networkComplete = true;
     for (HWDiskStore disk : systemInfo.getHardware().getDiskStores()) {
-      disk.updateAttributes();
-      read += disk.getReadBytes();
-      write += disk.getWriteBytes();
+      try {
+        disk.updateAttributes();
+        read += disk.getReadBytes();
+        write += disk.getWriteBytes();
+      } catch (Exception exception) {
+        diskComplete = false;
+        warningLogger.warn("host.disk." + disk.getName(), hostId, exception);
+      }
     }
     for (NetworkIF network : systemInfo.getHardware().getNetworkIFs()) {
-      network.updateAttributes();
-      receive += network.getBytesRecv();
-      transmit += network.getBytesSent();
+      try {
+        network.updateAttributes();
+        receive += network.getBytesRecv();
+        transmit += network.getBytesSent();
+      } catch (Exception exception) {
+        networkComplete = false;
+        warningLogger.warn("host.network." + network.getName(), hostId, exception);
+      }
     }
     long nanoTime = System.nanoTime();
     HostSnapshotVO.IoInfo result = new HostSnapshotVO.IoInfo();
@@ -105,15 +128,18 @@ class OshiHostMetricsProvider {
     result.setNetworkTransmitBytes(transmit);
     if (previousIoCounters != null) {
       double seconds = (nanoTime - previousIoCounters.nanoTime) / 1_000_000_000d;
-      if (seconds > 0) {
+      if (seconds > 0 && diskComplete && previousIoCounters.diskComplete) {
         result.setDiskReadBytesPerSecond(rate(read, previousIoCounters.read, seconds));
         result.setDiskWriteBytesPerSecond(rate(write, previousIoCounters.write, seconds));
+      }
+      if (seconds > 0 && networkComplete && previousIoCounters.networkComplete) {
         result.setNetworkReceiveBytesPerSecond(rate(receive, previousIoCounters.receive, seconds));
         result.setNetworkTransmitBytesPerSecond(
             rate(transmit, previousIoCounters.transmit, seconds));
       }
     }
-    previousIoCounters = new IoCounters(nanoTime, read, write, receive, transmit);
+    previousIoCounters =
+        new IoCounters(nanoTime, read, write, receive, transmit, diskComplete, networkComplete);
     return result;
   }
 
@@ -125,7 +151,24 @@ class OshiHostMetricsProvider {
     return Double.isFinite(value) && value >= 0 ? value : null;
   }
 
-  private record IoCounters(long nanoTime, long read, long write, long receive, long transmit) {}
+  private <T> T safely(
+      String collector, String hostId, java.util.function.Supplier<T> supplier, T fallback) {
+    try {
+      return supplier.get();
+    } catch (Exception exception) {
+      warningLogger.warn(collector, hostId, exception);
+      return fallback;
+    }
+  }
+
+  private record IoCounters(
+      long nanoTime,
+      long read,
+      long write,
+      long receive,
+      long transmit,
+      boolean diskComplete,
+      boolean networkComplete) {}
 
   private static final class ManagementFactoryHolder {
     private static final java.lang.management.OperatingSystemMXBean LOAD =

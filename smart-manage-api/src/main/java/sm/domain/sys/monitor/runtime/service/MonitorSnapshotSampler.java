@@ -41,34 +41,47 @@ class MonitorSnapshotSampler {
   @Scheduled(fixedDelayString = "${smart-manage.monitor.sampling.interval-ms}")
   void sampleCurrent() {
     Instant sampleTime = Instant.now();
+    HostSnapshotVO host = collectHost(sampleTime);
+    InstanceSnapshotVO instance = collectInstance(sampleTime);
+    Duration ttl = Duration.ofSeconds(properties.getSampling().getSnapshotTtlSeconds());
+    if (host != null) store.publishHost(host);
+    if (instance != null) store.publishInstance(instance);
     try {
-      HostSnapshotVO host = hostProvider.collect(sampleTime);
-      InstanceSnapshotVO instance = applicationProvider.collect(sampleTime);
-      store.publish(host, instance);
-      Duration ttl = Duration.ofSeconds(properties.getSampling().getSnapshotTtlSeconds());
-      redisTemplate.execute(
-          PUBLISH_SCRIPT,
-          java.util.List.of(
-              "sm:monitor:snapshot:host:" + host.getHostId(),
-              "sm:monitor:snapshot:instance:" + instance.getInstanceId()),
-          Long.toString(ttl.toMillis()),
-          jsonMapper.writeValueAsString(host),
-          jsonMapper.writeValueAsString(instance));
+      if (host != null && instance != null) {
+        redisTemplate.execute(
+            PUBLISH_SCRIPT,
+            java.util.List.of(
+                "sm:monitor:snapshot:host:" + host.getHostId(),
+                "sm:monitor:snapshot:instance:" + instance.getInstanceId()),
+            Long.toString(ttl.toMillis()),
+            jsonMapper.writeValueAsString(host),
+            jsonMapper.writeValueAsString(instance));
+      } else if (host != null) {
+        redisTemplate
+            .opsForValue()
+            .set(
+                "sm:monitor:snapshot:host:" + host.getHostId(),
+                jsonMapper.writeValueAsString(host),
+                ttl);
+      } else if (instance != null) {
+        redisTemplate
+            .opsForValue()
+            .set(
+                "sm:monitor:snapshot:instance:" + instance.getInstanceId(),
+                jsonMapper.writeValueAsString(instance),
+                ttl);
+      }
     } catch (Exception exception) {
-      log.warn("监控实时采样失败", exception);
+      log.warn("监控当前快照写入 Redis 失败: {}", exception.getMessage());
     }
   }
 
   @Scheduled(fixedDelayString = "${smart-manage.monitor.history.interval-ms}")
   void persistHistory() {
-    MonitorSnapshotStore.SnapshotPair pair = store.current();
-    if (pair == null) return;
-    try {
-      persistHost(pair.host());
-      persistInstance(pair.instance());
-    } catch (Exception exception) {
-      log.warn("监控历史持久化失败", exception);
-    }
+    HostSnapshotVO host = store.currentHost();
+    InstanceSnapshotVO instance = store.currentInstance();
+    if (host != null) persistSafely("host", () -> persistHost(host));
+    if (instance != null) persistSafely("instance", () -> persistInstance(instance));
   }
 
   private void persistHost(HostSnapshotVO snapshot) {
@@ -179,5 +192,32 @@ WHERE EXCLUDED.sample_time>=t_sys_monitor_instance_history.sample_time
         .map(InstanceSnapshotVO.HealthComponent::getStatus)
         .findFirst()
         .orElse("UNKNOWN");
+  }
+
+  private HostSnapshotVO collectHost(Instant sampleTime) {
+    try {
+      return hostProvider.collect(sampleTime);
+    } catch (Exception exception) {
+      log.warn(
+          "Host 遥测采集失败，instanceId={}, error={}", properties.getHostId(), exception.getMessage());
+      return null;
+    }
+  }
+
+  private InstanceSnapshotVO collectInstance(Instant sampleTime) {
+    try {
+      return applicationProvider.collect(sampleTime);
+    } catch (Exception exception) {
+      log.warn("Instance 遥测采集失败: {}", exception.getMessage());
+      return null;
+    }
+  }
+
+  private void persistSafely(String scope, Runnable persistence) {
+    try {
+      persistence.run();
+    } catch (Exception exception) {
+      log.warn("监控历史持久化失败，scope={}, error={}", scope, exception.getMessage());
+    }
   }
 }

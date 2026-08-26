@@ -22,13 +22,13 @@ class MonitorAlertEvaluator {
   private final MonitorSnapshotService snapshotService;
   private final MonitorTopologyService topologyService;
   private final MonitorAlertService alertService;
+  private final MonitorMetricValueFormatter valueFormatter;
 
   @Scheduled(fixedDelayString = "${smart-manage.monitor.alert.evaluation-interval-ms}")
   void evaluate() {
     try {
       HostSnapshotVO hostSnapshot = snapshotService.currentHost();
       InstanceSnapshotVO instanceSnapshot = snapshotService.currentInstance();
-      if (hostSnapshot == null || instanceSnapshot == null) return;
       List<Map<String, Object>> rules = enabledRules();
       for (Map<String, Object> rule : rules) evaluateRule(rule, hostSnapshot, instanceSnapshot);
       rules.stream()
@@ -80,6 +80,8 @@ class MonitorAlertEvaluator {
     String code = (String) rule.get("rule_code");
     String scopeType = (String) rule.get("scope_type");
     if ("INSTANCE_OFFLINE".equals(code)) return; // 由在线注册 TTL 和持久化目录的独立检查处理。
+    if (("HOST".equals(scopeType) && host == null)
+        || ("INSTANCE".equals(scopeType) && instance == null)) return;
     Double metric = metric(code, host, instance);
     if (metric == null) return;
     BigDecimal value = BigDecimal.valueOf(metric);
@@ -100,7 +102,7 @@ class MonitorAlertEvaluator {
             recovery,
             ((Number) rule.get("repeat_interval_seconds")).intValue(),
             Boolean.TRUE.equals(rule.get("email_enabled")),
-            summary((String) rule.get("name"), scopeId, value, threshold));
+            summary(rule, scopeId, value, threshold));
     try {
       alertService.evaluateInternal(evaluation);
     } catch (DuplicateKeyException ignored) {
@@ -128,7 +130,6 @@ class MonitorAlertEvaluator {
           instance.getThreads().getStateCounts().getOrDefault("BLOCKED", 0).doubleValue();
       case "HTTP_ERROR_RATE_HIGH" -> instance.getHttp().getServerErrorRate();
       case "HTTP_LATENCY_HIGH" -> instance.getHttp().getP95Ms();
-      case "DB_HEALTH_DOWN" -> healthDown(instance, "db");
       case "DB_POOL_HIGH" ->
           ratio(instance.getDataSource().getActive(), instance.getDataSource().getMaxActive());
       case "DB_POOL_WAITING" -> (double) instance.getDataSource().getWaiting();
@@ -153,13 +154,16 @@ class MonitorAlertEvaluator {
     return value == null ? null : new BigDecimal(value.toString());
   }
 
-  private String summary(String name, String scopeId, BigDecimal value, BigDecimal threshold) {
-    return name
+  private String summary(
+      Map<String, Object> rule, String scopeId, BigDecimal value, BigDecimal threshold) {
+    String valueKind = (String) rule.get("value_kind");
+    String displayUnit = (String) rule.get("display_unit");
+    return rule.get("name")
         + "："
         + scopeId
         + " 当前值 "
-        + value.stripTrailingZeros().toPlainString()
+        + valueFormatter.format(value, valueKind, displayUnit)
         + "，阈值 "
-        + threshold.stripTrailingZeros().toPlainString();
+        + valueFormatter.format(threshold, valueKind, displayUnit);
   }
 }

@@ -21,27 +21,65 @@ public class MonitorTopologyService {
     return registry.listOnline();
   }
 
+  public List<MonitorInstanceVO> catalogInstances() {
+    Map<String, MonitorInstanceVO> online = onlineIndex();
+    return jdbcTemplate.query(
+        """
+SELECT instance_id,host_id,application_name,application_version,lifecycle,last_start_time,last_seen_time
+FROM t_sys_monitor_instance ORDER BY instance_id
+""",
+        (rs, row) -> {
+          MonitorInstanceVO live = online.get(rs.getString("instance_id"));
+          MonitorInstanceVO value = live == null ? new MonitorInstanceVO() : live;
+          value.setInstanceId(rs.getString("instance_id"));
+          value.setHostId(rs.getString("host_id"));
+          value.setApplicationName(rs.getString("application_name"));
+          value.setApplicationVersion(rs.getString("application_version"));
+          value.setLifecycle(rs.getString("lifecycle"));
+          value.setOnline(live != null);
+          value.setCurrent(registry.isCurrent(value.getInstanceId()));
+          if (live == null) {
+            value.setStartTime(
+                toIso(rs.getObject("last_start_time", java.time.OffsetDateTime.class)));
+            value.setLastSeenTime(
+                toIso(rs.getObject("last_seen_time", java.time.OffsetDateTime.class)));
+          }
+          return value;
+        });
+  }
+
   public void retire(String instanceId) {
     if (instanceId == null || instanceId.isBlank())
       throw new sm.system.exception.BizException(
           sm.system.response.ResultEnum.PARAM_ERROR, "实例 ID 不能为空");
-    lifecycleTxService.retire(instanceId.trim());
+    String targetInstanceId = instanceId.trim();
+    if (registry.listOnline().stream()
+        .anyMatch(instance -> targetInstanceId.equals(instance.getInstanceId()))) {
+      throw new sm.system.exception.BizException(
+          sm.system.response.ResultEnum.DATA_CONFLICT, "在线实例不能退役，请先停止该实例");
+    }
+    lifecycleTxService.retire(targetInstanceId);
   }
 
   public List<MonitorTopologyVO> topology() {
-    Map<String, MonitorInstanceVO> online = new HashMap<>();
-    for (var item : registry.listOnline()) online.put(item.getInstanceId(), item);
+    Map<String, MonitorInstanceVO> online = onlineIndex();
     List<MonitorTopologyVO> result =
         jdbcTemplate.query(
-            "SELECT host_id,host_name,os_name,os_version FROM t_sys_monitor_host ORDER BY"
-                + " host_name,host_id",
+            """
+            SELECT host_id,host_name,os_name,os_version
+            FROM t_sys_monitor_host host
+            WHERE EXISTS (SELECT 1 FROM t_sys_monitor_instance instance
+                          WHERE instance.host_id=host.host_id AND instance.lifecycle='ACTIVE')
+            ORDER BY host_name,host_id
+            """,
             (hostRs, row) -> host(hostRs));
     for (MonitorTopologyVO host : result) {
       List<MonitorTopologyVO.Instance> instances =
           jdbcTemplate.query(
-              "SELECT"
-                  + " instance_id,application_name,application_version,lifecycle,last_seen_time,retired_at"
-                  + " FROM t_sys_monitor_instance WHERE host_id=? ORDER BY instance_id",
+              """
+SELECT instance_id,application_name,application_version,lifecycle,last_seen_time,retired_at
+FROM t_sys_monitor_instance WHERE host_id=? AND lifecycle='ACTIVE' ORDER BY instance_id
+""",
               (rs, row) -> instance(rs, online),
               host.getHostId());
       host.setInstances(instances);
@@ -49,6 +87,16 @@ public class MonitorTopologyService {
           snapshotService.hasHostSnapshot(host.getHostId()) ? "UP" : "TELEMETRY_UNAVAILABLE");
     }
     return result;
+  }
+
+  private Map<String, MonitorInstanceVO> onlineIndex() {
+    Map<String, MonitorInstanceVO> online = new HashMap<>();
+    for (MonitorInstanceVO item : registry.listOnline()) online.put(item.getInstanceId(), item);
+    return online;
+  }
+
+  private String toIso(java.time.OffsetDateTime value) {
+    return value == null ? null : value.toInstant().toString();
   }
 
   private MonitorTopologyVO host(ResultSet rs) throws java.sql.SQLException {
