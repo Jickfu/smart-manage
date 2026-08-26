@@ -3,8 +3,6 @@ spring:
     name: smart-manage
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
-  lifecycle:
-    timeout-per-shutdown-phase: 30s
   jackson:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
@@ -17,33 +15,16 @@ spring:
     clean-disabled: true
   web:
     resources:
-      cache:
-        cachecontrol:
-          max-age: 2592000
-          cache-public: true
       chain:
         strategy:
           content:
             enabled: true
             paths: /**
       static-locations: classpath:/META-INF/resources/,classpath:/resources/,classpath:/static/,classpath:/public/
-  servlet:
-    multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
-      file-size-threshold: 500KB
-      resolve-lazily: false
   task:
     execution:
-      pool:
-        core-size: 4
-        max-size: 4
-        queue-capacity: 100
-        keep-alive: 60s
       thread-name-prefix: async-task-
     scheduling:
-      pool:
-        size: 4
       thread-name-prefix: scheduling-task-
   quartz:
     job-store-type: jdbc
@@ -54,35 +35,16 @@ spring:
       org.quartz.scheduler.instanceId: AUTO
       org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
       org.quartz.jobStore.isClustered: true
-      org.quartz.jobStore.clusterCheckinInterval: 10000
-      org.quartz.jobStore.misfireThreshold: 60000
       org.quartz.jobStore.tablePrefix: QRTZ_
-      org.quartz.threadPool.threadCount: 10
 
 server:
   shutdown: graceful
   servlet:
     context-path: /smart-manage-api
-  compression:
-    enabled: true
-  tomcat:
-    max-connections: 100
-    threads:
-      max: 200
-      min-spare: 20
-    accept-count: 10
-    connection-timeout: 20000
 
 logging:
   pattern:
     dateformat: yyyy-MM-dd HH:mm:ss.SSS
-  file:
-    name: logs/smart-manage.log
-  logback:
-    rollingpolicy:
-      max-file-size: 50MB
-      max-history: 30
-      total-size-cap: 5GB
 
 mybatis-plus:
   mapper-locations: classpath*:mapper/**/*.xml
@@ -93,7 +55,6 @@ mybatis-plus:
       id-type: assign_id
 
 jetcache:
-  statIntervalMinutes: 15
   areaInCacheName: false
   decodeFilterAllowPatterns:
     - sm.
@@ -101,8 +62,6 @@ jetcache:
     default:
       type: caffeine
       keyConvertor: jackson
-      limit: 10000
-      expireAfterWriteInMillis: 1800000
 
 sa-token:
   token-name: smtoken
@@ -111,8 +70,6 @@ sa-token:
   is-read-body: false
   is-write-header: false
   is-lasting-cookie: true
-  timeout: 86400
-  active-timeout: 18000
   is-concurrent: true
   is-share: false
   token-style: random-64
@@ -120,42 +77,12 @@ sa-token:
   is-log: false
   cookie:
     path: /
-    secure: ${SMART_MANAGE_COOKIE_SECURE:false}
     http-only: true
     same-site: Lax
 
 smart-manage:
-  infrastructure:
-    http:
-      connect-timeout: 3s
-      request-timeout: 10s
   system:
-    runtime:
-      instance-id: ${SMART_MANAGE_INSTANCE_ID:instance1}
     security:
       no-need-login: /sys/base/login,/sys/base/captcha/challenge,/sys/base/captcha/verify
-      argon2:
-        iterations: 2
-        memory: 65536
-        parallelism: 1
     log:
-      core-pool-size: 10
-      max-pool-size: 20
-      queue-capacity: 1000
-      keep-alive-seconds: 60
       thread-name-prefix: biz-log-
-  domain:
-    sys:
-      monitor:
-        # host-id 表示 Smart Manage 认知中的运行主机；缺省时使用稳定 hostname。
-        host-id: ${SMART_MANAGE_HOST_ID:}
-        sampling:
-          interval-ms: 10000
-          snapshot-ttl-seconds: 40
-        history:
-          interval-ms: 60000
-          retention-days: ${SMART_MANAGE_MONITOR_RETENTION_DAYS:7}
-          cleanup-cron: "0 20 3 * * *"
-        alert:
-          evaluation-interval-ms: 10000
-          notification-interval-ms: 10000

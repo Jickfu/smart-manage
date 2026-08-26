@@ -16,6 +16,34 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SmartManageConfigurationNamespaceTests {
 
     private static final Set<String> ALLOWED_LAYERS = Set.of("infrastructure", "system", "domain");
+    private static final Set<String> ENVIRONMENT_PROPERTY_PREFIXES = Set.of(
+            "spring.lifecycle.",
+            "spring.web.resources.cache.",
+            "spring.servlet.multipart.",
+            "spring.task.execution.pool.",
+            "spring.task.scheduling.pool.",
+            "spring.quartz.properties.org.quartz.jobStore.clusterCheckinInterval",
+            "spring.quartz.properties.org.quartz.jobStore.misfireThreshold",
+            "spring.quartz.properties.org.quartz.threadPool.threadCount",
+            "server.port",
+            "server.compression.",
+            "server.tomcat.",
+            "logging.file.",
+            "logging.logback.",
+            "jetcache.statIntervalMinutes",
+            "jetcache.local.default.limit",
+            "jetcache.local.default.expireAfterWriteInMillis",
+            "sa-token.timeout",
+            "sa-token.active-timeout",
+            "sa-token.cookie.secure",
+            "smart-manage.infrastructure.http.",
+            "smart-manage.system.runtime.",
+            "smart-manage.system.security.argon2.",
+            "smart-manage.system.log.core-pool-size",
+            "smart-manage.system.log.max-pool-size",
+            "smart-manage.system.log.queue-capacity",
+            "smart-manage.system.log.keep-alive-seconds",
+            "smart-manage.domain.");
     private final YamlPropertySourceLoader loader = new YamlPropertySourceLoader();
 
     @Test
@@ -37,11 +65,54 @@ class SmartManageConfigurationNamespaceTests {
         }
     }
 
+    @Test
+    void commonConfigurationMustNotContainEnvironmentProperties() throws IOException {
+        String[] propertyNames = propertyNames(loadSingle("application.yml"));
+
+        // 公共文件只保存环境不变量；即使各环境当前取值相同，部署参数也必须留在环境配置中。
+        List<String> environmentProperties = Arrays.stream(propertyNames)
+                .filter(this::isEnvironmentProperty)
+                .toList();
+
+        assertThat(environmentProperties)
+                .as("application.yml 不得包含具有部署属性的配置")
+                .isEmpty();
+    }
+
+    @Test
+    void profileConfigurationMustExposeCoreDeploymentContract() throws IOException {
+        for (String resourceName : List.of("application-dev.yml", "application-prod.yml")) {
+            assertThat(propertyNames(loadSingle(resourceName)))
+                    .as(resourceName + " 必须显式提供核心部署配置")
+                    .contains(
+                            "server.port",
+                            "spring.servlet.multipart.max-file-size",
+                            "sa-token.cookie.secure",
+                            "smart-manage.system.runtime.instance-id",
+                            "smart-manage.system.security.argon2.iterations",
+                            "smart-manage.domain.sys.monitor.sampling.interval-ms");
+        }
+    }
+
     private boolean belongsToAllowedLayer(String propertyName) {
         String remainingPath = propertyName.substring("smart-manage.".length());
         int separatorIndex = remainingPath.indexOf('.');
         String layer = separatorIndex < 0 ? remainingPath : remainingPath.substring(0, separatorIndex);
         return ALLOWED_LAYERS.contains(layer);
+    }
+
+    private boolean isEnvironmentProperty(String propertyName) {
+        for (String prefix : ENVIRONMENT_PROPERTY_PREFIXES) {
+            if (propertyName.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String[] propertyNames(PropertySource<?> source) {
+        assertThat(source).isInstanceOf(EnumerablePropertySource.class);
+        return ((EnumerablePropertySource<?>) source).getPropertyNames();
     }
 
     private PropertySource<?> loadSingle(String resourceName) throws IOException {

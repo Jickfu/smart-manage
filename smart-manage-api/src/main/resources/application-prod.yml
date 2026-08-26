@@ -1,14 +1,54 @@
 server:
   port: ${SMART_MANAGE_SERVER_PORT:8080}
+  compression:
+    enabled: true
+  tomcat:
+    max-connections: 100
+    threads:
+      max: 200
+      min-spare: 20
+    accept-count: 10
+    connection-timeout: 20000
 
 # 生产浏览器认证 Cookie 必须只通过 HTTPS 发送，不允许环境变量降级覆盖。
 sa-token:
   # 防御性生产覆盖：禁止 Sa-Token 内置监听器把完整会话 token 写入日志。
   is-log: false
+  timeout: 86400
+  active-timeout: 18000
   cookie:
     secure: true
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          max-age: 2592000
+          cache-public: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+      file-size-threshold: 500KB
+      resolve-lazily: false
+  task:
+    execution:
+      pool:
+        core-size: 4
+        max-size: 4
+        queue-capacity: 100
+        keep-alive: 60s
+    scheduling:
+      pool:
+        size: 4
+  quartz:
+    properties:
+      org.quartz.jobStore.clusterCheckinInterval: 10000
+      org.quartz.jobStore.misfireThreshold: 60000
+      org.quartz.threadPool.threadCount: 10
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     url: ${SMART_MANAGE_DB_URL}
@@ -43,6 +83,11 @@ spring:
       timeout: 1000ms
 
 jetcache:
+  statIntervalMinutes: 15
+  local:
+    default:
+      limit: 10000
+      expireAfterWriteInMillis: 1800000
   remote:
     default:
       type: redis
@@ -83,9 +128,19 @@ logging:
   level:
     root: INFO
     sm: INFO
+  file:
+    name: logs/smart-manage.log
+  logback:
+    rollingpolicy:
+      max-file-size: 50MB
+      max-history: 30
+      total-size-cap: 5GB
 
 smart-manage:
   infrastructure:
+    http:
+      connect-timeout: 3s
+      request-timeout: 10s
     cors:
       allowed-origins:
         - ${SMART_MANAGE_CORS_ALLOWED_ORIGIN}
@@ -96,6 +151,10 @@ smart-manage:
     runtime:
       instance-id: ${SMART_MANAGE_INSTANCE_ID}
     security:
+      argon2:
+        iterations: 2
+        memory: 65536
+        parallelism: 1
       sm4:
         key-base64: ${SMART_MANAGE_SM4_KEY}
       sm2:
@@ -105,12 +164,29 @@ smart-manage:
     upload:
       # 单实例使用 Local 时必须指向持久化并纳入备份的目录；S3/FTP 模式不会读取该目录。
       dir: ${SMART_MANAGE_UPLOAD_DIR:./upload/}
+    log:
+      core-pool-size: 10
+      max-pool-size: 20
+      queue-capacity: 1000
+      keep-alive-seconds: 60
   domain:
     sys:
       base:
         user:
           initial-administrator-password: ${SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD}
       monitor:
+        # host-id 表示 Smart Manage 认知中的运行主机；缺省时使用稳定 hostname。
+        host-id: ${SMART_MANAGE_HOST_ID:}
+        sampling:
+          interval-ms: 10000
+          snapshot-ttl-seconds: 40
+        history:
+          interval-ms: 60000
+          retention-days: ${SMART_MANAGE_MONITOR_RETENTION_DAYS:7}
+          cleanup-cron: "0 20 3 * * *"
+        alert:
+          evaluation-interval-ms: 10000
+          notification-interval-ms: 10000
         cluster:
           # 每个实例必须配置其他应用实例可直接访问的内部地址，禁止填写公网入口或负载均衡地址。
           internal-base-url: ${SMART_MANAGE_INTERNAL_BASE_URL}

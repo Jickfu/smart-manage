@@ -14,6 +14,14 @@ smart-manage:
 
 领域配置必须在 `domain` 下先声明具体领域，再按真实所有者细分应用或模块，例如监控配置使用 `smart-manage.domain.sys.monitor`。配置按能力所有权而不是读取类的位置归属，禁止在 `smart-manage` 下新增 `monitor`、`security` 等绕过架构层级的一级节点。该约束由 `SmartManageConfigurationNamespaceTests` 对所有内置环境配置执行自动化校验。
 
+## 公共配置与环境配置
+
+`application.yml` 只维护不随部署环境变化的应用身份、固定协议和架构约束，例如应用名、Profile 选择入口、JSON 规则、Flyway 安全策略、静态资源寻址、Quartz 存储结构、API context path、MyBatis-Plus 规则以及认证凭据读取方式。
+
+端口、容量、超时、连接池、线程池、文件大小限制、缓存规模、日志留存、会话时长、密码计算成本、实例身份和监控频率等具有部署属性的配置必须放在 `application-{profile}.yml` 或外部配置中。不同环境当前取值相同也不能作为上移到公共配置的理由；内置环境文件同时承担开源部署模板和配置契约的职责，允许存在有意义的重复。
+
+环境变量继续负责具体部署实例的覆盖。是否归入环境文件按配置语义判断，不按当前值是否重复判断。`SmartManageConfigurationNamespaceTests` 同时防止已识别的环境配置重新进入公共文件。
+
 ## 环境划分
 
 | Profile | 用途 | 主要配置来源 |

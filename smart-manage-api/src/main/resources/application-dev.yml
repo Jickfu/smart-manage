@@ -1,8 +1,46 @@
 # dev 是共享测试环境；敏感值由测试服务器外部配置或环境变量覆盖。
 server:
   port: 8080
+  compression:
+    enabled: true
+  tomcat:
+    max-connections: 100
+    threads:
+      max: 200
+      min-spare: 20
+    accept-count: 10
+    connection-timeout: 20000
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          max-age: 2592000
+          cache-public: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+      file-size-threshold: 500KB
+      resolve-lazily: false
+  task:
+    execution:
+      pool:
+        core-size: 4
+        max-size: 4
+        queue-capacity: 100
+        keep-alive: 60s
+    scheduling:
+      pool:
+        size: 4
+  quartz:
+    properties:
+      org.quartz.jobStore.clusterCheckinInterval: 10000
+      org.quartz.jobStore.misfireThreshold: 60000
+      org.quartz.threadPool.threadCount: 10
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     url: ${SMART_MANAGE_DB_URL:jdbc:postgresql://localhost:5432/smart_manage}
@@ -58,6 +96,11 @@ spring:
           min-idle: 2
 
 jetcache:
+  statIntervalMinutes: 15
+  local:
+    default:
+      limit: 10000
+      expireAfterWriteInMillis: 1800000
   remote:
     default:
       type: redis
@@ -71,6 +114,12 @@ jetcache:
         maxTotal: 100
         maxIdle: 10
         minIdle: 2
+
+sa-token:
+  timeout: 86400
+  active-timeout: 18000
+  cookie:
+    secure: false
 
 springdoc:
   swagger-ui:
@@ -94,8 +143,20 @@ management:
       show-details: always
       show-components: always
 
+logging:
+  file:
+    name: logs/smart-manage.log
+  logback:
+    rollingpolicy:
+      max-file-size: 50MB
+      max-history: 30
+      total-size-cap: 5GB
+
 smart-manage:
   infrastructure:
+    http:
+      connect-timeout: 3s
+      request-timeout: 10s
     cors:
       allowed-origins:
         - "http://localhost:*"
@@ -105,9 +166,15 @@ smart-manage:
         - 127.0.0.1/32
         - ::1/128
   system:
+    runtime:
+      instance-id: ${SMART_MANAGE_INSTANCE_ID:instance1}
     upload:
       dir: ${SMART_MANAGE_UPLOAD_DIR:./upload/}
     security:
+      argon2:
+        iterations: 2
+        memory: 65536
+        parallelism: 1
       sm4:
         # 公开开发密钥，仅用于本地开发和演示；生产环境禁止复用。
         key-base64: ${SMART_MANAGE_SM4_KEY:c21hcnQtbWFuYWdlLWRldg==}
@@ -116,9 +183,26 @@ smart-manage:
           # 开发密钥与 login.html 的公开开发公钥配套，禁止在生产环境复用。
           private-key: ${SMART_MANAGE_SM2_PRIVATE_KEY:00dc349799de9b5a3beef8d3d77aa7e3655c5542a10c395cc86670580b6250dfeb}
           public-key: ${SMART_MANAGE_SM2_PUBLIC_KEY:0405102042204d15e802522ea09eb609358e4c72295e0ca44727eef75faac9afb3eeaa3e9df5af87e205e6ce5cb351e4fb30c37602f32aad969d2b222f05f8fa99}
+    log:
+      core-pool-size: 10
+      max-pool-size: 20
+      queue-capacity: 1000
+      keep-alive-seconds: 60
   domain:
     sys:
       monitor:
+        # host-id 表示 Smart Manage 认知中的运行主机；缺省时使用稳定 hostname。
+        host-id: ${SMART_MANAGE_HOST_ID:}
+        sampling:
+          interval-ms: 10000
+          snapshot-ttl-seconds: 40
+        history:
+          interval-ms: 60000
+          retention-days: ${SMART_MANAGE_MONITOR_RETENTION_DAYS:7}
+          cleanup-cron: "0 20 3 * * *"
+        alert:
+          evaluation-interval-ms: 10000
+          notification-interval-ms: 10000
         cluster:
           internal-base-url: ${SMART_MANAGE_INTERNAL_BASE_URL:http://127.0.0.1:8080/smart-manage-api}
           require-https: false
