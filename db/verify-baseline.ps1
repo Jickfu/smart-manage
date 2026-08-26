@@ -1,5 +1,6 @@
 param(
-    [string]$PsqlPath = 'D:\Program Files\PostgreSQL\16\bin\psql.exe',
+    [string]$PsqlPath = 'psql',
+    [int]$ExpectedPsqlMajor = 16,
     [string]$DbHost = 'localhost',
     [int]$DbPort = 5432,
     [string]$DbUser = 'postgres',
@@ -13,14 +14,30 @@ $verifyDatabase = 'smart_manage_verify_' + (Get-Date -Format 'yyyyMMddHHmmss')
 $migrationDirectory = Join-Path $PSScriptRoot 'migration'
 $backendPomPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\smart-manage-api\pom.xml'))
 $migrationLocation = 'filesystem:' + $migrationDirectory.Replace('\', '/')
-$permissionCatalogFile = [System.IO.Path]::GetTempFileName()
-$menuPermissionCatalogFile = [System.IO.Path]::GetTempFileName()
-$featureCatalogFile = [System.IO.Path]::GetTempFileName()
 $env:PGPASSWORD = $DbPassword
 $env:PGCLIENTENCODING = 'UTF8'
 
+try {
+    $psqlCommand = Get-Command -Name $PsqlPath -CommandType Application -ErrorAction Stop |
+        Select-Object -First 1
+} catch {
+    throw "PostgreSQL Client 未安装或不在 PATH 中，可通过 -PsqlPath 显式指定 psql 路径: $PsqlPath"
+}
+$resolvedPsqlPath = $psqlCommand.Source
+$psqlVersion = & $resolvedPsqlPath --version
+if ($LASTEXITCODE -ne 0) {
+    throw "psql --version failed with exit code $LASTEXITCODE"
+}
+Write-Host "Using PostgreSQL Client: $psqlVersion ($resolvedPsqlPath)"
+if ($psqlVersion -notmatch 'PostgreSQL\)\s+(\d+)' -or [int]$Matches[1] -ne $ExpectedPsqlMajor) {
+    throw "PostgreSQL Client 主版本必须为 $ExpectedPsqlMajor，实际版本: $psqlVersion"
+}
+$permissionCatalogFile = [System.IO.Path]::GetTempFileName()
+$menuPermissionCatalogFile = [System.IO.Path]::GetTempFileName()
+$featureCatalogFile = [System.IO.Path]::GetTempFileName()
+
 function Invoke-Psql([string]$database, [string[]]$arguments) {
-    & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $database @arguments
+    & $resolvedPsqlPath -h $DbHost -p $DbPort -U $DbUser -d $database @arguments
     if ($LASTEXITCODE -ne 0) {
         throw "psql failed with exit code $LASTEXITCODE"
     }
@@ -59,7 +76,7 @@ try {
         '-c', "SELECT count(*) AS menu_count FROM t_sys_menu;",
         '-c', "SELECT count(*) AS flyway_version_count FROM flyway_schema_history WHERE success;"
     )
-    $menuFeatureMismatchCount = & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
+    $menuFeatureMismatchCount = & $resolvedPsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
         -v ON_ERROR_STOP=1 -A -t -c 'SELECT count(*) FROM t_sys_menu menu JOIN t_sys_permission permission ON permission.id = menu.permission_id WHERE menu.feature_id <> permission.feature_id'
     if ($LASTEXITCODE -ne 0 -or [int]$menuFeatureMismatchCount -ne 0) {
         throw "menu feature consistency verification failed: $menuFeatureMismatchCount mismatches"
@@ -68,19 +85,19 @@ try {
         '-v', 'ON_ERROR_STOP=1',
         '-c', "SELECT 1 / count(*) AS invalid_feature_keys_removed FROM (SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM t_sys_feature WHERE feature_key IN ('sys/base', 'sys/log', 'sys/scheduler', 'scm/procurement'))) verification;"
     )
-    $permissionNumbers = & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
+    $permissionNumbers = & $resolvedPsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
         -v ON_ERROR_STOP=1 -A -t -c 'SELECT number FROM t_sys_permission ORDER BY number'
     if ($LASTEXITCODE -ne 0) {
         throw "permission catalog query failed with exit code $LASTEXITCODE"
     }
     [System.IO.File]::WriteAllLines($permissionCatalogFile, [string[]]$permissionNumbers)
-    $menuPermissionNumbers = & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
+    $menuPermissionNumbers = & $resolvedPsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
         -v ON_ERROR_STOP=1 -A -t -c 'SELECT DISTINCT permission.number FROM t_sys_permission permission JOIN t_sys_menu menu ON menu.permission_id = permission.id ORDER BY permission.number'
     if ($LASTEXITCODE -ne 0) {
         throw "menu permission catalog query failed with exit code $LASTEXITCODE"
     }
     [System.IO.File]::WriteAllLines($menuPermissionCatalogFile, [string[]]$menuPermissionNumbers)
-    $featureKeys = & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
+    $featureKeys = & $resolvedPsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
         -v ON_ERROR_STOP=1 -A -t -c 'SELECT feature_key FROM t_sys_feature ORDER BY feature_key'
     if ($LASTEXITCODE -ne 0) {
         throw "feature catalog query failed with exit code $LASTEXITCODE"
@@ -95,7 +112,7 @@ try {
 }
 finally {
     # The database name is generated internally, so cleanup cannot target a caller-supplied database.
-    & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d postgres -v ON_ERROR_STOP=1 `
+    & $resolvedPsqlPath -h $DbHost -p $DbPort -U $DbUser -d postgres -v ON_ERROR_STOP=1 `
         -c "DROP DATABASE IF EXISTS $verifyDatabase WITH (FORCE)"
     Remove-Item -LiteralPath $permissionCatalogFile -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $menuPermissionCatalogFile -Force -ErrorAction SilentlyContinue

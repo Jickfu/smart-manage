@@ -49,6 +49,8 @@ D:\Program Files\PostgreSQL\16\bin
 C:\Program Files\PostgreSQL\16\bin
 ```
 
+Flyway 空库验证默认使用 PATH 中的 PostgreSQL Client 16。无法加入 PATH 时，使用 `-PsqlPath` 参数传入 `psql.exe` 的完整路径；客户端主版本必须和当前 CI 的 PostgreSQL 16 基线保持一致。
+
 执行 SQL 时必须使用当前环境已有的安全凭据方式，例如临时 `PGPASSWORD` 或受控连接配置。禁止把密码写入脚本、代码、文档、提交记录或回复。
 
 只有确认 Windows 终端输出乱码时，才临时调整查询输出的客户端编码；数据库写入始终使用 UTF-8。

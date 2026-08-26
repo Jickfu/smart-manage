@@ -57,7 +57,7 @@ jobs:
         run: git diff --exit-code -- smart-manage-web/src/domain/common/registry/registry.gen.ts
 
   migrations:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16
@@ -80,6 +80,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install PostgreSQL Client 16
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client-16
+          psql --version
       - name: Verify migrations from an empty database
         shell: pwsh
-        run: ./db/verify-baseline.ps1 -PsqlPath /usr/bin/psql
+        run: ./db/verify-baseline.ps1
