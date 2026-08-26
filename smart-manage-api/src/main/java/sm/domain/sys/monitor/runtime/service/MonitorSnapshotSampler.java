@@ -7,11 +7,12 @@ import java.util.Comparator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import sm.domain.sys.monitor.common.config.MonitorProperties;
+import sm.domain.sys.monitor.common.service.MonitorInstanceRegistry;
+import sm.domain.sys.monitor.runtime.model.vo.HostObservationSourceVO;
 import sm.domain.sys.monitor.runtime.model.vo.HostSnapshotVO;
 import sm.domain.sys.monitor.runtime.model.vo.InstanceSnapshotVO;
 import tools.jackson.databind.json.JsonMapper;
@@ -21,15 +22,6 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 @Slf4j
 class MonitorSnapshotSampler {
-  private static final DefaultRedisScript<Long> PUBLISH_SCRIPT =
-      new DefaultRedisScript<>(
-          """
-          redis.call('PSETEX', KEYS[1], ARGV[1], ARGV[2])
-          redis.call('PSETEX', KEYS[2], ARGV[1], ARGV[3])
-          return 1
-          """,
-          Long.class);
-
   private final OshiHostMetricsProvider hostProvider;
   private final ApplicationMetricsProvider applicationProvider;
   private final MonitorSnapshotStore store;
@@ -37,6 +29,7 @@ class MonitorSnapshotSampler {
   private final JsonMapper jsonMapper;
   private final JdbcTemplate jdbcTemplate;
   private final MonitorProperties properties;
+  private final MonitorInstanceRegistry instanceRegistry;
 
   @Scheduled(fixedDelayString = "${smart-manage.monitor.sampling.interval-ms}")
   void sampleCurrent() {
@@ -47,23 +40,8 @@ class MonitorSnapshotSampler {
     if (host != null) store.publishHost(host);
     if (instance != null) store.publishInstance(instance);
     try {
-      if (host != null && instance != null) {
-        redisTemplate.execute(
-            PUBLISH_SCRIPT,
-            java.util.List.of(
-                "sm:monitor:snapshot:host:" + host.getHostId(),
-                "sm:monitor:snapshot:instance:" + instance.getInstanceId()),
-            Long.toString(ttl.toMillis()),
-            jsonMapper.writeValueAsString(host),
-            jsonMapper.writeValueAsString(instance));
-      } else if (host != null) {
-        redisTemplate
-            .opsForValue()
-            .set(
-                "sm:monitor:snapshot:host:" + host.getHostId(),
-                jsonMapper.writeValueAsString(host),
-                ttl);
-      } else if (instance != null) {
+      if (host != null) publishHostSource(host, ttl);
+      if (instance != null) {
         redisTemplate
             .opsForValue()
             .set(
@@ -74,6 +52,28 @@ class MonitorSnapshotSampler {
     } catch (Exception exception) {
       log.warn("监控当前快照写入 Redis 失败: {}", exception.getMessage());
     }
+  }
+
+  private void publishHostSource(HostSnapshotVO host, Duration ttl) throws Exception {
+    String hostId = host.getHostId();
+    String instanceId = instanceRegistry.currentInstanceId();
+    HostObservationSourceVO source = new HostObservationSourceVO();
+    source.setHostId(hostId);
+    source.setInstanceId(instanceId);
+    source.setSnapshot(host);
+    redisTemplate
+        .opsForValue()
+        .set(
+            MonitorSnapshotService.hostSourceKey(hostId, instanceId),
+            jsonMapper.writeValueAsString(source),
+            ttl);
+    String sourceIndexKey = MonitorSnapshotService.hostSourceIndexKey(hostId);
+    long sampleTime = host.getSampleTime().toEpochMilli();
+    redisTemplate.opsForZSet().add(sourceIndexKey, instanceId, sampleTime);
+    redisTemplate
+        .opsForZSet()
+        .removeRangeByScore(sourceIndexKey, 0, sampleTime - ttl.toMillis());
+    redisTemplate.expire(sourceIndexKey, ttl);
   }
 
   @Scheduled(fixedDelayString = "${smart-manage.monitor.history.interval-ms}")

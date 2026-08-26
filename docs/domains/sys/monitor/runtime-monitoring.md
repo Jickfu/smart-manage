@@ -21,13 +21,13 @@
 
 后台默认每 10 秒采样并将当前快照以 TTL 写入 Redis，每分钟将固定结构历史 UPSERT 到 PostgreSQL。前端刷新频率只影响展示，不承担采样职责。历史默认保留 7 天并定时清理，查询范围必须受限并按范围聚合。
 
-每个实例只由本机唯一采样器推进 Host 和 Instance 快照；Host Redis key 只保存 Host Snapshot，Instance key 只保存 JVM/应用 Snapshot。两类采集独立降级，单个 OSHI/JVM collector 失败不阻断其他指标。历史通过 `(host_id, sample_bucket)` 与 `(instance_id, sample_bucket)` 唯一约束收敛多实例并发。
+每个实例只由本机唯一采样器推进 Host 和 Instance 快照；Host 观测按 `{hostId}:{instanceId}` 写入独立 TTL source key，Instance key 只保存 JVM/应用 Snapshot。两类采集独立降级，单个 OSHI/JVM collector 失败不阻断其他指标。历史通过 `(host_id, sample_bucket)` 与 `(instance_id, sample_bucket)` 唯一约束收敛多实例并发。
 
 重要 Collector 明确携带可用性：内存、线程、连接池、健康、IO 和整体文件系统采集失败时为 `UNAVAILABLE`，对应数值为未知而非零。主机静态元数据采集失败仍保留 `hostId` 与采样时间，应用快照也始终保留 `instanceId`、`hostId` 与采样时间。历史未知值写为 SQL `NULL`，前端实时区显示“-”，趋势图保留断点。
 
 本地 Snapshot Store 按 `smart-manage.monitor.sampling.snapshot-ttl-seconds` 检查采样时间，语义与 Redis TTL 一致；过期快照不会继续用于告警或被历史任务重复写入。
 
-Host 规则的当前观测不读取本地 Snapshot Store，而统一读取 `sm:monitor:snapshot:host:{hostId}`。Redis 值采用最后写入获胜，读取时必须同时校验 key 与值内 `hostId` 一致、`sampleTime` 未超过统一 TTL；否则按 Host 指标未知处理。Instance 规则仍读取当前 JVM 的本地新鲜 Instance Snapshot。Host 历史保持各 JVM 本地采样写入 PostgreSQL，并由 `(host_id, sample_bucket)` UPSERT 保留该分钟最新采样。
+Host 规则和 Host Current Telemetry 不读取本地 Snapshot Store，而共同读取 `sm:monitor:snapshot:host-source:{hostId}:{instanceId}` 候选观测。系统按 metric 过滤 Collector 未知和过期 source，再选择 `sampleTime` 最新的有效值；不取最大值或平均值。读取时校验 source key 对应的 `hostId / instanceId`、值内身份和统一 TTL，只有所有新鲜 source 对该 metric 均不可用时才按未知处理。Instance 规则仍读取当前 JVM 的本地新鲜 Instance Snapshot。Host 历史保持各 JVM 本地采样写入 PostgreSQL，并由 `(host_id, sample_bucket)` UPSERT 保留该分钟最新采样。
 
 Host Catalog 是历史目录；Current Topology 只展示仍有 `ACTIVE` 实例的 Host。实例选择来自持久化目录，明确区分在线、离线和已退役；离线或退役实例的实时遥测显示不可用，但历史趋势仍可查询。较长范围的历史 P95/P99 取查询桶内最差一分钟值。
 

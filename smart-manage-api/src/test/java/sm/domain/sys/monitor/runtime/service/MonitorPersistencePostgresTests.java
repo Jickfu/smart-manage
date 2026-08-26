@@ -56,7 +56,8 @@ class MonitorPersistencePostgresTests {
             mock(StringRedisTemplate.class),
             JsonMapper.builder().build(),
             jdbcTemplate,
-            properties);
+            properties,
+            mock(MonitorInstanceRegistry.class));
   }
 
   @AfterEach

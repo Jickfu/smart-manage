@@ -14,7 +14,7 @@
 
 活动事件通过 `(rule_id, scope_type, scope_id)` 条件唯一索引保证同一对象同一规则只有一个 PENDING/FIRING 事件，状态评估在事务内锁定活动事件。多实例同时评估时由数据库唯一约束和行锁收敛，不使用 JVM 锁、分布式选主或 Redis 锁。
 
-Host 规则不使用各 JVM 的本地 Host Snapshot，而按 `hostId` 读取共享 Redis canonical Snapshot，并校验快照身份、采样时间和 TTL。同一 Host 上的多个 JVM 因而基于同一观测值参与数据库并发收敛；canonical Snapshot 不可用时进入既有指标未知语义。Instance 规则仍使用当前 JVM 的本地新鲜 Instance Snapshot。
+Host 规则不使用各 JVM 的本地 Host Snapshot，而从共享 Redis 中该 Host 的独立实例 source observations 按 metric 选择 freshest valid observation。较新的 UNKNOWN source 不会覆盖其他仍新鲜的有效 source；不取最大值或平均值。系统校验 source 的 Host/Instance 身份、采样时间和 TTL，只有全部新鲜 source 对目标 metric 均不可用时才进入既有指标未知语义。Instance 规则仍使用当前 JVM 的本地新鲜 Instance Snapshot。
 
 状态事务在创建新事件前以共享锁重新验证规则仍启用；INSTANCE 作用域同时验证实例仍为 ACTIVE。规则停用与实例退役的写锁因此能和已经读取旧状态的 Evaluator 收敛，最终不会留下新的活动事件。
 

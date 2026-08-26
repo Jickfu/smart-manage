@@ -1,6 +1,11 @@
 package sm.domain.sys.monitor.runtime.service;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -26,7 +31,7 @@ public class MonitorSnapshotService {
 
   public MonitorCurrentTelemetryVO<HostSnapshotVO> host(String hostId) {
     requireCatalogObject("t_sys_monitor_host", "host_id", hostId, "主机不存在");
-    HostSnapshotVO snapshot = find("sm:monitor:snapshot:host:" + hostId, HostSnapshotVO.class);
+    HostSnapshotVO snapshot = currentCanonicalHost(hostId);
     return snapshot == null
         ? MonitorCurrentTelemetryVO.unavailable()
         : MonitorCurrentTelemetryVO.available(snapshot);
@@ -45,36 +50,16 @@ public class MonitorSnapshotService {
         : MonitorCurrentTelemetryVO.available(snapshot);
   }
 
-  public HostSnapshotVO currentHost() {
-    return store.currentHost();
-  }
-
-  /**
-   * 告警引擎使用的 Host 权威观测。同一 Host 上的所有 JVM 必须读取同一个 Redis 快照，避免各自的
-   * 本地 OSHI 采样把 Host 规则评估成不同事实。
-   */
+  /** 按 metric 从同一 Host 的新鲜实例观测中选取最新有效值，供当前遥测和 Host 告警共同使用。 */
   public HostSnapshotVO currentCanonicalHost(String hostId) {
     if (hostId == null || hostId.isBlank()) return null;
     String normalizedHostId = hostId.trim();
     try {
-      HostSnapshotVO snapshot =
-          find("sm:monitor:snapshot:host:" + normalizedHostId, HostSnapshotVO.class);
-      if (snapshot == null) return null;
-      if (!normalizedHostId.equals(snapshot.getHostId())) {
-        log.warn(
-            "忽略 Host ID 不匹配的权威监控快照：keyHostId={}，snapshotHostId={}",
-            normalizedHostId,
-            snapshot.getHostId());
-        return null;
-      }
-      Instant sampleTime = snapshot.getSampleTime();
-      long ttlSeconds = properties.getSampling().getSnapshotTtlSeconds();
-      return sampleTime != null && !Instant.now().isAfter(sampleTime.plusSeconds(ttlSeconds))
-          ? snapshot
-          : null;
-    } catch (BizException exception) {
-      // 告警调度不能因一条损坏快照中断全部规则；损坏数据按当前指标未知处理并保留可诊断日志。
-      log.warn("忽略损坏的 Host 权威监控快照：hostId={}", normalizedHostId, exception);
+      List<HostObservationSourceVO> sources = freshHostSources(normalizedHostId);
+      return sources.isEmpty() ? null : assembleCanonicalHost(normalizedHostId, sources);
+    } catch (Exception exception) {
+      // Redis 断连时 Instance 规则仍需继续评估，因此 Host source 读取失败仅令 Host 指标未知。
+      log.warn("读取 Host 观测源失败：hostId={}", normalizedHostId, exception);
       return null;
     }
   }
@@ -84,7 +69,148 @@ public class MonitorSnapshotService {
   }
 
   public boolean hasHostSnapshot(String hostId) {
-    return Boolean.TRUE.equals(redisTemplate.hasKey("sm:monitor:snapshot:host:" + hostId));
+    return currentCanonicalHost(hostId) != null;
+  }
+
+  static String hostSourceKey(String hostId, String instanceId) {
+    return "sm:monitor:snapshot:host-source:" + hostId + ":" + instanceId;
+  }
+
+  static String hostSourceIndexKey(String hostId) {
+    return "sm:monitor:snapshot:host-sources:" + hostId;
+  }
+
+  private List<HostObservationSourceVO> freshHostSources(String hostId) throws Exception {
+    long ttlMillis = properties.getSampling().getSnapshotTtlSeconds() * 1000L;
+    long cutoff = System.currentTimeMillis() - ttlMillis;
+    Set<String> instanceIds =
+        redisTemplate
+            .opsForZSet()
+            .rangeByScore(hostSourceIndexKey(hostId), cutoff, Double.MAX_VALUE);
+    if (instanceIds == null || instanceIds.isEmpty()) return List.of();
+    List<String> sourceInstanceIds = new ArrayList<>(instanceIds);
+    List<String> keys = new ArrayList<>(sourceInstanceIds.size());
+    for (String instanceId : sourceInstanceIds) keys.add(hostSourceKey(hostId, instanceId));
+    List<String> jsonValues = redisTemplate.opsForValue().multiGet(keys);
+    if (jsonValues == null) return List.of();
+    List<HostObservationSourceVO> result = new ArrayList<>();
+    int valueCount = Math.min(keys.size(), jsonValues.size());
+    for (int index = 0; index < valueCount; index++) {
+      String json = jsonValues.get(index);
+      if (json == null) continue;
+      String expectedInstanceId = sourceInstanceIds.get(index);
+      try {
+        HostObservationSourceVO source = jsonMapper.readValue(json, HostObservationSourceVO.class);
+        if (validSource(hostId, expectedInstanceId, source)) result.add(source);
+      } catch (Exception exception) {
+        log.warn(
+            "忽略损坏的 Host 观测源：hostId={}，instanceId={}",
+            hostId,
+            expectedInstanceId,
+            exception);
+      }
+    }
+    return result;
+  }
+
+  private boolean validSource(
+      String hostId, String expectedInstanceId, HostObservationSourceVO source) {
+    HostSnapshotVO snapshot = source == null ? null : source.getSnapshot();
+    Instant sampleTime = snapshot == null ? null : snapshot.getSampleTime();
+    boolean identityMatches =
+        source != null
+            && snapshot != null
+            && hostId.equals(source.getHostId())
+            && expectedInstanceId.equals(source.getInstanceId())
+            && hostId.equals(snapshot.getHostId());
+    boolean fresh =
+        sampleTime != null
+            && !Instant.now()
+                .isAfter(
+                    sampleTime.plusSeconds(properties.getSampling().getSnapshotTtlSeconds()));
+    if (!identityMatches || !fresh) {
+      log.warn(
+          "忽略身份不匹配或过期的 Host 观测源：hostId={}，instanceId={}", hostId, expectedInstanceId);
+    }
+    return identityMatches && fresh;
+  }
+
+  private HostSnapshotVO assembleCanonicalHost(
+      String hostId, List<HostObservationSourceVO> sources) {
+    HostSnapshotVO base = newest(sources, snapshot -> true).getSnapshot();
+    HostSnapshotVO result = new HostSnapshotVO();
+    result.setHostId(hostId);
+    result.setHostname(base.getHostname());
+    result.setSampleTime(base.getSampleTime());
+    result.setUptimeMs(base.getUptimeMs());
+    result.setOs(base.getOs());
+
+    HostSnapshotVO.CpuInfo cpu = new HostSnapshotVO.CpuInfo();
+    HostObservationSourceVO cpuUsage =
+        newest(sources, snapshot -> snapshot.getCpu() != null && snapshot.getCpu().getUsage() != null);
+    HostObservationSourceVO loadAverage =
+        newest(
+            sources,
+            snapshot -> snapshot.getCpu() != null && snapshot.getCpu().getLoadAverage() != null);
+    cpu.setUsage(cpuUsage == null ? null : cpuUsage.getSnapshot().getCpu().getUsage());
+    cpu.setLoadAverage(
+        loadAverage == null ? null : loadAverage.getSnapshot().getCpu().getLoadAverage());
+    result.setCpu(cpu);
+
+    HostSnapshotVO.MemoryInfo memory = new HostSnapshotVO.MemoryInfo();
+    HostObservationSourceVO memoryUsage =
+        newest(
+            sources,
+            snapshot ->
+                snapshot.getMemory() != null
+                    && snapshot.getMemory().isCollectorAvailable()
+                    && snapshot.getMemory().getTotal() > 0);
+    HostObservationSourceVO swapUsage =
+        newest(
+            sources,
+            snapshot ->
+                snapshot.getMemory() != null
+                    && snapshot.getMemory().isCollectorAvailable()
+                    && snapshot.getMemory().getSwapTotal() > 0);
+    if (memoryUsage != null) {
+      HostSnapshotVO.MemoryInfo selected = memoryUsage.getSnapshot().getMemory();
+      memory.setTotal(selected.getTotal());
+      memory.setAvailable(selected.getAvailable());
+    }
+    if (swapUsage != null) {
+      HostSnapshotVO.MemoryInfo selected = swapUsage.getSnapshot().getMemory();
+      memory.setSwapTotal(selected.getSwapTotal());
+      memory.setSwapUsed(selected.getSwapUsed());
+    }
+    memory.setCollectorAvailable(memoryUsage != null || swapUsage != null);
+    result.setMemory(memory);
+
+    HostObservationSourceVO filesystems =
+        newest(
+            sources,
+            snapshot ->
+                snapshot.isFilesystemsAvailable()
+                    && snapshot.getFilesystems() != null
+                    && snapshot.getFilesystems().stream()
+                        .anyMatch(filesystem -> filesystem.getUsage() != null));
+    result.setFilesystemsAvailable(filesystems != null);
+    result.setFilesystems(
+        filesystems == null ? List.of() : filesystems.getSnapshot().getFilesystems());
+
+    HostObservationSourceVO io =
+        newest(
+            sources,
+            snapshot -> snapshot.getIo() != null && snapshot.getIo().isCollectorAvailable());
+    result.setIo(io == null ? new HostSnapshotVO.IoInfo() : io.getSnapshot().getIo());
+    return result;
+  }
+
+  private HostObservationSourceVO newest(
+      List<HostObservationSourceVO> sources, Predicate<HostSnapshotVO> validMetric) {
+    return sources.stream()
+        .filter(source -> validMetric.test(source.getSnapshot()))
+        .max(Comparator.comparing(source -> source.getSnapshot().getSampleTime()))
+        .orElse(null);
   }
 
   private <T> T find(String key, Class<T> type) {

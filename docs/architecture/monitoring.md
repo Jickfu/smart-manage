@@ -26,9 +26,9 @@ OshiHostMetricsProvider + ApplicationMetricsProvider
 
 `MonitorSnapshotSampler` 是唯一调用指标 Provider 的组件。CPU ticks、IO 计数器和 HTTP 计数器差值只在该链路推进。历史、告警和 Controller 只读取已发布快照，不触发 OSHI 或 JVM 重新采集。
 
-Host Snapshot 只包含 OS、Host CPU/内存/交换区、文件系统、磁盘/网络 IO 和主机 uptime，写入 `sm:monitor:snapshot:host:{hostId}`。Instance Snapshot 只包含 JVM、进程 CPU、堆/非堆、线程、GC、HTTP、连接池和健康状态，写入 `sm:monitor:snapshot:instance:{instanceId}`。两类快照独立推进，一个 Provider 失败不能阻断另一类快照。所有 API 时间使用 ISO-8601。
+Host Snapshot 只包含 OS、Host CPU/内存/交换区、文件系统、磁盘/网络 IO 和主机 uptime。每个实例将自己的 Host 观测写入独立 TTL key `sm:monitor:snapshot:host-source:{hostId}:{instanceId}`，Host source 索引只负责发现候选实例；Instance Snapshot 只包含 JVM、进程 CPU、堆/非堆、线程、GC、HTTP、连接池和健康状态，写入 `sm:monitor:snapshot:instance:{instanceId}`。两类快照独立推进，一个 Provider 失败不能阻断另一类快照。所有 API 时间使用 ISO-8601。
 
-Host 作用域告警统一读取 `sm:monitor:snapshot:host:{hostId}` 作为同一 Host 的权威当前观测，采用最后写入获胜，并校验快照内 `hostId`、`sampleTime` 与统一 TTL；键值身份不一致、过期、缺失或损坏均视为指标未知。Instance 作用域告警继续读取当前 JVM 的本地新鲜 Instance Snapshot。Host 历史仍由各 JVM 持久化本地 Host Snapshot，通过一分钟唯一键 UPSERT 和采样时间比较保留最新样本；当前告警观测与历史写入职责不得混用。
+Host 作用域告警和 Host Current Telemetry 复用同一个 canonical 组装逻辑：对目标 metric 从该 Host 全部新鲜 source 中选择 `sampleTime` 最新的有效观测，不取最大值或平均值；单个 source 的 Collector 未知不能覆盖其他 source 的有效观测。source key 使用独立统一 TTL，并校验 key 对应的 `hostId / instanceId`、值内身份和 `sampleTime`；只有所有新鲜 source 对目标 metric 均不可用时，该 metric 才未知。Instance 作用域告警继续读取当前 JVM 的本地新鲜 Instance Snapshot。Host 历史仍由各 JVM 持久化本地 Host Snapshot，通过一分钟唯一键 UPSERT 和采样时间比较保留最新样本；当前告警观测与历史写入职责不得混用。
 
 CPU、内存、文件系统、磁盘、网络、JVM、线程、GC、HTTP、连接池和健康组件按 collector 隔离。局部失败只令对应字段未知或集合缺失；同一 collector 的重复异常日志按时间限频，并携带 collector 与 Host/Instance 身份。
 
