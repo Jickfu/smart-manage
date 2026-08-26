@@ -14,6 +14,7 @@
 - [数据权限设计](./architecture/data-permission.md)
 - [日志数据生命周期](./architecture/log-lifecycle.md)
 - [前端页面注册约定](./architecture/page-registration-convention.md)
+- [内建监控架构](./architecture/monitoring.md)
 
 `architecture/` 只描述当前已经生效的设计和边界，不记录实施计划或历史进度。
 

@@ -1,6 +1,12 @@
 import request from '@/api/request';
 import type { Result } from '@/types/api';
-import type { HistoryPoint, MonitorHost, MonitorInstance, RuntimeSnapshot } from './types';
+import type {
+  HistoryPoint,
+  HostSnapshot,
+  InstanceSnapshot,
+  MonitorHost,
+  MonitorInstance,
+} from './types';
 
 export const runtimeMonitorApi = {
   instances: () =>
@@ -9,10 +15,20 @@ export const runtimeMonitorApi = {
       .then((r) => r.data.data),
   topology: () =>
     request.get<Result<MonitorHost[]>>('/sys/monitor/runtime/topology').then((r) => r.data.data),
-  snapshot: (instanceId?: string) =>
+  hostSnapshot: (hostId: string) =>
     request
-      .get<Result<RuntimeSnapshot>>('/sys/monitor/runtime/snapshot', { params: { instanceId } })
+      .get<Result<HostSnapshot>>('/sys/monitor/runtime/host-snapshot', { params: { hostId } })
       .then((r) => r.data.data),
+  instanceSnapshot: (instanceId?: string) =>
+    request
+      .get<
+        Result<InstanceSnapshot>
+      >('/sys/monitor/runtime/instance-snapshot', { params: { instanceId } })
+      .then((r) => r.data.data),
+  retire: (instanceId: string) =>
+    request.post<Result<void>>('/sys/monitor/runtime/instances/retire', undefined, {
+      params: { instanceId },
+    }),
   history: (scopeType: 'HOST' | 'INSTANCE', scopeId: string, range: string) =>
     request
       .get<

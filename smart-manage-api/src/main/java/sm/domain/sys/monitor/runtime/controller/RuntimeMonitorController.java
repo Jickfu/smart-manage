@@ -1,53 +1,61 @@
 package sm.domain.sys.monitor.runtime.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import sm.domain.sys.monitor.common.model.vo.MonitorInstanceVO;
 import sm.domain.sys.monitor.runtime.constant.RuntimeMonitorPermission;
-import sm.domain.sys.monitor.runtime.model.vo.RuntimeSnapshotVO;
-import sm.domain.sys.monitor.runtime.service.RuntimeMonitorService;
+import sm.domain.sys.monitor.runtime.model.vo.*;
+import sm.domain.sys.monitor.runtime.service.*;
 import sm.system.response.Result;
 
-import java.util.List;
-
-/**
- * 内建运行监控接口。
- */
 @RestController
-@Tag(name = "运维中心-运行监控", description = "主机、应用实例、实时快照与历史趋势")
+@RequestMapping("/sys/monitor/runtime")
 @RequiredArgsConstructor
 public class RuntimeMonitorController {
+  private final MonitorTopologyService topologyService;
+  private final MonitorHistoryService historyService;
+  private final MonitorSnapshotService snapshotService;
 
-    private final RuntimeMonitorService service;
+  @GetMapping("/instances")
+  @SaCheckPermission(RuntimeMonitorPermission.VIEW)
+  public Result<List<MonitorInstanceVO>> instances() {
+    return Result.success(topologyService.onlineInstances());
+  }
 
-    @GetMapping("/sys/monitor/runtime/instances")
-    @Operation(summary = "在线实例", description = "查询 Redis 注册表中的在线应用实例")
-    @SaCheckPermission(RuntimeMonitorPermission.VIEW)
-    public Result<List<MonitorInstanceVO>> instances() {
-        return Result.success(service.instances());
-    }
+  @GetMapping("/topology")
+  @SaCheckPermission(RuntimeMonitorPermission.VIEW)
+  public Result<List<MonitorTopologyVO>> topology() {
+    return Result.success(topologyService.topology());
+  }
 
-    @GetMapping("/sys/monitor/runtime/snapshot")
-    @Operation(summary = "节点信息", description = "获取指定在线实例 JVM/OS/CPU/内存/磁盘/线程/GC 聚合信息")
-    @SaCheckPermission(RuntimeMonitorPermission.VIEW)
-    public Result<RuntimeSnapshotVO> snapshot(@RequestParam(required = false) String instanceId) {
-        return Result.success(service.snapshot(instanceId));
-    }
+  @GetMapping("/host-snapshot")
+  @SaCheckPermission(RuntimeMonitorPermission.VIEW)
+  public Result<HostSnapshotVO> hostSnapshot(@RequestParam String hostId) {
+    return Result.success(snapshotService.host(hostId));
+  }
 
-    @GetMapping("/sys/monitor/runtime/topology")
-    @SaCheckPermission(RuntimeMonitorPermission.VIEW)
-    public Result<java.util.List<java.util.Map<String,Object>>> topology() { return Result.success(service.topology()); }
+  @GetMapping("/instance-snapshot")
+  @SaCheckPermission(RuntimeMonitorPermission.VIEW)
+  public Result<InstanceSnapshotVO> instanceSnapshot(
+      @RequestParam(required = false) String instanceId) {
+    return Result.success(snapshotService.instance(instanceId));
+  }
 
-    @GetMapping("/sys/monitor/runtime/history")
-    @SaCheckPermission(RuntimeMonitorPermission.VIEW)
-    public Result<java.util.List<java.util.Map<String,Object>>> history(@RequestParam String scopeType,
-            @RequestParam String scopeId, @RequestParam(defaultValue = "1h") String range) {
-        return Result.success(service.history(scopeType, scopeId, range));
-    }
+  @GetMapping("/history")
+  @SaCheckPermission(RuntimeMonitorPermission.VIEW)
+  public Result<List<MonitorHistoryPointVO>> history(
+      @RequestParam String scopeType,
+      @RequestParam String scopeId,
+      @RequestParam(defaultValue = "1h") String range) {
+    return Result.success(historyService.history(scopeType, scopeId, range));
+  }
 
+  @PostMapping("/instances/retire")
+  @SaCheckPermission(RuntimeMonitorPermission.MANAGE)
+  public Result<Void> retire(@RequestParam String instanceId) {
+    topologyService.retire(instanceId);
+    return Result.success();
+  }
 }

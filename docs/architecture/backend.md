@@ -1,5 +1,7 @@
 # 后端架构
 
+内建监控的 Host/Instance 边界、唯一采样链、状态机和 Redis/PostgreSQL 职责见[内建监控架构](./monitoring.md)。
+
 ## 分层边界
 
 - `sm.infrastructure`：第三方技术、外部设施和技术适配，例如 CORS、JSON、Redis、MyBatis-Plus、数据源与出站 HTTP 客户端配置。

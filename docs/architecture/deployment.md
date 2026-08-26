@@ -1,5 +1,7 @@
 # 部署与多实例架构
 
+多实例必须配置唯一 `instanceId`。内建监控通过每 JVM `registrationToken` 原子拒绝重复活跃 ID，并使用稳定 `hostId` 归并同主机实例，见[内建监控架构](./monitoring.md)。
+
 ## 目标拓扑
 
 Smart Manage 保持模块化单体，不拆分微服务。生产目标部署方式为：

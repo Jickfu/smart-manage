@@ -105,6 +105,7 @@ smart-manage:
       internal-base-url: ${SMART_MANAGE_INTERNAL_BASE_URL}
       require-https: true
       heartbeat-interval-ms: 10000
+      catalog-refresh-interval-ms: 300000
       instance-ttl-ms: 30000
       request-timeout-ms: 10000
   sm2:

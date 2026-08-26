@@ -11,13 +11,22 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { EChartsCoreOption } from 'echarts/core';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { runtimeMonitorApi } from './api';
 import { runtimeMonitorQueryKeys as keys } from './queryKeys';
-import type { MonitorHost, RuntimeSnapshot } from './types';
+import type { HistoryPoint, HostSnapshot, InstanceSnapshot, MonitorHost } from './types';
+import {
+  monitorBytes as bytes,
+  monitorPercent as percent,
+  monitorRatio as ratio,
+} from './formatters';
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
+import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { runtimeMonitorAccess } from './permissions';
 import './runtimeMonitor.css';
 
 const SmChart = lazy(() => import('@/domain/common/chart/SmChart'));
@@ -27,20 +36,16 @@ const ranges = [
   { label: '24 小时', value: '24h' },
   { label: '7 天', value: '7d' },
 ];
-const percent = (value?: number) => Math.max(0, Math.min(100, (value ?? 0) * 100));
-const ratio = (used: number, total: number) => (total > 0 ? percent(used / total) : 0);
-const bytes = (value?: number) => {
-  const safe = value ?? 0;
-  if (safe <= 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const index = Math.min(Math.floor(Math.log(safe) / Math.log(1024)), 4);
-  return `${(safe / 1024 ** index).toFixed(index ? 1 : 0)} ${units[index]}`;
-};
 
 export default function RuntimeMonitorPage({ active }: PageComponentProps) {
   const [instanceId, setInstanceId] = useState<string>();
   const [range, setRange] = useState('1h');
   const [scope, setScope] = useState<'HOST' | 'INSTANCE'>('INSTANCE');
+  const [selectedLifecycleInstanceId, setSelectedLifecycleInstanceId] = useState<string>();
+  const queryClient = useQueryClient();
+  const confirmOperation = useOperationConfirm();
+  const feedback = useOperationFeedback();
+  const { can } = usePermissionAccess(runtimeMonitorAccess.prefix);
   const topology = useQuery({
     queryKey: keys.topology(),
     queryFn: runtimeMonitorApi.topology,
@@ -57,30 +62,44 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
     instanceId ??
     instances.data?.find((item) => item.current)?.instanceId ??
     instances.data?.[0]?.instanceId;
-  const snapshot = useQuery({
-    queryKey: keys.snapshot(selectedId),
-    queryFn: () => runtimeMonitorApi.snapshot(selectedId),
+  const instanceSnapshot = useQuery({
+    queryKey: keys.instanceSnapshot(selectedId),
+    queryFn: () => runtimeMonitorApi.instanceSnapshot(selectedId),
     enabled: active && Boolean(selectedId),
     refetchInterval: active ? 10000 : false,
   });
-  const scopeId = scope === 'HOST' ? snapshot.data?.hostId : selectedId;
+  const selectedHostId = instanceSnapshot.data?.hostId;
+  const hostSnapshot = useQuery({
+    queryKey: keys.hostSnapshot(selectedHostId),
+    queryFn: () => runtimeMonitorApi.hostSnapshot(selectedHostId!),
+    enabled: active && Boolean(selectedHostId),
+    refetchInterval: active ? 10000 : false,
+  });
+  const scopeId = scope === 'HOST' ? selectedHostId : selectedId;
   const history = useQuery({
     queryKey: keys.history(scope, scopeId ?? '', range),
     queryFn: () => runtimeMonitorApi.history(scope, scopeId!, range),
     enabled: active && Boolean(scopeId),
   });
-  const chart = useMemo<EChartsCoreOption>(
-    () => historyOption(scope, history.data ?? []),
-    [history.data, scope],
-  );
+  const retire = useMutation({
+    mutationFn: runtimeMonitorApi.retire,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: keys.topology() });
+      setSelectedLifecycleInstanceId(undefined);
+      feedback.success('实例已退役');
+    },
+    onError: (error) => feedback.fromError(error, '实例退役失败'),
+  });
+  const charts = useMemo(() => historyOptions(scope, history.data ?? []), [history.data, scope]);
   return (
     <EditPageShell
       title="运行监控"
-      loading={topology.isLoading || snapshot.isLoading}
-      error={topology.error ?? snapshot.error}
+      loading={topology.isLoading || instanceSnapshot.isLoading || hostSnapshot.isLoading}
+      error={topology.error ?? instanceSnapshot.error ?? hostSnapshot.error}
       onRetry={() => {
         void topology.refetch();
-        void snapshot.refetch();
+        void instanceSnapshot.refetch();
+        void hostSnapshot.refetch();
       }}
       actions={
         <Space size={10}>
@@ -105,34 +124,53 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
           <Select value={range} options={ranges} onChange={setRange} />
           <Button
             type="primary"
-            loading={snapshot.isFetching}
+            loading={instanceSnapshot.isFetching || hostSnapshot.isFetching}
             onClick={() => {
-              void snapshot.refetch();
+              void instanceSnapshot.refetch();
+              void hostSnapshot.refetch();
               void topology.refetch();
               void history.refetch();
             }}
           >
             立即刷新
           </Button>
+          <Button
+            type="primary"
+            danger
+            disabled={!selectedLifecycleInstanceId || !can(runtimeMonitorAccess.permissions.manage)}
+            onClick={() =>
+              selectedLifecycleInstanceId &&
+              void confirmOperation({
+                type: 'warning',
+                title: '退役应用实例',
+                description: `退役 ${selectedLifecycleInstanceId} 后将不再评估离线告警。`,
+                confirmText: '确认退役',
+                onConfirm: () => retire.mutateAsync(selectedLifecycleInstanceId),
+              })
+            }
+          >
+            退役实例
+          </Button>
         </Space>
       }
     >
       <div className="sm-runtime-monitor">
-        <TopologyCard hosts={topology.data ?? []} />
-        {snapshot.data && (
+        <TopologyCard
+          hosts={topology.data ?? []}
+          selectedInstanceId={selectedLifecycleInstanceId}
+          onSelectInstance={setSelectedLifecycleInstanceId}
+        />
+        {instanceSnapshot.data && hostSnapshot.data && (
           <>
-            <SnapshotSummary snapshot={snapshot.data} />
-            <Card
-              title={`${scope === 'HOST' ? '主机' : '实例'}历史趋势`}
-              extra={
-                <Typography.Text type="secondary">后台持续采样，历史不依赖页面打开</Typography.Text>
-              }
-            >
-              <Suspense fallback={<div>正在加载图表</div>}>
-                <SmChart option={chart} ariaLabel="运行监控历史趋势" />
-              </Suspense>
-            </Card>
-            <FilesystemCard snapshot={snapshot.data} />
+            <SnapshotSummary host={hostSnapshot.data} instance={instanceSnapshot.data} />
+            {charts.map((chart) => (
+              <Card key={chart.title} title={chart.title}>
+                <Suspense fallback={<div>正在加载图表</div>}>
+                  <SmChart option={chart.option} ariaLabel={chart.title} />
+                </Suspense>
+              </Card>
+            ))}
+            <FilesystemCard snapshot={hostSnapshot.data} />
           </>
         )}
       </div>
@@ -140,7 +178,15 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
   );
 }
 
-function TopologyCard({ hosts }: { hosts: MonitorHost[] }) {
+function TopologyCard({
+  hosts,
+  selectedInstanceId,
+  onSelectInstance,
+}: {
+  hosts: MonitorHost[];
+  selectedInstanceId?: string;
+  onSelectInstance: (id?: string) => void;
+}) {
   return (
     <Card
       title="运行拓扑"
@@ -149,19 +195,29 @@ function TopologyCard({ hosts }: { hosts: MonitorHost[] }) {
       <Table
         size="small"
         pagination={false}
-        rowKey="host_id"
+        rowKey="hostId"
         dataSource={hosts}
         expandable={{
           expandedRowRender: (host) => (
             <Table
               size="small"
               pagination={false}
-              rowKey="instance_id"
+              rowKey="instanceId"
               dataSource={host.instances}
+              rowSelection={{
+                type: 'checkbox',
+                selectedRowKeys: selectedInstanceId ? [selectedInstanceId] : [],
+                getCheckboxProps: (item) => ({
+                  disabled: item.lifecycle === 'RETIRED' || item.online,
+                }),
+                onChange: (keys) =>
+                  onSelectInstance(keys.length === 1 ? String(keys[0]) : undefined),
+              }}
               columns={[
-                { title: '实例 ID', dataIndex: 'instance_id' },
-                { title: '应用', dataIndex: 'application_name', width: 180 },
-                { title: '版本', dataIndex: 'application_version', width: 140 },
+                { title: '实例 ID', dataIndex: 'instanceId' },
+                { title: '应用', dataIndex: 'applicationName', width: 180 },
+                { title: '版本', dataIndex: 'applicationVersion', width: 140 },
+                { title: '生命周期', dataIndex: 'lifecycle', width: 110 },
                 {
                   title: '状态',
                   dataIndex: 'online',
@@ -170,21 +226,21 @@ function TopologyCard({ hosts }: { hosts: MonitorHost[] }) {
                     <Tag color={online ? 'success' : 'default'}>{online ? '在线' : '离线'}</Tag>
                   ),
                 },
-                { title: '最后发现', dataIndex: 'last_seen_time', width: 180 },
+                { title: '最后发现', dataIndex: 'lastSeenTime', width: 180 },
               ]}
             />
           ),
         }}
         columns={[
-          { title: '主机', dataIndex: 'host_name' },
-          { title: 'Host ID', dataIndex: 'host_id', width: 200 },
+          { title: '主机', dataIndex: 'hostName' },
+          { title: 'Host ID', dataIndex: 'hostId', width: 200 },
           {
             title: '操作系统',
-            render: (_, host) => `${host.os_name ?? '-'} ${host.os_version ?? ''}`,
+            render: (_, host) => `${host.osName ?? '-'} ${host.osVersion ?? ''}`,
           },
           {
             title: '遥测状态',
-            dataIndex: 'status',
+            dataIndex: 'telemetryStatus',
             width: 180,
             render: (status: string) => (
               <Tag color={status === 'UP' ? 'success' : 'warning'}>
@@ -206,30 +262,27 @@ function Metric({ title, value }: { title: string; value: number }) {
     </Card>
   );
 }
-function SnapshotSummary({ snapshot }: { snapshot: RuntimeSnapshot }) {
+function SnapshotSummary({ host, instance }: { host: HostSnapshot; instance: InstanceSnapshot }) {
   return (
     <>
       <div className="sm-runtime-monitor-metrics">
-        <Metric title="主机 CPU" value={percent(snapshot.cpu.systemUsage)} />
-        <Metric title="进程 CPU" value={percent(snapshot.cpu.processUsage)} />
+        <Metric title="主机 CPU" value={percent(host.cpu.usage)} />
+        <Metric title="进程 CPU" value={percent(instance.cpu.processUsage)} />
         <Metric
           title="物理内存"
-          value={ratio(
-            snapshot.memory.physicalTotal - snapshot.memory.physicalAvailable,
-            snapshot.memory.physicalTotal,
-          )}
+          value={ratio(host.memory.total - host.memory.available, host.memory.total)}
         />
-        <Metric title="JVM 堆" value={ratio(snapshot.memory.heapUsed, snapshot.memory.heapMax)} />
+        <Metric title="JVM 堆" value={ratio(instance.memory.heapUsed, instance.memory.heapMax)} />
         <Metric
           title="连接池"
-          value={ratio(snapshot.dataSource.active, snapshot.dataSource.maxActive)}
+          value={ratio(instance.dataSource.active, instance.dataSource.maxActive)}
         />
       </div>
       <Card
-        title={`${snapshot.instanceId} 实时快照`}
+        title={`${instance.instanceId} 实时快照`}
         extra={
-          <Tag color={snapshot.health.status === 'UP' ? 'success' : 'error'}>
-            {snapshot.health.status}
+          <Tag color={instance.health.status === 'UP' ? 'success' : 'error'}>
+            {instance.health.status}
           </Tag>
         }
       >
@@ -237,33 +290,33 @@ function SnapshotSummary({ snapshot }: { snapshot: RuntimeSnapshot }) {
           size="small"
           column={4}
           items={[
-            { key: 'host', label: 'Host ID', children: snapshot.hostId },
-            { key: 'sample', label: '采样时间', children: snapshot.sampleTime },
+            { key: 'host', label: 'Host ID', children: host.hostId },
+            { key: 'sample', label: '采样时间', children: instance.sampleTime },
             {
               key: 'os',
               label: '操作系统',
-              children: `${snapshot.os.name} ${snapshot.os.version}`,
+              children: `${host.os.name} ${host.os.version}`,
             },
-            { key: 'jvm', label: 'JVM', children: snapshot.runtime.vmName },
+            { key: 'jvm', label: 'JVM', children: instance.runtime.vmName },
             {
               key: 'threads',
               label: '活动/阻塞线程',
-              children: `${snapshot.threads.live} / ${snapshot.threads.stateCounts.BLOCKED ?? 0}`,
+              children: `${instance.threads.live} / ${instance.threads.stateCounts.BLOCKED ?? 0}`,
             },
             {
               key: 'http',
               label: 'HTTP 请求/5xx 速率',
-              children: `${snapshot.http.requestRate?.toFixed(2) ?? '-'} / ${snapshot.http.serverErrorRate?.toFixed(2) ?? '-'} req/s`,
+              children: `${instance.http.requestRate?.toFixed(2) ?? '-'} / ${instance.http.serverErrorRate?.toFixed(2) ?? '-'} req/s`,
             },
             {
               key: 'latency',
               label: 'HTTP P95 / P99',
-              children: `${snapshot.http.p95Ms?.toFixed(1) ?? '-'} / ${snapshot.http.p99Ms?.toFixed(1) ?? '-'} ms`,
+              children: `${instance.http.p95Ms?.toFixed(1) ?? '-'} / ${instance.http.p99Ms?.toFixed(1) ?? '-'} ms`,
             },
             {
               key: 'io',
               label: '磁盘读/写',
-              children: `${bytes(snapshot.io.diskReadBytesPerSecond)}/s / ${bytes(snapshot.io.diskWriteBytesPerSecond)}/s`,
+              children: `${bytes(host.io.diskReadBytesPerSecond)}/s / ${bytes(host.io.diskWriteBytesPerSecond)}/s`,
             },
           ]}
         />
@@ -271,7 +324,7 @@ function SnapshotSummary({ snapshot }: { snapshot: RuntimeSnapshot }) {
     </>
   );
 }
-function FilesystemCard({ snapshot }: { snapshot: RuntimeSnapshot }) {
+function FilesystemCard({ snapshot }: { snapshot: HostSnapshot }) {
   return (
     <Card title="文件系统">
       <Table
@@ -300,43 +353,93 @@ function FilesystemCard({ snapshot }: { snapshot: RuntimeSnapshot }) {
     </Card>
   );
 }
-function historyOption(
+function historyOptions(
   scope: 'HOST' | 'INSTANCE',
-  points: Array<Record<string, string | number | null>>,
-): EChartsCoreOption {
-  const definitions =
+  points: HistoryPoint[],
+): Array<{ title: string; option: EChartsCoreOption }> {
+  const groups: Array<{
+    title: string;
+    definitions: Array<[string, keyof HistoryPoint, number?]>;
+  }> =
     scope === 'HOST'
       ? [
-          ['CPU %', 'cpu_usage', 100],
-          ['内存 %', 'memory_used', null],
-          ['磁盘读 B/s', 'disk_read_rate', null],
-          ['网络收 B/s', 'network_receive_rate', null],
+          {
+            title: '主机利用率',
+            definitions: [
+              ['CPU %', 'cpuUsage', 100],
+              ['内存 %', 'memoryUsage', 100],
+              ['最高文件系统 %', 'filesystemUsage', 100],
+            ],
+          },
+          {
+            title: '磁盘 IO',
+            definitions: [
+              ['读 B/s', 'diskReadBytesPerSecond'],
+              ['写 B/s', 'diskWriteBytesPerSecond'],
+            ],
+          },
+          {
+            title: '网络 IO',
+            definitions: [
+              ['接收 B/s', 'networkReceiveBytesPerSecond'],
+              ['发送 B/s', 'networkTransmitBytesPerSecond'],
+            ],
+          },
         ]
       : [
-          ['进程 CPU %', 'process_cpu', 100],
-          ['堆内存', 'heap_used', null],
-          ['线程数', 'thread_count', null],
-          ['HTTP P95 ms', 'http_p95_ms', null],
+          {
+            title: 'JVM 利用率',
+            definitions: [
+              ['进程 CPU %', 'processCpuUsage', 100],
+              ['Heap %', 'heapUsage', 100],
+              ['连接池 %', 'dbPoolUsage', 100],
+            ],
+          },
+          {
+            title: 'HTTP 流量',
+            definitions: [
+              ['QPS', 'requestRate'],
+              ['5xx req/s', 'serverErrorRate'],
+            ],
+          },
+          {
+            title: 'HTTP 延迟',
+            definitions: [
+              ['P95 ms', 'p95Ms'],
+              ['P99 ms', 'p99Ms'],
+            ],
+          },
+          {
+            title: '线程与连接池等待',
+            definitions: [
+              ['线程数', 'threadCount'],
+              ['阻塞线程', 'blockedThreadCount'],
+              ['连接池等待', 'dbWaiting'],
+            ],
+          },
         ];
-  return {
-    tooltip: { trigger: 'axis' },
-    legend: { data: definitions.map((item) => item[0]) },
-    grid: { left: 56, right: 24, top: 48, bottom: 32 },
-    xAxis: {
-      type: 'category',
-      boundaryGap: false,
-      data: points.map((item) => String(item.sample_time).replace('T', ' ').slice(0, 16)),
+  return groups.map(({ title, definitions }) => ({
+    title,
+    option: {
+      tooltip: { trigger: 'axis' },
+      legend: { data: definitions.map((item) => item[0]) },
+      grid: { left: 56, right: 24, top: 48, bottom: 32 },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: points.map((item) => item.sampleTime.replace('T', ' ').slice(0, 16)),
+      },
+      yAxis: { type: 'value' },
+      series: definitions.map(([name, key, multiplier]) => ({
+        name,
+        type: 'line',
+        smooth: true,
+        showSymbol: false,
+        data: points.map((item) => {
+          const value = Number(item[key] ?? 0);
+          return multiplier ? value * Number(multiplier) : value;
+        }),
+      })),
     },
-    yAxis: { type: 'value' },
-    series: definitions.map(([name, key, multiplier]) => ({
-      name,
-      type: 'line',
-      smooth: true,
-      showSymbol: false,
-      data: points.map((item) => {
-        const value = Number(item[String(key)] ?? 0);
-        return multiplier ? value * Number(multiplier) : value;
-      }),
-    })),
-  };
+  }));
 }

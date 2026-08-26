@@ -41,6 +41,10 @@ const severityColor: Record<string, string> = {
   WARNING: 'warning',
   CRITICAL: 'error',
 };
+const displayValue = (rule: AlertRule | undefined, value?: number) =>
+  value == null ? undefined : rule?.valueKind === 'RATIO' ? value * 100 : value;
+const persistedValue = (rule: AlertRule, value?: number) =>
+  value == null ? undefined : rule.valueKind === 'RATIO' ? value / 100 : value;
 export default function MonitorAlertPage({ active }: PageComponentProps) {
   const [editing, setEditing] = useState<AlertRule>();
   const [page, setPage] = useState(1);
@@ -76,13 +80,15 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
     form.setFieldsValue({
       enabled: rule.enabled,
       severity: rule.severity,
-      threshold: Number(rule.threshold),
-      durationSeconds: rule.duration_seconds,
-      recoveryThreshold:
-        rule.recovery_threshold == null ? undefined : Number(rule.recovery_threshold),
-      repeatIntervalSeconds: rule.repeat_interval_seconds,
-      emailEnabled: rule.email_enabled,
-      recipientUsers: rule.recipient_users ?? [],
+      threshold: displayValue(rule, Number(rule.threshold))!,
+      durationSeconds: rule.durationSeconds,
+      recoveryThreshold: displayValue(
+        rule,
+        rule.recoveryThreshold == null ? undefined : Number(rule.recoveryThreshold),
+      ),
+      repeatIntervalSeconds: rule.repeatIntervalSeconds,
+      emailEnabled: rule.emailEnabled,
+      recipientUsers: rule.recipientUsers ?? [],
       description: rule.description,
     });
   };
@@ -94,9 +100,9 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
       version: editing.version,
       enabled: values.enabled,
       severity: values.severity,
-      threshold: values.threshold,
+      threshold: persistedValue(editing, values.threshold)!,
       durationSeconds: values.durationSeconds,
-      recoveryThreshold: values.recoveryThreshold,
+      recoveryThreshold: persistedValue(editing, values.recoveryThreshold),
       repeatIntervalSeconds: values.repeatIntervalSeconds,
       emailEnabled: values.emailEnabled,
       recipientUserIds: (values.recipientUsers ?? []).map((item) => item.id),
@@ -116,7 +122,10 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
             allowClear
             placeholder="事件状态"
             value={status}
-            options={['PENDING', 'FIRING', 'RECOVERED'].map((value) => ({ value, label: value }))}
+            options={['PENDING', 'FIRING', 'RECOVERED', 'CLOSED'].map((value) => ({
+              value,
+              label: value,
+            }))}
             onChange={(value) => {
               setStatus(value);
               setPage(1);
@@ -162,7 +171,7 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
             }}
             columns={[
               { title: '规则', dataIndex: 'name' },
-              { title: '对象', dataIndex: 'scope_type', width: 100 },
+              { title: '对象', dataIndex: 'scopeType', width: 100 },
               {
                 title: '级别',
                 dataIndex: 'severity',
@@ -172,17 +181,18 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
               {
                 title: '触发 / 恢复阈值',
                 width: 180,
-                render: (_, rule) => `${rule.threshold} / ${rule.recovery_threshold ?? '-'}`,
+                render: (_, rule) =>
+                  `${displayValue(rule, rule.threshold)} / ${displayValue(rule, rule.recoveryThreshold) ?? '-'} ${rule.displayUnit}`,
               },
               {
                 title: '持续时间',
-                dataIndex: 'duration_seconds',
+                dataIndex: 'durationSeconds',
                 width: 120,
                 render: (value: number) => `${value}s`,
               },
               {
                 title: '邮件',
-                dataIndex: 'email_enabled',
+                dataIndex: 'emailEnabled',
                 width: 100,
                 render: (value: boolean) => (
                   <Tag color={value ? 'success' : 'default'}>{value ? '启用' : '关闭'}</Tag>
@@ -191,7 +201,7 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
               {
                 title: '接收人数',
                 width: 100,
-                render: (_, rule) => rule.recipient_users?.length ?? 0,
+                render: (_, rule) => rule.recipientUsers?.length ?? 0,
               },
               {
                 title: '状态',
@@ -226,9 +236,9 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
               },
             }}
             columns={[
-              { title: '开始时间', dataIndex: 'started_at', width: 180 },
-              { title: '规则', dataIndex: 'rule_name', width: 180 },
-              { title: '对象', render: (_, item) => `${item.scope_type} / ${item.scope_id}` },
+              { title: '开始时间', dataIndex: 'startedAt', width: 180 },
+              { title: '规则', dataIndex: 'ruleName', width: 180 },
+              { title: '对象', render: (_, item) => `${item.scopeType} / ${item.scopeId}` },
               {
                 title: '级别',
                 dataIndex: 'severity',
@@ -252,7 +262,7 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
               {
                 title: '最新 / 峰值',
                 width: 150,
-                render: (_, item) => `${item.last_value ?? '-'} / ${item.peak_value ?? '-'}`,
+                render: (_, item) => `${item.lastValue ?? '-'} / ${item.peakValue ?? '-'}`,
               },
               { title: '摘要', dataIndex: 'summary' },
             ]}
@@ -274,6 +284,15 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
         }
       >
         <Form form={form} layout="vertical" variant="underlined">
+          {editing && (
+            <Typography.Paragraph type="secondary">
+              指标类型：{editing.valueKind}；允许范围：
+              {displayValue(editing, editing.minValue)} ～
+              {displayValue(editing, editing.maxValue) ?? '不限'} {editing.displayUnit}
+              ；推荐触发值：
+              {displayValue(editing, editing.recommendedThreshold)} {editing.displayUnit}
+            </Typography.Paragraph>
+          )}
           <div className="sm-monitor-alert-form-grid">
             <Form.Item name="enabled" label="启用规则" valuePropName="checked">
               <Switch />
@@ -284,10 +303,20 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
               />
             </Form.Item>
             <Form.Item name="threshold" label="触发阈值" rules={[{ required: true }]}>
-              <InputNumber min={0} />
+              <InputNumber
+                disabled={editing?.valueKind === 'BOOLEAN'}
+                min={displayValue(editing, editing?.minValue)}
+                max={displayValue(editing, editing?.maxValue)}
+                suffix={editing?.displayUnit}
+              />
             </Form.Item>
             <Form.Item name="recoveryThreshold" label="恢复阈值">
-              <InputNumber min={0} />
+              <InputNumber
+                disabled={editing?.valueKind === 'BOOLEAN'}
+                min={displayValue(editing, editing?.minValue)}
+                max={displayValue(editing, editing?.maxValue)}
+                suffix={editing?.displayUnit}
+              />
             </Form.Item>
             <Form.Item name="durationSeconds" label="持续时间（秒）" rules={[{ required: true }]}>
               <InputNumber min={0} max={86400} />

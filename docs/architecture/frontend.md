@@ -1,5 +1,7 @@
 # 前端架构
 
+运维中心首页是固定业务总览；运行监控按 Host/Instance 分离快照，历史图按百分比、B/s、req/s、ms 和数量分图展示，见[内建监控架构](./monitoring.md)。
+
 ## 应用与路由
 
 应用使用 React Router `MemoryRouter`。浏览器地址保持在 `/index.html?app=...`，`app` 参数决定当前应用，页面内导航不修改浏览器 URL。

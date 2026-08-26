@@ -21,7 +21,7 @@
 
 后台默认每 10 秒采样并将当前快照以 TTL 写入 Redis，每分钟将固定结构历史 UPSERT 到 PostgreSQL。前端刷新频率只影响展示，不承担采样职责。历史默认保留 7 天并定时清理，查询范围必须受限并按范围聚合。
 
-同一 Host 的多个实例允许重复采集 OSHI 数据：Redis 的 Host Snapshot 后写覆盖前写；历史通过 `(host_id, sample_bucket)` 唯一约束保证每分钟一条。该边界不引入选主或分布式锁。
+每个实例只由本机唯一采样器推进 Host 和 Instance 快照；Host Redis key 只保存 Host Snapshot，Instance key 只保存 JVM/应用 Snapshot。历史通过 `(host_id, sample_bucket)` 与 `(instance_id, sample_bucket)` 唯一约束收敛多实例并发。
 
 当关联实例全部离线时，只能表达“主机遥测不可用”，不能断言物理主机宕机。整个 Smart Manage 集群全部不可达时无法自我告警，该场景属于外部 HTTP 可用性监控职责。
 

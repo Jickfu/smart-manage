@@ -39,6 +39,12 @@ try {
         "-Dflyway.user=$DbUser"
         "-Dflyway.password=$DbPassword"
         "-Dflyway.locations=$migrationLocation"
+        '-DsmartManage.postgresIntegration=true'
+        "-DsmartManage.testDbUrl=jdbc:postgresql://${DbHost}:${DbPort}/${verifyDatabase}"
+        "-DsmartManage.testDbUser=$DbUser"
+        "-DsmartManage.testDbPassword=$DbPassword"
+        '-Dtest=RoleDataScopeMapperPostgresTests,MonitorCatalogAccessorPostgresTests'
+        'test'
     )
     Write-Host "Running Flyway with project: $backendPomPath"
     & $MavenPath @flywayArguments
@@ -53,23 +59,6 @@ try {
         '-c', "SELECT count(*) AS menu_count FROM t_sys_menu;",
         '-c', "SELECT count(*) AS flyway_version_count FROM flyway_schema_history WHERE success;"
     )
-    # 真实加载 Mapper XML 并连接迁移后的 PostgreSQL，避免复制 SQL 的测试与生产 Mapper 漂移。
-    $mapperTestArguments = @()
-    # 使用 Maven 短参数分离 POM 路径，避免 PowerShell 增量数组在后续参数组合中丢失 --file 值。
-    $mapperTestArguments += '-f'
-    $mapperTestArguments += $backendPomPath
-    $mapperTestArguments += '--batch-mode'
-    $mapperTestArguments += '--no-transfer-progress'
-    $mapperTestArguments += '-DsmartManage.postgresIntegration=true'
-    $mapperTestArguments += "-DsmartManage.testDbUrl=jdbc:postgresql://${DbHost}:${DbPort}/${verifyDatabase}"
-    $mapperTestArguments += "-DsmartManage.testDbUser=$DbUser"
-    $mapperTestArguments += "-DsmartManage.testDbPassword=$DbPassword"
-    $mapperTestArguments += '-Dtest=RoleDataScopeMapperPostgresTests,MonitorCatalogAccessorPostgresTests'
-    $mapperTestArguments += 'test'
-    & $MavenPath @mapperTestArguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "DataScope Mapper PostgreSQL integration test failed with exit code $LASTEXITCODE"
-    }
     $menuFeatureMismatchCount = & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
         -v ON_ERROR_STOP=1 -A -t -c 'SELECT count(*) FROM t_sys_menu menu JOIN t_sys_permission permission ON permission.id = menu.permission_id WHERE menu.feature_id <> permission.feature_id'
     if ($LASTEXITCODE -ne 0 -or [int]$menuFeatureMismatchCount -ne 0) {

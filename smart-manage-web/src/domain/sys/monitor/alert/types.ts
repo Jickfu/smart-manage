@@ -6,33 +6,39 @@ export interface UserRef extends Record<string, unknown> {
 }
 export interface AlertRule {
   id: string;
-  rule_code: string;
+  ruleCode: string;
   name: string;
-  scope_type: 'HOST' | 'INSTANCE';
+  scopeType: 'HOST' | 'INSTANCE';
   enabled: boolean;
   severity: 'INFO' | 'WARNING' | 'CRITICAL';
   threshold: number;
-  duration_seconds: number;
-  recovery_threshold?: number;
-  repeat_interval_seconds: number;
-  email_enabled: boolean;
+  durationSeconds: number;
+  recoveryThreshold?: number;
+  repeatIntervalSeconds: number;
+  emailEnabled: boolean;
   description?: string;
   version: number;
-  recipient_users: UserRef[];
+  valueKind: 'RATIO' | 'COUNT' | 'BOOLEAN' | 'RATE' | 'DURATION_MS';
+  displayUnit: string;
+  minValue: number;
+  maxValue?: number;
+  recommendedThreshold: number;
+  recipientUsers: UserRef[];
 }
 export interface AlertIncident {
   id: string;
-  rule_code: string;
-  rule_name: string;
+  ruleCode: string;
+  ruleName: string;
   severity: string;
-  scope_type: string;
-  scope_id: string;
+  scopeType: string;
+  scopeId: string;
   status: string;
-  started_at: string;
-  fired_at?: string;
-  recovered_at?: string;
-  last_value?: number;
-  peak_value?: number;
+  closeReason?: string;
+  startedAt: string;
+  firedAt?: string;
+  recoveredAt?: string;
+  lastValue?: number;
+  peakValue?: number;
   summary: string;
 }
 export interface AlertRuleSave {
