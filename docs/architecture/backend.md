@@ -1,10 +1,13 @@
 # 后端架构
 
+本文档是后端分层、依赖、接口、Service/事务、数据实现和技术边界的权威来源。具体业务状态与不变量归对应领域文档，验证命令归[质量验证](../development/verification.md)，本文档不重复维护。
+
 内建监控的 Host/Instance 边界、唯一采样链、状态机和 Redis/PostgreSQL 职责见[内建监控架构](./monitoring.md)。
 监控 collector 按职责局部降级，当前遥测缺失通过明确状态表达，不使用业务异常伪装为页面整体失败。
 
 ## 分层边界
 
+- Java 根包为 `sm`。
 - `sm.infrastructure`：第三方技术、外部设施和技术适配，例如 CORS、JSON、Redis、MyBatis-Plus、数据源与出站 HTTP 客户端配置。
 - `sm.system`：不属于任何具体业务领域、供多个领域共享的 Smart Manage 系统内核能力，例如统一响应、异常体系、安全上下文、认证授权公共能力、DataScope Contract、通用事务辅助及稳定 SPI。
 - `sm.domain.{领域}`：领域模块。
@@ -30,6 +33,8 @@ Domain A
 Smart Manage 遵循：**先实现领域，后发现协作，再提取 Contract。** Contract 由真实消费者和真实用例塑造，而不是由对未来需求的猜测产生。没有真实跨领域消费者的 Domain 不需要 `contract` 包；同一顶级 Domain 内的应用和模块也不因潜在复用而提前升级为独立边界。
 
 当前附件和编号规则存在采购领域这一真实消费者，因此其最小跨领域接口和边界模型位于 `sm.domain.sys` 对应模块的 `contract` 包。不得据此给用户、组织、角色、菜单、库存等尚无真实跨领域调用方的模块提前建设 Contract。
+
+公开 `*Service` 按清晰、内聚的业务职责划分；同一模块可以有多个不同语义的公开 Service，例如用户管理、当前用户资料、认证和授权边界。不形成独立业务入口的技术协作者不得命名为 `*Service`，应按职责使用 `*Accessor`、`*Gateway` 等名称并尽量保持包级可见。`sm.system.storage` 只能通过 `FileStorageConfigProvider` 获取配置，不得依赖 `sm.domain.sys` 的实体或 Service。
 
 DataScope 的角色配置、Entity、Mapper 和规则解析实现保留在 `sm.domain.sys.base.datascope`；跨领域消费的 `DataScope` 与 `DataScopeResolver` 位于 `sm.system.datascope`，由 `DataScopeService` 实现。业务领域只依赖该系统内核 Contract。
 
@@ -57,13 +62,15 @@ DataScope 的角色配置、Entity、Mapper 和规则解析实现保留在 `sm.d
 
 系统功能、菜单和权限的归属必须遵守[功能、菜单与权限模型](./feature-and-permission.md)。权限直接归属 `Feature`，应用由功能推导；菜单与入口权限必须属于同一功能，写入时必须校验该约束。
 
+Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包内的权限常量，禁止直接书写权限码字符串。JSON 反序列化、ID 转换和持久化结果不得静默吞错。
+
 分页入参继承 `PageForm`，分页结果使用 `PageData<T>`。Controller 只依赖公开 Service，禁止直接依赖 Mapper 或 TxService。
 
 ## Service 与事务
 
-公开 `*Service` 是单据唯一业务入口，负责查询、业务命令、权限补充校验、操作日志入口和业务组装。
+公开 `*Service` 是其所属业务职责的入口，负责该职责内的查询、业务命令、权限补充校验、操作日志入口和业务组装。同一模块的多个公开 Service 必须保持边界明确，禁止出现职责重叠或为绕过内部边界而拆分的空壳 Service。
 
-写操作委托给同目录、包级可见的 `*TxService`。TxService 使用类级 `@Transactional(rollbackFor = Exception.class)`，Controller 和其他单据不能直接依赖它。事务内的存在性、唯一性和状态检查直接使用 Mapper，避免绕过事务边界调用 Service 缓存方法。
+写操作委托给同目录、包级可见的 `*TxService`。TxService 使用类级 `@Transactional(rollbackFor = Exception.class)`，可以由同模块内不同职责的公开 Service 共享，Controller 和其他模块不能直接依赖它。事务内的存在性、唯一性和状态检查直接使用 Mapper，避免绕过事务边界调用 Service 缓存方法。
 
 资源不存在、状态非法、无权限、参数不合法或持久化结果异常时必须抛出明确异常，禁止用 `null` 或静默忽略表示失败。
 
@@ -84,6 +91,28 @@ DataScope 的角色配置、Entity、Mapper 和规则解析实现保留在 `sm.d
 模块内 `*Converter` 使用 MapStruct 完成 Entity 到列表、选择、明细和基础详情 VO 的纯字段映射。Converter 不得依赖 Mapper、Service、缓存、安全上下文或外部资源。
 
 需要查询、权限判断、默认值、状态规则、树结构或主从聚合的转换属于业务组装，保留在公开 Service 并使用 `assemble*` 命名。MyBatis 联表查询可以直接投影 VO。
+
+## 数据与实现约定
+
+- 主键使用 `IdType.ASSIGN_ID`；可修改聚合使用 `@Version` 乐观锁。
+- 业务单据继承 `BaseBillEntity`，统一使用 `org_id` 表达单据所属组织；申请人、经办人等非通用角色字段保留在具体聚合。
+- 查询条件优先使用 `LambdaQueryWrapper` 和方法引用，禁止裸表名或字段名字符串。
+- Stream 只用于链路简单、无副作用的集合筛选、映射和归约；不得在流内执行数据库查询、缓存访问、外部调用或修改流外可变状态。关联查询应先批量加载；树结构、多层分组和路径遍历应建立显式索引并使用清晰的普通循环。
+- XML Mapper 的主表别名为 `a`，JOIN 表按出现顺序使用 `b`、`c`、`d`。
+- 具有独立业务身份的主数据和业务单据使用 `number` 作为业务编码。
+- 明细使用 `*Entry`，只保留 Entity、Mapper、Form 和 VO，通过 `parent_id` 关联主表；删除主单时先显式删除明细，不使用数据库级联删除。
+- `*Util` 是不依赖 Spring 的纯静态工具类；`*Helper` 是依赖 Spring 注入或配置的组件。
+
+## 外部 HTTP 调用
+
+- 后端同步 HTTP 调用统一使用 `HttpClientHelper`；业务侧按需使用 `*Gateway` 封装第三方协议，Controller 禁止直接调用。
+- 外部请求必须设置合理超时，默认不重试，且原则上不得放在数据库事务中。Cookie、令牌、密钥及敏感请求响应正文不得写入代码、日志或异常，不得将该能力暴露为接收用户任意 URL 的通用代理接口。
+
+## 依赖治理
+
+- Spring Boot Parent / BOM 已管理的依赖版本不得重复显式声明。
+- Spring Boot 未管理、由项目主动选择的第三方依赖版本必须统一声明在 `<properties>` 中，并在 dependency 或插件配置中通过属性引用，禁止直接硬编码版本号；同一组件族共用同一版本属性。
+- 只有存在明确兼容性、安全或功能原因时才允许覆盖 Spring Boot 管理的版本，覆盖必须显式且说明原因。Maven Plugin 或 annotation processor 需要显式版本时，优先复用已有版本来源。
 
 ## 缓存、文件和任务
 
@@ -107,7 +136,7 @@ DataScope 的角色配置、Entity、Mapper 和规则解析实现保留在 `sm.d
 - 业务模块负责资源存在性、状态、数据范围和当前用户权限；公共层禁止直接查询可选业务模块的数据表。
 - 该机制不是动态模型平台，不提供动态字段、动态表单、动态建表或配置化业务权限。
 
-强制编码规则由 [后端 AGENTS.md](../../smart-manage-api/AGENTS.md) 定义。
+新增或显著扩展模块的实现流程见[模块开发指南](../development/module-development-guide.md)，编译、测试和风险匹配要求见[质量验证](../development/verification.md)。
 
 ## 自动化架构契约
 

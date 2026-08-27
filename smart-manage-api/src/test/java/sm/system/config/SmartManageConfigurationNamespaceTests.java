@@ -48,7 +48,7 @@ class SmartManageConfigurationNamespaceTests {
 
     @Test
     void projectConfigurationMustUseArchitectureLayerAsFirstLevelNamespace() throws IOException {
-        for (String resourceName : List.of("application.yml", "application-dev.yml", "application-prod.yml")) {
+        for (String resourceName : List.of("application.yml", "application-test.yml", "application-prod.yml")) {
             PropertySource<?> source = loadSingle(resourceName);
             assertThat(source).isInstanceOf(EnumerablePropertySource.class);
             String[] propertyNames = ((EnumerablePropertySource<?>) source).getPropertyNames();
@@ -81,7 +81,7 @@ class SmartManageConfigurationNamespaceTests {
 
     @Test
     void profileConfigurationMustExposeCoreDeploymentContract() throws IOException {
-        for (String resourceName : List.of("application-dev.yml", "application-prod.yml")) {
+        for (String resourceName : List.of("application-test.yml", "application-prod.yml")) {
             assertThat(propertyNames(loadSingle(resourceName)))
                     .as(resourceName + " 必须显式提供核心部署配置")
                     .contains(

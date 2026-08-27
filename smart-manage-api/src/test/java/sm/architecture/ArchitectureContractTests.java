@@ -146,8 +146,8 @@ class ArchitectureContractTests {
                 .andShould().notBePublic()
                 .andShould().beAnnotatedWith(Transactional.class)
                 .andShould(useRequiredRollbackPolicy())
-                .andShould(onlyBeAccessedByOwningPublicService())
-                .because("TxService 必须是同模块公开 Service 独占的包级事务实现")
+                .andShould(onlyBeAccessedByOwningPublicServices())
+                .because("TxService 必须是仅供同模块公开 Service 使用的包级事务实现")
                 .check(productionClasses);
     }
 
@@ -238,7 +238,7 @@ class ArchitectureContractTests {
         };
     }
 
-    private static ArchCondition<JavaClass> onlyBeAccessedByOwningPublicService() {
+    private static ArchCondition<JavaClass> onlyBeAccessedByOwningPublicServices() {
         return new ArchCondition<>("只由同模块公开 Service 访问") {
             @Override
             public void check(JavaClass txService, ConditionEvents events) {

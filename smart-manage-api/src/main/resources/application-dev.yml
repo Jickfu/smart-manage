@@ -1,4 +1,4 @@
-# dev 是共享测试环境；敏感值由测试服务器外部配置或环境变量覆盖。
+# dev 是个人开发环境；本文件已被 Git 忽略，请勿提交敏感配置。
 server:
   port: 8080
   compression:
@@ -10,7 +10,6 @@ server:
       min-spare: 20
     accept-count: 10
     connection-timeout: 20000
-
 spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
@@ -45,7 +44,6 @@ spring:
     type: com.alibaba.druid.pool.DruidDataSource
     url: ${SMART_MANAGE_DB_URL:jdbc:postgresql://localhost:5432/smart_manage}
     username: ${SMART_MANAGE_DB_USERNAME:postgres}
-    # 仅用于本地开发的公开默认凭据；生产环境由 application-prod.yml 强制从环境变量注入。
     password: ${SMART_MANAGE_DB_PASSWORD:postgres}
     druid:
       initial-size: 5
@@ -60,7 +58,6 @@ spring:
       time-between-eviction-runs-millis: 60000
       min-evictable-idle-time-millis: 300000
       remove-abandoned: true
-      # Druid 使用毫秒；开发环境允许任务持有连接最多 5 分钟后再判定为遗弃。
       remove-abandoned-timeout-millis: 300000
       keep-alive: true
       filters: stat
@@ -68,7 +65,6 @@ spring:
         stat:
           enabled: true
           merge-sql: true
-          # 页面直接读取内存统计，禁止把可能包含参数的慢 SQL 重复输出到日志。
           log-slow-sql: false
           slow-sql-millis: 2000
       web-stat-filter:
@@ -84,17 +80,16 @@ spring:
         allow: 127.0.0.1
   data:
     redis:
-      host: ${SMART_MANAGE_REDIS_HOST:127.0.0.1}
-      port: ${SMART_MANAGE_REDIS_PORT:6379}
-      password: ${SMART_MANAGE_REDIS_PASSWORD:redis123}
-      database: ${SMART_MANAGE_REDIS_DATABASE:1}
+      host: 127.0.0.1
+      port: 6379
+      password: redis123
+      database: 1
       timeout: 1000ms
       jedis:
         pool:
           max-active: 100
           max-idle: 10
           min-idle: 2
-
 jetcache:
   statIntervalMinutes: 15
   local:
@@ -105,22 +100,20 @@ jetcache:
     default:
       type: redis
       keyConvertor: jackson
-      host: ${SMART_MANAGE_REDIS_HOST:127.0.0.1}
-      port: ${SMART_MANAGE_REDIS_PORT:6379}
-      password: ${SMART_MANAGE_REDIS_PASSWORD:redis123}
-      database: ${SMART_MANAGE_REDIS_DATABASE:1}
+      host: 127.0.0.1
+      port: 6379
+      password: redis123
+      database: 1
       timeout: 1000
       poolConfig:
         maxTotal: 100
         maxIdle: 10
         minIdle: 2
-
 sa-token:
   timeout: 86400
   active-timeout: 18000
   cookie:
     secure: false
-
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -128,11 +121,9 @@ springdoc:
     operations-sorter: alpha
   api-docs:
     path: /v3/api-docs
-
 scalar:
   enabled: true
   path: /scalar
-
 management:
   endpoints:
     web:
@@ -142,7 +133,6 @@ management:
     health:
       show-details: always
       show-components: always
-
 logging:
   file:
     name: logs/smart-manage.log
@@ -159,8 +149,8 @@ smart-manage:
       request-timeout: 10s
     cors:
       allowed-origins:
-        - "http://localhost:*"
-        - "http://127.0.0.1:*"
+        - http://localhost:*
+        - http://127.0.0.1:*
     trusted-proxy:
       cidrs:
         - 127.0.0.1/32
@@ -176,11 +166,9 @@ smart-manage:
         memory: 65536
         parallelism: 1
       sm4:
-        # 公开开发密钥，仅用于本地开发和演示；生产环境禁止复用。
         key-base64: ${SMART_MANAGE_SM4_KEY:c21hcnQtbWFuYWdlLWRldg==}
       sm2:
         js:
-          # 开发密钥与 login.html 的公开开发公钥配套，禁止在生产环境复用。
           private-key: ${SMART_MANAGE_SM2_PRIVATE_KEY:00dc349799de9b5a3beef8d3d77aa7e3655c5542a10c395cc86670580b6250dfeb}
           public-key: ${SMART_MANAGE_SM2_PUBLIC_KEY:0405102042204d15e802522ea09eb609358e4c72295e0ca44727eef75faac9afb3eeaa3e9df5af87e205e6ce5cb351e4fb30c37602f32aad969d2b222f05f8fa99}
     log:
@@ -191,7 +179,6 @@ smart-manage:
   domain:
     sys:
       monitor:
-        # host-id 表示 Smart Manage 认知中的运行主机；缺省时使用稳定 hostname。
         host-id: ${SMART_MANAGE_HOST_ID:}
         sampling:
           interval-ms: 10000
@@ -199,7 +186,7 @@ smart-manage:
         history:
           interval-ms: 60000
           retention-days: ${SMART_MANAGE_MONITOR_RETENTION_DAYS:7}
-          cleanup-cron: "0 20 3 * * *"
+          cleanup-cron: 0 20 3 * * *
         alert:
           evaluation-interval-ms: 10000
           notification-interval-ms: 10000

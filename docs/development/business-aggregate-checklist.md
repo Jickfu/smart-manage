@@ -1,10 +1,10 @@
 # 新增业务聚合检查清单
 
-本清单用于后续 ERP、MES 业务聚合开发。它描述已经生效的稳定架构约束，不复制采购申请的具体字段；是否启动新聚合仍以[项目路线图](../roadmap.md)中的阶段门槛为准。
+本清单用于后续 ERP、MES 业务聚合开发，将[后端架构](../architecture/backend.md)、[前端架构](../architecture/frontend.md)、[模块开发指南](./module-development-guide.md)、[安全架构](../architecture/security.md)和[质量验证](./verification.md)中的生效规则转换为验收项，不作为独立规则来源，也不复制采购申请的具体字段。是否启动新聚合仍以[项目路线图](../roadmap.md)中的阶段门槛为准。
 
 ## 1. 聚合和目录
 
-- 一个业务单据只有一个公开 `*Service`。
+- 公开 `*Service` 按清晰、内聚的业务职责划分；同一模块可以拥有多个不同语义的公开 Service，不得为追求单一入口将无关职责堆入一个大 Service。
 - 写操作集中在同目录、包级可见的 `*TxService`。
 - 明细使用 `*Entry`，只提供 Entity、Mapper、Form、VO，不建立独立写入口。
 - 系统内核不得依赖可选业务领域。

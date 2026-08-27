@@ -2,7 +2,7 @@ spring:
   application:
     name: smart-manage
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   jackson:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss

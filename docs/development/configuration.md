@@ -26,8 +26,8 @@ smart-manage:
 
 | Profile | 用途 | 主要配置来源 |
 | --- | --- | --- |
-| `local` | IDEA 和个人电脑本地运行 | 后端资源目录私有 `application-local.yml` |
-| `dev` | 共享开发/测试服务器 | 内置 `application-dev.yml` 加服务器外部覆盖 |
+| `dev` | IDEA 和个人电脑开发运行 | 后端资源目录私有 `application-dev.yml` |
+| `test` | 共享测试服务器 | 内置 `application-test.yml` 加服务器外部覆盖 |
 | `prod` | 生产部署 | Jar 同级 `config/application.yml` 和 `config/application-prod.yml` |
 
 ## 本机环境
@@ -46,17 +46,17 @@ Redis：localhost:6379，密码 redis123，数据库 1
 ### 本机开发配置文件
 
 不希望设置操作系统环境变量时，复制
-`smart-manage-api/src/main/resources/application-dev.yml` 为同级的 `application-local.yml`，
-再填写本机配置。项目默认激活 `local`，`local` 不继承 `dev`，因此本地配置文件必须包含运行所需的完整配置。
+`smart-manage-api/src/main/resources/application-test.yml` 为同级的 `application-dev.yml`，
+再填写本机配置。项目默认激活 `dev`，`dev` 不继承 `test`，因此开发配置文件必须包含运行所需的完整配置。
 该文件位于 classpath，不受 IDEA 工作目录影响。
-实际 `application-local.yml` 已被 Git 忽略，
+实际 `application-dev.yml` 已被 Git 忽略，
 禁止移除忽略规则或提交其中的真实凭据。
 
 Spring Data Redis 与 JetCache 使用两套配置入口，本机文件中的两处 Redis 地址、端口、密码和数据库必须保持一致。
 
 ## 共享测试环境与可选环境变量
 
-`application-dev.yml` 用于共享测试环境。`${NAME:default}` 表示允许服务器外部配置或环境变量覆盖，
+`application-test.yml` 用于共享测试环境。`${NAME:default}` 表示允许服务器外部配置或环境变量覆盖，
 不是要求必须使用操作系统环境变量。保留这些占位符可供 CI、临时启动和不同测试服务器复用。
 
 | 环境变量 | 用途 |
@@ -114,7 +114,7 @@ Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
 - `SMART_MANAGE_TRUSTED_PROXY_CIDRS`，且只能包含实际 Nginx 或负载均衡器网段。
 
 公共配置和生产配置均固定关闭 `sa-token.is-log`。Sa-Token 内置事件日志会输出完整会话 token，
-因此 local、dev 和 prod 都不得重新开启；登录、退出和会话终止审计统一由项目受控的认证日志监听器记录。
+因此 dev、test 和 prod 都不得重新开启；登录、退出和会话终止审计统一由项目受控的认证日志监听器记录。
 
 可选的生产调优变量：
 

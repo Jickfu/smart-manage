@@ -1,28 +1,59 @@
 # Smart Manage 文档
 
 本文档集按“当前事实、开发操作、未来提案、历史归档”分区。相同内容只保留一个权威来源，其他位置使用链接引用。
+架构总览可以保留稳定结论的简短摘要，检查清单可以将权威规则转换为验收项；摘要和清单必须链接权威文档，不得独立扩展或改写规则。
+
+## 按任务阅读
+
+无需在每次改动前通读全部文档。先按任务阅读最小必要集合，再跟随文内链接进入安全、部署或领域细节。
+
+| 任务 | 首先阅读 | 按需补充 |
+| --- | --- | --- |
+| 理解项目整体设计 | [架构总览](./architecture/overview.md) | 对应的前端、后端、安全或部署架构 |
+| 修改普通后端代码 | [后端架构](./architecture/backend.md)、[质量验证](./development/verification.md) | 对应领域模块文档 |
+| 修改前端页面或交互 | [前端架构](./architecture/frontend.md)、[模块开发指南](./development/module-development-guide.md)、[质量验证](./development/verification.md) | [页面注册约定](./architecture/page-registration-convention.md)、[模块样板目录](./development/module-pattern-catalog.md) |
+| 新增或显著扩展业务模块 | [模块开发指南](./development/module-development-guide.md)、[模块样板目录](./development/module-pattern-catalog.md)、对应领域文档 | 新聚合再使用[业务聚合检查清单](./development/business-aggregate-checklist.md) |
+| 认证、权限或高风险能力 | [安全架构](./architecture/security.md) | [登录保护](./architecture/login-protection.md)、[功能与权限](./architecture/feature-and-permission.md)、[数据权限](./architecture/data-permission.md)、[数据脱敏](./architecture/data-masking.md) |
+| 数据库或迁移 | [数据库开发](./development/database.md)、[质量验证](./development/verification.md) | 日志分区再阅读[日志数据生命周期](./architecture/log-lifecycle.md) |
+| 配置、部署或多实例 | [环境与配置](./development/configuration.md)、[部署与多实例架构](./architecture/deployment.md) | 涉及内建监控时阅读[内建监控架构](./architecture/monitoring.md) |
 
 ## 当前架构
+
+### 核心架构
 
 - [架构总览](./architecture/overview.md)
 - [后端架构](./architecture/backend.md)
 - [前端架构](./architecture/frontend.md)
+- [前端页面注册约定](./architecture/page-registration-convention.md)
+
+### 安全与访问控制
+
 - [安全架构](./architecture/security.md)
-- [部署与多实例架构](./architecture/deployment.md)
+- [登录保护架构](./architecture/login-protection.md)
 - [功能、菜单与权限模型](./architecture/feature-and-permission.md)
 - [数据脱敏架构](./architecture/data-masking.md)
 - [数据权限设计](./architecture/data-permission.md)
+
+### 运行与部署
+
+- [部署与多实例架构](./architecture/deployment.md)
 - [日志数据生命周期](./architecture/log-lifecycle.md)
-- [前端页面注册约定](./architecture/page-registration-convention.md)
 - [内建监控架构](./architecture/monitoring.md)
 
 `architecture/` 只描述当前已经生效的设计和边界，不记录实施计划或历史进度。
 
 ## 开发规范
 
+### 环境与质量
+
 - [环境与配置](./development/configuration.md)
 - [质量验证](./development/verification.md)
 - [数据库开发](./development/database.md)
+
+### 模块开发
+
+- [模块开发指南](./development/module-development-guide.md)
+- [模块样板目录](./development/module-pattern-catalog.md)
 - [新增业务聚合检查清单](./development/business-aggregate-checklist.md)
 
 ## 领域与模块
@@ -72,7 +103,6 @@
 ## 计划与提案
 
 - [项目路线图](./roadmap.md)
-- [登录保护架构](./architecture/login-protection.md)
 
 `roadmap.md` 只记录已批准但尚未完成的项目级事项。`proposals/` 中的内容尚未生效，不能作为实现依据。
 

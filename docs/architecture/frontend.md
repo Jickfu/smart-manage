@@ -1,6 +1,16 @@
 # 前端架构
 
+本文档是前端技术基线、路由、状态职责、页面类型和页签生命周期的权威来源。具体页面实现与交互约束归[模块开发指南](../development/module-development-guide.md)，注册协议细节归[页面注册约定](./page-registration-convention.md)。
+
 运维中心首页是固定业务总览；运行监控按 Host/Instance 分离快照，历史图按百分比、B/s、req/s、ms 和数量分图展示，见[内建监控架构](./monitoring.md)。
+
+## 技术基线与目录
+
+- 使用 pnpm、React、TypeScript 和 Ant Design，不引入其他 UI 组件库。
+- 使用 `@/` 别名引用 `src`。
+- 业务页面按 `src/domain/{领域}/{应用}/{模块}` 组织。
+- 页面组件目录使用 PascalCase，工具和 Hook 文件使用 camelCase。
+- 前端 ID 使用 `string`，避免雪花 ID 精度丢失。
 
 ## 应用与路由
 
@@ -61,4 +71,4 @@
 
 工作台内容页签标题同样属于页面注册边界：菜单只决定打开哪个 `componentKey`，不提供页签标题。LIST、EDIT、CUSTOM 的默认标题规则、通用页面壳同步方式以及业务页面动态覆盖能力统一遵守前端页面注册约定。
 
-强制编码、样式和验证规则由[前端 AGENTS.md](../../smart-manage-web/AGENTS.md)定义。
+页面实现、样式和交互约束统一见[模块开发指南](../development/module-development-guide.md)，编译、测试和构建要求统一见[质量验证](../development/verification.md)。
