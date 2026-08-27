@@ -3,6 +3,8 @@ package sm.domain.sys.base.attachment.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.TransactionSystemException;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
@@ -109,6 +111,51 @@ class AttachmentServiceStorageConsistencyTests {
         order.verify(txService).markPendingDelete(1L);
         order.verify(storage).delete("sys/stored.txt");
         order.verify(txService).markDeleted(1L);
+    }
+
+    @Test
+    void aggregateRollbackNeverDeletesStoredObject() throws IOException {
+        AttachmentDeletionTarget target = new AttachmentDeletionTarget(1L, "LOCAL", "sys/stored.txt");
+        when(txService.markPendingDelete(1L)).thenReturn(target);
+        TransactionSynchronizationManager.initSynchronization();
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            service.deleteForAggregate(1L);
+
+            verify(storage, never()).delete(anyString());
+            for (TransactionSynchronization synchronization
+                    : TransactionSynchronizationManager.getSynchronizations()) {
+                synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK);
+            }
+            verify(storage, never()).delete(anyString());
+            verify(txService, never()).markDeleted(1L);
+        } finally {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void aggregateCommitDeletesStoredObjectAndConfirmsFinalState() throws IOException {
+        AttachmentDeletionTarget target = new AttachmentDeletionTarget(1L, "LOCAL", "sys/stored.txt");
+        when(txService.markPendingDelete(1L)).thenReturn(target);
+        when(storageFactory.getService("LOCAL")).thenReturn(storage);
+        TransactionSynchronizationManager.initSynchronization();
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            service.deleteForAggregate(1L);
+
+            verify(storage, never()).delete(anyString());
+            for (TransactionSynchronization synchronization
+                    : TransactionSynchronizationManager.getSynchronizations()) {
+                synchronization.afterCommit();
+            }
+            verify(storage).delete("sys/stored.txt");
+            verify(txService).markDeleted(1L);
+        } finally {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test

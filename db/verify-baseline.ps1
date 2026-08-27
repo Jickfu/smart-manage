@@ -72,6 +72,7 @@ try {
     Invoke-Psql $verifyDatabase @(
         '-v', 'ON_ERROR_STOP=1',
         '-c', "SELECT 1 / count(*) AS administrator_ready FROM t_sys_user WHERE username = 'administrator' AND enabled;",
+        '-c', "SELECT 1 / count(*) AS attachment_cleanup_job_ready FROM t_sys_job WHERE number = 'ATTACHMENT_OBJECT_CLEANUP' AND is_system AND status = 'ENABLED' AND job_class_name = 'sm.domain.sys.scheduler.job.CleanTempFileJob';",
         '-c', "SELECT count(*) AS permission_count FROM t_sys_permission;",
         '-c', "SELECT count(*) AS menu_count FROM t_sys_menu;",
         '-c', "SELECT count(*) AS flyway_version_count FROM flyway_schema_history WHERE success;"

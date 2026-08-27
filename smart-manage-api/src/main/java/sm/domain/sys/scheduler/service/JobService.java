@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
 import org.quartz.impl.matchers.GroupMatcher;
 import org.springframework.stereotype.Service;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import sm.domain.sys.scheduler.constant.JobStatus;
 import sm.domain.sys.scheduler.model.entity.JobEntity;
 import sm.domain.sys.scheduler.model.entity.JobLogEntity;
@@ -139,10 +141,25 @@ public class JobService {
     @AdministratorOnly
     public void syncAll() {
         List<JobEntity> entities = mapper.selectList(new LambdaQueryWrapper<>());
+        synchronizeAll(entities, true);
+    }
+
+    /** 系统任务由数据库迁移提供稳定定义，应用启动后必须自动同步到持久化 Quartz。 */
+    @EventListener(ApplicationReadyEvent.class)
+    void synchronizeSystemJobsOnStartup() {
+        List<JobEntity> systemJobs = mapper.selectList(new LambdaQueryWrapper<JobEntity>()
+                .eq(JobEntity::getIsSystem, true));
+        synchronizeAll(systemJobs, false);
+    }
+
+    private void synchronizeAll(List<JobEntity> entities, boolean removeOrphans) {
         Map<Long, JobKey> expectedKeys = new java.util.HashMap<>();
         for (JobEntity entity : entities) {
             expectedKeys.put(entity.getId(), JobKey.jobKey(entity.getJobName(), entity.getJobGroup()));
             synchronize(entity);
+        }
+        if (!removeOrphans) {
+            return;
         }
         try {
             for (JobKey jobKey : scheduler.getJobKeys(GroupMatcher.anyJobGroup())) {

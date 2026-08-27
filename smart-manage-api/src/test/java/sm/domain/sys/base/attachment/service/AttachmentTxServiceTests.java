@@ -1,6 +1,8 @@
 package sm.domain.sys.base.attachment.service;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
@@ -123,6 +125,15 @@ class AttachmentTxServiceTests {
 
 		assertEquals("DELETED", entity.getStatus());
 		verify(mapper).updateById(entity);
+	}
+
+	@Test
+	void markDeletedAlwaysUsesIndependentTransaction() throws Exception {
+		Transactional transactional = AttachmentTxService.class
+				.getDeclaredMethod("markDeleted", Long.class)
+				.getAnnotation(Transactional.class);
+
+		assertEquals(Propagation.REQUIRES_NEW, transactional.propagation());
 	}
 
 	@Test

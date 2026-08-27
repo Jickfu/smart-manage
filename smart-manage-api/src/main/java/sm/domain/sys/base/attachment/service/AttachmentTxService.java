@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.entity.BizAttachmentEntity;
@@ -137,7 +138,8 @@ class AttachmentTxService {
         return new AttachmentDeletionTarget(id, entity.getStorageType(), entity.getObjectKey());
     }
 
-    /** 对象已确认删除后，以独立短事务推进最终状态。 */
+    /** 对象已确认删除后，以独立短事务推进最终状态，避免复用已经提交的外层事务资源。 */
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void markDeleted(Long id) {
         AttachmentEntity entity = mapper.selectById(id);
         if (entity == null || "DELETED".equals(entity.getStatus())) return;

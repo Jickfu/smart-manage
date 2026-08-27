@@ -1283,6 +1283,160 @@ COMMENT ON COLUMN public.t_sys_domain.version IS '乐观锁版本号';
 
 
 --
+-- Name: t_sys_email_account; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_email_account (
+    id bigint NOT NULL,
+    number character varying(64) NOT NULL,
+    name character varying(100) NOT NULL,
+    host character varying(255) NOT NULL,
+    port integer NOT NULL,
+    security_mode character varying(16) NOT NULL,
+    username character varying(255) NOT NULL,
+    password_cipher text NOT NULL,
+    from_address character varying(320) NOT NULL,
+    from_name character varying(100),
+    reply_to character varying(320),
+    enabled boolean DEFAULT false NOT NULL,
+    default_account boolean DEFAULT false NOT NULL,
+    allow_manual boolean DEFAULT false NOT NULL,
+    connection_timeout_ms integer DEFAULT 10000 NOT NULL,
+    read_timeout_ms integer DEFAULT 10000 NOT NULL,
+    description character varying(500),
+    create_time timestamp without time zone,
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    version integer DEFAULT 0 NOT NULL,
+    CONSTRAINT ck_sys_email_account_port CHECK (((port >= 1) AND (port <= 65535))),
+    CONSTRAINT ck_sys_email_account_security CHECK (((security_mode)::text = ANY ((ARRAY['NONE'::character varying, 'STARTTLS'::character varying, 'SSL_TLS'::character varying])::text[]))),
+    CONSTRAINT ck_sys_email_account_timeout CHECK ((((connection_timeout_ms >= 1000) AND (connection_timeout_ms <= 60000)) AND ((read_timeout_ms >= 1000) AND (read_timeout_ms <= 60000))))
+);
+
+
+--
+-- Name: TABLE t_sys_email_account; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_email_account IS 'SMTP 发信账号';
+
+
+--
+-- Name: COLUMN t_sys_email_account.password_cipher; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_email_account.password_cipher IS 'SMTP 密码或授权码的 SM4/GCM 密文';
+
+
+--
+-- Name: COLUMN t_sys_email_account.default_account; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_email_account.default_account IS '是否为全局默认发信账号';
+
+
+--
+-- Name: COLUMN t_sys_email_account.allow_manual; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_email_account.allow_manual IS '是否允许管理员手工选择';
+
+
+--
+-- Name: t_sys_email_attempt; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_email_attempt (
+    id bigint NOT NULL,
+    task_id bigint NOT NULL,
+    attempt_no integer NOT NULL,
+    status character varying(20) NOT NULL,
+    started_time timestamp without time zone NOT NULL,
+    completed_time timestamp without time zone,
+    error_category character varying(50),
+    error_message character varying(1000),
+    instance_id character varying(100),
+    trace_id character varying(64),
+    create_time timestamp without time zone,
+    CONSTRAINT ck_sys_email_attempt_status CHECK (((status)::text = ANY ((ARRAY['SENDING'::character varying, 'SUCCESS'::character varying, 'FAILED'::character varying, 'UNKNOWN'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_email_attempt; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_email_attempt IS '邮件每次 SMTP 投递尝试记录';
+
+
+--
+-- Name: t_sys_email_task; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_email_task (
+    id bigint NOT NULL,
+    scene_key character varying(100) NOT NULL,
+    idempotency_key character varying(200) NOT NULL,
+    source_task_id bigint,
+    account_id bigint NOT NULL,
+    account_number character varying(64) NOT NULL,
+    from_address character varying(320) NOT NULL,
+    from_name character varying(100),
+    to_addresses text NOT NULL,
+    cc_addresses text,
+    bcc_addresses text,
+    subject character varying(300) NOT NULL,
+    html_body text NOT NULL,
+    text_body text,
+    status character varying(20) NOT NULL,
+    attempt_count integer DEFAULT 0 NOT NULL,
+    max_attempts integer DEFAULT 3 NOT NULL,
+    next_attempt_time timestamp without time zone,
+    started_time timestamp without time zone,
+    completed_time timestamp without time zone,
+    error_category character varying(50),
+    error_message character varying(1000),
+    trace_id character varying(64),
+    create_time timestamp without time zone,
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    version integer DEFAULT 0 NOT NULL,
+    CONSTRAINT ck_sys_email_task_attempt CHECK (((attempt_count >= 0) AND ((max_attempts >= 1) AND (max_attempts <= 10)))),
+    CONSTRAINT ck_sys_email_task_status CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'SENDING'::character varying, 'SUCCESS'::character varying, 'RETRY_WAIT'::character varying, 'FAILED'::character varying, 'UNKNOWN'::character varying, 'CANCELLED'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_email_task; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_email_task IS '邮件持久化投递任务';
+
+
+--
+-- Name: COLUMN t_sys_email_task.idempotency_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_email_task.idempotency_key IS '业务幂等键';
+
+
+--
+-- Name: COLUMN t_sys_email_task.to_addresses; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_email_task.to_addresses IS 'JSON 格式收件人地址快照';
+
+
+--
+-- Name: COLUMN t_sys_email_task.status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_email_task.status IS 'PENDING/SENDING/SUCCESS/RETRY_WAIT/FAILED/UNKNOWN/CANCELLED';
+
+
+--
 -- Name: t_sys_feature; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4793,6 +4947,1062 @@ COMMENT ON COLUMN public.t_sys_menu.external_open_mode IS '外链打开方式：
 
 
 --
+-- Name: t_sys_monitor_alert_incident; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_monitor_alert_incident (
+    id bigint NOT NULL,
+    rule_id bigint NOT NULL,
+    rule_code character varying(80) NOT NULL,
+    scope_type character varying(20) NOT NULL,
+    scope_id character varying(100) NOT NULL,
+    status character varying(20) NOT NULL,
+    cycle_key character varying(80) NOT NULL,
+    started_at timestamp with time zone NOT NULL,
+    fired_at timestamp with time zone,
+    recovered_at timestamp with time zone,
+    last_evaluated_at timestamp with time zone NOT NULL,
+    last_value numeric(20,6),
+    peak_value numeric(20,6),
+    threshold numeric(20,6) NOT NULL,
+    last_notified_at timestamp with time zone,
+    notification_count integer DEFAULT 0 NOT NULL,
+    summary character varying(500) NOT NULL,
+    version integer DEFAULT 0 NOT NULL,
+    close_reason character varying(30),
+    CONSTRAINT ck_monitor_alert_incident_close_reason CHECK (((((status)::text = 'CLOSED'::text) AND ((close_reason)::text = ANY ((ARRAY['PENDING_CLEARED'::character varying, 'INSTANCE_RETIRED'::character varying, 'RULE_DISABLED'::character varying, 'METRIC_UNAVAILABLE'::character varying])::text[]))) OR (((status)::text <> 'CLOSED'::text) AND (close_reason IS NULL)))),
+    CONSTRAINT ck_monitor_alert_incident_status CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'FIRING'::character varying, 'RECOVERED'::character varying, 'CLOSED'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_monitor_alert_incident; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_monitor_alert_incident IS '监控告警事件';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.rule_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.rule_id IS '告警规则ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.rule_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.rule_code IS '规则编码';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.scope_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.scope_type IS '作用对象类型';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.scope_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.scope_id IS '作用对象标识';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.status IS '告警状态';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.cycle_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.cycle_key IS '告警周期幂等键';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.started_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.started_at IS '异常开始时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.fired_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.fired_at IS '触发时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.recovered_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.recovered_at IS '恢复时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.last_evaluated_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.last_evaluated_at IS '最后评估时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.last_value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.last_value IS '最新值';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.peak_value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.peak_value IS '峰值';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.threshold; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.threshold IS '触发阈值快照';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.last_notified_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.last_notified_at IS '最后通知时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.notification_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.notification_count IS '通知次数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.summary; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.summary IS '摘要';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.version IS '乐观锁版本号';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_incident.close_reason; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_incident.close_reason IS '非恢复性关闭原因：条件清除、实例退役、规则停用或指标不可用';
+
+
+--
+-- Name: t_sys_monitor_alert_notification; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_monitor_alert_notification (
+    id bigint NOT NULL,
+    incident_id bigint NOT NULL,
+    notification_type character varying(20) NOT NULL,
+    sequence_no integer NOT NULL,
+    status character varying(20) NOT NULL,
+    attempt_count integer DEFAULT 0 NOT NULL,
+    next_attempt_time timestamp with time zone NOT NULL,
+    claimed_time timestamp with time zone,
+    email_task_id bigint,
+    error_message character varying(500),
+    create_time timestamp with time zone NOT NULL,
+    completed_time timestamp with time zone,
+    CONSTRAINT ck_monitor_alert_notification_status CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'PROCESSING'::character varying, 'SUCCESS'::character varying, 'RETRY'::character varying, 'FAILED'::character varying, 'SKIPPED'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_monitor_alert_notification; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_monitor_alert_notification IS '监控告警邮件通知发件箱';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.incident_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.incident_id IS '告警事件ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.notification_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.notification_type IS '通知类型';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.sequence_no; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.sequence_no IS '同类型通知序号';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.status IS '投递状态';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.attempt_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.attempt_count IS '尝试次数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.next_attempt_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.next_attempt_time IS '下次尝试时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.claimed_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.claimed_time IS '领取时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.email_task_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.email_task_id IS '邮件任务ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.error_message; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.error_message IS '错误信息';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.create_time IS '创建时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_notification.completed_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_notification.completed_time IS '完成时间';
+
+
+--
+-- Name: t_sys_monitor_alert_rule; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_monitor_alert_rule (
+    id bigint NOT NULL,
+    rule_code character varying(80) NOT NULL,
+    name character varying(200) NOT NULL,
+    scope_type character varying(20) NOT NULL,
+    enabled boolean NOT NULL,
+    severity character varying(20) NOT NULL,
+    threshold numeric(20,6) NOT NULL,
+    duration_seconds integer NOT NULL,
+    recovery_threshold numeric(20,6),
+    repeat_interval_seconds integer NOT NULL,
+    email_enabled boolean NOT NULL,
+    description character varying(500),
+    version integer DEFAULT 0 NOT NULL,
+    create_time timestamp with time zone NOT NULL,
+    update_time timestamp with time zone NOT NULL,
+    create_user bigint,
+    update_user bigint,
+    value_kind character varying(20) NOT NULL,
+    display_unit character varying(20) NOT NULL,
+    min_value numeric(20,6) NOT NULL,
+    max_value numeric(20,6),
+    recommended_threshold numeric(20,6) NOT NULL,
+    CONSTRAINT ck_monitor_alert_rule_range CHECK (((threshold >= min_value) AND ((max_value IS NULL) OR (threshold <= max_value)) AND ((recovery_threshold IS NULL) OR ((recovery_threshold >= min_value) AND ((max_value IS NULL) OR (recovery_threshold <= max_value)))))),
+    CONSTRAINT ck_monitor_alert_rule_scope CHECK (((scope_type)::text = ANY ((ARRAY['HOST'::character varying, 'INSTANCE'::character varying])::text[]))),
+    CONSTRAINT ck_monitor_alert_rule_severity CHECK (((severity)::text = ANY ((ARRAY['INFO'::character varying, 'WARNING'::character varying, 'CRITICAL'::character varying])::text[]))),
+    CONSTRAINT ck_monitor_alert_rule_value_kind CHECK (((value_kind)::text = ANY ((ARRAY['RATIO'::character varying, 'COUNT'::character varying, 'BOOLEAN'::character varying, 'RATE'::character varying, 'DURATION_MS'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_monitor_alert_rule; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_monitor_alert_rule IS '监控告警规则';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.rule_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.rule_code IS '预定义规则编码';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.name IS '名称';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.scope_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.scope_type IS '作用对象类型';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.enabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.enabled IS '启用状态';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.severity; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.severity IS '严重程度';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.threshold; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.threshold IS '触发阈值';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.duration_seconds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.duration_seconds IS '持续时间秒数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.recovery_threshold; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.recovery_threshold IS '恢复阈值';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.repeat_interval_seconds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.repeat_interval_seconds IS '重复通知间隔秒数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.email_enabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.email_enabled IS '是否发送邮件';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.description IS '描述';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.version IS '乐观锁版本号';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.create_time IS '创建时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.update_time IS '更新时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.create_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.create_user IS '创建人用户ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.update_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.update_user IS '更新人用户ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.value_kind; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.value_kind IS '值类型：RATIO/COUNT/BOOLEAN/RATE/DURATION_MS';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.display_unit; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.display_unit IS '展示单位';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.min_value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.min_value IS '最小可配置值';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.max_value; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.max_value IS '最大可配置值';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule.recommended_threshold; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule.recommended_threshold IS '推荐触发阈值';
+
+
+--
+-- Name: t_sys_monitor_alert_rule_recipient; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_monitor_alert_rule_recipient (
+    id bigint NOT NULL,
+    rule_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    create_time timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: TABLE t_sys_monitor_alert_rule_recipient; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_monitor_alert_rule_recipient IS '监控告警邮件接收人';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule_recipient.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule_recipient.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule_recipient.rule_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule_recipient.rule_id IS '告警规则ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule_recipient.user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule_recipient.user_id IS '接收用户ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_alert_rule_recipient.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_alert_rule_recipient.create_time IS '创建时间';
+
+
+--
+-- Name: t_sys_monitor_host; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_monitor_host (
+    id bigint NOT NULL,
+    host_id character varying(100) NOT NULL,
+    host_name character varying(200) NOT NULL,
+    os_name character varying(100),
+    os_version character varying(200),
+    arch character varying(50),
+    first_seen_time timestamp with time zone NOT NULL,
+    last_seen_time timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: TABLE t_sys_monitor_host; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_monitor_host IS '监控主机目录';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host.host_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host.host_id IS '运行主机稳定标识';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host.host_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host.host_name IS '主机名称';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host.os_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host.os_name IS '操作系统名称';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host.os_version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host.os_version IS '操作系统版本';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host.arch; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host.arch IS '系统架构';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host.first_seen_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host.first_seen_time IS '首次发现时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host.last_seen_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host.last_seen_time IS '最后发现时间';
+
+
+--
+-- Name: t_sys_monitor_host_history; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_monitor_host_history (
+    id bigint NOT NULL,
+    host_id character varying(100) NOT NULL,
+    sample_bucket timestamp with time zone NOT NULL,
+    sample_time timestamp with time zone NOT NULL,
+    cpu_usage numeric(8,6),
+    load_average numeric(12,4),
+    memory_total bigint,
+    memory_used bigint,
+    swap_total bigint,
+    swap_used bigint,
+    filesystem_total bigint,
+    filesystem_used bigint,
+    disk_read_rate numeric(20,2),
+    disk_write_rate numeric(20,2),
+    network_receive_rate numeric(20,2),
+    network_transmit_rate numeric(20,2),
+    worst_filesystem_usage numeric(8,6),
+    worst_mount character varying(500)
+);
+
+
+--
+-- Name: TABLE t_sys_monitor_host_history; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_monitor_host_history IS '主机监控历史';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.host_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.host_id IS '运行主机稳定标识';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.sample_bucket; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.sample_bucket IS '采样时间桶';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.sample_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.sample_time IS '采样时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.cpu_usage; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.cpu_usage IS 'CPU 使用率';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.load_average; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.load_average IS '系统负载均值';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.memory_total; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.memory_total IS '物理内存总字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.memory_used; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.memory_used IS '物理内存已用字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.swap_total; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.swap_total IS '交换区总字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.swap_used; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.swap_used IS '交换区已用字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.filesystem_total; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.filesystem_total IS '文件系统总字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.filesystem_used; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.filesystem_used IS '文件系统已用字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.disk_read_rate; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.disk_read_rate IS '磁盘每秒读取字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.disk_write_rate; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.disk_write_rate IS '磁盘每秒写入字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.network_receive_rate; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.network_receive_rate IS '网络每秒接收字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.network_transmit_rate; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.network_transmit_rate IS '网络每秒发送字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.worst_filesystem_usage; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.worst_filesystem_usage IS '最高使用率文件系统使用率';
+
+
+--
+-- Name: COLUMN t_sys_monitor_host_history.worst_mount; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_host_history.worst_mount IS '最高使用率挂载点';
+
+
+--
+-- Name: t_sys_monitor_instance; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_monitor_instance (
+    id bigint NOT NULL,
+    instance_id character varying(100) NOT NULL,
+    host_id character varying(100) NOT NULL,
+    application_name character varying(200) NOT NULL,
+    application_version character varying(100),
+    first_seen_time timestamp with time zone NOT NULL,
+    last_seen_time timestamp with time zone NOT NULL,
+    last_start_time timestamp with time zone NOT NULL,
+    lifecycle character varying(20) DEFAULT 'ACTIVE'::character varying NOT NULL,
+    retired_at timestamp with time zone,
+    CONSTRAINT ck_monitor_instance_lifecycle CHECK (((lifecycle)::text = ANY ((ARRAY['ACTIVE'::character varying, 'RETIRED'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_monitor_instance; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_monitor_instance IS '应用实例监控目录';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance.instance_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance.instance_id IS '应用实例稳定标识';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance.host_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance.host_id IS '运行主机稳定标识';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance.application_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance.application_name IS '应用名称';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance.application_version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance.application_version IS '应用版本';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance.first_seen_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance.first_seen_time IS '首次发现时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance.last_seen_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance.last_seen_time IS '最后发现时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance.last_start_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance.last_start_time IS '最后启动时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance.lifecycle; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance.lifecycle IS '实例生命周期：ACTIVE/RETIRED';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance.retired_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance.retired_at IS '退役时间';
+
+
+--
+-- Name: t_sys_monitor_instance_history; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_monitor_instance_history (
+    id bigint NOT NULL,
+    instance_id character varying(100) NOT NULL,
+    host_id character varying(100) NOT NULL,
+    sample_bucket timestamp with time zone NOT NULL,
+    sample_time timestamp with time zone NOT NULL,
+    process_cpu numeric(8,6),
+    heap_used bigint,
+    heap_max bigint,
+    thread_count integer,
+    blocked_thread_count integer,
+    gc_count bigint,
+    gc_duration_ms bigint,
+    http_request_rate numeric(20,4),
+    http_4xx_rate numeric(20,4),
+    http_5xx_rate numeric(20,4),
+    http_p95_ms numeric(20,4),
+    http_p99_ms numeric(20,4),
+    db_active integer,
+    db_max integer,
+    db_waiting integer,
+    health_status character varying(30),
+    database_status character varying(30),
+    redis_status character varying(30)
+);
+
+
+--
+-- Name: TABLE t_sys_monitor_instance_history; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_monitor_instance_history IS '应用实例监控历史';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.instance_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.instance_id IS '应用实例稳定标识';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.host_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.host_id IS '运行主机稳定标识';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.sample_bucket; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.sample_bucket IS '采样时间桶';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.sample_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.sample_time IS '采样时间';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.process_cpu; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.process_cpu IS 'JVM 进程 CPU 使用率';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.heap_used; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.heap_used IS 'JVM 堆内存已用字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.heap_max; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.heap_max IS 'JVM 堆内存上限字节数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.thread_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.thread_count IS 'JVM 线程数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.blocked_thread_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.blocked_thread_count IS 'JVM 阻塞线程数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.gc_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.gc_count IS 'GC 累计次数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.gc_duration_ms; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.gc_duration_ms IS 'GC 累计耗时毫秒数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.http_request_rate; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.http_request_rate IS 'HTTP 每秒请求数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.http_4xx_rate; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.http_4xx_rate IS 'HTTP 4xx 每秒请求数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.http_5xx_rate; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.http_5xx_rate IS 'HTTP 5xx 每秒请求数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.http_p95_ms; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.http_p95_ms IS 'HTTP P95 耗时毫秒数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.http_p99_ms; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.http_p99_ms IS 'HTTP P99 耗时毫秒数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.db_active; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.db_active IS '数据库连接池活跃连接数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.db_max; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.db_max IS '数据库连接池最大连接数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.db_waiting; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.db_waiting IS '数据库连接池等待线程数';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.health_status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.health_status IS '应用健康状态';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.database_status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.database_status IS '数据库健康状态';
+
+
+--
+-- Name: COLUMN t_sys_monitor_instance_history.redis_status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_monitor_instance_history.redis_status IS 'Redis 健康状态';
+
+
+--
 -- Name: t_sys_number_counter; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7082,7 +8292,7 @@ CREATE TABLE public.t_sys_param (
     update_user bigint,
     is_system boolean DEFAULT false NOT NULL,
     version integer DEFAULT 0 NOT NULL,
-    app_id bigint
+    feature_id bigint
 );
 
 
@@ -7171,10 +8381,10 @@ COMMENT ON COLUMN public.t_sys_param.version IS '乐观锁版本号';
 
 
 --
--- Name: COLUMN t_sys_param.app_id; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN t_sys_param.feature_id; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_sys_param.app_id IS '所属应用ID';
+COMMENT ON COLUMN public.t_sys_param.feature_id IS '所属功能ID；为空表示全局参数';
 
 
 --
@@ -7286,7 +8496,8 @@ CREATE TABLE public.t_sys_role (
     create_user bigint,
     update_user bigint,
     version integer DEFAULT 0 NOT NULL,
-    description character varying(500)
+    description character varying(500),
+    default_data_scope character varying(32) DEFAULT 'SELF'::character varying NOT NULL
 );
 
 
@@ -7358,6 +8569,40 @@ COMMENT ON COLUMN public.t_sys_role.version IS '乐观锁版本号';
 --
 
 COMMENT ON COLUMN public.t_sys_role.description IS '描述';
+
+
+--
+-- Name: t_sys_role_data_scope; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_role_data_scope (
+    id bigint NOT NULL,
+    role_id bigint NOT NULL,
+    resource_type character varying(128) NOT NULL,
+    action character varying(32),
+    scope_type character varying(32) NOT NULL,
+    create_time timestamp without time zone,
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    CONSTRAINT ck_role_data_scope_action CHECK (((action IS NULL) OR ((action)::text ~ '^[A-Z][A-Z0-9_]*$'::text))),
+    CONSTRAINT ck_role_data_scope_type CHECK (((scope_type)::text = ANY ((ARRAY['ALL'::character varying, 'ORG_AND_CHILDREN'::character varying, 'ORG'::character varying, 'SELF'::character varying, 'CUSTOM_ORGS'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_role_data_scope_org; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_role_data_scope_org (
+    id bigint NOT NULL,
+    scope_rule_id bigint NOT NULL,
+    org_id bigint NOT NULL,
+    create_time timestamp without time zone,
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint
+);
 
 
 --
@@ -12344,6 +13589,30 @@ ALTER TABLE ONLY public.t_sys_attachment_config
 
 
 --
+-- Name: t_sys_email_account pk_sys_email_account; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_email_account
+    ADD CONSTRAINT pk_sys_email_account PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_email_attempt pk_sys_email_attempt; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_email_attempt
+    ADD CONSTRAINT pk_sys_email_attempt PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_email_task pk_sys_email_task; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_email_task
+    ADD CONSTRAINT pk_sys_email_task PRIMARY KEY (id);
+
+
+--
 -- Name: t_sys_job_log pk_sys_job_log; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13424,6 +14693,70 @@ ALTER TABLE ONLY public.t_sys_menu
 
 
 --
+-- Name: t_sys_monitor_alert_incident t_sys_monitor_alert_incident_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_alert_incident
+    ADD CONSTRAINT t_sys_monitor_alert_incident_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_monitor_alert_notification t_sys_monitor_alert_notification_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_alert_notification
+    ADD CONSTRAINT t_sys_monitor_alert_notification_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_monitor_alert_rule t_sys_monitor_alert_rule_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_alert_rule
+    ADD CONSTRAINT t_sys_monitor_alert_rule_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_monitor_alert_rule_recipient t_sys_monitor_alert_rule_recipient_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_alert_rule_recipient
+    ADD CONSTRAINT t_sys_monitor_alert_rule_recipient_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_monitor_host_history t_sys_monitor_host_history_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_host_history
+    ADD CONSTRAINT t_sys_monitor_host_history_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_monitor_host t_sys_monitor_host_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_host
+    ADD CONSTRAINT t_sys_monitor_host_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_monitor_instance_history t_sys_monitor_instance_history_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_instance_history
+    ADD CONSTRAINT t_sys_monitor_instance_history_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_monitor_instance t_sys_monitor_instance_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_instance
+    ADD CONSTRAINT t_sys_monitor_instance_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: t_sys_operate_log_default t_sys_operate_log_default_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13837,6 +15170,22 @@ ALTER TABLE ONLY public.t_sys_param
 
 ALTER TABLE ONLY public.t_sys_permission
     ADD CONSTRAINT t_sys_permission_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_role_data_scope_org t_sys_role_data_scope_org_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_role_data_scope_org
+    ADD CONSTRAINT t_sys_role_data_scope_org_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_role_data_scope t_sys_role_data_scope_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_role_data_scope
+    ADD CONSTRAINT t_sys_role_data_scope_pkey PRIMARY KEY (id);
 
 
 --
@@ -14680,6 +16029,22 @@ ALTER TABLE ONLY public.t_sys_basic_data_category
 
 
 --
+-- Name: t_sys_role_data_scope_org uk_role_data_scope_org; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_role_data_scope_org
+    ADD CONSTRAINT uk_role_data_scope_org UNIQUE (scope_rule_id, org_id);
+
+
+--
+-- Name: t_sys_role_data_scope uk_role_data_scope_rule; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_role_data_scope
+    ADD CONSTRAINT uk_role_data_scope_rule UNIQUE NULLS NOT DISTINCT (role_id, resource_type, action);
+
+
+--
 -- Name: t_scm_purchase_requisition uk_scm_purchase_requisition_org_number; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14701,6 +16066,30 @@ ALTER TABLE ONLY public.t_sys_app
 
 ALTER TABLE ONLY public.t_sys_domain
     ADD CONSTRAINT uk_sys_domain_number UNIQUE (number);
+
+
+--
+-- Name: t_sys_email_account uk_sys_email_account_number; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_email_account
+    ADD CONSTRAINT uk_sys_email_account_number UNIQUE (number);
+
+
+--
+-- Name: t_sys_email_attempt uk_sys_email_attempt_no; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_email_attempt
+    ADD CONSTRAINT uk_sys_email_attempt_no UNIQUE (task_id, attempt_no);
+
+
+--
+-- Name: t_sys_email_task uk_sys_email_task_idempotency; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_email_task
+    ADD CONSTRAINT uk_sys_email_task_idempotency UNIQUE (idempotency_key);
 
 
 --
@@ -14823,6 +16212,20 @@ CREATE INDEX idx_biz_attachment_att ON public.t_sys_biz_attachment USING btree (
 --
 
 CREATE INDEX idx_biz_attachment_biz ON public.t_sys_biz_attachment USING btree (biz_type, biz_id);
+
+
+--
+-- Name: idx_purchase_requisition_scope_applicant; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_purchase_requisition_scope_applicant ON public.t_scm_purchase_requisition USING btree (applicant_id, create_time DESC, id DESC);
+
+
+--
+-- Name: idx_purchase_requisition_scope_org; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_purchase_requisition_scope_org ON public.t_scm_purchase_requisition USING btree (org_id, create_time DESC, id DESC);
 
 
 --
@@ -14966,6 +16369,20 @@ CREATE INDEX idx_qrtz_t_state ON public.qrtz_triggers USING btree (sched_name, t
 
 
 --
+-- Name: idx_role_data_scope_org_org; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_role_data_scope_org_org ON public.t_sys_role_data_scope_org USING btree (org_id);
+
+
+--
+-- Name: idx_role_data_scope_role; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_role_data_scope_role ON public.t_sys_role_data_scope USING btree (role_id);
+
+
+--
 -- Name: idx_scm_purchase_requisition_entry_parent_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -14998,6 +16415,20 @@ CREATE INDEX idx_sys_attachment_cleanup ON public.t_sys_attachment USING btree (
 --
 
 CREATE INDEX idx_sys_domain_num ON public.t_sys_domain USING btree (number);
+
+
+--
+-- Name: idx_sys_email_task_account; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_email_task_account ON public.t_sys_email_task USING btree (account_id, create_time DESC);
+
+
+--
+-- Name: idx_sys_email_task_dispatch; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_email_task_dispatch ON public.t_sys_email_task USING btree (status, next_attempt_time, create_time);
 
 
 --
@@ -15148,6 +16579,55 @@ CREATE INDEX idx_sys_menu_perm ON public.t_sys_menu USING btree (permission_id);
 
 
 --
+-- Name: idx_sys_monitor_alert_incident_scope; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_monitor_alert_incident_scope ON public.t_sys_monitor_alert_incident USING btree (scope_type, scope_id, started_at DESC);
+
+
+--
+-- Name: idx_sys_monitor_alert_incident_status_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_monitor_alert_incident_status_time ON public.t_sys_monitor_alert_incident USING btree (status, last_evaluated_at DESC);
+
+
+--
+-- Name: idx_sys_monitor_alert_notification_dispatch; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_monitor_alert_notification_dispatch ON public.t_sys_monitor_alert_notification USING btree (status, next_attempt_time);
+
+
+--
+-- Name: idx_sys_monitor_host_history_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_monitor_host_history_time ON public.t_sys_monitor_host_history USING btree (host_id, sample_time DESC);
+
+
+--
+-- Name: idx_sys_monitor_instance_history_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_monitor_instance_history_time ON public.t_sys_monitor_instance_history USING btree (instance_id, sample_time DESC);
+
+
+--
+-- Name: idx_sys_monitor_instance_host; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_monitor_instance_host ON public.t_sys_monitor_instance USING btree (host_id);
+
+
+--
+-- Name: idx_sys_monitor_instance_lifecycle; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_monitor_instance_lifecycle ON public.t_sys_monitor_instance USING btree (lifecycle, host_id);
+
+
+--
 -- Name: idx_sys_number_rule_reference; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15211,10 +16691,10 @@ CREATE INDEX idx_sys_org_parent_sort ON public.t_sys_org USING btree (parent_id,
 
 
 --
--- Name: idx_sys_param_app_id; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_sys_param_feature_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_sys_param_app_id ON public.t_sys_param USING btree (app_id);
+CREATE INDEX idx_sys_param_feature_id ON public.t_sys_param USING btree (feature_id);
 
 
 --
@@ -21532,10 +23012,80 @@ CREATE UNIQUE INDEX uk_sys_attachment_object_key ON public.t_sys_attachment USIN
 
 
 --
+-- Name: uk_sys_email_account_default; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_email_account_default ON public.t_sys_email_account USING btree (default_account) WHERE default_account;
+
+
+--
 -- Name: uk_sys_file_config_singleton; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX uk_sys_file_config_singleton ON public.t_sys_file_config USING btree ((true));
+
+
+--
+-- Name: uk_sys_monitor_alert_incident_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_monitor_alert_incident_active ON public.t_sys_monitor_alert_incident USING btree (rule_id, scope_type, scope_id) WHERE ((status)::text = ANY ((ARRAY['PENDING'::character varying, 'FIRING'::character varying])::text[]));
+
+
+--
+-- Name: uk_sys_monitor_alert_incident_cycle; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_monitor_alert_incident_cycle ON public.t_sys_monitor_alert_incident USING btree (rule_id, scope_type, scope_id, cycle_key);
+
+
+--
+-- Name: uk_sys_monitor_alert_notification_sequence; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_monitor_alert_notification_sequence ON public.t_sys_monitor_alert_notification USING btree (incident_id, notification_type, sequence_no);
+
+
+--
+-- Name: uk_sys_monitor_alert_recipient; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_monitor_alert_recipient ON public.t_sys_monitor_alert_rule_recipient USING btree (rule_id, user_id);
+
+
+--
+-- Name: uk_sys_monitor_alert_rule_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_monitor_alert_rule_code ON public.t_sys_monitor_alert_rule USING btree (rule_code);
+
+
+--
+-- Name: uk_sys_monitor_host_history_bucket; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_monitor_host_history_bucket ON public.t_sys_monitor_host_history USING btree (host_id, sample_bucket);
+
+
+--
+-- Name: uk_sys_monitor_host_host_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_monitor_host_host_id ON public.t_sys_monitor_host USING btree (host_id);
+
+
+--
+-- Name: uk_sys_monitor_instance_history_bucket; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_monitor_instance_history_bucket ON public.t_sys_monitor_instance_history USING btree (instance_id, sample_bucket);
+
+
+--
+-- Name: uk_sys_monitor_instance_instance_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_monitor_instance_instance_id ON public.t_sys_monitor_instance USING btree (instance_id);
 
 
 --
@@ -29487,6 +31037,38 @@ ALTER TABLE ONLY public.t_sys_basic_data_item
 
 
 --
+-- Name: t_sys_monitor_alert_incident fk_monitor_alert_incident_rule; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_alert_incident
+    ADD CONSTRAINT fk_monitor_alert_incident_rule FOREIGN KEY (rule_id) REFERENCES public.t_sys_monitor_alert_rule(id);
+
+
+--
+-- Name: t_sys_monitor_alert_notification fk_monitor_alert_notification_incident; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_alert_notification
+    ADD CONSTRAINT fk_monitor_alert_notification_incident FOREIGN KEY (incident_id) REFERENCES public.t_sys_monitor_alert_incident(id);
+
+
+--
+-- Name: t_sys_monitor_alert_rule_recipient fk_monitor_alert_recipient_rule; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_alert_rule_recipient
+    ADD CONSTRAINT fk_monitor_alert_recipient_rule FOREIGN KEY (rule_id) REFERENCES public.t_sys_monitor_alert_rule(id);
+
+
+--
+-- Name: t_sys_monitor_alert_rule_recipient fk_monitor_alert_recipient_user; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_monitor_alert_rule_recipient
+    ADD CONSTRAINT fk_monitor_alert_recipient_user FOREIGN KEY (user_id) REFERENCES public.t_sys_user(id);
+
+
+--
 -- Name: t_scm_purchase_requisition fk_scm_purchase_requisition_applicant; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -29516,6 +31098,30 @@ ALTER TABLE ONLY public.t_scm_purchase_requisition
 
 ALTER TABLE ONLY public.t_sys_app
     ADD CONSTRAINT fk_sys_app_domain FOREIGN KEY (domain_id) REFERENCES public.t_sys_domain(id);
+
+
+--
+-- Name: t_sys_email_attempt fk_sys_email_attempt_task; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_email_attempt
+    ADD CONSTRAINT fk_sys_email_attempt_task FOREIGN KEY (task_id) REFERENCES public.t_sys_email_task(id);
+
+
+--
+-- Name: t_sys_email_task fk_sys_email_task_account; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_email_task
+    ADD CONSTRAINT fk_sys_email_task_account FOREIGN KEY (account_id) REFERENCES public.t_sys_email_account(id);
+
+
+--
+-- Name: t_sys_email_task fk_sys_email_task_source; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_email_task
+    ADD CONSTRAINT fk_sys_email_task_source FOREIGN KEY (source_task_id) REFERENCES public.t_sys_email_task(id);
 
 
 --
@@ -29575,19 +31181,11 @@ ALTER TABLE ONLY public.t_sys_number_rule_segment
 
 
 --
--- Name: t_sys_org fk_sys_org_parent; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.t_sys_org
-    ADD CONSTRAINT fk_sys_org_parent FOREIGN KEY (parent_id) REFERENCES public.t_sys_org(id);
-
-
---
--- Name: t_sys_param fk_sys_param_app; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: t_sys_param fk_sys_param_feature; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.t_sys_param
-    ADD CONSTRAINT fk_sys_param_app FOREIGN KEY (app_id) REFERENCES public.t_sys_app(id);
+    ADD CONSTRAINT fk_sys_param_feature FOREIGN KEY (feature_id) REFERENCES public.t_sys_feature(id);
 
 
 --
@@ -29748,6 +31346,30 @@ ALTER TABLE ONLY public.qrtz_simprop_triggers
 
 ALTER TABLE ONLY public.qrtz_triggers
     ADD CONSTRAINT qrtz_triggers_sched_name_job_name_job_group_fkey FOREIGN KEY (sched_name, job_name, job_group) REFERENCES public.qrtz_job_details(sched_name, job_name, job_group);
+
+
+--
+-- Name: t_sys_role_data_scope_org t_sys_role_data_scope_org_org_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_role_data_scope_org
+    ADD CONSTRAINT t_sys_role_data_scope_org_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.t_sys_org(id);
+
+
+--
+-- Name: t_sys_role_data_scope_org t_sys_role_data_scope_org_scope_rule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_role_data_scope_org
+    ADD CONSTRAINT t_sys_role_data_scope_org_scope_rule_id_fkey FOREIGN KEY (scope_rule_id) REFERENCES public.t_sys_role_data_scope(id) ON DELETE CASCADE;
+
+
+--
+-- Name: t_sys_role_data_scope t_sys_role_data_scope_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_role_data_scope
+    ADD CONSTRAINT t_sys_role_data_scope_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.t_sys_role(id) ON DELETE CASCADE;
 
 
 --

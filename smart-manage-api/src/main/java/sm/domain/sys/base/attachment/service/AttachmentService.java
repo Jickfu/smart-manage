@@ -21,6 +21,7 @@ import sm.system.storage.FileStoreResult;
 import sm.system.helper.CurrentOperatorProvider;
 import sm.system.resource.BusinessResourceAction;
 import sm.system.resource.BusinessResourceRegistry;
+import sm.system.util.TransactionUtil;
 import sm.domain.sys.base.attachmentconfig.service.AttachmentConfigService;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.model.entity.UserEntity;
@@ -109,19 +110,19 @@ public class AttachmentService implements AttachmentGateway {
     @BizLog("删除附件")
     public void delete(Long id, String uploadSessionId) throws IOException {
         requireAttachmentAccess(id, BusinessResourceAction.DELETE, uploadSessionId);
-        deleteStoredObject(txService.markPendingDelete(id));
+        deleteStoredObjectAfterCommit(txService.markPendingDelete(id));
     }
 
     /** 已完成自身权限和状态校验的业务命令内部清理附件。 */
     public void deleteForAggregate(Long id) throws IOException {
-        deleteStoredObject(txService.markPendingDelete(id));
+        deleteStoredObjectAfterCommit(txService.markPendingDelete(id));
     }
 
     /** 已完成主聚合删除权限校验后，清理其全部正式附件。 */
     @Override
     public void deleteForAggregate(String bizType, String bizId) throws IOException {
         for (AttachmentEntity entity : mapper.selectByBiz(bizType, bizId)) {
-            deleteStoredObject(txService.markPendingDelete(entity.getId()));
+            deleteStoredObjectAfterCommit(txService.markPendingDelete(entity.getId()));
         }
     }
 
@@ -362,6 +363,11 @@ public class AttachmentService implements AttachmentGateway {
                     target.attachmentId(), target.objectKey(), exception);
             return false;
         }
+    }
+
+    /** 当前事务回滚时不触碰对象存储；无外层事务时立即执行，保持独立删除入口的既有语义。 */
+    private void deleteStoredObjectAfterCommit(AttachmentDeletionTarget target) {
+        TransactionUtil.afterCommit(() -> deleteStoredObject(target));
     }
 
     private void deleteUploadForCompensation(
