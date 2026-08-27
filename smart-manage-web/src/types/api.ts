@@ -45,6 +45,7 @@ export interface UserInfoVO {
   currentOrgId: string;
   currentOrgName: string;
   companyName: string;
+  rootOrgName: string;
   assignments: UserAssignmentVO[];
 }
 

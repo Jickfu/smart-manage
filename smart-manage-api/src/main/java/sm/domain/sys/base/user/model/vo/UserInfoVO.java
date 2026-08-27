@@ -61,6 +61,9 @@ public class UserInfoVO {
 	@Schema(description = "当前组织所属公司名称")
 	private String companyName;
 
+	@Schema(description = "当前组织所在组织树的绝对顶层组织名称")
+	private String rootOrgName;
+
 	private List<UserAssignmentVO> assignments;
 
 }

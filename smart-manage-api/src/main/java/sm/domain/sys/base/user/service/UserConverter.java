@@ -22,6 +22,7 @@ interface UserConverter {
     @Mapping(target = "currentOrgId", ignore = true)
     @Mapping(target = "currentOrgName", ignore = true)
     @Mapping(target = "companyName", ignore = true)
+    @Mapping(target = "rootOrgName", ignore = true)
     UserInfoVO toInfoVO(UserEntity entity);
 
     @Mapping(target = "assignments", ignore = true)

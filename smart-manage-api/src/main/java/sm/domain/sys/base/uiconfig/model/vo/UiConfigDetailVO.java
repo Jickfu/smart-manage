@@ -29,4 +29,24 @@ public class UiConfigDetailVO {
     private Long loginLogoAttachmentId;
 
     private Long headerLogoAttachmentId;
+
+    private Boolean watermarkEnabled;
+
+    private String watermarkContent;
+
+    private Boolean watermarkShowName;
+
+    private Boolean watermarkShowPhone;
+
+    private Boolean watermarkShowEmail;
+
+    private Boolean watermarkShowNumber;
+
+    private Boolean watermarkShowRootOrg;
+
+    private Integer watermarkGapX;
+
+    private Integer watermarkGapY;
+
+    private Integer watermarkFontSize;
 }

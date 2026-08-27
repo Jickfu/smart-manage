@@ -1,3 +1,7 @@
 .sm-ui-config-form {
   min-height: 100%;
 }
+
+.sm-ui-config-watermark-content {
+  resize: none;
+}

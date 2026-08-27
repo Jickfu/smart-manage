@@ -193,18 +193,23 @@ public class UserProfileService {
         result.setAssignments(availableAssignments);
         result.setCurrentOrgId(currentOrganization.getId());
         result.setCurrentOrgName(currentOrganization.getName());
-        result.setCompanyName(resolveCompanyName(currentOrganization));
+        assembleOrganizationNames(result, currentOrganization);
     }
 
-    private String resolveCompanyName(OrgEntity organization) {
+    /** 一次向上遍历同时解析最近公司和组织树绝对顶层，避免为两个名称重复查询父链。 */
+    private void assembleOrganizationNames(UserInfoVO result, OrgEntity organization) {
         OrgEntity current = organization;
-        String highestName = organization.getName();
+        String rootOrganizationName = organization.getName();
+        String companyName = null;
         while (current != null) {
-            highestName = current.getName();
-            if (OrgType.COMPANY.equals(current.getOrgType())) return current.getName();
+            rootOrganizationName = current.getName();
+            if (companyName == null && OrgType.COMPANY.equals(current.getOrgType())) {
+                companyName = current.getName();
+            }
             current = current.getParentId() == null ? null : orgMapper.selectById(current.getParentId());
         }
-        return highestName;
+        result.setCompanyName(companyName == null ? rootOrganizationName : companyName);
+        result.setRootOrgName(rootOrganizationName);
     }
 
     private String avatarUrl(Long userId, Long attachmentId) {

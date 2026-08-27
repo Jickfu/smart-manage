@@ -50,6 +50,32 @@ public class UiConfigEntity extends BaseEntity {
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Long headerLogoAttachmentId;
 
+    /** 是否启用登录后主应用水印 */
+    private Boolean watermarkEnabled;
+
+    /** 水印固定内容 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String watermarkContent;
+
+    private Boolean watermarkShowName;
+
+    private Boolean watermarkShowPhone;
+
+    private Boolean watermarkShowEmail;
+
+    private Boolean watermarkShowNumber;
+
+    private Boolean watermarkShowRootOrg;
+
+    /** 水印水平间距（像素） */
+    private Integer watermarkGapX;
+
+    /** 水印垂直间距（像素） */
+    private Integer watermarkGapY;
+
+    /** 水印字体大小（像素） */
+    private Integer watermarkFontSize;
+
     @Version
     private Integer version;
 }

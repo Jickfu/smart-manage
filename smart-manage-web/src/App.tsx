@@ -13,6 +13,7 @@ import '@/domain/common/registry/registry.gen';
 import { AppErrorBoundary } from '@/pages/errors/AppErrorBoundary';
 import { OperationConfirmProvider } from '@/domain/common/component/OperationConfirmProvider';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
+import { AuthenticatedWatermark } from '@/layouts/AuthenticatedWatermark';
 
 const UNAUTHORIZED_CODE = 100401;
 
@@ -65,6 +66,7 @@ export default function App() {
           currentOrgId: String(info.currentOrgId),
           currentOrgName: info.currentOrgName,
           companyName: info.companyName,
+          rootOrgName: info.rootOrgName,
           assignments: info.assignments.map((assignment) => ({
             ...assignment,
             id: String(assignment.id),
@@ -130,7 +132,9 @@ export default function App() {
           <OperationConfirmProvider>
             <SecurityErrorNotifier />
             <AppErrorBoundary>
-              <RouterProvider router={router} />
+              <AuthenticatedWatermark>
+                <RouterProvider router={router} />
+              </AuthenticatedWatermark>
             </AppErrorBoundary>
           </OperationConfirmProvider>
         </AntApp>

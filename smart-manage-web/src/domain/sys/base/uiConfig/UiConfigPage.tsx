@@ -1,6 +1,6 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useRef, useState } from 'react';
-import { Form, Input } from 'antd';
+import { Form, Input, InputNumber, Select, Switch } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { activeUiConfigQueryKey } from '@/api/uiConfig';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -16,6 +16,8 @@ import { uiConfigAccess } from './permissions';
 import type { UiConfigDetail } from './types';
 import './UiConfigPage.css';
 
+type WatermarkField = 'NAME' | 'PHONE' | 'EMAIL' | 'NUMBER' | 'ROOT_ORG';
+
 interface UiConfigFormValues {
   pageTitle: string;
   systemName: string;
@@ -25,7 +27,21 @@ interface UiConfigFormValues {
   loginLogo: string | null;
   headerLogoAttachmentId: string | null;
   headerLogo: string | null;
+  watermarkEnabled: boolean;
+  watermarkContent: string;
+  watermarkFields: WatermarkField[];
+  watermarkGapX: number;
+  watermarkGapY: number;
+  watermarkFontSize: number;
 }
+
+const watermarkFieldOptions = [
+  { label: '当前用户姓名', value: 'NAME' },
+  { label: '手机号（脱敏）', value: 'PHONE' },
+  { label: '邮箱（脱敏）', value: 'EMAIL' },
+  { label: '工号', value: 'NUMBER' },
+  { label: '最根级组织名称', value: 'ROOT_ORG' },
+] satisfies Array<{ label: string; value: WatermarkField }>;
 
 const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
   const feedback = useOperationFeedback();
@@ -58,6 +74,18 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
       loginLogo: query.data.loginLogo ?? null,
       headerLogoAttachmentId: query.data.headerLogoAttachmentId ?? null,
       headerLogo: query.data.headerLogo ?? null,
+      watermarkEnabled: query.data.watermarkEnabled ?? false,
+      watermarkContent: query.data.watermarkContent ?? '',
+      watermarkFields: [
+        query.data.watermarkShowName ? 'NAME' : null,
+        query.data.watermarkShowPhone ? 'PHONE' : null,
+        query.data.watermarkShowEmail ? 'EMAIL' : null,
+        query.data.watermarkShowNumber ? 'NUMBER' : null,
+        query.data.watermarkShowRootOrg ? 'ROOT_ORG' : null,
+      ].filter((field): field is WatermarkField => field !== null),
+      watermarkGapX: query.data.watermarkGapX ?? 100,
+      watermarkGapY: query.data.watermarkGapY ?? 100,
+      watermarkFontSize: query.data.watermarkFontSize ?? 16,
     });
   }, [form, query.data]);
   const saveMutation = useCommandMutation({
@@ -70,6 +98,16 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
         loginBannerAttachmentId: values.loginBannerAttachmentId,
         loginLogoAttachmentId: values.loginLogoAttachmentId,
         headerLogoAttachmentId: values.headerLogoAttachmentId,
+        watermarkEnabled: values.watermarkEnabled,
+        watermarkContent: values.watermarkContent.trim() || null,
+        watermarkShowName: values.watermarkFields.includes('NAME'),
+        watermarkShowPhone: values.watermarkFields.includes('PHONE'),
+        watermarkShowEmail: values.watermarkFields.includes('EMAIL'),
+        watermarkShowNumber: values.watermarkFields.includes('NUMBER'),
+        watermarkShowRootOrg: values.watermarkFields.includes('ROOT_ORG'),
+        watermarkGapX: values.watermarkGapX,
+        watermarkGapY: values.watermarkGapY,
+        watermarkFontSize: values.watermarkFontSize,
         attachmentUploadSessions: uploadSessions.current,
       };
       await uiConfigApi.save(payload);
@@ -172,7 +210,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
           <Input />
         </Form.Item>
         <EditSectionCollapse
-          defaultActiveKeys={['basic', 'images']}
+          defaultActiveKeys={['basic', 'images', 'watermark']}
           items={[
             {
               key: 'basic',
@@ -231,6 +269,107 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
                     headerLogoAttachmentId,
                     headerLogo,
                   )}
+                </FormFieldGrid>
+              ),
+            },
+            {
+              key: 'watermark',
+              label: '水印配置',
+              children: (
+                <FormFieldGrid>
+                  <FormFieldCell>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      name="watermarkEnabled"
+                      label="启用水印"
+                      valuePropName="checked"
+                    >
+                      <Switch checkedChildren="开启" unCheckedChildren="关闭" />
+                    </Form.Item>
+                  </FormFieldCell>
+                  <FormFieldCell>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      name="watermarkFontSize"
+                      label="字体大小"
+                      rules={[{ required: true, message: '水印字体大小不能为空' }]}
+                    >
+                      <InputNumber
+                        className="sm-edit-control-full"
+                        min={12}
+                        max={32}
+                        precision={0}
+                        suffix="px"
+                        variant="underlined"
+                      />
+                    </Form.Item>
+                  </FormFieldCell>
+                  <FormFieldCell columnSpan={2}>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      name="watermarkContent"
+                      label="固定内容"
+                      rules={[{ max: 200, message: '水印固定内容不能超过200个字符' }]}
+                    >
+                      <Input.TextArea
+                        className="sm-ui-config-watermark-content"
+                        variant="underlined"
+                        maxLength={200}
+                        showCount
+                        placeholder="可选；固定内容与用户信息分行显示"
+                      />
+                    </Form.Item>
+                  </FormFieldCell>
+                  <FormFieldCell columnSpan={2}>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      name="watermarkFields"
+                      label="用户信息"
+                      extra="手机号和邮箱固定脱敏；未设置的用户信息会自动忽略"
+                    >
+                      <Select
+                        mode="multiple"
+                        allowClear
+                        variant="underlined"
+                        placeholder="请选择需要显示的用户信息"
+                        options={watermarkFieldOptions}
+                      />
+                    </Form.Item>
+                  </FormFieldCell>
+                  <FormFieldCell>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      name="watermarkGapX"
+                      label="水平间距"
+                      rules={[{ required: true, message: '水印水平间距不能为空' }]}
+                    >
+                      <InputNumber
+                        className="sm-edit-control-full"
+                        min={20}
+                        max={500}
+                        precision={0}
+                        suffix="px"
+                        variant="underlined"
+                      />
+                    </Form.Item>
+                  </FormFieldCell>
+                  <FormFieldCell>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      name="watermarkGapY"
+                      label="垂直间距"
+                      rules={[{ required: true, message: '水印垂直间距不能为空' }]}
+                    >
+                      <InputNumber
+                        className="sm-edit-control-full"
+                        min={20}
+                        max={500}
+                        precision={0}
+                        suffix="px"
+                        variant="underlined"
+                      />
+                    </Form.Item>
+                  </FormFieldCell>
                 </FormFieldGrid>
               ),
             },

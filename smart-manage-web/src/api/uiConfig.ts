@@ -5,6 +5,16 @@ export interface ActiveUiConfig {
   pageTitle?: string;
   systemName?: string;
   headerLogo?: string | null;
+  watermarkEnabled?: boolean;
+  watermarkContent?: string | null;
+  watermarkShowName?: boolean;
+  watermarkShowPhone?: boolean;
+  watermarkShowEmail?: boolean;
+  watermarkShowNumber?: boolean;
+  watermarkShowRootOrg?: boolean;
+  watermarkGapX?: number;
+  watermarkGapY?: number;
+  watermarkFontSize?: number;
 }
 
 export const activeUiConfigQueryKey = ['sys', 'ui-config', 'active'] as const;

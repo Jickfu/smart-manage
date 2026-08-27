@@ -50,6 +50,16 @@ class UiConfigTxService {
         entity.setLoginBannerAttachmentId(form.getLoginBannerAttachmentId());
         entity.setLoginLogoAttachmentId(form.getLoginLogoAttachmentId());
         entity.setHeaderLogoAttachmentId(form.getHeaderLogoAttachmentId());
+        entity.setWatermarkEnabled(form.getWatermarkEnabled());
+        entity.setWatermarkContent(normalizeWatermarkContent(form.getWatermarkContent()));
+        entity.setWatermarkShowName(form.getWatermarkShowName());
+        entity.setWatermarkShowPhone(form.getWatermarkShowPhone());
+        entity.setWatermarkShowEmail(form.getWatermarkShowEmail());
+        entity.setWatermarkShowNumber(form.getWatermarkShowNumber());
+        entity.setWatermarkShowRootOrg(form.getWatermarkShowRootOrg());
+        entity.setWatermarkGapX(form.getWatermarkGapX());
+        entity.setWatermarkGapY(form.getWatermarkGapY());
+        entity.setWatermarkFontSize(form.getWatermarkFontSize());
         if (form.getId() == null) {
             if (mapper.insert(entity) != 1) {
                 throw new BizException(sm.system.response.ResultEnum.PERSISTENCE_ERROR, "新增数据失败");
@@ -60,6 +70,13 @@ class UiConfigTxService {
             }
         }
         return entity.getId();
+    }
+
+    private String normalizeWatermarkContent(String content) {
+        if (content == null || content.isBlank()) {
+            return null;
+        }
+        return content.trim();
     }
 
 }

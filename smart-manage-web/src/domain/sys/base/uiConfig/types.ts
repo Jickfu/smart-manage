@@ -9,6 +9,16 @@ export interface UiConfigDetail {
   loginBannerAttachmentId?: string | null;
   loginLogoAttachmentId?: string | null;
   headerLogoAttachmentId?: string | null;
+  watermarkEnabled?: boolean;
+  watermarkContent?: string | null;
+  watermarkShowName?: boolean;
+  watermarkShowPhone?: boolean;
+  watermarkShowEmail?: boolean;
+  watermarkShowNumber?: boolean;
+  watermarkShowRootOrg?: boolean;
+  watermarkGapX?: number;
+  watermarkGapY?: number;
+  watermarkFontSize?: number;
   attachmentUploadSessions?: Record<string, string>;
 }
 
