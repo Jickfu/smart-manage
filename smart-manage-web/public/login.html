@@ -7,7 +7,7 @@
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-wMCCx79ld7EofZBg4z0n/n0D1QIFv/nix+C2gQyPuQQ='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-A9DvQeVL/qZ8dtfpwLtS7MvN9I12F04KE5fHvsrhPYk='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
     <title>Smart Manage - 登录</title>
     <script src="js/sm2.js"></script>
@@ -139,6 +139,83 @@
               <button id="changePasswordBtn" class="sm-login-btn" type="submit">确认修改</button>
               <button id="backToLoginBtn" class="sm-secondary-btn" type="button">返回登录</button>
             </form>
+
+            <form id="emailRecoveryForm" class="sm-form" autocomplete="off" hidden>
+              <div class="sm-input-wrap">
+                <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M3 5h18v14H3V5Zm0 1 9 7 9-7"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <input
+                  id="recoveryEmail"
+                  class="sm-input"
+                  type="email"
+                  placeholder="完整邮箱"
+                  autocomplete="email"
+                />
+              </div>
+              <button id="sendRecoveryCodeBtn" class="sm-login-btn" type="submit">
+                发送邮箱验证码
+              </button>
+              <div class="sm-recovery-links">
+                <button id="switchPhoneRecoveryBtn" class="sm-link-button" type="button">
+                  通过手机找回
+                </button>
+                <button id="backFromRecoveryBtn" class="sm-link-button" type="button">
+                  &lt; 返回账号登录
+                </button>
+              </div>
+            </form>
+
+            <form id="emailResetForm" class="sm-form" autocomplete="off" hidden>
+              <p id="recoveryEmailHint" class="sm-recovery-hint"></p>
+              <div class="sm-input-wrap">
+                <input
+                  id="recoveryCode"
+                  class="sm-input sm-input--plain"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="6"
+                  placeholder="6位邮箱验证码"
+                  autocomplete="one-time-code"
+                />
+              </div>
+              <div class="sm-input-wrap">
+                <input
+                  id="recoveryNewPassword"
+                  class="sm-input sm-input--plain"
+                  type="password"
+                  placeholder="新密码（至少8位）"
+                  autocomplete="new-password"
+                />
+              </div>
+              <div class="sm-input-wrap">
+                <input
+                  id="recoveryConfirmPassword"
+                  class="sm-input sm-input--plain"
+                  type="password"
+                  placeholder="确认新密码"
+                  autocomplete="new-password"
+                />
+              </div>
+              <button id="resetPasswordByEmailBtn" class="sm-login-btn" type="submit">
+                重置密码
+              </button>
+              <div class="sm-recovery-links">
+                <button id="resendRecoveryCodeBtn" class="sm-link-button" type="button">
+                  重新发送验证码
+                </button>
+                <button id="backFromResetBtn" class="sm-link-button" type="button">
+                  &lt; 返回账号登录
+                </button>
+              </div>
+            </form>
           </div>
         </div>
         <div class="sm-psv"></div>
@@ -208,6 +285,8 @@
       var captchaTemplateImage = new Image();
       var passwordChangeTicket = '';
       var defaultLoginTitle = '';
+      var captchaPurpose = 'login';
+      var recoveryEmail = '';
 
       var loginLogoEl = document.getElementById('loginLogo');
       var loginTitleEl = document.getElementById('loginTitle');
@@ -230,6 +309,19 @@
       var confirmPasswordEl = document.getElementById('confirmPassword');
       var changePasswordBtnEl = document.getElementById('changePasswordBtn');
       var backToLoginBtnEl = document.getElementById('backToLoginBtn');
+      var emailRecoveryFormEl = document.getElementById('emailRecoveryForm');
+      var emailResetFormEl = document.getElementById('emailResetForm');
+      var recoveryEmailEl = document.getElementById('recoveryEmail');
+      var recoveryCodeEl = document.getElementById('recoveryCode');
+      var recoveryNewPasswordEl = document.getElementById('recoveryNewPassword');
+      var recoveryConfirmPasswordEl = document.getElementById('recoveryConfirmPassword');
+      var recoveryEmailHintEl = document.getElementById('recoveryEmailHint');
+      var sendRecoveryCodeBtnEl = document.getElementById('sendRecoveryCodeBtn');
+      var resetPasswordByEmailBtnEl = document.getElementById('resetPasswordByEmailBtn');
+      var switchPhoneRecoveryBtnEl = document.getElementById('switchPhoneRecoveryBtn');
+      var backFromRecoveryBtnEl = document.getElementById('backFromRecoveryBtn');
+      var resendRecoveryCodeBtnEl = document.getElementById('resendRecoveryCodeBtn');
+      var backFromResetBtnEl = document.getElementById('backFromResetBtn');
       var bannerEl = document.getElementById('loginBanner');
 
       /** 获取并校验重定向 URL — 使用 URL 解析器严格校验同源，防止开放重定向攻击 */
@@ -411,7 +503,7 @@
         fetch(API_BASE + '/sys/base/captcha/challenge', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: usernameEl.value.trim() }),
+          body: JSON.stringify({ username: getCaptchaIdentity() }),
         })
           .then(function (res) {
             return res.json();
@@ -440,9 +532,16 @@
           });
       }
 
-      function openCaptchaModal() {
+      function getCaptchaIdentity() {
+        return captchaPurpose === 'email-recovery'
+          ? recoveryEmailEl.value.trim()
+          : usernameEl.value.trim();
+      }
+
+      function openCaptchaModal(purpose) {
+        captchaPurpose = purpose || 'login';
         captchaModalEl.hidden = false;
-        setLoginLoading(true);
+        setCaptchaActionLoading(true);
         loadCaptchaChallenge();
         captchaSliderEl.focus();
       }
@@ -451,7 +550,17 @@
         captchaModalEl.hidden = true;
         captchaChallenge = null;
         resetCaptchaInteraction();
-        setLoginLoading(false);
+        setCaptchaActionLoading(false);
+      }
+
+      function setCaptchaActionLoading(loading) {
+        if (captchaPurpose === 'email-recovery') {
+          sendRecoveryCodeBtnEl.disabled = loading;
+          resendRecoveryCodeBtnEl.disabled = loading;
+          sendRecoveryCodeBtnEl.textContent = loading ? '验证中...' : '发送邮箱验证码';
+        } else {
+          setLoginLoading(loading);
+        }
       }
 
       function pointerPosition(event) {
@@ -519,7 +628,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            username: usernameEl.value.trim(),
+            username: getCaptchaIdentity(),
             challengeId: challenge.challengeId,
             track: {
               backgroundImageWidth: captchaCanvasEl.width,
@@ -544,7 +653,11 @@
             setCaptchaStatus('验证成功', 'success');
             captchaModalEl.hidden = true;
             captchaChallenge = null;
-            submitLogin(result.data.captchaTicket);
+            if (captchaPurpose === 'email-recovery') {
+              submitRecoveryCodeRequest(result.data.captchaTicket);
+            } else {
+              submitLogin(result.data.captchaTicket);
+            }
           })
           .catch(function (error) {
             setCaptchaStatus(error.message || '滑块验证失败，请重试', 'error');
@@ -585,6 +698,8 @@
         defaultLoginTitle = defaultLoginTitle || loginTitleEl.textContent;
         loginTitleEl.textContent = '首次登录修改密码';
         loginFormEl.hidden = true;
+        emailRecoveryFormEl.hidden = true;
+        emailResetFormEl.hidden = true;
         passwordChangeFormEl.hidden = false;
         passwordEl.value = '';
         hideError();
@@ -596,6 +711,8 @@
         newPasswordEl.value = '';
         confirmPasswordEl.value = '';
         passwordChangeFormEl.hidden = true;
+        emailRecoveryFormEl.hidden = true;
+        emailResetFormEl.hidden = true;
         loginFormEl.hidden = false;
         loginTitleEl.textContent = defaultLoginTitle || 'Smart Manage 账号登录';
         if (successMessage) {
@@ -604,6 +721,106 @@
           hideError();
         }
         passwordEl.focus();
+      }
+
+      function showEmailRecoveryForm() {
+        defaultLoginTitle = defaultLoginTitle || loginTitleEl.textContent;
+        loginTitleEl.textContent = '邮箱找回密码';
+        loginFormEl.hidden = true;
+        passwordChangeFormEl.hidden = true;
+        emailResetFormEl.hidden = true;
+        emailRecoveryFormEl.hidden = false;
+        hideError();
+        recoveryEmailEl.focus();
+      }
+
+      function requestRecoveryCode() {
+        var email = recoveryEmailEl.value.trim();
+        if (!email || !recoveryEmailEl.checkValidity()) {
+          showError('请输入有效的完整邮箱');
+          recoveryEmailEl.focus();
+          return;
+        }
+        hideError();
+        openCaptchaModal('email-recovery');
+      }
+
+      function submitRecoveryCodeRequest(captchaTicket) {
+        recoveryEmail = recoveryEmailEl.value.trim();
+        fetch(API_BASE + '/sys/base/login/password/email/code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: recoveryEmail, captchaTicket: captchaTicket }),
+        })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (result) {
+            if (result.code !== 0) throw new Error(result.msg || '验证码发送失败');
+            emailRecoveryFormEl.hidden = true;
+            emailResetFormEl.hidden = false;
+            recoveryEmailHintEl.textContent =
+              '如果账号存在且已绑定该邮箱，6位验证码已发送到 ' +
+              recoveryEmail +
+              '，请在10分钟内完成重置。';
+            showSuccess(result.data || '验证码发送请求已受理');
+            recoveryCodeEl.focus();
+          })
+          .catch(function (error) {
+            showError(error.message || '网络异常，验证码发送失败');
+          })
+          .finally(function () {
+            setCaptchaActionLoading(false);
+          });
+      }
+
+      function resetPasswordByEmail() {
+        var code = recoveryCodeEl.value.trim();
+        var newPassword = recoveryNewPasswordEl.value;
+        var confirmPassword = recoveryConfirmPasswordEl.value;
+        if (!/^\d{6}$/.test(code)) {
+          showError('请输入6位邮箱验证码');
+          recoveryCodeEl.focus();
+          return;
+        }
+        if (newPassword.length < 8) {
+          showError('新密码不能少于8位');
+          recoveryNewPasswordEl.focus();
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          showError('两次输入的密码不一致');
+          recoveryConfirmPasswordEl.focus();
+          return;
+        }
+        resetPasswordByEmailBtnEl.disabled = true;
+        resetPasswordByEmailBtnEl.textContent = '重置中...';
+        fetch(API_BASE + '/sys/base/login/password/email/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: recoveryEmail,
+            code: code,
+            newPassword: sm2.doEncrypt(newPassword, SM2_PUBLIC_KEY, 1),
+          }),
+        })
+          .then(function (res) {
+            return res.json();
+          })
+          .then(function (result) {
+            if (result.code !== 0) throw new Error(result.msg || '密码重置失败');
+            recoveryCodeEl.value = '';
+            recoveryNewPasswordEl.value = '';
+            recoveryConfirmPasswordEl.value = '';
+            showLoginForm('密码重置成功，请使用新密码登录');
+          })
+          .catch(function (error) {
+            showError(error.message || '网络异常，密码重置失败');
+          })
+          .finally(function () {
+            resetPasswordByEmailBtnEl.disabled = false;
+            resetPasswordByEmailBtnEl.textContent = '重置密码';
+          });
       }
 
       function setPasswordChangeLoading(loading) {
@@ -676,7 +893,7 @@
           return;
         }
         hideError();
-        openCaptchaModal();
+        openCaptchaModal('login');
       }
 
       function submitLogin(captchaTicket) {
@@ -718,7 +935,7 @@
             showError('网络异常，登录失败');
           })
           .finally(function () {
-            setLoginLoading(false);
+            setCaptchaActionLoading(false);
           });
       }
 
@@ -738,7 +955,7 @@
       captchaRefreshBtnEl.addEventListener('click', loadCaptchaChallenge);
       errorMsgCloseEl.addEventListener('click', hideError);
       forgotPasswordBtnEl.addEventListener('click', function () {
-        showError('请联系系统管理员重置密码');
+        showEmailRecoveryForm();
       });
       loginFormEl.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -749,6 +966,27 @@
         changePassword();
       });
       backToLoginBtnEl.addEventListener('click', function () {
+        showLoginForm('');
+      });
+      emailRecoveryFormEl.addEventListener('submit', function (event) {
+        event.preventDefault();
+        requestRecoveryCode();
+      });
+      emailResetFormEl.addEventListener('submit', function (event) {
+        event.preventDefault();
+        resetPasswordByEmail();
+      });
+      resendRecoveryCodeBtnEl.addEventListener('click', function () {
+        recoveryEmailEl.value = recoveryEmail;
+        requestRecoveryCode();
+      });
+      switchPhoneRecoveryBtnEl.addEventListener('click', function () {
+        showError('暂不支持通过手机找回密码');
+      });
+      backFromRecoveryBtnEl.addEventListener('click', function () {
+        showLoginForm('');
+      });
+      backFromResetBtnEl.addEventListener('click', function () {
         showLoginForm('');
       });
     </script>

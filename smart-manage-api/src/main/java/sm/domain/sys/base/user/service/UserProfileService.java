@@ -120,6 +120,9 @@ public class UserProfileService {
     @BizLog(value = "修改个人联系方式", recordResponse = false)
     @CacheInvalidate(name = BaseCacheName.USER_INFO, key = "@currentUserContext.getUserId()")
     public void updateCurrentContact(CurrentUserContactForm form) {
+        if ("EMAIL".equals(form.getType())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "邮箱必须通过发送到新地址的验证码完成绑定");
+        }
         String password;
         try {
             password = browserPasswordCipher.decrypt(form.getPassword());

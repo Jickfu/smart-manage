@@ -80,6 +80,10 @@ class EmailTxService {
             throw new BizException(ResultEnum.DATA_CONFLICT, "只有等待发送的邮件可以取消");
         }
         task.setStatus("CANCELLED"); task.setCompletedTime(LocalDateTime.now());
+        if (Boolean.TRUE.equals(task.getSensitiveContent())) {
+            task.setHtmlBodyCipher(null);
+            task.setTextBodyCipher(null);
+        }
         if (taskMapper.updateById(task) != 1) conflict();
     }
 

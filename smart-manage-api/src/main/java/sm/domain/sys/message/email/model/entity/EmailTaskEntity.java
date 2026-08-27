@@ -24,6 +24,9 @@ public class EmailTaskEntity extends BaseEntity {
     private String subject;
     private String htmlBody;
     private String textBody;
+    private Boolean sensitiveContent;
+    private String htmlBodyCipher;
+    private String textBodyCipher;
     private String status;
     private Integer attemptCount;
     private Integer maxAttempts;

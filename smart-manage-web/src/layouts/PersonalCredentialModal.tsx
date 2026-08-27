@@ -8,6 +8,10 @@ import {
   getCurrentPasswordPublicKey,
   updateCurrentUserContact,
   updateCurrentUserPassword,
+  requestCurrentPasswordEmailCode,
+  updateCurrentUserPasswordByEmail,
+  requestCurrentEmailCode,
+  bindCurrentEmail,
 } from '@/api/user';
 import type { UserInfoVO } from '@/types/api';
 
@@ -18,16 +22,18 @@ interface PersonalCredentialModalProps {
   onClose: () => void;
   onProfileSaved: (profile: UserInfoVO) => void;
   onPasswordChanged: () => void;
+  emailPasswordAvailable: boolean;
 }
 
 interface VerifyValues {
-  verificationMethod: 'PASSWORD';
-  password: string;
+  verificationMethod: 'PASSWORD' | 'EMAIL';
+  password?: string;
 }
 
 interface ChangeValues {
   value: string;
   confirmValue?: string;
+  code?: string;
 }
 
 const TITLES: Record<CredentialType, string> = {
@@ -41,12 +47,15 @@ export default function PersonalCredentialModal({
   onClose,
   onProfileSaved,
   onPasswordChanged,
+  emailPasswordAvailable,
 }: PersonalCredentialModalProps) {
   const feedback = useOperationFeedback();
   const [verifyForm] = Form.useForm<VerifyValues>();
   const [changeForm] = Form.useForm<ChangeValues>();
   const [step, setStep] = useState<'verify' | 'change'>('verify');
   const [saving, setSaving] = useState(false);
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
+  const verificationMethod = Form.useWatch('verificationMethod', verifyForm);
 
   const submit = async () => {
     const verification = await verifyForm.validateFields();
@@ -54,17 +63,32 @@ export default function PersonalCredentialModal({
     setSaving(true);
     try {
       const publicKey = await getCurrentPasswordPublicKey();
-      const encryptedPassword = sm2.doEncrypt(verification.password, publicKey, 1);
+      const encryptedPassword = verification.password
+        ? sm2.doEncrypt(verification.password, publicKey, 1)
+        : '';
       if (type === 'PASSWORD') {
-        await updateCurrentUserPassword(
-          encryptedPassword,
-          sm2.doEncrypt(change.value, publicKey, 1),
-        );
+        const encryptedNewPassword = sm2.doEncrypt(change.value, publicKey, 1);
+        if (verification.verificationMethod === 'EMAIL') {
+          await updateCurrentUserPasswordByEmail(change.code ?? '', encryptedNewPassword);
+        } else {
+          await updateCurrentUserPassword(encryptedPassword, encryptedNewPassword);
+        }
         feedback.success('密码已修改，请重新登录');
         onPasswordChanged();
+      } else if (type === 'EMAIL') {
+        if (!emailCodeSent) {
+          await requestCurrentEmailCode(encryptedPassword, change.value.trim());
+          setEmailCodeSent(true);
+          feedback.success('验证码已发送到新邮箱');
+          return;
+        }
+        const profile = await bindCurrentEmail(change.value.trim(), change.code ?? '');
+        onProfileSaved(profile);
+        feedback.success('邮箱已验证并修改');
+        onClose();
       } else {
         const profile = await updateCurrentUserContact({
-          verificationMethod: verification.verificationMethod,
+          verificationMethod: 'PASSWORD',
           password: encryptedPassword,
           type,
           value: change.value.trim(),
@@ -107,20 +131,57 @@ export default function PersonalCredentialModal({
           hidden={step !== 'verify'}
         >
           <Form.Item name="verificationMethod" label="验证方式">
-            <Select options={[{ value: 'PASSWORD', label: '密码验证' }]} popupMatchSelectWidth />
+            <Select
+              options={[
+                { value: 'PASSWORD', label: '原密码验证' },
+                ...(type === 'PASSWORD' && emailPasswordAvailable
+                  ? [{ value: 'EMAIL' as const, label: '邮箱验证码' }]
+                  : []),
+              ]}
+              popupMatchSelectWidth
+            />
           </Form.Item>
           <Form.Item
-            name="password"
-            label="密码"
-            rules={[{ required: true, message: '请输入当前密码' }]}
+            noStyle
+            shouldUpdate={(previous, current) =>
+              previous.verificationMethod !== current.verificationMethod
+            }
           >
-            <Input.Password autoComplete="current-password" />
+            {({ getFieldValue }) =>
+              getFieldValue('verificationMethod') === 'PASSWORD' ? (
+                <Form.Item
+                  name="password"
+                  label="密码"
+                  rules={[{ required: true, message: '请输入当前密码' }]}
+                >
+                  <Input.Password autoComplete="current-password" />
+                </Form.Item>
+              ) : (
+                <div className="sm-personal-credential-email-tip">
+                  验证码将发送到当前账号已验证的邮箱。
+                </div>
+              )
+            }
           </Form.Item>
           <div className="sm-personal-credential-actions">
             <Button onClick={onClose}>取消</Button>
             <Button
               type="primary"
-              onClick={() => void verifyForm.validateFields().then(() => setStep('change'))}
+              onClick={() =>
+                void verifyForm.validateFields().then(async (values) => {
+                  if (type === 'PASSWORD' && values.verificationMethod === 'EMAIL') {
+                    setSaving(true);
+                    try {
+                      await requestCurrentPasswordEmailCode();
+                      feedback.success('验证码已发送到当前已验证邮箱');
+                    } finally {
+                      setSaving(false);
+                    }
+                  }
+                  setStep('change');
+                })
+              }
+              loading={saving}
             >
               下一步
             </Button>
@@ -142,30 +203,56 @@ export default function PersonalCredentialModal({
               <Input maxLength={type === 'PHONE' ? 30 : 100} />
             )}
           </Form.Item>
-          {type === 'PASSWORD' && (
+          {type === 'EMAIL' && emailCodeSent && (
             <Form.Item
-              name="confirmValue"
-              label="确认新密码"
-              dependencies={['value']}
+              name="code"
+              label="邮箱验证码"
               rules={[
-                { required: true, message: '请再次输入新密码' },
-                ({ getFieldValue }) => ({
-                  validator: (_, value) =>
-                    !value || getFieldValue('value') === value
-                      ? Promise.resolve()
-                      : Promise.reject(new Error('两次输入的密码不一致')),
-                }),
+                { required: true, message: '请输入邮箱验证码' },
+                { pattern: /^\d{6}$/, message: '请输入6位邮箱验证码' },
               ]}
             >
-              <Input.Password autoComplete="new-password" />
+              <Input maxLength={6} inputMode="numeric" autoComplete="one-time-code" />
             </Form.Item>
+          )}
+          {type === 'PASSWORD' && (
+            <>
+              {verificationMethod === 'EMAIL' && (
+                <Form.Item
+                  name="code"
+                  label="邮箱验证码"
+                  rules={[
+                    { required: true, message: '请输入邮箱验证码' },
+                    { pattern: /^\d{6}$/, message: '请输入6位邮箱验证码' },
+                  ]}
+                >
+                  <Input maxLength={6} inputMode="numeric" autoComplete="one-time-code" />
+                </Form.Item>
+              )}
+              <Form.Item
+                name="confirmValue"
+                label="确认新密码"
+                dependencies={['value']}
+                rules={[
+                  { required: true, message: '请再次输入新密码' },
+                  ({ getFieldValue }) => ({
+                    validator: (_: unknown, value: string) =>
+                      !value || getFieldValue('value') === value
+                        ? Promise.resolve()
+                        : Promise.reject(new Error('两次输入的密码不一致')),
+                  }),
+                ]}
+              >
+                <Input.Password autoComplete="new-password" />
+              </Form.Item>
+            </>
           )}
           <div className="sm-personal-credential-actions">
             <Button disabled={saving} onClick={onClose}>
               取消
             </Button>
             <Button type="primary" loading={saving} onClick={() => void submit()}>
-              确定
+              {type === 'EMAIL' && !emailCodeSent ? '发送验证码' : '确定'}
             </Button>
           </div>
         </Form>

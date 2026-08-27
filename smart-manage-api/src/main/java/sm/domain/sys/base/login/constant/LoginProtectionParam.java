@@ -13,6 +13,9 @@ public final class LoginProtectionParam {
     public static final String IP_BLOCK_MINUTES = "LOGIN_IP_BLOCK_MINUTES";
     public static final String ACCOUNT_IP_MAX_FAILURES = "LOGIN_ACCOUNT_IP_MAX_FAILURES";
     public static final String ACCOUNT_IP_BLOCK_MINUTES = "LOGIN_ACCOUNT_IP_BLOCK_MINUTES";
+    public static final String PASSWORD_EMAIL_CODE_EXPIRE_MINUTES = "PASSWORD_EMAIL_CODE_EXPIRE_MINUTES";
+    public static final String PASSWORD_EMAIL_CODE_RESEND_SECONDS = "PASSWORD_EMAIL_CODE_RESEND_SECONDS";
+    public static final String PASSWORD_EMAIL_CODE_MAX_ATTEMPTS = "PASSWORD_EMAIL_CODE_MAX_ATTEMPTS";
 
     private LoginProtectionParam() {
     }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
 import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.user.mapper.UserMapper;
@@ -29,6 +30,8 @@ import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Locale;
 import sm.system.util.EnabledCommandUtil;
 
 /**
@@ -70,6 +73,9 @@ class UserTxService {
 			throw new BizException(ResultEnum.UNIQUE_CONFLICT, "工号已存在");
 		}
 		validateAssignments(form.getAssignments());
+		String normalizedEmail = normalizeEmail(form.getEmail());
+		String normalizedPhone = form.getPhone() == null ? null : normalizeOptional(form.getPhone());
+		assertContactUnique(normalizedEmail, normalizedPhone, form.getId());
 
         UserEntity entity;
         if (form.getId() != null) {
@@ -106,10 +112,13 @@ class UserTxService {
         entity.setGender(form.getGender());
         entity.setBirthday(form.getBirthday());
         if (form.getEmail() != null) {
-            entity.setEmail(normalizeOptional(form.getEmail()));
+            if (!Objects.equals(entity.getEmail(), normalizedEmail)) {
+                entity.setEmail(normalizedEmail);
+                entity.setEmailVerifiedAt(null);
+            }
         }
         if (form.getPhone() != null) {
-            entity.setPhone(normalizeOptional(form.getPhone()));
+            entity.setPhone(normalizedPhone);
         }
         entity.setAvatarAttachmentId(form.getAvatarAttachmentId());
         if (form.getId() == null) {
@@ -200,6 +209,7 @@ class UserTxService {
         }
         String normalizedValue = value.trim();
         if ("PHONE".equals(type)) {
+            assertContactUnique(null, normalizedValue, userId);
             entity.setPhone(normalizedValue);
         } else if ("EMAIL".equals(type)) {
             if (!normalizedValue.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
@@ -209,8 +219,12 @@ class UserTxService {
         } else {
             throw new BizException(ResultEnum.PARAM_ERROR, "联系方式类型无效");
         }
-        if (mapper.updateById(entity) == 0) {
-            throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请刷新后重试");
+        try {
+            if (mapper.updateById(entity) == 0) {
+                throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请刷新后重试");
+            }
+        } catch (DuplicateKeyException exception) {
+            throw new BizException(ResultEnum.UNIQUE_CONFLICT, "手机号或邮箱已被其他账号使用");
         }
     }
 
@@ -229,6 +243,64 @@ class UserTxService {
         if (mapper.updateById(entity) == 0) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请刷新后重试");
         }
+    }
+
+    /** 邮箱验证码已经在事务外原子消费，本事务只完成密码安全事件写入。 */
+    public void updatePasswordByVerifiedEmail(Long userId, String newPassword) {
+        UserEntity entity = mapper.selectById(userId);
+        if (entity == null || entity.getEmailVerifiedAt() == null || !Boolean.TRUE.equals(entity.getEnabled())) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "邮箱验证状态已变化，请重新获取验证码");
+        }
+        if (Argon2Helper.verify(entity.getPassword(), newPassword)) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能与原密码相同");
+        }
+        entity.setPassword(Argon2Helper.encode(newPassword));
+        entity.setPasswordReset(false);
+        if (mapper.updateById(entity) == 0) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请重新获取验证码");
+        }
+    }
+
+    /** 验证码发送到新邮箱并成功消费后，才正式绑定并标记邮箱已验证。 */
+    public void bindVerifiedEmail(Long userId, String email) {
+        String normalizedEmail = normalizeEmail(email);
+        assertContactUnique(normalizedEmail, null, userId);
+        UserEntity entity = mapper.selectById(userId);
+        if (entity == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+        entity.setEmail(normalizedEmail);
+        entity.setEmailVerifiedAt(LocalDateTime.now());
+        try {
+            if (mapper.updateById(entity) == 0) {
+                throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请重新验证邮箱");
+            }
+        } catch (DuplicateKeyException exception) {
+            throw new BizException(ResultEnum.UNIQUE_CONFLICT, "邮箱已被其他账号使用");
+        }
+    }
+
+    private void assertContactUnique(String email, String phone, Long excludedUserId) {
+        if (email != null) {
+            LambdaQueryWrapper<UserEntity> emailQuery = new LambdaQueryWrapper<UserEntity>()
+                    .eq(UserEntity::getEmail, email)
+                    .ne(excludedUserId != null, UserEntity::getId, excludedUserId);
+            if (mapper.selectCount(emailQuery) > 0) {
+                throw new BizException(ResultEnum.UNIQUE_CONFLICT, "邮箱已被其他账号使用");
+            }
+        }
+        if (phone != null) {
+            LambdaQueryWrapper<UserEntity> phoneQuery = new LambdaQueryWrapper<UserEntity>()
+                    .eq(UserEntity::getPhone, phone)
+                    .ne(excludedUserId != null, UserEntity::getId, excludedUserId);
+            if (mapper.selectCount(phoneQuery) > 0) {
+                throw new BizException(ResultEnum.UNIQUE_CONFLICT, "手机号已被其他账号使用");
+            }
+        }
+    }
+
+    private String normalizeEmail(String value) {
+        if (value == null) return null;
+        String normalizedValue = normalizeOptional(value);
+        return normalizedValue == null ? null : normalizedValue.toLowerCase(Locale.ROOT);
     }
 
     public void updateEnabled(List<Long> ids, boolean enabled) {

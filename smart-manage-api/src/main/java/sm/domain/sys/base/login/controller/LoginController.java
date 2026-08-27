@@ -14,6 +14,8 @@ import sm.domain.sys.base.login.model.form.CaptchaChallengeForm;
 import sm.domain.sys.base.login.model.form.CaptchaVerifyForm;
 import sm.domain.sys.base.login.model.form.LoginForm;
 import sm.domain.sys.base.login.model.form.PasswordChangeForm;
+import sm.domain.sys.base.login.model.form.EmailPasswordCodeRequestForm;
+import sm.domain.sys.base.login.model.form.EmailPasswordResetForm;
 import sm.domain.sys.base.login.model.vo.CaptchaChallengeVO;
 import sm.domain.sys.base.login.model.vo.CaptchaTicketVO;
 import sm.domain.sys.base.login.model.vo.LoginVO;
@@ -48,6 +50,23 @@ public class LoginController {
 	@PostMapping("/sys/base/login/change-password")
 	public Result<String> changePassword(@Validated @RequestBody PasswordChangeForm form) {
 		service.changePassword(form);
+		return Result.success();
+	}
+
+	@SaIgnore
+	@Operation(summary = "发送邮箱找回验证码", description = "消费滑块票据后统一响应，避免暴露邮箱对应账号状态")
+	@PostMapping("/sys/base/login/password/email/code")
+	public Result<String> requestEmailPasswordCode(
+			@Validated @RequestBody EmailPasswordCodeRequestForm form) {
+		service.requestEmailPasswordCode(form);
+		return Result.success(sm.domain.sys.base.user.service.UserEmailPasswordService.GENERIC_SEND_MESSAGE);
+	}
+
+	@SaIgnore
+	@Operation(summary = "邮箱验证码重置密码")
+	@PostMapping("/sys/base/login/password/email/reset")
+	public Result<String> resetPasswordByEmail(@Validated @RequestBody EmailPasswordResetForm form) {
+		service.resetPasswordByEmail(form);
 		return Result.success();
 	}
 

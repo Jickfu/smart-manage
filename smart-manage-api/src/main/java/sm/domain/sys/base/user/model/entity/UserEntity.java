@@ -9,6 +9,7 @@ import lombok.EqualsAndHashCode;
 import sm.system.entity.BaseEntity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import sm.domain.sys.base.user.model.Gender;
 
 /**
@@ -43,6 +44,7 @@ public class UserEntity extends BaseEntity {
 	 * 邮箱地址
 	 */
 	private String email;
+	private LocalDateTime emailVerifiedAt;
 	/*
 	 * 手机号
 	 */

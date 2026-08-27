@@ -37,6 +37,7 @@ public class UserInfoVO {
 	private String themeColor;
 
 	private String email;
+	private LocalDateTime emailVerifiedAt;
 
 	private String phone;
 

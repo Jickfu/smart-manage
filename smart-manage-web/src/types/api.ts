@@ -40,6 +40,7 @@ export interface UserInfoVO {
   gender?: 'MALE' | 'FEMALE';
   birthday?: string;
   email?: string;
+  emailVerifiedAt?: string;
   phone?: string;
   currentOrgId: string;
   currentOrgName: string;

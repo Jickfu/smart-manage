@@ -62,6 +62,30 @@ export function updateCurrentUserPassword(currentPassword: string, newPassword: 
     .then((response) => response.data);
 }
 
+export function requestCurrentPasswordEmailCode() {
+  return request
+    .post<Result<string>>('/sys/base/user/current/password/email/code')
+    .then((response) => response.data);
+}
+
+export function updateCurrentUserPasswordByEmail(code: string, newPassword: string) {
+  return request
+    .post<Result<void>>('/sys/base/user/current/password/email', { code, newPassword })
+    .then((response) => response.data);
+}
+
+export function requestCurrentEmailCode(password: string, email: string) {
+  return request
+    .post<Result<string>>('/sys/base/user/current/email/code', { password, email })
+    .then((response) => response.data);
+}
+
+export function bindCurrentEmail(email: string, code: string) {
+  return request
+    .post<Result<UserInfoVO>>('/sys/base/user/current/email/bind', { email, code })
+    .then((response) => response.data.data);
+}
+
 /** 主动注销当前服务端会话。 */
 export function logoutCurrentUser() {
   return request.post<Result<void>>('/sys/base/logout').then((response) => response.data);

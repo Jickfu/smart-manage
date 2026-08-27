@@ -18,6 +18,7 @@ import sm.domain.sys.base.user.model.vo.UserAuthentication;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.base.user.service.UserAuthenticationService;
 import sm.domain.sys.base.user.service.UserProfileService;
+import sm.domain.sys.base.user.service.UserEmailPasswordService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
@@ -55,6 +56,7 @@ class LoginServiceTests {
     private final LoginProtectionService loginProtectionService = mock(LoginProtectionService.class);
     private final LoginRedisAccessor loginRedisAccessor = mock(LoginRedisAccessor.class);
     private final BrowserPasswordCipher browserPasswordCipher = mock(BrowserPasswordCipher.class);
+    private final UserEmailPasswordService userEmailPasswordService = mock(UserEmailPasswordService.class);
     private LoginService loginService;
 
     @BeforeEach
@@ -62,7 +64,7 @@ class LoginServiceTests {
         loginService = new LoginService(userAuthenticationService, userProfileService, userSessionService,
                 logWriteService, redisTemplate, clientIpResolver,
                 temporaryLoginService, csrfTokenManager, sliderCaptchaGateway, loginProtectionService,
-                loginRedisAccessor, browserPasswordCipher);
+                loginRedisAccessor, browserPasswordCipher, userEmailPasswordService);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(clientIpResolver.resolveCurrentRequest()).thenReturn("127.0.0.1");
         when(browserPasswordCipher.decrypt("encrypted-password")).thenReturn("password");

@@ -208,6 +208,25 @@ body {
   color: #0041b0;
 }
 
+.sm-recovery-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 22px;
+  font-size: 12px;
+}
+
+.sm-recovery-hint {
+  margin: 0 0 20px;
+  color: var(--sm-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sm-input--plain {
+  padding: 0 14px;
+}
+
 /* ===== 登录按钮 ===== */
 .sm-login-btn {
   width: 100%;

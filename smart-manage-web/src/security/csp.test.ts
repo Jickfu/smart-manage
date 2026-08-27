@@ -46,4 +46,16 @@ describe('login form visibility', () => {
     expect(html).toContain('captchaDragStartLeft + position.x - captchaDragStartX');
     expect(css).toMatch(/\.sm-captcha-refresh\s*\{[^}]*font-size:\s*14px;/);
   });
+
+  it('keeps email recovery in the login panel and reserves the unsupported phone entry', () => {
+    const html = readFileSync('public/login.html', 'utf8');
+
+    expect(html).toMatch(/<form id="emailRecoveryForm"[^>]*\shidden>/);
+    expect(html).toMatch(/<form id="emailResetForm"[^>]*\shidden>/);
+    expect(html).toContain('通过手机找回');
+    expect(html).toContain('暂不支持通过手机找回密码');
+    expect(html).toContain('/sys/base/login/password/email/code');
+    expect(html).toContain('/sys/base/login/password/email/reset');
+    expect(html).not.toContain('虚拟管理员');
+  });
 });

@@ -11,12 +11,15 @@ import sm.domain.sys.base.login.model.form.CaptchaChallengeForm;
 import sm.domain.sys.base.login.model.form.CaptchaVerifyForm;
 import sm.domain.sys.base.login.model.form.LoginForm;
 import sm.domain.sys.base.login.model.form.PasswordChangeForm;
+import sm.domain.sys.base.login.model.form.EmailPasswordCodeRequestForm;
+import sm.domain.sys.base.login.model.form.EmailPasswordResetForm;
 import sm.domain.sys.base.login.model.vo.CaptchaChallengeVO;
 import sm.domain.sys.base.login.model.vo.CaptchaTicketVO;
 import sm.domain.sys.base.login.model.vo.LoginVO;
 import sm.domain.sys.base.login.model.vo.SessionVO;
 import sm.domain.sys.base.user.service.UserAuthenticationService;
 import sm.domain.sys.base.user.service.UserProfileService;
+import sm.domain.sys.base.user.service.UserEmailPasswordService;
 import sm.domain.sys.monitor.common.service.LogWriteService;
 import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
 import sm.system.exception.BizException;
@@ -50,6 +53,7 @@ public class LoginService {
 	private final LoginProtectionService loginProtectionService;
 	private final LoginRedisAccessor loginRedisAccessor;
 	private final BrowserPasswordCipher browserPasswordCipher;
+	private final UserEmailPasswordService userEmailPasswordService;
 
 	public SessionVO session() {
 		return new SessionVO(userProfileService.current(), csrfTokenManager.getCurrentToken());
@@ -120,6 +124,16 @@ public class LoginService {
 			throw new BizException(ResultEnum.CAPTCHA_ERROR, "滑块位置或轨迹校验失败");
 		}
 		return new CaptchaTicketVO(loginProtectionService.issueCaptchaTicket(form.getUsername()));
+	}
+
+	public void requestEmailPasswordCode(EmailPasswordCodeRequestForm form) {
+		String clientIp = clientIpResolver.resolveCurrentRequest();
+		loginProtectionService.consumeCaptchaTicket(form.getEmail(), clientIp, form.getCaptchaTicket());
+		userEmailPasswordService.requestPublicCode(form.getEmail());
+	}
+
+	public void resetPasswordByEmail(EmailPasswordResetForm form) {
+		userEmailPasswordService.resetPublicPassword(form.getEmail(), form.getCode(), form.getNewPassword());
 	}
 
 	/**

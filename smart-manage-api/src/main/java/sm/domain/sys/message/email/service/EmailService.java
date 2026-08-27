@@ -25,6 +25,7 @@ import sm.system.util.TraceIdUtil;
 import sm.system.query.ListQueryUtil;
 import sm.domain.sys.message.email.contract.EmailNotificationCommand;
 import sm.domain.sys.message.email.contract.EmailNotificationSender;
+import sm.domain.sys.message.email.contract.SensitiveEmailNotificationCommand;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -157,6 +158,42 @@ public class EmailService implements EmailNotificationSender {
         }
     }
 
+    @Override
+    public Long enqueueSensitive(SensitiveEmailNotificationCommand command) {
+        if (command == null || !StringUtils.hasText(command.sceneKey())
+                || !StringUtils.hasText(command.idempotencyKey())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "敏感邮件场景和幂等键不能为空");
+        }
+        if (command.recipientAddresses() == null || command.recipientAddresses().isEmpty()) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "敏感邮件接收人不能为空");
+        }
+        validateRecipientCount(command.recipientAddresses(), List.of(), List.of());
+        if (DANGEROUS_HTML.matcher(command.htmlBody()).find()) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "邮件正文包含脚本、事件处理器或危险链接");
+        }
+        EmailAccountEntity account = resolveManualAccount(null);
+        EmailTaskEntity task = new EmailTaskEntity();
+        task.setSceneKey(command.sceneKey().trim());
+        task.setIdempotencyKey(command.idempotencyKey().trim());
+        task.setAccountId(account.getId()); task.setAccountNumber(account.getNumber());
+        task.setFromAddress(account.getFromAddress()); task.setFromName(account.getFromName());
+        task.setToAddresses(json(command.recipientAddresses().stream().map(String::trim).toList()));
+        task.setCcAddresses("[]"); task.setBccAddresses("[]"); task.setSubject(command.subject().trim());
+        task.setHtmlBody(""); task.setTextBody(null); task.setSensitiveContent(true);
+        task.setHtmlBodyCipher(sm4Helper.encrypt(command.htmlBody()));
+        task.setTextBodyCipher(StringUtils.hasText(command.textBody()) ? sm4Helper.encrypt(command.textBody()) : null);
+        task.setStatus("PENDING"); task.setAttemptCount(0); task.setMaxAttempts(3);
+        task.setNextAttemptTime(LocalDateTime.now()); task.setTraceId(TraceIdUtil.getTraceId());
+        try {
+            return txService.insertTask(task);
+        } catch (DuplicateKeyException exception) {
+            EmailTaskEntity existing = taskMapper.selectOne(new LambdaQueryWrapper<EmailTaskEntity>()
+                    .eq(EmailTaskEntity::getIdempotencyKey, command.idempotencyKey().trim()));
+            if (existing == null) throw exception;
+            return existing.getId();
+        }
+    }
+
     @AdministratorOnly
     public PageData<Map<String, Object>> recordList(RecordListForm form) {
         LambdaQueryWrapper<EmailTaskEntity> query = new LambdaQueryWrapper<>();
@@ -178,7 +215,10 @@ public class EmailService implements EmailNotificationSender {
         EmailTaskEntity task = txService.requireTask(id);
         List<Map<String,Object>> attempts = attemptMapper.selectList(new LambdaQueryWrapper<EmailAttemptEntity>().eq(EmailAttemptEntity::getTaskId, id).orderByAsc(EmailAttemptEntity::getAttemptNo)).stream().map(this::attemptMap).toList();
         Map<String,Object> result = new LinkedHashMap<>(taskListMap(task));
-        result.put("cc", addresses(task.getCcAddresses())); result.put("bcc", addresses(task.getBccAddresses())); result.put("htmlBody", task.getHtmlBody()); result.put("textBody", task.getTextBody()); result.put("attempts", attempts);
+        result.put("cc", addresses(task.getCcAddresses())); result.put("bcc", addresses(task.getBccAddresses()));
+        result.put("htmlBody", Boolean.TRUE.equals(task.getSensitiveContent()) ? null : task.getHtmlBody());
+        result.put("textBody", Boolean.TRUE.equals(task.getSensitiveContent()) ? null : task.getTextBody());
+        result.put("sensitiveContent", Boolean.TRUE.equals(task.getSensitiveContent())); result.put("attempts", attempts);
         return result;
     }
 
@@ -186,6 +226,9 @@ public class EmailService implements EmailNotificationSender {
     @AdministratorOnly
     public Long retry(Long id) {
         EmailTaskEntity source = txService.requireTask(id);
+        if (Boolean.TRUE.equals(source.getSensitiveContent())) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "敏感邮件不允许重新发送");
+        }
         if (!"FAILED".equals(source.getStatus()) && !"UNKNOWN".equals(source.getStatus()) && !"CANCELLED".equals(source.getStatus())) throw new BizException(ResultEnum.DATA_CONFLICT, "只有失败、未知或已取消的邮件可以重新发送");
         EmailAccountEntity account = txService.requireAccount(source.getAccountId());
         if (!Boolean.TRUE.equals(account.getEnabled())) throw new BizException(ResultEnum.CONFIG_ERROR, "原发信账号已停用，不能自动切换账号");
@@ -211,7 +254,11 @@ public class EmailService implements EmailNotificationSender {
         try {
             EmailAccountEntity account = txService.requireAccount(task.getAccountId());
             if (!Boolean.TRUE.equals(account.getEnabled())) throw new MailConfigurationException("ACCOUNT_DISABLED", "发信账号已停用");
-            sendSmtp(account, addresses(task.getToAddresses()), addresses(task.getCcAddresses()), addresses(task.getBccAddresses()), task.getSubject(), task.getHtmlBody(), task.getTextBody());
+            String htmlBody = Boolean.TRUE.equals(task.getSensitiveContent())
+                    ? sm4Helper.decrypt(task.getHtmlBodyCipher()) : task.getHtmlBody();
+            String textBody = Boolean.TRUE.equals(task.getSensitiveContent()) && StringUtils.hasText(task.getTextBodyCipher())
+                    ? sm4Helper.decrypt(task.getTextBodyCipher()) : task.getTextBody();
+            sendSmtp(account, addresses(task.getToAddresses()), addresses(task.getCcAddresses()), addresses(task.getBccAddresses()), task.getSubject(), htmlBody, textBody);
             LocalDateTime completed = LocalDateTime.now(); attempt.setStatus("SUCCESS"); attempt.setCompletedTime(completed); task.setStatus("SUCCESS"); task.setCompletedTime(completed); task.setErrorCategory(null); task.setErrorMessage(null);
         } catch (Exception exception) {
             String category = exception instanceof MailConfigurationException configuration ? configuration.category : classify(exception);
@@ -220,6 +267,10 @@ public class EmailService implements EmailNotificationSender {
             attempt.setStatus("FAILED"); attempt.setCompletedTime(LocalDateTime.now()); attempt.setErrorCategory(category); attempt.setErrorMessage(message);
             task.setStatus(retryable ? "RETRY_WAIT" : "FAILED"); task.setNextAttemptTime(retryable ? LocalDateTime.now().plusMinutes(1L << (attemptNo - 1)) : null); task.setCompletedTime(retryable ? null : LocalDateTime.now()); task.setErrorCategory(category); task.setErrorMessage(message);
             log.warn("邮件投递失败: taskId={}, accountNumber={}, category={}, attempt={}", task.getId(), task.getAccountNumber(), category, attemptNo);
+        }
+        if (Boolean.TRUE.equals(task.getSensitiveContent()) && !"RETRY_WAIT".equals(task.getStatus())) {
+            task.setHtmlBodyCipher(null);
+            task.setTextBodyCipher(null);
         }
         txService.finishAttempt(task, attempt);
     }
@@ -260,7 +311,7 @@ public class EmailService implements EmailNotificationSender {
     }
 
     private Map<String,Object> accountMap(EmailAccountEntity value) { return map("id",value.getId(),"number",value.getNumber(),"name",value.getName(),"host",value.getHost(),"port",value.getPort(),"securityMode",value.getSecurityMode(),"username",value.getUsername(),"passwordConfigured",StringUtils.hasText(value.getPasswordCipher()),"fromAddress",value.getFromAddress(),"fromName",value.getFromName(),"replyTo",value.getReplyTo(),"enabled",value.getEnabled(),"defaultAccount",value.getDefaultAccount(),"allowManual",value.getAllowManual(),"connectionTimeoutMs",value.getConnectionTimeoutMs(),"readTimeoutMs",value.getReadTimeoutMs(),"description",value.getDescription(),"version",value.getVersion(),"createTime",value.getCreateTime(),"updateTime",value.getUpdateTime()); }
-    private Map<String,Object> taskListMap(EmailTaskEntity value) { return map("id",value.getId(),"sourceTaskId",value.getSourceTaskId(),"sceneKey",value.getSceneKey(),"accountId",value.getAccountId(),"accountNumber",value.getAccountNumber(),"fromAddress",value.getFromAddress(),"fromName",value.getFromName(),"to",addresses(value.getToAddresses()),"subject",value.getSubject(),"status",value.getStatus(),"attemptCount",value.getAttemptCount(),"maxAttempts",value.getMaxAttempts(),"nextAttemptTime",value.getNextAttemptTime(),"completedTime",value.getCompletedTime(),"errorCategory",value.getErrorCategory(),"errorMessage",value.getErrorMessage(),"traceId",value.getTraceId(),"createUser",value.getCreateUser(),"createTime",value.getCreateTime(),"version",value.getVersion()); }
+    private Map<String,Object> taskListMap(EmailTaskEntity value) { return map("id",value.getId(),"sourceTaskId",value.getSourceTaskId(),"sceneKey",value.getSceneKey(),"accountId",value.getAccountId(),"accountNumber",value.getAccountNumber(),"fromAddress",value.getFromAddress(),"fromName",value.getFromName(),"to",addresses(value.getToAddresses()),"subject",value.getSubject(),"sensitiveContent",Boolean.TRUE.equals(value.getSensitiveContent()),"status",value.getStatus(),"attemptCount",value.getAttemptCount(),"maxAttempts",value.getMaxAttempts(),"nextAttemptTime",value.getNextAttemptTime(),"completedTime",value.getCompletedTime(),"errorCategory",value.getErrorCategory(),"errorMessage",value.getErrorMessage(),"traceId",value.getTraceId(),"createUser",value.getCreateUser(),"createTime",value.getCreateTime(),"version",value.getVersion()); }
     private Map<String,Object> attemptMap(EmailAttemptEntity value) { return map("id",value.getId(),"attemptNo",value.getAttemptNo(),"status",value.getStatus(),"startedTime",value.getStartedTime(),"completedTime",value.getCompletedTime(),"errorCategory",value.getErrorCategory(),"errorMessage",value.getErrorMessage(),"instanceId",value.getInstanceId(),"traceId",value.getTraceId()); }
     private EmailTaskEntity copyTask(EmailTaskEntity source) { EmailTaskEntity task=new EmailTaskEntity(); task.setSceneKey(source.getSceneKey()); task.setAccountId(source.getAccountId()); task.setAccountNumber(source.getAccountNumber()); task.setFromAddress(source.getFromAddress()); task.setFromName(source.getFromName()); task.setToAddresses(source.getToAddresses()); task.setCcAddresses(source.getCcAddresses()); task.setBccAddresses(source.getBccAddresses()); task.setSubject(source.getSubject()); task.setHtmlBody(source.getHtmlBody()); task.setTextBody(source.getTextBody()); task.setStatus("PENDING"); task.setAttemptCount(0); task.setMaxAttempts(source.getMaxAttempts()); task.setNextAttemptTime(LocalDateTime.now()); task.setTraceId(TraceIdUtil.getTraceId()); return task; }
     private static void validateRecipientCount(List<?> to,List<?> cc,List<?> bcc) { int count=size(to)+size(cc)+size(bcc); if(count>50) throw new BizException(ResultEnum.PARAM_ERROR,"单封邮件收件地址合计不能超过 50 个"); }

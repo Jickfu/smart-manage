@@ -601,6 +601,13 @@
   margin: -4px 0 12px -12px;
 }
 
+.sm-personal-credential-email-tip {
+  margin-bottom: 20px;
+  color: var(--sm-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .sm-current-login-log-modal .ant-modal-container {
   display: flex;
   height: min(520px, calc(100vh - 64px));

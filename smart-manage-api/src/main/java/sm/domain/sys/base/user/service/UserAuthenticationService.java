@@ -52,6 +52,13 @@ public class UserAuthenticationService {
                 && Argon2Helper.verify(user.getPassword(), password);
     }
 
+    /** 当前用户敏感联系方式变更前的密码二级认证。 */
+    public boolean verifyCurrentPassword(Long userId, String password) {
+        UserEntity user = userMapper.selectById(userId);
+        return user != null && Boolean.TRUE.equals(user.getEnabled())
+                && Argon2Helper.verify(user.getPassword(), password);
+    }
+
     /** 代登录不验证目标密码，但复用正式登录的账号和主职组织有效性校验。 */
     public UserAuthentication authenticateTemporaryLogin(Long userId, String expectedUsername) {
         UserEntity user = userMapper.selectById(userId);

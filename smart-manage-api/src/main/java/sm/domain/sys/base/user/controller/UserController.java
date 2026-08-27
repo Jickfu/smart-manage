@@ -19,6 +19,9 @@ import sm.domain.sys.base.user.model.form.CurrentOrganizationForm;
 import sm.domain.sys.base.user.model.form.CurrentUserPasswordForm;
 import sm.domain.sys.base.user.model.form.CurrentUserProfileForm;
 import sm.domain.sys.base.user.model.form.CurrentUserContactForm;
+import sm.domain.sys.base.user.model.form.CurrentUserEmailPasswordForm;
+import sm.domain.sys.base.user.model.form.CurrentUserEmailCodeRequestForm;
+import sm.domain.sys.base.user.model.form.CurrentUserEmailBindForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.domain.sys.base.user.model.vo.UserDetailVO;
@@ -33,6 +36,7 @@ import sm.domain.sys.base.user.service.UserService;
 import sm.domain.sys.base.user.service.UserAuthenticationService;
 import sm.domain.sys.base.user.service.UserAuthorizationService;
 import sm.domain.sys.base.user.service.UserProfileService;
+import sm.domain.sys.base.user.service.UserEmailPasswordService;
 import sm.system.form.IdForm;
 import sm.system.form.IdsForm;
 import sm.system.response.PageData;
@@ -65,6 +69,7 @@ public class UserController {
 	private final FileStorageServiceFactory storageFactory;
 	private final TemporaryLoginService temporaryLoginService;
 	private final BrowserPasswordCipher browserPasswordCipher;
+	private final UserEmailPasswordService userEmailPasswordService;
 
 	@GetMapping("/sys/base/user/avatar/{userId}")
 	public ResponseEntity<StreamingResponseBody> avatar(@PathVariable Long userId) {
@@ -176,7 +181,7 @@ public class UserController {
 	}
 
 	@PostMapping("/sys/base/user/current/contact")
-	@Operation(summary = "修改个人联系方式", description = "当前用户通过密码二级认证修改手机或邮箱")
+	@Operation(summary = "修改个人联系方式", description = "当前用户通过密码二级认证修改手机号；邮箱使用独立验证绑定接口")
 	public Result<UserInfoVO> updateCurrentContact(@RequestBody @Valid CurrentUserContactForm form) {
 		userProfileService.updateCurrentContact(form);
 		return Result.success(userProfileService.current());
@@ -193,6 +198,36 @@ public class UserController {
 	public Result<String> updateCurrentPassword(@RequestBody @Valid CurrentUserPasswordForm form) {
 		userProfileService.updateCurrentPassword(form);
 		return Result.success();
+	}
+
+	@PostMapping("/sys/base/user/current/password/email/code")
+	@Operation(summary = "发送个人改密邮箱验证码")
+	public Result<String> requestCurrentPasswordEmailCode() {
+		userEmailPasswordService.requestCurrentCode();
+		return Result.success("验证码已发送到当前已验证邮箱");
+	}
+
+	@PostMapping("/sys/base/user/current/password/email")
+	@Operation(summary = "通过邮箱验证码修改个人密码")
+	public Result<String> updateCurrentPasswordByEmail(
+			@RequestBody @Valid CurrentUserEmailPasswordForm form) {
+		userEmailPasswordService.changeCurrentPassword(form.getCode(), form.getNewPassword());
+		return Result.success();
+	}
+
+	@PostMapping("/sys/base/user/current/email/code")
+	@Operation(summary = "发送新邮箱验证验证码", description = "验证当前密码后向新邮箱发送验证码")
+	public Result<String> requestCurrentEmailCode(
+			@RequestBody @Valid CurrentUserEmailCodeRequestForm form) {
+		userEmailPasswordService.requestEmailBinding(form.getPassword(), form.getEmail());
+		return Result.success("验证码已发送到新邮箱");
+	}
+
+	@PostMapping("/sys/base/user/current/email/bind")
+	@Operation(summary = "验证并绑定新邮箱")
+	public Result<UserInfoVO> bindCurrentEmail(@RequestBody @Valid CurrentUserEmailBindForm form) {
+		userEmailPasswordService.bindCurrentEmail(form.getEmail(), form.getCode());
+		return Result.success(userProfileService.current());
 	}
 
 	@Operation(summary = "重置用户密码", description = "生成随机临时密码并要求用户登录后修改")

@@ -222,6 +222,9 @@ export default function PersonalSettingsModal({
           onClose={() => setCredentialType(undefined)}
           onProfileSaved={onProfileSaved}
           onPasswordChanged={onPasswordChanged}
+          emailPasswordAvailable={Boolean(
+            userInfo?.emailVerifiedAt && userInfo.username !== 'administrator',
+          )}
         />
       )}
       <CurrentLoginLogModal open={loginLogOpen} onClose={() => setLoginLogOpen(false)} />
