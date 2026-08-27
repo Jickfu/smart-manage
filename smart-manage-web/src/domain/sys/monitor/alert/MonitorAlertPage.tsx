@@ -14,6 +14,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
 import AppModal from '@/domain/common/component/AppModal';
 import RefSelector from '@/domain/common/component/RefSelector';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
@@ -283,7 +284,7 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
           </>
         }
       >
-        <Form form={form} layout="vertical" variant="underlined">
+        <Form form={form} layout="vertical" variant="underlined" className="sm-edit-form">
           {editing && (
             <Typography.Paragraph type="secondary">
               指标类型：{editing.valueKind}；允许范围：
@@ -293,64 +294,117 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
               {displayValue(editing, editing.recommendedThreshold)} {editing.displayUnit}
             </Typography.Paragraph>
           )}
-          <div className="sm-monitor-alert-form-grid">
-            <Form.Item name="enabled" label="启用规则" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-            <Form.Item name="severity" label="严重程度" rules={[{ required: true }]}>
-              <Select
-                options={['INFO', 'WARNING', 'CRITICAL'].map((value) => ({ value, label: value }))}
-              />
-            </Form.Item>
-            <Form.Item name="threshold" label="触发阈值" rules={[{ required: true }]}>
-              <InputNumber
-                disabled={editing?.valueKind === 'BOOLEAN'}
-                min={displayValue(editing, editing?.minValue)}
-                max={displayValue(editing, editing?.maxValue)}
-                suffix={editing?.displayUnit}
-              />
-            </Form.Item>
-            <Form.Item name="recoveryThreshold" label="恢复阈值">
-              <InputNumber
-                disabled={editing?.valueKind === 'BOOLEAN'}
-                min={displayValue(editing, editing?.minValue)}
-                max={displayValue(editing, editing?.maxValue)}
-                suffix={editing?.displayUnit}
-              />
-            </Form.Item>
-            <Form.Item name="durationSeconds" label="持续时间（秒）" rules={[{ required: true }]}>
-              <InputNumber min={0} max={86400} />
-            </Form.Item>
-            <Form.Item
-              name="repeatIntervalSeconds"
-              label="重复通知间隔（秒）"
-              rules={[{ required: true }]}
-            >
-              <InputNumber min={60} max={604800} />
-            </Form.Item>
-            <Form.Item name="emailEnabled" label="邮件通知" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-            <Form.Item
-              name="recipientUsers"
-              label="邮件接收人"
-              className="sm-monitor-alert-form-wide"
-              dependencies={['emailEnabled']}
-              rules={[
-                ({ getFieldValue }) => ({
-                  validator: (_, value) =>
-                    getFieldValue('emailEnabled') && (!value || value.length === 0)
-                      ? Promise.reject(new Error('启用邮件通知时必须选择接收人'))
-                      : Promise.resolve(),
-                }),
-              ]}
-            >
-              <RefSelector<Record<string, unknown>> {...recipientSelector} />
-            </Form.Item>
-            <Form.Item name="description" label="描述" className="sm-monitor-alert-form-wide">
-              <Input.TextArea rows={2} maxLength={500} />
-            </Form.Item>
-          </div>
+          <FormFieldGrid maxColumns={2}>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="enabled"
+                label="启用规则"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="severity"
+                label="严重程度"
+                rules={[{ required: true }]}
+              >
+                <Select
+                  options={['INFO', 'WARNING', 'CRITICAL'].map((value) => ({
+                    value,
+                    label: value,
+                  }))}
+                />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="threshold"
+                label="触发阈值"
+                rules={[{ required: true }]}
+              >
+                <InputNumber
+                  className="sm-edit-control-full"
+                  disabled={editing?.valueKind === 'BOOLEAN'}
+                  min={displayValue(editing, editing?.minValue)}
+                  max={displayValue(editing, editing?.maxValue)}
+                  suffix={editing?.displayUnit}
+                />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="recoveryThreshold"
+                label="恢复阈值"
+              >
+                <InputNumber
+                  className="sm-edit-control-full"
+                  disabled={editing?.valueKind === 'BOOLEAN'}
+                  min={displayValue(editing, editing?.minValue)}
+                  max={displayValue(editing, editing?.maxValue)}
+                  suffix={editing?.displayUnit}
+                />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="durationSeconds"
+                label="持续时间（秒）"
+                rules={[{ required: true }]}
+              >
+                <InputNumber className="sm-edit-control-full" min={0} max={86400} />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="repeatIntervalSeconds"
+                label="重复通知间隔（秒）"
+                rules={[{ required: true }]}
+              >
+                <InputNumber className="sm-edit-control-full" min={60} max={604800} />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="emailEnabled"
+                label="邮件通知"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell fullWidth>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="recipientUsers"
+                label="邮件接收人"
+                dependencies={['emailEnabled']}
+                rules={[
+                  ({ getFieldValue }) => ({
+                    validator: (_, value) =>
+                      getFieldValue('emailEnabled') && (!value || value.length === 0)
+                        ? Promise.reject(new Error('启用邮件通知时必须选择接收人'))
+                        : Promise.resolve(),
+                  }),
+                ]}
+              >
+                <RefSelector<Record<string, unknown>> {...recipientSelector} />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell fullWidth>
+              <Form.Item className="sm-edit-field-content" name="description" label="描述">
+                <Input.TextArea rows={2} maxLength={500} />
+              </Form.Item>
+            </FormFieldCell>
+          </FormFieldGrid>
         </Form>
       </AppModal>
     </EditPageShell>

@@ -649,22 +649,10 @@
   overflow: auto;
 }
 
-.sm-personal-info-form .ant-form-item {
-  width: 230px;
-  margin-bottom: 14px;
-}
-
 .sm-personal-info-form .ant-input,
 .sm-personal-info-form .ant-select,
 .sm-personal-info-form .ant-picker {
   width: 100%;
-}
-
-.sm-personal-info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 230px);
-  column-gap: 64px;
-  justify-content: center;
 }
 
 .sm-personal-info-assignments {

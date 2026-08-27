@@ -4,6 +4,7 @@ import { Form, Input, InputNumber, Select, Switch } from 'antd';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { EditSectionCollapse } from '@/domain/common/page/EditSectionCollapse';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -153,166 +154,201 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
               label: '存储设置',
               children: (
                 <>
-                  <div className="sm-edit-fields">
-                    <Form.Item
-                      className="sm-edit-field"
-                      name="storageType"
-                      label="当前存储类型"
-                      extra="保存后，系统文件将使用该存储类型"
-                      rules={[{ required: true, message: '请选择存储类型' }]}
-                    >
-                      <Select
-                        className="sm-file-config-full"
-                        variant="underlined"
-                        placeholder="请选择存储类型"
-                        showSearch={false}
-                        options={[
-                          { label: '本地存储', value: 'LOCAL' },
-                          { label: 'FTP 存储', value: 'FTP' },
-                          { label: 'S3 / MinIO', value: 'S3' },
-                        ]}
-                      />
-                    </Form.Item>
-                    {storageType === 'LOCAL' ? (
+                  <FormFieldGrid>
+                    <FormFieldCell>
                       <Form.Item
-                        className="sm-edit-field"
-                        name="localDir"
-                        label="本地存储目录"
-                        rules={[{ required: true, message: '本地存储目录不能为空' }]}
+                        className="sm-edit-field-content"
+                        name="storageType"
+                        label="当前存储类型"
+                        extra="保存后，系统文件将使用该存储类型"
+                        rules={[{ required: true, message: '请选择存储类型' }]}
                       >
-                        <Input variant="underlined" placeholder="例如 /data/smart-manage/upload/" />
-                      </Form.Item>
-                    ) : storageType === 'FTP' ? (
-                      <>
-                        <Form.Item
-                          className="sm-edit-field"
-                          name="ftpHost"
-                          label="FTP 主机"
-                          rules={[{ required: true, message: 'FTP 主机不能为空' }]}
-                        >
-                          <Input variant="underlined" />
-                        </Form.Item>
-                        <Form.Item
-                          className="sm-edit-field"
-                          name="ftpPort"
-                          label="FTP 端口"
-                          rules={[{ required: true, message: 'FTP 端口不能为空' }]}
-                        >
-                          <InputNumber
-                            className="sm-file-config-full"
-                            min={1}
-                            max={65535}
-                            variant="underlined"
-                          />
-                        </Form.Item>
-                        <Form.Item
-                          className="sm-edit-field"
-                          name="ftpUsername"
-                          label="FTP 用户名"
-                          rules={[{ required: true, message: 'FTP 用户名不能为空' }]}
-                        >
-                          <Input variant="underlined" autoComplete="off" />
-                        </Form.Item>
-                        <Form.Item
-                          className="sm-edit-field"
-                          name="ftpPassword"
-                          label="FTP 密码"
-                          extra={
-                            query.data?.ftpPasswordConfigured
-                              ? '密码已配置；留空保存时保留原密码，测试连接时必须重新输入'
-                              : '尚未配置密码'
-                          }
-                          rules={[
-                            {
-                              validator: (_, value) =>
-                                query.data?.ftpPasswordConfigured || value
-                                  ? Promise.resolve()
-                                  : Promise.reject(new Error('FTP 密码不能为空')),
-                            },
+                        <Select
+                          className="sm-file-config-full"
+                          variant="underlined"
+                          placeholder="请选择存储类型"
+                          showSearch={false}
+                          options={[
+                            { label: '本地存储', value: 'LOCAL' },
+                            { label: 'FTP 存储', value: 'FTP' },
+                            { label: 'S3 / MinIO', value: 'S3' },
                           ]}
-                        >
-                          <Input.Password variant="underlined" autoComplete="new-password" />
-                        </Form.Item>
-                        <Form.Item className="sm-edit-field" name="ftpDir" label="FTP 远程目录">
-                          <Input variant="underlined" />
-                        </Form.Item>
+                        />
+                      </Form.Item>
+                    </FormFieldCell>
+                    {storageType === 'LOCAL' ? (
+                      <FormFieldCell>
                         <Form.Item
-                          className="sm-edit-field"
-                          name="ftpPassiveMode"
-                          label="被动模式"
-                          valuePropName="checked"
-                        >
-                          <Switch />
-                        </Form.Item>
-                      </>
-                    ) : (
-                      <>
-                        <Form.Item
-                          className="sm-edit-field"
-                          name="s3Endpoint"
-                          label="S3 Endpoint"
-                          rules={[{ required: true, message: 'S3 Endpoint 不能为空' }]}
+                          className="sm-edit-field-content"
+                          name="localDir"
+                          label="本地存储目录"
+                          rules={[{ required: true, message: '本地存储目录不能为空' }]}
                         >
                           <Input
                             variant="underlined"
-                            placeholder="例如 https://minio.example.com"
+                            placeholder="例如 /data/smart-manage/upload/"
                           />
                         </Form.Item>
-                        <Form.Item
-                          className="sm-edit-field"
-                          name="s3Region"
-                          label="S3 Region"
-                          rules={[{ required: true, message: 'S3 Region 不能为空' }]}
-                        >
-                          <Input variant="underlined" />
-                        </Form.Item>
-                        <Form.Item
-                          className="sm-edit-field"
-                          name="s3Bucket"
-                          label="私有 Bucket"
-                          rules={[{ required: true, message: 'Bucket 不能为空' }]}
-                        >
-                          <Input variant="underlined" />
-                        </Form.Item>
-                        <Form.Item
-                          className="sm-edit-field"
-                          name="s3AccessKey"
-                          label="Access Key"
-                          rules={[{ required: true, message: 'Access Key 不能为空' }]}
-                        >
-                          <Input variant="underlined" autoComplete="off" />
-                        </Form.Item>
-                        <Form.Item
-                          className="sm-edit-field"
-                          name="s3SecretKey"
-                          label="Secret Key"
-                          extra={
-                            query.data?.s3SecretKeyConfigured
-                              ? '密钥已配置；留空保存时保留原密钥'
-                              : '尚未配置密钥'
-                          }
-                          rules={[
-                            {
-                              validator: (_, value) =>
-                                query.data?.s3SecretKeyConfigured || value
-                                  ? Promise.resolve()
-                                  : Promise.reject(new Error('Secret Key 不能为空')),
-                            },
-                          ]}
-                        >
-                          <Input.Password variant="underlined" autoComplete="new-password" />
-                        </Form.Item>
-                        <Form.Item
-                          className="sm-edit-field"
-                          name="s3PathStyle"
-                          label="Path Style（MinIO 通常启用）"
-                          valuePropName="checked"
-                        >
-                          <Switch />
-                        </Form.Item>
+                      </FormFieldCell>
+                    ) : storageType === 'FTP' ? (
+                      <>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="ftpHost"
+                            label="FTP 主机"
+                            rules={[{ required: true, message: 'FTP 主机不能为空' }]}
+                          >
+                            <Input variant="underlined" />
+                          </Form.Item>
+                        </FormFieldCell>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="ftpPort"
+                            label="FTP 端口"
+                            rules={[{ required: true, message: 'FTP 端口不能为空' }]}
+                          >
+                            <InputNumber
+                              className="sm-file-config-full"
+                              min={1}
+                              max={65535}
+                              variant="underlined"
+                            />
+                          </Form.Item>
+                        </FormFieldCell>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="ftpUsername"
+                            label="FTP 用户名"
+                            rules={[{ required: true, message: 'FTP 用户名不能为空' }]}
+                          >
+                            <Input variant="underlined" autoComplete="off" />
+                          </Form.Item>
+                        </FormFieldCell>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="ftpPassword"
+                            label="FTP 密码"
+                            extra={
+                              query.data?.ftpPasswordConfigured
+                                ? '密码已配置；留空保存时保留原密码，测试连接时必须重新输入'
+                                : '尚未配置密码'
+                            }
+                            rules={[
+                              {
+                                validator: (_, value) =>
+                                  query.data?.ftpPasswordConfigured || value
+                                    ? Promise.resolve()
+                                    : Promise.reject(new Error('FTP 密码不能为空')),
+                              },
+                            ]}
+                          >
+                            <Input.Password variant="underlined" autoComplete="new-password" />
+                          </Form.Item>
+                        </FormFieldCell>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="ftpDir"
+                            label="FTP 远程目录"
+                          >
+                            <Input variant="underlined" />
+                          </Form.Item>
+                        </FormFieldCell>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="ftpPassiveMode"
+                            label="被动模式"
+                            valuePropName="checked"
+                          >
+                            <Switch />
+                          </Form.Item>
+                        </FormFieldCell>
+                      </>
+                    ) : (
+                      <>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="s3Endpoint"
+                            label="S3 Endpoint"
+                            rules={[{ required: true, message: 'S3 Endpoint 不能为空' }]}
+                          >
+                            <Input
+                              variant="underlined"
+                              placeholder="例如 https://minio.example.com"
+                            />
+                          </Form.Item>
+                        </FormFieldCell>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="s3Region"
+                            label="S3 Region"
+                            rules={[{ required: true, message: 'S3 Region 不能为空' }]}
+                          >
+                            <Input variant="underlined" />
+                          </Form.Item>
+                        </FormFieldCell>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="s3Bucket"
+                            label="私有 Bucket"
+                            rules={[{ required: true, message: 'Bucket 不能为空' }]}
+                          >
+                            <Input variant="underlined" />
+                          </Form.Item>
+                        </FormFieldCell>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="s3AccessKey"
+                            label="Access Key"
+                            rules={[{ required: true, message: 'Access Key 不能为空' }]}
+                          >
+                            <Input variant="underlined" autoComplete="off" />
+                          </Form.Item>
+                        </FormFieldCell>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="s3SecretKey"
+                            label="Secret Key"
+                            extra={
+                              query.data?.s3SecretKeyConfigured
+                                ? '密钥已配置；留空保存时保留原密钥'
+                                : '尚未配置密钥'
+                            }
+                            rules={[
+                              {
+                                validator: (_, value) =>
+                                  query.data?.s3SecretKeyConfigured || value
+                                    ? Promise.resolve()
+                                    : Promise.reject(new Error('Secret Key 不能为空')),
+                              },
+                            ]}
+                          >
+                            <Input.Password variant="underlined" autoComplete="new-password" />
+                          </Form.Item>
+                        </FormFieldCell>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="s3PathStyle"
+                            label="Path Style（MinIO 通常启用）"
+                            valuePropName="checked"
+                          >
+                            <Switch />
+                          </Form.Item>
+                        </FormFieldCell>
                       </>
                     )}
-                  </div>
+                  </FormFieldGrid>
                 </>
               ),
             },

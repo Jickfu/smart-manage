@@ -6,6 +6,7 @@ import { activeUiConfigQueryKey } from '@/api/uiConfig';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { EditSectionCollapse } from '@/domain/common/page/EditSectionCollapse';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useConfigDirtyGuard } from '@/domain/sys/base/configCommon/useConfigDirtyGuard';
@@ -99,28 +100,30 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     attachmentId?: string | null,
     imageUrl?: string | null,
   ) => (
-    <Form.Item className="sm-edit-field" label={label} extra={extra}>
-      <ImageAttachmentField
-        attachmentId={attachmentId}
-        imageUrl={imageUrl}
-        onChange={(nextAttachmentId, nextImageUrl, uploadSessionId) => {
-          if (attachmentId && sessionUploadedIds.current.has(attachmentId)) {
-            sessionUploadedIds.current.delete(attachmentId);
-            void uiConfigApi
-              .deleteAttachment(attachmentId, uploadSessions.current[attachmentId])
-              .catch(() => feedback.warning('未使用的临时图片清理失败，将由临时文件任务处理'));
-          }
-          if (nextAttachmentId) {
-            sessionUploadedIds.current.add(nextAttachmentId);
-            if (uploadSessionId) uploadSessions.current[nextAttachmentId] = uploadSessionId;
-          }
-          // 删除必须写入显式 null；undefined 会被 JSON 省略，并导致受控 Upload 保留旧预览。
-          form.setFieldValue(idName, nextAttachmentId ?? null);
-          form.setFieldValue(urlName, nextImageUrl ?? null);
-          setDirty(true);
-        }}
-      />
-    </Form.Item>
+    <FormFieldCell>
+      <Form.Item className="sm-edit-field-content" label={label} extra={extra}>
+        <ImageAttachmentField
+          attachmentId={attachmentId}
+          imageUrl={imageUrl}
+          onChange={(nextAttachmentId, nextImageUrl, uploadSessionId) => {
+            if (attachmentId && sessionUploadedIds.current.has(attachmentId)) {
+              sessionUploadedIds.current.delete(attachmentId);
+              void uiConfigApi
+                .deleteAttachment(attachmentId, uploadSessions.current[attachmentId])
+                .catch(() => feedback.warning('未使用的临时图片清理失败，将由临时文件任务处理'));
+            }
+            if (nextAttachmentId) {
+              sessionUploadedIds.current.add(nextAttachmentId);
+              if (uploadSessionId) uploadSessions.current[nextAttachmentId] = uploadSessionId;
+            }
+            // 删除必须写入显式 null；undefined 会被 JSON 省略，并导致受控 Upload 保留旧预览。
+            form.setFieldValue(idName, nextAttachmentId ?? null);
+            form.setFieldValue(urlName, nextImageUrl ?? null);
+            setDirty(true);
+          }}
+        />
+      </Form.Item>
+    </FormFieldCell>
   );
   return (
     <EditPageShell
@@ -175,31 +178,35 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
               key: 'basic',
               label: '基本信息',
               children: (
-                <div className="sm-edit-fields">
-                  <Form.Item
-                    className="sm-edit-field"
-                    name="pageTitle"
-                    label="页面标题"
-                    rules={[{ required: true, message: '页面标题不能为空' }]}
-                  >
-                    <Input variant="underlined" />
-                  </Form.Item>
-                  <Form.Item
-                    className="sm-edit-field"
-                    name="systemName"
-                    label="系统名称"
-                    rules={[{ required: true, message: '系统名称不能为空' }]}
-                  >
-                    <Input variant="underlined" />
-                  </Form.Item>
-                </div>
+                <FormFieldGrid>
+                  <FormFieldCell>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      name="pageTitle"
+                      label="页面标题"
+                      rules={[{ required: true, message: '页面标题不能为空' }]}
+                    >
+                      <Input variant="underlined" />
+                    </Form.Item>
+                  </FormFieldCell>
+                  <FormFieldCell>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      name="systemName"
+                      label="系统名称"
+                      rules={[{ required: true, message: '系统名称不能为空' }]}
+                    >
+                      <Input variant="underlined" />
+                    </Form.Item>
+                  </FormFieldCell>
+                </FormFieldGrid>
               ),
             },
             {
               key: 'images',
               label: '图片配置',
               children: (
-                <div className="sm-edit-fields">
+                <FormFieldGrid>
                   {imageField(
                     'loginBannerAttachmentId',
                     'loginBanner',
@@ -224,7 +231,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
                     headerLogoAttachmentId,
                     headerLogo,
                   )}
-                </div>
+                </FormFieldGrid>
               ),
             },
           ]}

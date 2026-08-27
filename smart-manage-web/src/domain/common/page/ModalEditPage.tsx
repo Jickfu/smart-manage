@@ -111,7 +111,7 @@ const ModalEditPage = ({
       ) : (
         <Spin spinning={loading}>
           <Form form={form} layout="vertical" className="sm-edit-form">
-            <EditFormFields fields={fields} />
+            <EditFormFields fields={fields} maxColumns={2} />
           </Form>
         </Spin>
       )}

@@ -13,6 +13,7 @@ import { userApi } from './api';
 import { userAccess } from './permissions';
 import { userQueryKeys } from './queryKeys';
 import { UserProfileFields } from './UserProfileFields';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
 import { UserAssignmentTable } from './UserAssignmentTable';
 import { resolveSensitiveContactUpdate } from './sensitiveContact';
 import type { UserAssignmentTableRef } from './UserAssignmentTable';
@@ -158,46 +159,62 @@ const UserEditPage = (props: PageComponentProps) => {
       saving={saveMutation.isPending}
       basicContent={(editable) =>
         selfMode ? (
-          <div className="sm-user-profile-grid">
-            <Form.Item name="username" label="用户名">
-              <Input disabled />
-            </Form.Item>
-            <Form.Item name="number" label="工号">
-              <Input disabled />
-            </Form.Item>
-            <Form.Item
-              name="name"
-              label="姓名"
-              rules={[{ required: true, message: '姓名不能为空' }]}
-            >
-              <Input disabled={!editable} maxLength={50} />
-            </Form.Item>
-            <Form.Item name="gender" label="性别">
-              <Select
-                disabled={!editable}
-                allowClear
-                options={[
-                  { value: 'MALE', label: '男' },
-                  { value: 'FEMALE', label: '女' },
-                ]}
-              />
-            </Form.Item>
-            <Form.Item name="birthday" label="生日">
-              <DatePicker disabled={!editable} />
-            </Form.Item>
-            <Form.Item name="companyName" label="公司">
-              <Input disabled />
-            </Form.Item>
-            <Form.Item name="currentOrgName" label="部门">
-              <Input disabled />
-            </Form.Item>
-            <Form.Item name="phone" label="手机">
-              <Input disabled />
-            </Form.Item>
-            <Form.Item name="email" label="邮箱">
-              <Input disabled />
-            </Form.Item>
-          </div>
+          <FormFieldGrid>
+            <FormFieldCell>
+              <Form.Item className="sm-edit-field-content" name="username" label="用户名">
+                <Input variant="underlined" disabled />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item className="sm-edit-field-content" name="number" label="工号">
+                <Input variant="underlined" disabled />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="name"
+                label="姓名"
+                rules={[{ required: true, message: '姓名不能为空' }]}
+              >
+                <Input variant="underlined" disabled={!editable} maxLength={50} />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item className="sm-edit-field-content" name="gender" label="性别">
+                <Select
+                  variant="underlined"
+                  disabled={!editable}
+                  allowClear
+                  options={[
+                    { value: 'MALE', label: '男' },
+                    { value: 'FEMALE', label: '女' },
+                  ]}
+                />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item className="sm-edit-field-content" name="birthday" label="生日">
+                <DatePicker
+                  className="sm-edit-control-full"
+                  variant="underlined"
+                  disabled={!editable}
+                />
+              </Form.Item>
+            </FormFieldCell>
+            {[
+              ['companyName', '公司'],
+              ['currentOrgName', '部门'],
+              ['phone', '手机'],
+              ['email', '邮箱'],
+            ].map(([name, label]) => (
+              <FormFieldCell key={name}>
+                <Form.Item className="sm-edit-field-content" name={name} label={label}>
+                  <Input variant="underlined" disabled />
+                </Form.Item>
+              </FormFieldCell>
+            ))}
+          </FormFieldGrid>
         ) : (
           <UserProfileFields
             editable={editable}

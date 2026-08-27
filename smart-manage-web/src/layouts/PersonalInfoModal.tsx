@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import { Button, DatePicker, Form, Input, Select, Table } from 'antd';
 import AppModal from '@/domain/common/component/AppModal';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
 import { updateCurrentUserProfile } from '@/api/user';
 import type { UserInfoVO } from '@/types/api';
 
@@ -79,43 +80,58 @@ export default function PersonalInfoModal({
         </>
       }
     >
-      <Form form={form} layout="vertical" className="sm-personal-info-form">
-        <div className="sm-personal-info-grid">
-          <Form.Item label="用户名">
-            <Input variant="underlined" value={userInfo?.username} disabled />
-          </Form.Item>
-          <Form.Item label="工号">
-            <Input variant="underlined" value={userInfo?.number ?? ''} disabled />
-          </Form.Item>
-          <Form.Item name="name" label="姓名" rules={[{ required: true, message: '姓名不能为空' }]}>
-            <Input variant="underlined" maxLength={50} />
-          </Form.Item>
-          <Form.Item name="gender" label="性别">
-            <Select
-              variant="underlined"
-              allowClear
-              options={[
-                { value: 'MALE', label: '男' },
-                { value: 'FEMALE', label: '女' },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item name="birthday" label="生日">
-            <DatePicker variant="underlined" />
-          </Form.Item>
-          <Form.Item label="公司">
-            <Input variant="underlined" value={userInfo?.companyName} disabled />
-          </Form.Item>
-          <Form.Item label="部门">
-            <Input variant="underlined" value={userInfo?.currentOrgName} disabled />
-          </Form.Item>
-          <Form.Item label="手机">
-            <Input variant="underlined" value={userInfo?.phone ?? ''} disabled />
-          </Form.Item>
-          <Form.Item label="邮箱">
-            <Input variant="underlined" value={userInfo?.email ?? ''} disabled />
-          </Form.Item>
-        </div>
+      <Form form={form} layout="vertical" className="sm-edit-form sm-personal-info-form">
+        <FormFieldGrid maxColumns={2}>
+          <FormFieldCell>
+            <Form.Item className="sm-edit-field-content" label="用户名">
+              <Input variant="underlined" value={userInfo?.username} disabled />
+            </Form.Item>
+          </FormFieldCell>
+          <FormFieldCell>
+            <Form.Item className="sm-edit-field-content" label="工号">
+              <Input variant="underlined" value={userInfo?.number ?? ''} disabled />
+            </Form.Item>
+          </FormFieldCell>
+          <FormFieldCell>
+            <Form.Item
+              className="sm-edit-field-content"
+              name="name"
+              label="姓名"
+              rules={[{ required: true, message: '姓名不能为空' }]}
+            >
+              <Input variant="underlined" maxLength={50} />
+            </Form.Item>
+          </FormFieldCell>
+          <FormFieldCell>
+            <Form.Item className="sm-edit-field-content" name="gender" label="性别">
+              <Select
+                variant="underlined"
+                allowClear
+                options={[
+                  { value: 'MALE', label: '男' },
+                  { value: 'FEMALE', label: '女' },
+                ]}
+              />
+            </Form.Item>
+          </FormFieldCell>
+          <FormFieldCell>
+            <Form.Item className="sm-edit-field-content" name="birthday" label="生日">
+              <DatePicker className="sm-edit-control-full" variant="underlined" />
+            </Form.Item>
+          </FormFieldCell>
+          {[
+            { label: '公司', value: userInfo?.companyName },
+            { label: '部门', value: userInfo?.currentOrgName },
+            { label: '手机', value: userInfo?.phone ?? '' },
+            { label: '邮箱', value: userInfo?.email ?? '' },
+          ].map((field) => (
+            <FormFieldCell key={field.label}>
+              <Form.Item className="sm-edit-field-content" label={field.label}>
+                <Input variant="underlined" value={field.value} disabled />
+              </Form.Item>
+            </FormFieldCell>
+          ))}
+        </FormFieldGrid>
       </Form>
       <div className="sm-personal-info-assignments">
         <div className="sm-personal-info-section-title">部门信息</div>

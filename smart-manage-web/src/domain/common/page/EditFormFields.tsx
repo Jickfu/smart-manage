@@ -11,6 +11,7 @@ import {
 import RefSelector from '@/domain/common/component/RefSelector';
 import IconSelector from '@/domain/common/component/IconSelector';
 import type { EditField } from './EditPage';
+import { FormFieldCell, FormFieldGrid } from './FormFieldLayout';
 import {
   getDatePickerValueProps,
   getDateTimePickerValueProps,
@@ -23,6 +24,7 @@ const { TextArea } = Input;
 interface EditFormFieldsProps {
   fields: EditField[];
   editable?: boolean;
+  maxColumns?: 1 | 2 | 4;
 }
 
 interface EditFieldItemProps {
@@ -159,37 +161,29 @@ function renderFormControl(field: EditField, disabled: boolean) {
  */
 function EditFieldItem({ field, editable }: EditFieldItemProps) {
   const disabled = Boolean(field.disabled || !editable);
-  const className = [
-    'sm-edit-field',
-    field.columnSpan === 2 ? 'sm-edit-field--span-2' : '',
-    field.columnSpan === 3 ? 'sm-edit-field--span-3' : '',
-    field.fullWidth ? 'sm-edit-field--full' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
 
   if (field.type === 'custom') {
     return (
-      <div className={className}>
+      <FormFieldCell columnSpan={field.columnSpan} fullWidth={field.fullWidth}>
         <Form.Item label={field.label} className="sm-edit-field-content">
           <div className="sm-edit-readonly">{field.content}</div>
         </Form.Item>
-      </div>
+      </FormFieldCell>
     );
   }
 
   if (field.type === 'readonly') {
     return (
-      <div className={className}>
+      <FormFieldCell columnSpan={field.columnSpan} fullWidth={field.fullWidth}>
         <Form.Item name={field.dataIndex} label={field.label} className="sm-edit-field-content">
           <ReadonlyText />
         </Form.Item>
-      </div>
+      </FormFieldCell>
     );
   }
 
   return (
-    <div className={className}>
+    <FormFieldCell columnSpan={field.columnSpan} fullWidth={field.fullWidth}>
       <Form.Item
         name={field.dataIndex}
         label={field.label}
@@ -213,16 +207,16 @@ function EditFieldItem({ field, editable }: EditFieldItemProps) {
       >
         {renderFormControl(field, disabled)}
       </Form.Item>
-    </div>
+    </FormFieldCell>
   );
 }
 
-export function EditFormFields({ fields, editable = true }: EditFormFieldsProps) {
+export function EditFormFields({ fields, editable = true, maxColumns }: EditFormFieldsProps) {
   return (
-    <div className="sm-edit-fields">
+    <FormFieldGrid maxColumns={maxColumns}>
       {fields.map((field) => (
         <EditFieldItem key={field.dataIndex} field={field} editable={editable} />
       ))}
-    </div>
+    </FormFieldGrid>
   );
 }

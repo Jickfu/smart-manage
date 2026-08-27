@@ -27,6 +27,7 @@ import type { UserAssignmentVO, UserListVO } from './types';
 import { userAccess } from './permissions';
 import { UserAvatar } from './UserAvatar';
 import AppModal from '@/domain/common/component/AppModal';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
 import './UserListPage.css';
 import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 
@@ -472,29 +473,37 @@ const UserListPage = (props: PageComponentProps) => {
         <Form
           form={temporaryLoginForm}
           layout="vertical"
-          className="sm-user-temporary-login-form"
+          className="sm-edit-form sm-user-temporary-login-form"
           onFinish={(values) => temporaryLoginMutation.mutate(values)}
         >
-          <Form.Item
-            name="reason"
-            label="代登录原因"
-            rules={[
-              { required: true, whitespace: true, message: '请输入代登录原因' },
-              { max: 500, message: '代登录原因不能超过500个字符' },
-            ]}
-          >
-            <Input.TextArea rows={3} maxLength={500} showCount />
-          </Form.Item>
-          {!temporaryLoginSafe && (
-            <Form.Item
-              name="administratorPassword"
-              label="administrator 密码"
-              extra="验证通过后5分钟内再次生成无需重复输入。"
-              rules={[{ required: true, message: '请输入 administrator 密码' }]}
-            >
-              <Input.Password autoComplete="current-password" />
-            </Form.Item>
-          )}
+          <FormFieldGrid maxColumns={1}>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="reason"
+                label="代登录原因"
+                rules={[
+                  { required: true, whitespace: true, message: '请输入代登录原因' },
+                  { max: 500, message: '代登录原因不能超过500个字符' },
+                ]}
+              >
+                <Input.TextArea variant="underlined" rows={3} maxLength={500} showCount />
+              </Form.Item>
+            </FormFieldCell>
+            {!temporaryLoginSafe && (
+              <FormFieldCell>
+                <Form.Item
+                  className="sm-edit-field-content"
+                  name="administratorPassword"
+                  label="administrator 密码"
+                  extra="验证通过后5分钟内再次生成无需重复输入。"
+                  rules={[{ required: true, message: '请输入 administrator 密码' }]}
+                >
+                  <Input.Password variant="underlined" autoComplete="current-password" />
+                </Form.Item>
+              </FormFieldCell>
+            )}
+          </FormFieldGrid>
         </Form>
       </AppModal>
       <Modal

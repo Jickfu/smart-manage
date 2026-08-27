@@ -4,6 +4,7 @@ import { Button, Form, Input, Select } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { sm2 } from 'sm-crypto';
 import AppModal from '@/domain/common/component/AppModal';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
 import {
   getCurrentPasswordPublicKey,
   updateCurrentUserContact,
@@ -127,42 +128,55 @@ export default function PersonalCredentialModal({
         <Form
           form={verifyForm}
           layout="vertical"
+          className="sm-edit-form"
           initialValues={{ verificationMethod: 'PASSWORD' }}
           hidden={step !== 'verify'}
         >
-          <Form.Item name="verificationMethod" label="验证方式">
-            <Select
-              options={[
-                { value: 'PASSWORD', label: '原密码验证' },
-                ...(type === 'PASSWORD' && emailPasswordAvailable
-                  ? [{ value: 'EMAIL' as const, label: '邮箱验证码' }]
-                  : []),
-              ]}
-              popupMatchSelectWidth
-            />
-          </Form.Item>
-          <Form.Item
-            noStyle
-            shouldUpdate={(previous, current) =>
-              previous.verificationMethod !== current.verificationMethod
-            }
-          >
-            {({ getFieldValue }) =>
-              getFieldValue('verificationMethod') === 'PASSWORD' ? (
-                <Form.Item
-                  name="password"
-                  label="密码"
-                  rules={[{ required: true, message: '请输入当前密码' }]}
-                >
-                  <Input.Password autoComplete="current-password" />
-                </Form.Item>
-              ) : (
-                <div className="sm-personal-credential-email-tip">
-                  验证码将发送到当前账号已验证的邮箱。
-                </div>
-              )
-            }
-          </Form.Item>
+          <FormFieldGrid maxColumns={1}>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="verificationMethod"
+                label="验证方式"
+              >
+                <Select
+                  variant="underlined"
+                  options={[
+                    { value: 'PASSWORD', label: '原密码验证' },
+                    ...(type === 'PASSWORD' && emailPasswordAvailable
+                      ? [{ value: 'EMAIL' as const, label: '邮箱验证码' }]
+                      : []),
+                  ]}
+                  popupMatchSelectWidth
+                />
+              </Form.Item>
+            </FormFieldCell>
+            <Form.Item
+              noStyle
+              shouldUpdate={(previous, current) =>
+                previous.verificationMethod !== current.verificationMethod
+              }
+            >
+              {({ getFieldValue }) =>
+                getFieldValue('verificationMethod') === 'PASSWORD' ? (
+                  <FormFieldCell>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      name="password"
+                      label="密码"
+                      rules={[{ required: true, message: '请输入当前密码' }]}
+                    >
+                      <Input.Password variant="underlined" autoComplete="current-password" />
+                    </Form.Item>
+                  </FormFieldCell>
+                ) : (
+                  <div className="sm-personal-credential-email-tip">
+                    验证码将发送到当前账号已验证的邮箱。
+                  </div>
+                )
+              }
+            </Form.Item>
+          </FormFieldGrid>
           <div className="sm-personal-credential-actions">
             <Button onClick={onClose}>取消</Button>
             <Button
@@ -187,38 +201,37 @@ export default function PersonalCredentialModal({
             </Button>
           </div>
         </Form>
-        <Form form={changeForm} layout="vertical" hidden={step !== 'change'}>
-          <Form.Item
-            name="value"
-            label={type === 'PHONE' ? '新手机号' : type === 'EMAIL' ? '新邮箱' : '新密码'}
-            rules={[
-              { required: true, message: '请输入新值' },
-              ...(type === 'EMAIL' ? [{ type: 'email' as const, message: '邮箱格式不正确' }] : []),
-              ...(type === 'PASSWORD' ? [{ min: 8, message: '新密码不能少于8位' }] : []),
-            ]}
-          >
-            {type === 'PASSWORD' ? (
-              <Input.Password autoComplete="new-password" />
-            ) : (
-              <Input maxLength={type === 'PHONE' ? 30 : 100} />
-            )}
-          </Form.Item>
-          {type === 'EMAIL' && emailCodeSent && (
-            <Form.Item
-              name="code"
-              label="邮箱验证码"
-              rules={[
-                { required: true, message: '请输入邮箱验证码' },
-                { pattern: /^\d{6}$/, message: '请输入6位邮箱验证码' },
-              ]}
-            >
-              <Input maxLength={6} inputMode="numeric" autoComplete="one-time-code" />
-            </Form.Item>
-          )}
-          {type === 'PASSWORD' && (
-            <>
-              {verificationMethod === 'EMAIL' && (
+        <Form
+          form={changeForm}
+          layout="vertical"
+          className="sm-edit-form"
+          hidden={step !== 'change'}
+        >
+          <FormFieldGrid maxColumns={1}>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                name="value"
+                label={type === 'PHONE' ? '新手机号' : type === 'EMAIL' ? '新邮箱' : '新密码'}
+                rules={[
+                  { required: true, message: '请输入新值' },
+                  ...(type === 'EMAIL'
+                    ? [{ type: 'email' as const, message: '邮箱格式不正确' }]
+                    : []),
+                  ...(type === 'PASSWORD' ? [{ min: 8, message: '新密码不能少于8位' }] : []),
+                ]}
+              >
+                {type === 'PASSWORD' ? (
+                  <Input.Password variant="underlined" autoComplete="new-password" />
+                ) : (
+                  <Input variant="underlined" maxLength={type === 'PHONE' ? 30 : 100} />
+                )}
+              </Form.Item>
+            </FormFieldCell>
+            {type === 'EMAIL' && emailCodeSent && (
+              <FormFieldCell>
                 <Form.Item
+                  className="sm-edit-field-content"
                   name="code"
                   label="邮箱验证码"
                   rules={[
@@ -226,27 +239,59 @@ export default function PersonalCredentialModal({
                     { pattern: /^\d{6}$/, message: '请输入6位邮箱验证码' },
                   ]}
                 >
-                  <Input maxLength={6} inputMode="numeric" autoComplete="one-time-code" />
+                  <Input
+                    variant="underlined"
+                    maxLength={6}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                  />
                 </Form.Item>
-              )}
-              <Form.Item
-                name="confirmValue"
-                label="确认新密码"
-                dependencies={['value']}
-                rules={[
-                  { required: true, message: '请再次输入新密码' },
-                  ({ getFieldValue }) => ({
-                    validator: (_: unknown, value: string) =>
-                      !value || getFieldValue('value') === value
-                        ? Promise.resolve()
-                        : Promise.reject(new Error('两次输入的密码不一致')),
-                  }),
-                ]}
-              >
-                <Input.Password autoComplete="new-password" />
-              </Form.Item>
-            </>
-          )}
+              </FormFieldCell>
+            )}
+            {type === 'PASSWORD' && (
+              <>
+                {verificationMethod === 'EMAIL' && (
+                  <FormFieldCell>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      name="code"
+                      label="邮箱验证码"
+                      rules={[
+                        { required: true, message: '请输入邮箱验证码' },
+                        { pattern: /^\d{6}$/, message: '请输入6位邮箱验证码' },
+                      ]}
+                    >
+                      <Input
+                        variant="underlined"
+                        maxLength={6}
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                      />
+                    </Form.Item>
+                  </FormFieldCell>
+                )}
+                <FormFieldCell>
+                  <Form.Item
+                    className="sm-edit-field-content"
+                    name="confirmValue"
+                    label="确认新密码"
+                    dependencies={['value']}
+                    rules={[
+                      { required: true, message: '请再次输入新密码' },
+                      ({ getFieldValue }) => ({
+                        validator: (_: unknown, value: string) =>
+                          !value || getFieldValue('value') === value
+                            ? Promise.resolve()
+                            : Promise.reject(new Error('两次输入的密码不一致')),
+                      }),
+                    ]}
+                  >
+                    <Input.Password variant="underlined" autoComplete="new-password" />
+                  </Form.Item>
+                </FormFieldCell>
+              </>
+            )}
+          </FormFieldGrid>
           <div className="sm-personal-credential-actions">
             <Button disabled={saving} onClick={onClose}>
               取消

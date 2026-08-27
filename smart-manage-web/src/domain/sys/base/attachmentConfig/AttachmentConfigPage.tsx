@@ -6,6 +6,7 @@ import type { FormListFieldData } from 'antd/es/form';
 import { useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { EditSectionCollapse } from '@/domain/common/page/EditSectionCollapse';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -167,40 +168,44 @@ const AttachmentConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
               key: 'upload-limit',
               label: '上传限制',
               children: (
-                <div className="sm-edit-fields">
-                  <Form.Item
-                    className="sm-edit-field"
-                    label="单文件最大大小（MB）"
-                    name="maxUploadBytes"
-                    getValueProps={(value) => ({
-                      value: value ? value / 1024 / 1024 : undefined,
-                    })}
-                    normalize={(value) => Math.round(Number(value) * 1024 * 1024)}
-                    rules={[{ required: true, message: '请输入单文件最大大小' }]}
-                  >
-                    <InputNumber
-                      className="sm-edit-control-full"
-                      min={1}
-                      max={100}
-                      precision={0}
-                      variant="underlined"
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    className="sm-edit-field"
-                    label="临时附件有效期（小时）"
-                    name="tempExpireHours"
-                    rules={[{ required: true, message: '请输入临时附件有效期' }]}
-                  >
-                    <InputNumber
-                      className="sm-edit-control-full"
-                      min={1}
-                      max={168}
-                      precision={0}
-                      variant="underlined"
-                    />
-                  </Form.Item>
-                </div>
+                <FormFieldGrid>
+                  <FormFieldCell>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      label="单文件最大大小（MB）"
+                      name="maxUploadBytes"
+                      getValueProps={(value) => ({
+                        value: value ? value / 1024 / 1024 : undefined,
+                      })}
+                      normalize={(value) => Math.round(Number(value) * 1024 * 1024)}
+                      rules={[{ required: true, message: '请输入单文件最大大小' }]}
+                    >
+                      <InputNumber
+                        className="sm-edit-control-full"
+                        min={1}
+                        max={100}
+                        precision={0}
+                        variant="underlined"
+                      />
+                    </Form.Item>
+                  </FormFieldCell>
+                  <FormFieldCell>
+                    <Form.Item
+                      className="sm-edit-field-content"
+                      label="临时附件有效期（小时）"
+                      name="tempExpireHours"
+                      rules={[{ required: true, message: '请输入临时附件有效期' }]}
+                    >
+                      <InputNumber
+                        className="sm-edit-control-full"
+                        min={1}
+                        max={168}
+                        precision={0}
+                        variant="underlined"
+                      />
+                    </Form.Item>
+                  </FormFieldCell>
+                </FormFieldGrid>
               ),
             },
             {

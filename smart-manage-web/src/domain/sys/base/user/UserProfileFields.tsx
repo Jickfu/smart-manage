@@ -3,6 +3,7 @@ import { Button, DatePicker, Form, Input, Select, Upload } from 'antd';
 import type { UploadProps } from 'antd';
 import { businessAttachmentApi } from '@/domain/common/attachment/api';
 import { UserAvatar } from './UserAvatar';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
 
 interface UserProfileFieldsProps {
   editable: boolean;
@@ -105,27 +106,29 @@ export function UserProfileFields({
       <div className="sm-user-profile-sections">
         <section className="sm-user-profile-section">
           <h3 className="sm-user-profile-section-title">人员信息</h3>
-          <div className="sm-user-profile-fields">
-            <div className="sm-user-profile-field">
+          <FormFieldGrid>
+            <FormFieldCell>
               <Form.Item
+                className="sm-edit-field-content"
                 name="name"
                 label="姓名"
                 rules={[{ required: true, message: '姓名不能为空' }]}
               >
                 <Input variant="underlined" disabled={!editable} />
               </Form.Item>
-            </div>
-            <div className="sm-user-profile-field">
+            </FormFieldCell>
+            <FormFieldCell>
               <Form.Item
+                className="sm-edit-field-content"
                 name="number"
                 label="工号"
                 rules={[{ required: true, message: '工号不能为空' }]}
               >
                 <Input variant="underlined" disabled={!editable} />
               </Form.Item>
-            </div>
-            <div className="sm-user-profile-field">
-              <Form.Item name="gender" label="性别">
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item className="sm-edit-field-content" name="gender" label="性别">
                 <Select
                   variant="underlined"
                   allowClear
@@ -136,43 +139,46 @@ export function UserProfileFields({
                   ]}
                 />
               </Form.Item>
-            </div>
-            <div className="sm-user-profile-field">
-              <Form.Item name="birthday" label="生日">
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item className="sm-edit-field-content" name="birthday" label="生日">
                 <DatePicker
                   className="sm-user-profile-control"
                   variant="underlined"
                   disabled={!editable}
                 />
               </Form.Item>
-            </div>
-          </div>
+            </FormFieldCell>
+          </FormFieldGrid>
         </section>
         <section className="sm-user-profile-section">
           <h3 className="sm-user-profile-section-title">账号信息</h3>
-          <div className="sm-user-profile-fields">
-            <div className="sm-user-profile-field">
+          <FormFieldGrid>
+            <FormFieldCell>
               <Form.Item
+                className="sm-edit-field-content"
                 name="username"
                 label="用户名"
                 rules={[{ required: true, message: '用户名不能为空' }]}
               >
                 <Input variant="underlined" disabled={!editable || !isAddNew} />
               </Form.Item>
-            </div>
+            </FormFieldCell>
             {isAddNew && (
-              <div className="sm-user-profile-field">
+              <FormFieldCell>
                 <Form.Item
+                  className="sm-edit-field-content"
                   name="password"
                   label="初始密码"
                   rules={[{ required: true, message: '初始密码不能为空' }]}
                 >
                   <Input.Password variant="underlined" disabled={!editable} />
                 </Form.Item>
-              </div>
+              </FormFieldCell>
             )}
-            <div className="sm-user-profile-field">
+            <FormFieldCell>
               <Form.Item
+                className="sm-edit-field-content"
                 name="phone"
                 label="手机"
                 rules={[{ pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确' }]}
@@ -192,9 +198,10 @@ export function UserProfileFields({
               >
                 <Input variant="underlined" disabled={!editable || phoneProtected} />
               </Form.Item>
-            </div>
-            <div className="sm-user-profile-field">
+            </FormFieldCell>
+            <FormFieldCell>
               <Form.Item
+                className="sm-edit-field-content"
                 name="email"
                 label="邮箱"
                 rules={[{ type: 'email', message: '邮箱格式不正确' }]}
@@ -214,8 +221,8 @@ export function UserProfileFields({
               >
                 <Input variant="underlined" disabled={!editable || emailProtected} />
               </Form.Item>
-            </div>
-          </div>
+            </FormFieldCell>
+          </FormFieldGrid>
         </section>
       </div>
     </div>
