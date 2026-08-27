@@ -4,10 +4,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 @Data
 @NoArgsConstructor
 @Schema(description = "基础数据选项")
-public class BasicDataOptionVO {
+public class BasicDataOptionVO implements Serializable {
 
     private Long id;
 
