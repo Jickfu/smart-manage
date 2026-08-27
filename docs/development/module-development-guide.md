@@ -105,35 +105,20 @@
 
 ### 表单字段布局
 
-标准编辑页、业务表单弹框、命令参数弹框和 CUSTOM 页面中的普通表单字段统一使用 `FormFieldGrid` 与 `FormFieldCell`，组件及样式位于 `smart-manage-web/src/domain/common/page/FormFieldLayout.tsx` 和 `FormFieldLayout.css`。数据驱动的标准编辑页继续通过 `EditFormFields` 间接复用该布局；手写 `Form.Item` 时必须显式组合公共字段容器，不得在业务页面复制网格、字段宽度或响应式断点。
+普通表单字段统一使用 `FormFieldGrid` 与 `FormFieldCell`；标准 `EditPage` 通过 `EditFormFields` 间接复用，手写字段保持以下结构：
 
 ```tsx
-<Form layout="vertical" className="sm-edit-form">
-  <FormFieldGrid>
-    <FormFieldCell>
-      <Form.Item className="sm-edit-field-content" name="name" label="名称">
-        <Input variant="underlined" />
-      </Form.Item>
-    </FormFieldCell>
-    <FormFieldCell columnSpan={2}>
-      <Form.Item className="sm-edit-field-content" name="description" label="描述">
-        <Input.TextArea variant="underlined" />
-      </Form.Item>
-    </FormFieldCell>
-  </FormFieldGrid>
-</Form>
+<FormFieldGrid maxColumns={2}>
+  <FormFieldCell columnSpan={2}>
+    <Form.Item className="sm-edit-field-content">...</Form.Item>
+  </FormFieldCell>
+</FormFieldGrid>
 ```
 
-使用约束如下：
-
-- `FormFieldGrid` 默认 `maxColumns={4}`，沿用通用编辑页已经调优的四列、三列、两列和单列容器查询；字段控件标准宽度为 `230px`，字段占位、右侧留白、跨列偏移及 `+230px` 计算属于公共布局契约，业务页面不得覆盖或重新计算。
-- 普通工作台编辑页和宽 CUSTOM 表单使用默认四列上限；普通业务弹框使用 `maxColumns={2}`；更改密码、身份验证等窄参数弹框使用 `maxColumns={1}`。两列和单列字段容器作为整体在父容器内居中，字段自身及最后一行仍从左向右排列，不得对单个字段或不满一行的字段单独居中。
-- `FormFieldCell` 默认占一列；`columnSpan={2}` 或 `columnSpan={3}` 分别占两个或三个标准字段列；`fullWidth` 延伸至当前容器最后一列的标准控件右边缘。在两列或单列容器中，超出当前最大列数的跨列字段自动占满当前容器。
-- `Form.Item` 必须是 `FormFieldCell` 的直接子元素，并使用 `sm-edit-field-content`；这是跨列宽度选择器生效的结构契约。不得把 `sm-edit-fields`、`sm-edit-field` 或 `sm-edit-field-content` 当作业务页面的自由样式类直接拼装。
-- 承载公共字段布局的 Ant Design `Form` 使用 `layout="vertical"` 和 `sm-edit-form`；标准输入控件使用 `variant="underlined"`，日期、数字、选择器等不能自然填满字段内容宽度的控件使用 `sm-edit-control-full`。
-- 头像、字段分区标题、步骤提示、弹框按钮区等不是普通字段，不放入 `FormFieldCell`；它们由外层业务布局组织。头像旁的人员字段区域仍使用 `FormFieldGrid`，头像本身保持为字段容器的同级内容。
-- 查询筛选器、隐藏字段、可编辑表格单元格、代码编辑器以及具有专用密度或交互结构的控制台不强制使用字段容器。不能仅因存在 `Form.Item` 就机械套用；普通字段与特殊区域混合时，只包裹普通字段部分。
-- 如果真实需求无法由一、二、四列上限或既有跨列语义表达，必须先确认设计边界，不得在领域 CSS 中覆盖公共布局内部类；确认形成稳定的第二个使用方后再扩展公共组件。
+- 页面默认四列上限，普通弹框使用 `maxColumns={2}`，窄参数弹框使用 `maxColumns={1}`；两列和单列容器整体居中，内部字段仍从左向右排列。
+- `FormFieldCell` 默认占一列，使用 `columnSpan={2 | 3}` 或 `fullWidth` 跨列；`Form.Item` 必须是其直接子元素并使用 `sm-edit-field-content`。
+- 字段宽度、间距、断点和跨列计算属于公共布局契约，领域页面不得直接拼装或覆盖内部 `sm-edit-*` 类；新布局需求应先确认边界再扩展公共组件。
+- 头像、分区标题、提示和按钮区由外层布局组织；查询筛选器、隐藏字段、可编辑表格单元格、代码编辑器及专用控制台不套用字段容器。
 
 ### 实体引用选择
 
