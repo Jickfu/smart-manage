@@ -1,8 +1,19 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
-import { Alert, Button, Collapse, Input, Segmented, Space, Table, Tag, Typography } from 'antd';
+import {
+  Alert,
+  Button,
+  Card,
+  Collapse,
+  Input,
+  Segmented,
+  Space,
+  Table,
+  Tag,
+  Typography,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { CopyOutlined, ReloadOutlined } from '@ant-design/icons';
+import { CopyOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -67,19 +78,7 @@ export default function ScriptHelpPage(_props: PageComponentProps) {
       error={apiQuery.error}
       onRetry={() => apiQuery.refetch()}
       actions={
-        <Button type="primary" icon={<ReloadOutlined />} onClick={() => apiQuery.refetch()}>
-          刷新 API
-        </Button>
-      }
-    >
-      <div className="sm-script-help">
-        <div className="sm-script-help-heading">
-          <div>
-            <Typography.Title level={4}>脚本控制台使用帮助</Typography.Title>
-            <Typography.Text type="secondary">
-              从模板开始，或者查询当前服务实际开放的领域 Service 和方法。
-            </Typography.Text>
-          </div>
+        <div className="sm-script-help-toolbar">
           <Segmented<HelpSection>
             value={section}
             options={[
@@ -89,39 +88,50 @@ export default function ScriptHelpPage(_props: PageComponentProps) {
             ]}
             onChange={setSection}
           />
+          <Button type="primary" onClick={() => apiQuery.refetch()}>
+            刷新 API
+          </Button>
         </div>
+      }
+    >
+      <div className="sm-script-help">
+        <Card className="sm-script-help-card" title="脚本控制台使用帮助">
+          <Typography.Paragraph className="sm-script-help-description" type="secondary">
+            从模板开始，或者查询当前服务实际开放的领域 Service 和方法。
+          </Typography.Paragraph>
 
-        {section === 'guide' && <QuickGuide />}
-        {section === 'templates' && (
-          <Collapse
-            className="sm-script-help-collapse"
-            items={scriptTemplates.map((template) => ({
-              key: template.key,
-              label: template.name,
-              children: (
-                <div className="sm-script-help-example">
-                  <Typography.Paragraph>{template.description}</Typography.Paragraph>
-                  <Button
-                    size="small"
-                    icon={<CopyOutlined />}
-                    onClick={() => copy(template.content)}
-                  >
-                    复制模板
-                  </Button>
-                  <pre>{template.content}</pre>
-                </div>
-              ),
-            }))}
-          />
-        )}
-        {section === 'api' && (
-          <ApiReference
-            services={services}
-            keyword={keyword}
-            onKeywordChange={setKeyword}
-            onCopy={copy}
-          />
-        )}
+          {section === 'guide' && <QuickGuide />}
+          {section === 'templates' && (
+            <Collapse
+              className="sm-script-help-collapse"
+              items={scriptTemplates.map((template) => ({
+                key: template.key,
+                label: template.name,
+                children: (
+                  <div className="sm-script-help-example">
+                    <Typography.Paragraph>{template.description}</Typography.Paragraph>
+                    <Button
+                      size="small"
+                      icon={<CopyOutlined />}
+                      onClick={() => copy(template.content)}
+                    >
+                      复制模板
+                    </Button>
+                    <pre>{template.content}</pre>
+                  </div>
+                ),
+              }))}
+            />
+          )}
+          {section === 'api' && (
+            <ApiReference
+              services={services}
+              keyword={keyword}
+              onKeywordChange={setKeyword}
+              onCopy={copy}
+            />
+          )}
+        </Card>
       </div>
     </EditPageShell>
   );

@@ -1,27 +1,29 @@
 .sm-script-help {
+  min-height: 100%;
+}
+
+.sm-script-help-toolbar {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.sm-script-help-card .ant-card-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 100%;
-  overflow: auto;
 }
 
-.sm-script-help-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.sm-script-help-heading .ant-typography {
-  margin: 0;
+.sm-script-help-description {
+  margin-bottom: 0;
 }
 
 .sm-script-help-guide {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: 1000px;
 }
 
 .sm-script-help-guide section {
