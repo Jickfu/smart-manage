@@ -71,6 +71,7 @@ export interface UserAssignmentVO {
 /** 菜单节点 */
 export interface MenuVO {
   id: string;
+  number?: string;
   name: string;
   path?: string;
   component?: string;

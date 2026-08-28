@@ -50,6 +50,7 @@ class MenuTxServiceTests {
         MenuEntity entity = new MenuEntity();
         entity.setId(1L);
         entity.setVersion(2);
+        entity.setNumber("menu_management");
         entity.setEnabled(true);
         when(mapper.selectById(1L)).thenReturn(entity);
         when(mapper.updateAllColumns(any())).thenReturn(0);
@@ -78,6 +79,30 @@ class MenuTxServiceTests {
 
         assertThrows(BizException.class, () -> txService.save(form));
         verify(mapper, never()).updateAllColumns(any());
+    }
+
+    @Test
+    void existingMenuNumberCannotBeChanged() {
+        MenuEntity entity = new MenuEntity();
+        entity.setId(1L);
+        entity.setVersion(2);
+        entity.setNumber("original_menu");
+        when(mapper.selectById(1L)).thenReturn(entity);
+        MenuSaveForm form = validEditForm();
+        form.setVersion(2);
+
+        assertThrows(BizException.class, () -> txService.save(form));
+        verify(mapper, never()).updateAllColumns(any());
+    }
+
+    @Test
+    void menuNumberMustBeUniqueWithinApplication() {
+        MenuSaveForm form = validEditForm();
+        form.setId(null);
+        when(mapper.selectCount(any())).thenReturn(1L);
+
+        assertThrows(BizException.class, () -> txService.save(form));
+        verify(mapper, never()).insert(any(MenuEntity.class));
     }
 
     @Test

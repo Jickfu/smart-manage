@@ -5,6 +5,18 @@ export type MenuAction =
   | { type: 'EXTERNAL_NEW_TAB'; externalUrl: string }
   | { type: 'EXTERNAL_IFRAME'; menuId: string; title: string; externalUrl: string };
 
+/** 只从服务端返回的当前用户可见菜单树中解析可打开的页面入口。 */
+export function findMenuEntry(items: MenuVO[], entryNumber: string): MenuVO | null {
+  for (const item of items) {
+    if (item.level === 1 && item.number === entryNumber) return item;
+    if (item.routes?.length) {
+      const found = findMenuEntry(item.routes, entryNumber);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 function validateExternalUrl(menuName: string, rawExternalUrl?: string) {
   const externalUrl = rawExternalUrl?.trim();
   if (!externalUrl) throw new Error(`外部链接菜单“${menuName}”缺少链接地址`);

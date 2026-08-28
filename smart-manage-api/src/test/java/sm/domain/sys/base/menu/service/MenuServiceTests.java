@@ -185,6 +185,7 @@ class MenuServiceTests {
         MenuVO result = service.getUserMenusByAppId(1L, 430000000000000002L);
 
         assertEquals(1, result.getRoutes().size());
+        assertEquals("menu_301", result.getRoutes().getFirst().getNumber());
         assertEquals("采购申请", result.getRoutes().getFirst().getName());
     }
 
@@ -210,6 +211,7 @@ class MenuServiceTests {
             Long id, Long appId, Long parentId, MenuLevelEnum level, String name, String path) {
         MenuEntity entity = new MenuEntity();
         entity.setId(id);
+        entity.setNumber("menu_" + id);
         entity.setAppId(appId);
         entity.setParentId(parentId);
         entity.setLevel(level);

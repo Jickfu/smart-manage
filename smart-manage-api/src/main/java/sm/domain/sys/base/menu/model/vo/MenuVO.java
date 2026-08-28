@@ -16,6 +16,9 @@ public class MenuVO {
 	@Schema(description = "菜单ID")
 	private Long id;
 
+	@Schema(description = "稳定菜单编码")
+	private String number;
+
 	@Schema(description = "名称")
 	private String name;
 
@@ -44,4 +47,3 @@ public class MenuVO {
 	private List<MenuVO> routes;
 
 }
-

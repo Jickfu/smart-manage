@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MenuVO } from '@/types/api';
-import { resolveMenuAction } from './menuNavigation';
+import { findMenuEntry, resolveMenuAction } from './menuNavigation';
 
 function menu(overrides: Partial<MenuVO>): MenuVO {
   return {
@@ -59,5 +59,20 @@ describe('resolveMenuAction', () => {
         }),
       ),
     ).toThrow('链接地址无效');
+  });
+});
+
+describe('findMenuEntry', () => {
+  it('finds a nested page by its stable menu number', () => {
+    const page = menu({ id: '2', number: 'user_list', level: 1 });
+    const group = menu({ number: 'base_group', level: 0, routes: [page] });
+
+    expect(findMenuEntry([group], 'user_list')).toBe(page);
+  });
+
+  it('does not resolve a group as an openable entry', () => {
+    const group = menu({ number: 'base_group', level: 0 });
+
+    expect(findMenuEntry([group], 'base_group')).toBeNull();
   });
 });

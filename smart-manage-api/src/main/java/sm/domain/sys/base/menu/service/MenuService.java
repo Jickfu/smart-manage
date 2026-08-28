@@ -389,6 +389,7 @@ public class MenuService {
 		for (MenuEntity menuEntity : entityList) {
 			MenuVO menu = new MenuVO();
 			menu.setId(menuEntity.getId());
+			menu.setNumber(menuEntity.getNumber());
 			menu.setName(menuEntity.getName());
 			menu.setPath(menuEntity.getPath());
 			menu.setComponent(menuEntity.getComponent());

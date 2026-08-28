@@ -59,6 +59,17 @@ class MenuTxService {
         if (form.getNumber() == null || !MENU_NUMBER_PATTERN.matcher(form.getNumber()).matches()) {
             throw new BizException(ResultEnum.PARAM_ERROR, "菜单编码必须为小写字母、数字和下划线，且以小写字母开头");
         }
+        // 菜单编码会用于可分享的应用入口，创建后必须保持稳定。
+        if (form.getId() != null && !java.util.Objects.equals(entity.getNumber(), form.getNumber())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "菜单编码创建后不能修改");
+        }
+        Long duplicateCount = mapper.selectCount(new LambdaQueryWrapper<MenuEntity>()
+                .eq(MenuEntity::getAppId, form.getAppId())
+                .eq(MenuEntity::getNumber, form.getNumber())
+                .ne(form.getId() != null, MenuEntity::getId, form.getId()));
+        if (duplicateCount != null && duplicateCount > 0) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "同一应用下菜单编码不能重复");
+        }
         entity.setNumber(form.getNumber());
         entity.setName(form.getName());
         if (form.getLevel() == null) {

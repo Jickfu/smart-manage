@@ -122,6 +122,7 @@ const MenuEditPage = (props: PageComponentProps) => {
       label: '编码',
       dataIndex: 'number',
       type: 'text',
+      disabled: !isAddNew,
       placeholder: '例如：user 或 base_management',
       rules: [
         { required: true, message: '编码不能为空' },

@@ -1,9 +1,10 @@
-import { lazy, Suspense, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Layout, Spin } from 'antd';
 import Header from './Header';
 import { useHeaderTabsStore } from '@/stores/headerTabs';
 import { openApp } from '@/services/navigationService';
+import { parseStartupNavigation } from '@/services/startupNavigation';
 import { fetchPinnedApps } from '@/domain/sys/base/user/appPinApi';
 import './MainLayout.css';
 
@@ -33,6 +34,8 @@ const PersistentView = ({ appKey, children }: { appKey: string; children: ReactN
 
 const MainLayout = () => {
   const initialAppOpened = useRef(false);
+  const startupTarget = useMemo(() => parseStartupNavigation(window.location.search), []);
+  const [pendingEntryNumber, setPendingEntryNumber] = useState(startupTarget.entryNumber);
   const tabs = useHeaderTabsStore((s) => s.tabs);
   const loadedAppTabs = tabs.filter((tab) => tab.type === 'app' && tab.loaded);
 
@@ -46,11 +49,12 @@ const MainLayout = () => {
       } catch {
         // 固定配置加载失败不能阻断 URL 指定应用及基础页面启动。
       }
-      const appNumber = new URLSearchParams(window.location.search).get('app')?.trim() || 'home';
-      await openApp(appNumber);
+      await openApp(startupTarget.appNumber);
     };
     void initialize();
-  }, []);
+  }, [startupTarget.appNumber]);
+
+  const consumeStartupEntry = useCallback(() => setPendingEntryNumber(undefined), []);
 
   return (
     <Layout className="sm-layout">
@@ -66,7 +70,15 @@ const MainLayout = () => {
           {/* 动态应用工作台 — 每个已打开的应用一个 li */}
           {loadedAppTabs.map((tab) => (
             <PersistentView key={tab.key} appKey={tab.key}>
-              {renderLazyPage(<Workbench appNumber={tab.key} />)}
+              {renderLazyPage(
+                <Workbench
+                  appNumber={tab.key}
+                  initialEntryNumber={
+                    tab.key === startupTarget.appNumber ? pendingEntryNumber : undefined
+                  }
+                  onInitialEntryConsumed={consumeStartupEntry}
+                />,
+              )}
             </PersistentView>
           ))}
         </ol>
