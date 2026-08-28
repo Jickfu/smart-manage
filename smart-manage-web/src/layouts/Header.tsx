@@ -2,7 +2,6 @@ import { useOperationFeedback } from '@/domain/common/component/useOperationFeed
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Input, Popover, Table, Tooltip, Tree } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import { MessageOutlined } from '@ant-design/icons';
 import { UserAvatar } from '@/domain/sys/base/user/UserAvatar';
 import AppModal from '@/domain/common/component/AppModal';
 import { useHeaderTabsStore } from '@/stores/headerTabs';
@@ -22,6 +21,7 @@ import { resolveAssetUrl } from '@/utils/assetUrl';
 import HeaderTabs from './HeaderTabs';
 import HeaderUserPanel from './HeaderUserPanel';
 import PersonalSettingsModal from './PersonalSettingsModal';
+import InboxHeaderButton from '@/domain/sys/message/inbox/InboxHeaderButton';
 import ListTableShell from '@/domain/common/page/ListTableShell';
 import './Header.css';
 
@@ -232,12 +232,7 @@ const Header = () => {
       />
       {/* 右侧操作区 */}
       <div className="sm-header-actions">
-        <Button
-          className="sm-header-action-button"
-          type="text"
-          icon={<MessageOutlined />}
-          aria-label="消息"
-        />
+        <InboxHeaderButton />
         <Popover
           content={
             <HeaderUserPanel

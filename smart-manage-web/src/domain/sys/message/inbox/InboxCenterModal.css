@@ -1,0 +1,112 @@
+.sm-inbox-center-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sm-inbox-center-layout {
+  display: grid;
+  min-height: 520px;
+  grid-template-columns: 340px minmax(0, 1fr);
+}
+
+.sm-inbox-center-list {
+  overflow: auto;
+  border-right: 1px solid var(--ant-color-border-secondary);
+}
+
+.sm-inbox-center-list > .ant-btn {
+  display: block;
+  margin: 8px auto;
+}
+
+.sm-inbox-center-item {
+  cursor: pointer;
+  padding: 12px 16px !important;
+}
+
+.sm-inbox-center-item:hover,
+.sm-inbox-center-item--selected {
+  background: var(--ant-color-fill-tertiary);
+}
+
+.sm-inbox-center-item--unread {
+  background: var(--ant-color-primary-bg);
+}
+
+.sm-inbox-center-item-content {
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sm-inbox-center-item-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.sm-inbox-center-item-title > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-inbox-center-unread-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ant-color-primary);
+}
+
+.sm-inbox-center-item-time,
+.sm-inbox-center-detail-meta {
+  color: var(--ant-color-text-tertiary);
+  font-size: 12px;
+}
+
+.sm-inbox-center-detail {
+  overflow: auto;
+  padding: 24px;
+}
+
+.sm-inbox-center-detail > .ant-empty {
+  margin-top: 150px;
+}
+
+.sm-inbox-center-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sm-inbox-center-detail-heading h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.sm-inbox-center-detail-content {
+  min-height: 320px;
+  padding: 24px 0;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .sm-inbox-center-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sm-inbox-center-list {
+    max-height: 260px;
+    border-right: 0;
+    border-bottom: 1px solid var(--ant-color-border-secondary);
+  }
+}

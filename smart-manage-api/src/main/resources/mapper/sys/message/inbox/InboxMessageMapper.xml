@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.sys.message.inbox.mapper.InboxMessageMapper">
+    <select id="selectAdminListPage" resultType="sm.domain.sys.message.inbox.model.vo.InboxMessageListVO">
+        SELECT a.id, a.version, a.title, a.level, a.status, a.sender_name, a.recipient_count,
+               a.publish_time, a.expire_time, a.create_time, a.error_message
+        FROM t_sys_inbox_message a
+        <where>
+            <if test="form.keyword != null and form.keyword.trim() != ''">
+                (a.title LIKE CONCAT('%', #{form.keyword}, '%') OR a.content LIKE CONCAT('%', #{form.keyword}, '%'))
+            </if>
+            <if test="form.status != null and form.status.trim() != ''">AND a.status = #{form.status}</if>
+            <if test="form.level != null and form.level.trim() != ''">AND a.level = #{form.level}</if>
+            <include refid="sm.system.query.ListSqlQueryMapper.conditions"/>
+        </where>
+        <choose>
+            <when test="listQuery.sortColumn != null">ORDER BY ${listQuery.sortColumn} ${listQuery.sortOrder}, a.id DESC</when>
+            <otherwise>ORDER BY a.create_time DESC, a.id DESC</otherwise>
+        </choose>
+    </select>
+
+    <!-- 领取与状态切换必须在一条 SQL 中完成，SKIP LOCKED 支持多实例并发调度。 -->
+    <select id="claimPending" resultType="sm.domain.sys.message.inbox.model.entity.InboxMessageEntity">
+        WITH candidates AS (
+            SELECT id FROM t_sys_inbox_message
+            WHERE status = 'PENDING' OR (status = 'PUBLISHING' AND claimed_time &lt; #{staleBefore})
+            ORDER BY create_time, id
+            FOR UPDATE SKIP LOCKED
+            LIMIT #{batchSize}
+        )
+        UPDATE t_sys_inbox_message a
+        SET status = 'PUBLISHING', claimed_time = CURRENT_TIMESTAMP,
+            attempt_count = a.attempt_count + 1, error_message = NULL,
+            update_time = CURRENT_TIMESTAMP, version = a.version + 1
+        FROM candidates b
+        WHERE a.id = b.id
+        RETURNING a.*
+    </select>
+
+    <update id="completePublish">
+        UPDATE t_sys_inbox_message
+        SET status = 'PUBLISHED', publish_time = #{publishTime}, recipient_count = #{recipientCount},
+            claimed_time = NULL, error_message = NULL, update_time = CURRENT_TIMESTAMP, version = version + 1
+        WHERE id = #{id} AND status = 'PUBLISHING'
+    </update>
+
+    <update id="markFailed">
+        UPDATE t_sys_inbox_message
+        SET status = 'FAILED', claimed_time = NULL, error_message = #{errorMessage},
+            update_time = CURRENT_TIMESTAMP, version = version + 1
+        WHERE id = #{id} AND status = 'PUBLISHING'
+    </update>
+</mapper>

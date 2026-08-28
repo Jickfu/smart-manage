@@ -24,4 +24,6 @@ export const componentKeys = {
   schedulerExecutionDetail: 'sys/scheduler/execution/detail',
   schedulerJob: 'sys/scheduler/job',
   schedulerJobEdit: 'sys/scheduler/job/edit',
+  inboxBroadcast: 'sys/message/inbox-broadcast',
+  inboxBroadcastEdit: 'sys/message/inbox-broadcast/edit',
 } as const;

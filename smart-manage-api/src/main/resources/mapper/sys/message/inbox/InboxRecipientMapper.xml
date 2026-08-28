@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.sys.message.inbox.mapper.InboxRecipientMapper">
+    <insert id="insertEnabledRecipients">
+        INSERT INTO t_sys_inbox_recipient (message_id, user_id, received_time, read_status, read_time)
+        SELECT #{messageId}, a.id, #{receivedTime}, FALSE, NULL
+        FROM t_sys_user a
+        WHERE a.enabled = TRUE
+        ON CONFLICT (message_id, user_id, received_time) DO NOTHING
+    </insert>
+
+    <insert id="insertSelectedRecipients">
+        INSERT INTO t_sys_inbox_recipient (message_id, user_id, received_time, read_status, read_time)
+        SELECT #{messageId}, a.id, #{receivedTime}, FALSE, NULL
+        FROM t_sys_user a
+        WHERE a.enabled = TRUE AND a.id IN
+        <foreach collection="userIds" item="userId" open="(" separator="," close=")">#{userId}</foreach>
+        ON CONFLICT (message_id, user_id, received_time) DO NOTHING
+    </insert>
+
+    <select id="selectCursorPage" resultType="sm.domain.sys.message.inbox.model.vo.InboxItemVO">
+        SELECT a.message_id, b.title,
+               CASE WHEN LENGTH(b.content) &gt; 160 THEN CONCAT(LEFT(b.content, 160), '…') ELSE b.content END AS summary,
+               b.level, b.sender_name, a.read_status, a.read_time,
+               TO_CHAR(a.received_time, 'YYYY-MM-DD HH24:MI:SS.US') AS received_time,
+               b.expire_time
+        FROM t_sys_inbox_recipient a
+        INNER JOIN t_sys_inbox_message b ON b.id = a.message_id
+        WHERE a.user_id = #{userId}
+          AND a.received_time &gt;= #{beginTime}
+          AND b.status = 'PUBLISHED'
+          AND b.expire_time &gt; CURRENT_TIMESTAMP
+          <if test="form.unreadOnly == true">AND a.read_status = FALSE</if>
+          <if test="form.cursorTime != null">
+              AND (a.received_time, a.message_id) &lt;
+                  (CAST(#{form.cursorTime} AS timestamp), #{form.cursorMessageId})
+          </if>
+        ORDER BY a.received_time DESC, a.message_id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectDetail" resultType="sm.domain.sys.message.inbox.model.vo.InboxDetailVO">
+        SELECT a.message_id, b.title, b.content, b.level, b.sender_name, a.read_status, a.read_time,
+               TO_CHAR(a.received_time, 'YYYY-MM-DD HH24:MI:SS.US') AS received_time,
+               b.expire_time, b.resource_type, b.resource_id, b.action_code, b.action_payload
+        FROM t_sys_inbox_recipient a
+        INNER JOIN t_sys_inbox_message b ON b.id = a.message_id
+        WHERE a.user_id = #{userId} AND a.message_id = #{messageId}
+          AND a.received_time = CAST(#{receivedTime} AS timestamp)
+          AND b.status = 'PUBLISHED' AND b.expire_time &gt; CURRENT_TIMESTAMP
+    </select>
+
+    <update id="updateReadStatus">
+        UPDATE t_sys_inbox_recipient
+        SET read_status = #{readStatus},
+            read_time = CASE WHEN #{readStatus} THEN COALESCE(read_time, #{readTime}) ELSE NULL END
+        WHERE user_id = #{userId} AND (received_time, message_id) IN
+        <foreach collection="receipts" item="receipt" open="(" separator="," close=")">
+            (CAST(#{receipt.receivedTime} AS timestamp), #{receipt.messageId})
+        </foreach>
+    </update>
+
+    <update id="markAllRead">
+        UPDATE t_sys_inbox_recipient
+        SET read_status = TRUE, read_time = #{readTime}
+        WHERE user_id = #{userId} AND received_time &gt;= #{beginTime} AND read_status = FALSE
+    </update>
+
+    <select id="countUnreadCapped" resultType="int">
+        SELECT COUNT(*) FROM (
+            SELECT 1
+            FROM t_sys_inbox_recipient a
+            INNER JOIN t_sys_inbox_message b ON b.id = a.message_id
+            WHERE a.user_id = #{userId} AND a.received_time &gt;= #{beginTime} AND a.read_status = FALSE
+              AND b.status = 'PUBLISHED' AND b.expire_time &gt; CURRENT_TIMESTAMP
+            LIMIT #{limit}
+        ) capped
+    </select>
+</mapper>
