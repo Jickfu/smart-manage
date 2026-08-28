@@ -203,6 +203,11 @@
   padding-inline-start: 0;
 }
 
+/* TextArea 启用 showCount 后，下边框类位于外层 wrapper，内部 textarea 需同步清除左内边距。 */
+.sm-edit-form .ant-input-textarea-affix-wrapper.ant-input-underlined > textarea.ant-input {
+  padding-inline-start: 0;
+}
+
 .sm-edit-control-full {
   width: 100%;
 }
