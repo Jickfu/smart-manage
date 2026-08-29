@@ -112,7 +112,7 @@ const Workbench = ({ appNumber, initialEntryNumber, onInitialEntryConsumed }: Pr
                   className={`sm-content-pane ${isActive ? 'sm-content-pane--active' : ''}`}
                 >
                   {tab.key === '__home__' ? (
-                    <ApplicationHome appNumber={appNumber} appName={ws.appInfo.name} />
+                    <ApplicationHome appNumber={appNumber} />
                   ) : tab.externalUrl ? (
                     <ExternalLinkFrame title={tab.label} externalUrl={tab.externalUrl} />
                   ) : (

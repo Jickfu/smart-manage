@@ -1,11 +1,20 @@
 .sm-procurement-home-statistics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  flex: 0 0 auto;
 }
 
-@media (max-width: 900px) {
-  .sm-procurement-home-statistics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.sm-procurement-home-statistic-card .ant-card-body {
+  display: flex;
+  min-height: 132px;
+  padding: 18px 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+.sm-procurement-home-statistic-card .ant-statistic {
+  text-align: center;
+}
+
+.sm-procurement-home-statistic-card .ant-statistic-content {
+  margin-top: 8px;
+  font-size: 40px;
 }

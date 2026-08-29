@@ -10,6 +10,9 @@
 import { useHeaderTabsStore } from '@/stores/headerTabs';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { openByNumber } from '@/domain/sys/base/app/api';
+import { componentRegistry } from '@/domain/common/registry/componentRegistry';
+import type { MenuVO } from '@/types/api';
+import { resolveMenuAction } from '@/pages/workbench/menuNavigation';
 
 /** 请求序号 — 每次 openApp 递增，防止异步竞态导致旧数据覆盖新状态 */
 let requestSeq = 0;
@@ -51,6 +54,29 @@ export async function openApp(appNumber: string): Promise<void> {
     if (seq !== requestSeq) return;
     // 应用不存在或无权访问，回退到应用列表
     useHeaderTabsStore.getState().activate('apps');
+  }
+}
+
+/** 从已授权菜单入口打开页面，首页快捷入口与侧边栏共享同一目标解析规则。 */
+export async function openMenuItem(appNumber: string, item: MenuVO): Promise<void> {
+  await openApp(appNumber);
+  const action = resolveMenuAction(item);
+  if (action.type === 'EXTERNAL_NEW_TAB') {
+    window.open(action.externalUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  const workbenchStore = useWorkbenchStore.getState();
+  if (!workbenchStore.workspaces[appNumber]) {
+    throw new Error(`应用“${appNumber}”未能打开`);
+  }
+  if (action.type === 'EXTERNAL_IFRAME') {
+    workbenchStore.openExternalLinkTab(appNumber, action.menuId, action.title, action.externalUrl);
+    return;
+  }
+  if (componentRegistry[action.componentKey]?.pageType === 'CUSTOM') {
+    workbenchStore.openCustomTab(appNumber, action.componentKey);
+  } else {
+    workbenchStore.openListTab(appNumber, action.componentKey);
   }
 }
 

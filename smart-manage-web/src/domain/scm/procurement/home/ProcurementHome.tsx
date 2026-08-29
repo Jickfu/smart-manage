@@ -1,6 +1,8 @@
 import { Card, Empty, Result, Statistic, Table } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { BillStatus } from '@/domain/common/page/types';
+import QuickLaunchCard from '@/domain/common/home/QuickLaunchCard';
+import HomeCardGrid from '@/domain/common/home/HomeCardGrid';
 import { purchaseRequisitionApi } from '../purchaseRequisition/api';
 import type { PurchaseRequisitionListVO } from '../purchaseRequisition/types';
 import './ProcurementHome.css';
@@ -20,6 +22,7 @@ const ProcurementHome = () => {
   if (summaryQuery.error) {
     return (
       <div className="sm-app-home">
+        <QuickLaunchCard scope="APPLICATION" appNumber="procurement" />
         <Card className="sm-app-home-card">
           <Result status="error" title="采购概览加载失败" subTitle={summaryQuery.error.message} />
         </Card>
@@ -29,19 +32,18 @@ const ProcurementHome = () => {
   const summary = summaryQuery.data;
   return (
     <div className="sm-app-home">
-      <header className="sm-app-home-header">
-        <div>
-          <h1>采购管理</h1>
-          <p>掌握当前数据范围内的采购需求与处理状态</p>
-        </div>
-      </header>
-      <section className="sm-procurement-home-statistics">
+      <QuickLaunchCard scope="APPLICATION" appNumber="procurement" />
+      <HomeCardGrid className="sm-procurement-home-statistics">
         {Object.entries(statusLabels).map(([status, label]) => (
-          <Card key={status} className="sm-app-home-card" loading={summaryQuery.isLoading}>
+          <Card
+            key={status}
+            className="sm-app-home-card sm-procurement-home-statistic-card"
+            loading={summaryQuery.isLoading}
+          >
             <Statistic title={label} value={summary?.statusCounts[status] ?? 0} />
           </Card>
         ))}
-      </section>
+      </HomeCardGrid>
       <Card className="sm-app-home-card" title="最近采购申请" loading={summaryQuery.isLoading}>
         {summary?.recent.length ? (
           <Table<PurchaseRequisitionListVO>

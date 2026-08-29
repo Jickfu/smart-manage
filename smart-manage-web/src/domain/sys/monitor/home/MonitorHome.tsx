@@ -1,6 +1,8 @@
-import { Card, Result, Statistic, Table, Tag } from 'antd';
+import { Card, Result, Table, Tag } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { monitorOverviewApi } from './api';
+import QuickLaunchCard from '@/domain/common/home/QuickLaunchCard';
+import HomeCardGrid from '@/domain/common/home/HomeCardGrid';
 import './monitorHome.css';
 const healthColor = (status: string) =>
   status === 'UP' ? 'success' : status === 'UNKNOWN' ? 'default' : 'error';
@@ -11,45 +13,63 @@ const MonitorHome = () => {
     refetchInterval: 10000,
   });
   if (query.error)
-    return <Result status="error" title="运维总览加载失败" subTitle={query.error.message} />;
+    return (
+      <div className="sm-app-home sm-monitor-home">
+        <QuickLaunchCard scope="APPLICATION" appNumber="monitor" />
+        <Result status="error" title="运维总览加载失败" subTitle={query.error.message} />
+      </div>
+    );
   const data = query.data;
   return (
     <div className="sm-app-home sm-monitor-home">
-      <header className="sm-app-home-header">
-        <div>
-          <h1>运维中心</h1>
-          <p>运行健康、当前异常与拓扑关注</p>
-        </div>
-      </header>
-      <div className="sm-monitor-home-metrics">
-        <Card loading={query.isLoading}>
-          <Statistic
-            title="主机遥测可用 / 总数"
-            value={`${data?.hostTelemetryAvailable ?? 0} / ${data?.hostTotal ?? 0}`}
-          />
+      <QuickLaunchCard scope="APPLICATION" appNumber="monitor" />
+      <HomeCardGrid className="sm-monitor-home-metrics">
+        <Card className="sm-app-home-card" loading={query.isLoading}>
+          <div className="sm-app-home-metric-title">主机遥测</div>
+          <div className="sm-monitor-home-ratio">
+            <strong>{data?.hostTelemetryAvailable ?? 0}</strong>
+            <span>/ {data?.hostTotal ?? 0}</span>
+          </div>
+          <div className="sm-app-home-metric-caption">可用 / 总数</div>
         </Card>
-        <Card loading={query.isLoading}>
-          <Statistic
-            title="应用在线 / 总数"
-            value={`${data?.applicationOnline ?? 0} / ${data?.applicationTotal ?? 0}`}
-          />
+        <Card className="sm-app-home-card" loading={query.isLoading}>
+          <div className="sm-app-home-metric-title">应用实例</div>
+          <div className="sm-monitor-home-ratio">
+            <strong>{data?.applicationOnline ?? 0}</strong>
+            <span>/ {data?.applicationTotal ?? 0}</span>
+          </div>
+          <div className="sm-app-home-metric-caption">在线 / 总数</div>
         </Card>
-        <Card loading={query.isLoading}>
-          <Statistic
-            title="PENDING / FIRING / CRITICAL"
-            value={`${data?.pendingCount ?? 0} / ${data?.firingCount ?? 0} / ${data?.criticalCount ?? 0}`}
-          />
+        <Card className="sm-app-home-card" loading={query.isLoading}>
+          <div className="sm-app-home-metric-title">告警状态</div>
+          <div className="sm-monitor-home-alerts">
+            <div>
+              <strong>{data?.pendingCount ?? 0}</strong>
+              <span>PENDING</span>
+            </div>
+            <div>
+              <strong>{data?.firingCount ?? 0}</strong>
+              <span>FIRING</span>
+            </div>
+            <div className="sm-monitor-home-alert--critical">
+              <strong>{data?.criticalCount ?? 0}</strong>
+              <span>CRITICAL</span>
+            </div>
+          </div>
         </Card>
-        <Card loading={query.isLoading} title="基础设施">
-          <Tag color={healthColor(data?.databaseHealth ?? 'UNKNOWN')}>
-            DB {data?.databaseHealth ?? 'UNKNOWN'}
-          </Tag>
-          <Tag color={healthColor(data?.redisHealth ?? 'UNKNOWN')}>
-            Redis {data?.redisHealth ?? 'UNKNOWN'}
-          </Tag>
+        <Card className="sm-app-home-card" loading={query.isLoading}>
+          <div className="sm-app-home-metric-title">基础设施</div>
+          <div className="sm-monitor-home-infrastructure">
+            <Tag color={healthColor(data?.databaseHealth ?? 'UNKNOWN')}>
+              DB {data?.databaseHealth ?? 'UNKNOWN'}
+            </Tag>
+            <Tag color={healthColor(data?.redisHealth ?? 'UNKNOWN')}>
+              Redis {data?.redisHealth ?? 'UNKNOWN'}
+            </Tag>
+          </div>
         </Card>
-      </div>
-      <Card title="当前异常">
+      </HomeCardGrid>
+      <Card className="sm-app-home-card" title="当前异常">
         <Table
           size="small"
           pagination={false}
@@ -74,7 +94,7 @@ const MonitorHome = () => {
           ]}
         />
       </Card>
-      <Card title="拓扑摘要">
+      <Card className="sm-app-home-card" title="拓扑摘要">
         <Table
           size="small"
           pagination={false}

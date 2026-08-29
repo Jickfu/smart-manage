@@ -1,0 +1,25 @@
+.sm-home-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+  scrollbar-gutter: stable;
+}
+
+.sm-home-card-span-1 {
+  grid-column: span 1;
+}
+
+.sm-home-card-span-2 {
+  grid-column: span 2;
+}
+
+.sm-home-card-span-3 {
+  grid-column: span 3;
+}
+
+.sm-home-card-span-4 {
+  grid-column: span 4;
+}

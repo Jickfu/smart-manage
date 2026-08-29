@@ -1,23 +1,18 @@
 import { Card, Empty } from 'antd';
+import QuickLaunchCard from '@/domain/common/home/QuickLaunchCard';
 import { resolveApplicationHome } from './applicationHomeRegistry';
 import './ApplicationHome.css';
 
 interface ApplicationHomeProps {
   appNumber: string;
-  appName: string;
 }
 
-const ApplicationHome = ({ appNumber, appName }: ApplicationHomeProps) => {
+const ApplicationHome = ({ appNumber }: ApplicationHomeProps) => {
   const home = resolveApplicationHome(appNumber);
   if (home) return home;
   return (
     <div className="sm-app-home">
-      <header className="sm-app-home-header">
-        <div>
-          <h1>{appName}首页</h1>
-          <p>当前应用暂未配置专属首页</p>
-        </div>
-      </header>
+      <QuickLaunchCard scope="APPLICATION" appNumber={appNumber} />
       <Card className="sm-app-home-card">
         <Empty description="暂无首页内容" />
       </Card>

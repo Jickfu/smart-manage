@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.sys.base.user.quicklaunch.mapper.UserHomeQuickLaunchMapper">
+    <select id="selectCurrentUserItems" resultType="sm.domain.sys.base.user.quicklaunch.model.vo.QuickLaunchItemVO">
+        SELECT b.id AS menu_id,
+               b.number AS menu_number,
+               b.name,
+               b.icon,
+               c.number AS app_number,
+               c.name AS app_name,
+               b.component,
+               b.target_type,
+               b.external_url,
+               b.external_open_mode
+        FROM t_sys_user_home_quick_launch a
+        INNER JOIN t_sys_menu b ON b.id = a.menu_id
+        INNER JOIN t_sys_app c ON c.id = b.app_id
+        INNER JOIN t_sys_domain d ON d.id = c.domain_id
+        WHERE a.user_id = #{userId}
+          AND a.scope_type = #{scope}
+          AND b.enabled = true
+          AND c.enabled = true
+          AND d.enabled = true
+        <choose>
+            <when test="appId != null">
+                AND a.app_id = #{appId}
+                AND b.app_id = #{appId}
+            </when>
+            <otherwise>
+                AND a.app_id IS NULL
+            </otherwise>
+        </choose>
+        <if test="!administrator">
+            AND EXISTS (
+                SELECT 1
+                FROM t_sys_role_perms e
+                INNER JOIN t_sys_user_role f ON f.role_id = e.role_id
+                WHERE e.permission_id = b.permission_id
+                  AND f.user_id = #{userId}
+                  AND f.org_id = #{orgId}
+            )
+        </if>
+        ORDER BY a.seq, a.id
+    </select>
+
+    <select id="selectMenuIds" resultType="java.lang.Long">
+        SELECT a.menu_id
+        FROM t_sys_user_home_quick_launch a
+        WHERE a.user_id = #{userId}
+          AND a.scope_type = #{scope}
+        <choose>
+            <when test="appId != null">AND a.app_id = #{appId}</when>
+            <otherwise>AND a.app_id IS NULL</otherwise>
+        </choose>
+        ORDER BY a.seq, a.id
+    </select>
+
+    <delete id="deleteScope">
+        DELETE FROM t_sys_user_home_quick_launch a
+        WHERE a.user_id = #{userId}
+          AND a.scope_type = #{scope}
+        <choose>
+            <when test="appId != null">AND a.app_id = #{appId}</when>
+            <otherwise>AND a.app_id IS NULL</otherwise>
+        </choose>
+    </delete>
+
+    <select id="lockUser" resultType="java.lang.Long">
+        SELECT a.id
+        FROM t_sys_user a
+        WHERE a.id = #{userId}
+        FOR UPDATE
+    </select>
+</mapper>

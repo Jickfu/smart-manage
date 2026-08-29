@@ -1,0 +1,103 @@
+.sm-home-card {
+  border: 0;
+  box-shadow: var(--sm-shadow-low);
+}
+
+.sm-home-card .ant-card-head {
+  border-bottom: 0;
+}
+
+.sm-quick-launch-card .ant-card-body {
+  padding: 8px 12px 12px;
+}
+
+.sm-quick-launch-scroll {
+  max-height: 184px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.sm-quick-launch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+.sm-quick-launch-item {
+  display: flex;
+  min-width: 0;
+  min-height: 80px;
+  padding: 8px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--sm-color-text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.sm-quick-launch-item:hover,
+.sm-quick-launch-item:focus-visible {
+  border-color: var(--ant-color-primary);
+  color: var(--ant-color-primary);
+  background: var(--ant-color-primary-bg);
+  outline: none;
+}
+
+.sm-quick-launch-icon {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  color: var(--ant-color-primary);
+  font-size: 22px;
+  background: var(--ant-color-primary-bg);
+}
+
+.sm-quick-launch-item--add .sm-quick-launch-icon {
+  border: 1px dashed var(--sm-color-border);
+  color: var(--sm-color-text-secondary);
+  background: transparent;
+}
+
+.sm-quick-launch-name {
+  width: 100%;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-quick-launch-search {
+  width: min(280px, 38vw);
+}
+
+.sm-quick-launch-manager-content {
+  height: clamp(300px, calc(100vh - 300px), 420px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.sm-quick-launch-manager-content > .ant-spin-nested-loading,
+.sm-quick-launch-manager-content > .ant-spin-nested-loading > .ant-spin-container {
+  min-height: 100%;
+}
+
+.sm-quick-launch-manager-content .ant-empty {
+  margin-block: 96px 0;
+}
+
+@media (max-width: 720px) {
+  .sm-quick-launch-scroll {
+    max-height: 272px;
+  }
+
+  .sm-quick-launch-grid {
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  }
+}

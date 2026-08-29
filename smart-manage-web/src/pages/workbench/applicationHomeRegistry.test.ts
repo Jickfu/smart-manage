@@ -5,6 +5,7 @@ describe('applicationHomeRegistry', () => {
   it('resolves registered application homes', () => {
     expect(resolveApplicationHome('procurement')).toBeTruthy();
     expect(resolveApplicationHome('scheduler')).toBeTruthy();
+    expect(resolveApplicationHome('message')).toBeTruthy();
   });
 
   it('returns undefined for unknown applications so the router can render its empty fallback', () => {

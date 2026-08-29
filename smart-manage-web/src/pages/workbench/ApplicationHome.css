@@ -1,30 +1,12 @@
 .sm-app-home {
   display: flex;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   padding: 10px;
   flex-direction: column;
   gap: 10px;
-  background: var(--sm-layout-bg);
-}
-
-.sm-app-home-header {
-  display: flex;
-  min-height: 58px;
-  padding: 8px 14px;
-  align-items: center;
-  background: #fff;
-}
-
-.sm-app-home-header h1 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 500;
-}
-
-.sm-app-home-header p {
-  margin: 0;
-  color: var(--sm-text-secondary);
-  font-size: 12px;
+  overflow-y: auto;
+  background: var(--sm-color-layout);
 }
 
 .sm-app-home-card {
@@ -32,10 +14,87 @@
   box-shadow: var(--sm-shadow-low);
 }
 
-.sm-app-home-columns {
+.sm-app-home .ant-card-head,
+.sm-system-home .ant-card-head {
+  border-bottom: 0;
+}
+
+.sm-app-home-metric-card .ant-card-body {
+  display: flex;
+  height: 100%;
+  min-height: 150px;
+  padding: 18px 20px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+}
+
+.sm-app-home-metric-title {
+  display: flex;
+  position: relative;
+  width: 100%;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--sm-color-text-secondary);
+  text-align: center;
+}
+
+.sm-app-home-metric-title .ant-tag {
+  position: absolute;
+  right: 0;
+  margin-inline-end: 0;
+}
+
+.sm-app-home-metric-value {
+  margin-top: 10px;
+  color: var(--sm-color-text);
+  font-size: 44px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.sm-app-home-metric-value--danger {
+  color: var(--ant-color-error);
+}
+
+.sm-app-home-metric-caption {
+  margin-top: 4px;
+  color: var(--sm-color-text-secondary);
+  font-size: 13px;
+}
+
+.sm-app-home-metric-pairs {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
-  gap: 10px;
+  width: 100%;
+  margin-top: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+}
+
+.sm-app-home-metric-pairs > div {
+  display: flex;
+  padding: 0 24px;
+  align-items: center;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sm-app-home-metric-pairs > div + div {
+  border-left: 1px solid var(--ant-color-border-secondary);
+}
+
+.sm-app-home-metric-pairs strong {
+  font-size: 44px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.sm-app-home-metric-pairs span {
+  color: var(--sm-color-text-secondary);
+  font-size: 13px;
 }
 
 .sm-app-home-demo-chart .sm-chart {
@@ -47,13 +106,7 @@
   height: 280px;
   align-items: center;
   justify-content: center;
-  color: var(--sm-text-secondary);
-}
-
-.sm-app-home-capabilities {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  color: var(--sm-color-text-secondary);
 }
 
 .sm-app-home-capabilities strong {
@@ -63,12 +116,5 @@
 
 .sm-app-home-capabilities p {
   margin: 8px 0 0;
-  color: var(--sm-text-secondary);
-}
-
-@media (max-width: 1100px) {
-  .sm-app-home-columns,
-  .sm-app-home-capabilities {
-    grid-template-columns: 1fr;
-  }
+  color: var(--sm-color-text-secondary);
 }
