@@ -4,16 +4,13 @@ import type { FormInstance } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { ReactNode } from 'react';
 import { OperationType, BillStatus } from './types';
-import { EditFormFields } from './EditFormFields';
 import type { AccessResource, PermissionAction } from './access';
 import { PermissionActions } from './PermissionActions';
 import { EditPageShell } from './EditPageShell';
 import { EditSectionCollapse } from './EditSectionCollapse';
 import { useBeforeCloseGuard } from './useBeforeCloseGuard';
-import { BusinessAttachmentPanel } from '@/domain/common/attachment/BusinessAttachmentPanel';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
-import type { BusinessAttachment } from '@/domain/common/attachment/types';
-import { useEditAttachments } from './useEditAttachments';
+import type { EditPageSection } from './editPageSection';
 import './EditPage.css';
 
 /** 编辑字段公共属性 */
@@ -101,7 +98,8 @@ export type EditField = EditFieldBase &
 
 interface EditPageProps {
   title: string;
-  fields: EditField[];
+  /** 页面正文卡片完全由调用方声明，EditPage 只负责统一壳层、Form 与折叠布局。 */
+  sections: EditPageSection[];
   /** 初始值（详情数据回显），Form 内部通过 setFieldsValue 同步 */
   initialValues?: Record<string, unknown>;
   /** 单据状态（无状态的基础数据不传） */
@@ -123,21 +121,6 @@ interface EditPageProps {
   access?: AccessResource<{ save: string; submit?: string }>;
   /** 提交、审核、关闭等扩展业务命令 */
   headerActions?: PermissionAction[];
-  /** 额外的聚合内容，仍处于同一个 Form 中，例如主从单据明细。 */
-  detailContent?: (editable: boolean) => ReactNode;
-  /** 基本信息折叠面板标题。 */
-  basicLabel?: ReactNode;
-  /** 明细折叠面板标题。 */
-  detailLabel?: ReactNode;
-  /** 自定义基本信息布局，用于头像等非标准表单。 */
-  basicContent?: (editable: boolean) => ReactNode;
-  /** 明细标题栏右侧操作区。 */
-  detailExtra?: (editable: boolean) => ReactNode;
-  /** 启用业务附件面板；附件上传、删除和表单字段组装统一由通用编辑页处理。 */
-  attachmentResource?: {
-    resourceType: string;
-    initialAttachments?: BusinessAttachment[];
-  };
   /** 注册页签关闭前的脏数据检查。 */
   closeGuard?: { appNumber: string; tabKey: string };
   onValuesChange?: (
@@ -145,6 +128,10 @@ interface EditPageProps {
     allValues: Record<string, unknown>,
     form: FormInstance,
   ) => void;
+  /** 保存或提交前对已校验值做领域级组装，例如合并附件上传会话。 */
+  transformValues?: (values: Record<string, unknown>) => Record<string, unknown>;
+  /** Form 外部卡片内容的用户编辑修订号，用于统一脏数据关闭保护。 */
+  dirtyRevision?: number;
 }
 
 /** 是否可编辑：暂存或新增时允许编辑 */
@@ -157,7 +144,7 @@ function isEditable(opType: OperationType, status?: BillStatus): boolean {
 /** 通用编辑页 — 使用 antd Form 驱动校验与字段状态 */
 const EditPage = ({
   title,
-  fields,
+  sections,
   initialValues,
   billStatus,
   operationType,
@@ -171,29 +158,20 @@ const EditPage = ({
   onExit,
   access,
   headerActions,
-  detailContent,
-  basicLabel = '基本信息',
-  detailLabel = '明细信息',
-  basicContent,
-  detailExtra,
-  attachmentResource,
   closeGuard,
   onValuesChange,
+  transformValues = (values) => values,
+  dirtyRevision = 0,
 }: EditPageProps) => {
   const [form] = Form.useForm();
   const feedback = useOperationFeedback();
   const revisionRef = useRef(0);
   const dirtyRef = useRef(false);
-  const [activeCollapseKeys, setActiveCollapseKeys] = useState<string[]>([
-    'basic',
-    ...(detailContent ? ['detail'] : []),
-    ...(attachmentResource ? ['attachments'] : []),
-  ]);
+  const dirtyRevisionRef = useRef(dirtyRevision);
+  const [activeCollapseKeys, setActiveCollapseKeys] = useState<string[]>(
+    sections.map((section) => section.key),
+  );
   const editable = isEditable(operationType, billStatus);
-  const attachmentController = useEditAttachments(attachmentResource, () => {
-    revisionRef.current += 1;
-    dirtyRef.current = true;
-  });
 
   // 后端数据加载完成后同步到 Form
   useEffect(() => {
@@ -204,12 +182,20 @@ const EditPage = ({
 
   useBeforeCloseGuard(closeGuard?.appNumber, closeGuard?.tabKey, dirtyRef);
 
+  useEffect(() => {
+    if (dirtyRevisionRef.current !== dirtyRevision) {
+      dirtyRevisionRef.current = dirtyRevision;
+      revisionRef.current += 1;
+      dirtyRef.current = true;
+    }
+  }, [dirtyRevision]);
+
   const handleSave = async () => {
     if (!onSave) return;
     try {
       const values = await form.validateFields();
       const savedRevision = revisionRef.current;
-      const completed = await onSave(attachmentController.withValues(values));
+      const completed = await onSave(transformValues(values));
       if (completed !== false && revisionRef.current === savedRevision) {
         dirtyRef.current = false;
       }
@@ -233,7 +219,7 @@ const EditPage = ({
     try {
       const values = await form.validateFields();
       const submittedRevision = revisionRef.current;
-      await onSubmit(attachmentController.withValues(values));
+      await onSubmit(transformValues(values));
       if (revisionRef.current === submittedRevision) {
         dirtyRef.current = false;
       }
@@ -304,41 +290,12 @@ const EditPage = ({
         <EditSectionCollapse
           activeKeys={activeCollapseKeys}
           onActiveKeysChange={setActiveCollapseKeys}
-          items={[
-            {
-              key: 'basic',
-              label: basicLabel,
-              children: basicContent?.(editable) ?? (
-                <EditFormFields fields={fields} editable={editable} />
-              ),
-            },
-            ...(detailContent
-              ? [
-                  {
-                    key: 'detail',
-                    label: detailLabel,
-                    children: detailContent(editable),
-                    extra: (expanded: boolean) => (expanded ? detailExtra?.(editable) : undefined),
-                  },
-                ]
-              : []),
-            ...(attachmentResource
-              ? [
-                  {
-                    key: 'attachments',
-                    label: '附件',
-                    children: (
-                      <BusinessAttachmentPanel
-                        resourceType={attachmentResource.resourceType}
-                        attachments={attachmentController.attachments}
-                        editable={editable}
-                        onChange={attachmentController.update}
-                      />
-                    ),
-                  },
-                ]
-              : []),
-          ]}
+          items={sections.map((section) => ({
+            key: section.key,
+            label: section.label,
+            children: section.content(editable),
+            extra: (expanded: boolean) => (expanded ? section.extra?.(editable) : undefined),
+          }))}
         />
       </Form>
     </EditPageShell>

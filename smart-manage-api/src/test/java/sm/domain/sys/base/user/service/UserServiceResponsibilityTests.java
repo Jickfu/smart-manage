@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.org.mapper.OrgMapper;
+import sm.domain.sys.base.org.service.OrgReferenceService;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
@@ -69,7 +70,7 @@ class UserServiceResponsibilityTests {
     private UserService service(UserMapper mapper, UserTxService txService,
             AuthorizationStateHelper authorizationStateHelper) {
         return new UserService(mapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-                mock(OrgMapper.class), mock(AttachmentService.class), txService,
+                new OrgReferenceService(mock(OrgMapper.class)), mock(AttachmentService.class), txService,
                 authorizationStateHelper, mock(UserConverter.class), mock(CurrentUserContext.class));
     }
 }

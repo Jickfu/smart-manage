@@ -23,10 +23,7 @@ import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.system.query.ListQueryUtil;
-import sm.domain.sys.base.datascope.mapper.RoleDataScopeMapper;
-import sm.domain.sys.base.datascope.mapper.RoleDataScopeOrgMapper;
-import sm.domain.sys.base.datascope.model.entity.RoleDataScopeEntity;
-import sm.domain.sys.base.datascope.model.entity.RoleDataScopeOrgEntity;
+import sm.domain.sys.base.datascope.service.DataScopeConfigurationService;
 import sm.domain.sys.base.role.model.form.RoleDataScopeAssignForm;
 import sm.domain.sys.base.role.model.vo.RoleDataScopeRuleVO;
 import sm.domain.sys.base.role.model.vo.RoleDataScopeWorkspaceVO;
@@ -54,8 +51,7 @@ public class RoleService {
 	private final RoleTxService txService;
 	private final AuthorizationStateHelper authorizationStateHelper;
 	private final RoleConverter converter;
-	private final RoleDataScopeMapper dataScopeMapper;
-	private final RoleDataScopeOrgMapper dataScopeOrgMapper;
+	private final DataScopeConfigurationService dataScopeConfigurationService;
 	private final BusinessResourceRegistry resourceRegistry;
 
 	public PageData<RoleListVO> listPage(RoleListForm form) {
@@ -144,15 +140,7 @@ public class RoleService {
 	public RoleDataScopeWorkspaceVO dataScopeWorkspace(Long roleId) {
 		RoleEntity role = mapper.selectById(roleId);
 		if (role == null) throw new BizException(ResultEnum.NOT_FOUND, "角色不存在");
-		var rules = dataScopeMapper.selectList(new LambdaQueryWrapper<RoleDataScopeEntity>()
-				.eq(RoleDataScopeEntity::getRoleId, roleId)
-				.orderByAsc(RoleDataScopeEntity::getResourceType, RoleDataScopeEntity::getAction));
-		var ruleIds = rules.stream().map(RoleDataScopeEntity::getId).toList();
-		Map<Long, List<Long>> orgIdsByRule = ruleIds.isEmpty() ? Map.of()
-				: dataScopeOrgMapper.selectList(new LambdaQueryWrapper<RoleDataScopeOrgEntity>()
-						.in(RoleDataScopeOrgEntity::getScopeRuleId, ruleIds)).stream()
-				.collect(Collectors.groupingBy(RoleDataScopeOrgEntity::getScopeRuleId,
-						Collectors.mapping(RoleDataScopeOrgEntity::getOrgId, Collectors.toList())));
+		var rules = dataScopeConfigurationService.roleRules(roleId);
 		RoleDataScopeWorkspaceVO workspace = new RoleDataScopeWorkspaceVO();
 		workspace.setRoleId(role.getId());
 		workspace.setRoleNumber(role.getNumber());
@@ -163,10 +151,10 @@ public class RoleService {
 				.collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().stream().sorted().toList())));
 		workspace.setRules(rules.stream().map(rule -> {
 			RoleDataScopeRuleVO vo = new RoleDataScopeRuleVO();
-			vo.setResourceType(rule.getResourceType());
-			vo.setAction(rule.getAction());
-			vo.setScopeType(rule.getScopeType());
-			vo.setOrgIds(orgIdsByRule.getOrDefault(rule.getId(), List.of()));
+			vo.setResourceType(rule.resourceType());
+			vo.setAction(rule.action());
+			vo.setScopeType(rule.scopeType());
+			vo.setOrgIds(rule.orgIds());
 			return vo;
 		}).toList());
 		return workspace;

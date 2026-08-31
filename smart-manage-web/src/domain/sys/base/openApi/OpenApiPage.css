@@ -1,0 +1,27 @@
+.sm-openapi-secret-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sm-openapi-secret-value {
+  display: block;
+  word-break: break-all;
+}
+
+.sm-openapi-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  color: var(--ant-color-text-secondary);
+}
+
+.sm-openapi-schema {
+  max-height: 260px;
+  overflow: auto;
+  padding: 12px;
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-fill-tertiary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

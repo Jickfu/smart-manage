@@ -212,6 +212,14 @@ class ArchitectureContractTests {
     }
 
     @Test
+    void servicesMustOnlyAccessMappersOwnedByTheirModule() {
+        classes().that().resideInAPackage("sm.domain..service..")
+                .should(onlyAccessMappersOwnedByTheirModule())
+                .because("Service 只能访问所属模块的 Mapper，跨模块协作必须调用公开 Service 或稳定 Contract")
+                .check(productionClasses);
+    }
+
+    @Test
     void modelsMustNotDependBackOnBusinessOrPersistenceLayers() {
         noClasses().that().resideInAnyPackage("..model.entity..", "..model.form..", "..model.vo..")
                 .should().dependOnClassesThat().resideInAnyPackage(
@@ -310,6 +318,28 @@ class ArchitectureContractTests {
                     events.add(new SimpleConditionEvent(dependency, valid,
                             dependency.getDescription()
                                     + "；Domain 目前只允许依赖 infrastructure.mapping 中的 SmMapperConfig"));
+                }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> onlyAccessMappersOwnedByTheirModule() {
+        return new ArchCondition<>("只访问所属模块 Mapper") {
+            @Override
+            public void check(JavaClass origin, ConditionEvents events) {
+                for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
+                    JavaClass target = dependency.getTargetClass();
+                    int mapperSegmentIndex = target.getPackageName().indexOf(".mapper");
+                    if (mapperSegmentIndex < 0 || !target.getSimpleName().endsWith("Mapper")) {
+                        continue;
+                    }
+                    String mapperModulePackage = target.getPackageName().substring(0, mapperSegmentIndex);
+                    boolean ownedByModule = origin.getPackageName().equals(mapperModulePackage + ".service")
+                            || origin.getPackageName().startsWith(mapperModulePackage + ".service.")
+                            || origin.getPackageName().startsWith(mapperModulePackage + ".");
+                    events.add(new SimpleConditionEvent(dependency, ownedByModule,
+                            dependency.getDescription() + "；Service 只能访问所属模块 Mapper: "
+                                    + mapperModulePackage));
                 }
             }
         };

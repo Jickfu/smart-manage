@@ -12,9 +12,9 @@ import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.common.model.vo.ReferenceVO;
-import sm.domain.sys.base.org.mapper.OrgMapper;
+import sm.domain.sys.base.org.contract.OrgReference;
+import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.org.model.OrgType;
-import sm.domain.sys.base.org.model.entity.OrgEntity;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.model.UserCacheSnapshot;
@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
 public class UserProfileService {
     private final UserMapper userMapper;
     private final UserAssignmentMapper userAssignmentMapper;
-    private final OrgMapper orgMapper;
+    private final OrgReferenceReader orgReferenceReader;
     private final AttachmentService attachmentService;
     private final UserTxService txService;
     private final AuthorizationStateHelper authorizationStateHelper;
@@ -93,9 +93,8 @@ public class UserProfileService {
         if (assignment == null) {
             throw new BizException(ResultEnum.PERMISSION_ERROR, "只能切换到自己的任职组织");
         }
-        OrgEntity organization = orgMapper.selectById(orgId);
-        if (organization == null || !Boolean.TRUE.equals(organization.getEnabled())
-                || Boolean.TRUE.equals(organization.getArchived())) {
+        OrgReference organization = orgReferenceReader.require(orgId);
+        if (!organization.enabled() || organization.archived()) {
             throw new BizException(ResultEnum.PARAM_ERROR, "目标组织不可用");
         }
         currentUserContext.setOrgId(orgId);
@@ -165,49 +164,43 @@ public class UserProfileService {
                         .orderByDesc(UserAssignmentEntity::getIsPrimary)
                         .orderByAsc(UserAssignmentEntity::getOrgId));
         Set<Long> organizationIds = assignments.stream().map(UserAssignmentEntity::getOrgId).collect(Collectors.toSet());
-        Map<Long, OrgEntity> organizationById = new HashMap<>();
-        if (!organizationIds.isEmpty()) {
-            for (OrgEntity organization : orgMapper.selectByIds(organizationIds)) {
-                organizationById.put(organization.getId(), organization);
-            }
-        }
+        Map<Long, OrgReference> organizationById = orgReferenceReader.findByIds(organizationIds);
         List<UserAssignmentVO> availableAssignments = new ArrayList<>();
-        Map<Long, OrgEntity> availableOrganizations = new HashMap<>();
+        Map<Long, OrgReference> availableOrganizations = new HashMap<>();
         for (UserAssignmentEntity assignment : assignments) {
-            OrgEntity organization = organizationById.get(assignment.getOrgId());
-            if (organization == null || !Boolean.TRUE.equals(organization.getEnabled())
-                    || Boolean.TRUE.equals(organization.getArchived())) continue;
-            availableOrganizations.put(organization.getId(), organization);
+            OrgReference organization = organizationById.get(assignment.getOrgId());
+            if (organization == null || !organization.enabled() || organization.archived()) continue;
+            availableOrganizations.put(organization.id(), organization);
             UserAssignmentVO assignmentVO = new UserAssignmentVO();
             assignmentVO.setId(assignment.getId());
-            assignmentVO.setOrg(new ReferenceVO(organization.getId(), organization.getNumber(), organization.getName()));
-            assignmentVO.setOrgNamePath(organization.getNamePath());
+            assignmentVO.setOrg(new ReferenceVO(organization.id(), organization.number(), organization.name()));
+            assignmentVO.setOrgNamePath(organization.namePath());
             assignmentVO.setPosition(assignment.getPosition());
             assignmentVO.setIsOrgLeader(assignment.getIsOrgLeader());
             assignmentVO.setIsPrimary(assignment.getIsPrimary());
             availableAssignments.add(assignmentVO);
         }
-        OrgEntity currentOrganization = availableOrganizations.get(currentUserContext.getOrgId());
+        OrgReference currentOrganization = availableOrganizations.get(currentUserContext.getOrgId());
         if (currentOrganization == null) {
             throw new BizException(ResultEnum.PERMISSION_ERROR, "当前组织不在用户的有效任职范围内");
         }
         result.setAssignments(availableAssignments);
-        result.setCurrentOrgId(currentOrganization.getId());
-        result.setCurrentOrgName(currentOrganization.getName());
+        result.setCurrentOrgId(currentOrganization.id());
+        result.setCurrentOrgName(currentOrganization.name());
         assembleOrganizationNames(result, currentOrganization);
     }
 
     /** 一次向上遍历同时解析最近公司和组织树绝对顶层，避免为两个名称重复查询父链。 */
-    private void assembleOrganizationNames(UserInfoVO result, OrgEntity organization) {
-        OrgEntity current = organization;
-        String rootOrganizationName = organization.getName();
+    private void assembleOrganizationNames(UserInfoVO result, OrgReference organization) {
+        OrgReference current = organization;
+        String rootOrganizationName = organization.name();
         String companyName = null;
         while (current != null) {
-            rootOrganizationName = current.getName();
-            if (companyName == null && OrgType.COMPANY.equals(current.getOrgType())) {
-                companyName = current.getName();
+            rootOrganizationName = current.name();
+            if (companyName == null && OrgType.COMPANY.name().equals(current.orgType())) {
+                companyName = current.name();
             }
-            current = current.getParentId() == null ? null : orgMapper.selectById(current.getParentId());
+            current = current.parentId() == null ? null : orgReferenceReader.require(current.parentId());
         }
         result.setCompanyName(companyName == null ? rootOrganizationName : companyName);
         result.setRootOrgName(rootOrganizationName);

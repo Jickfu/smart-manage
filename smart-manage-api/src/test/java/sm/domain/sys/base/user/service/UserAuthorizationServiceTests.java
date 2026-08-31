@@ -3,6 +3,7 @@ package sm.domain.sys.base.user.service;
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.org.mapper.OrgMapper;
+import sm.domain.sys.base.org.service.OrgReferenceService;
 import sm.domain.sys.base.permission.service.PermissionService;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.user.mapper.UserMapper;
@@ -25,7 +26,7 @@ class UserAuthorizationServiceTests {
         UserTxService txService = mock(UserTxService.class);
         AuthorizationStateHelper stateHelper = mock(AuthorizationStateHelper.class);
         UserAuthorizationService service = new UserAuthorizationService(mock(UserMapper.class), roleMapper,
-                mock(UserAssignmentMapper.class), mock(OrgMapper.class), txService,
+                mock(UserAssignmentMapper.class), new OrgReferenceService(mock(OrgMapper.class)), txService,
                 mock(PermissionService.class), stateHelper, mock(CurrentUserContext.class));
         UserOrganizationRoleForm organization = new UserOrganizationRoleForm();
         organization.setOrgId(21L);

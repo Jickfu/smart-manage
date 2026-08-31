@@ -23,7 +23,9 @@ class SysParamTxServiceTests {
         form.setNumber("DUPLICATE");
         form.setName("重复参数");
 
-        assertThrows(BizException.class, () -> new SysParamTxService(mapper, mock(FeatureMapper.class)).save(form));
+        assertThrows(BizException.class, () -> new SysParamTxService(mapper,
+                new sm.domain.sys.base.feature.service.FeatureReferenceService(mock(FeatureMapper.class)))
+                .save(form));
     }
 
     @Test
@@ -37,8 +39,9 @@ class SysParamTxServiceTests {
         form.setFeatureId(99L);
 
         BizException exception = assertThrows(BizException.class,
-                () -> new SysParamTxService(mapper, featureMapper).save(form));
+                () -> new SysParamTxService(mapper,
+                        new sm.domain.sys.base.feature.service.FeatureReferenceService(featureMapper)).save(form));
 
-        assertEquals(ResultEnum.PARAM_ERROR.getCode(), exception.getCode());
+        assertEquals(ResultEnum.NOT_FOUND.getCode(), exception.getCode());
     }
 }

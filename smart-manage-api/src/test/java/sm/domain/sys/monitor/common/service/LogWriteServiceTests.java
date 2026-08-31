@@ -16,7 +16,10 @@ import static org.mockito.Mockito.verify;
 class LogWriteServiceTests {
     private final LoginLogMapper loginLogMapper = mock(LoginLogMapper.class);
     private final LogWriteService service =
-            new LogWriteService(loginLogMapper, mock(OperateLogMapper.class));
+            new LogWriteService(
+                    new sm.domain.sys.monitor.loginlog.service.LoginLogPersistenceService(loginLogMapper),
+                    new sm.domain.sys.monitor.operatelog.service.OperateLogPersistenceService(
+                            mock(OperateLogMapper.class)));
 
     @AfterEach
     void clearTraceId() {

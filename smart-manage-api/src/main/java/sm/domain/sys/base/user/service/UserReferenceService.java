@@ -111,6 +111,7 @@ public class UserReferenceService implements UserReferenceReader {
 
     private UserReference toReference(UserEntity user) {
         return new UserReference(
-                user.getId(), user.getNumber(), user.getName(), Boolean.TRUE.equals(user.getEnabled()));
+                user.getId(), user.getNumber(), user.getName(), user.getUsername(), user.getEmail(),
+                Boolean.TRUE.equals(user.getEnabled()));
     }
 }

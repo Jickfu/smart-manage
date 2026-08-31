@@ -36,7 +36,8 @@ class BasicDataTxServiceTests {
     private final CacheHelper cacheHelper = mock(CacheHelper.class);
     private final NumberGeneratorAccessor numberGeneratorAccessor = mock(NumberGeneratorAccessor.class);
     private final BasicDataTxService txService = new BasicDataTxService(
-            categoryMapper, itemMapper, mock(DomainMapper.class), cacheHelper,
+            categoryMapper, itemMapper,
+            new sm.domain.sys.base.domain.service.DomainReferenceService(mock(DomainMapper.class)), cacheHelper,
             numberGeneratorAccessor);
 
     @BeforeAll

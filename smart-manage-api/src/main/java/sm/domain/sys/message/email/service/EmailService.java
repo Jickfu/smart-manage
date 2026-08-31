@@ -11,8 +11,8 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import sm.system.security.authorization.AdministratorOnly;
-import sm.domain.sys.base.user.mapper.UserMapper;
-import sm.domain.sys.base.user.model.entity.UserEntity;
+import sm.domain.sys.base.user.contract.UserReference;
+import sm.domain.sys.base.user.contract.UserReferenceReader;
 import sm.domain.sys.message.email.mapper.*;
 import sm.domain.sys.message.email.model.entity.*;
 import sm.domain.sys.message.email.model.form.*;
@@ -55,7 +55,7 @@ public class EmailService implements EmailNotificationSender {
             "attemptCount", ListQueryUtil.number(EmailTaskEntity::getAttemptCount, false),
             "createTime", ListQueryUtil.dateTime(EmailTaskEntity::getCreateTime, true));
     private final EmailAccountMapper accountMapper;
-    private final UserMapper userMapper;
+    private final UserReferenceReader userReferenceReader;
     private final EmailTaskMapper taskMapper;
     private final EmailAttemptMapper attemptMapper;
     private final EmailTxService txService;
@@ -320,15 +320,12 @@ public class EmailService implements EmailNotificationSender {
     private List<String> resolveUserAddresses(List<Long> userIds) {
         if (userIds == null || userIds.isEmpty()) return List.of();
         List<Long> distinctIds = userIds.stream().distinct().toList();
-        Map<Long, UserEntity> users = userMapper.selectBatchIds(distinctIds).stream()
-                .collect(java.util.stream.Collectors.toMap(UserEntity::getId, user -> user));
+        Map<Long, UserReference> users = userReferenceReader.requireEnabledByIds(distinctIds);
         List<String> addresses = new ArrayList<>(distinctIds.size());
         for (Long userId : distinctIds) {
-            UserEntity user = users.get(userId);
-            if (user == null) throw new BizException(ResultEnum.NOT_FOUND, "收件用户不存在: " + userId);
-            if (!Boolean.TRUE.equals(user.getEnabled())) throw new BizException(ResultEnum.PARAM_ERROR, "收件用户已停用: " + user.getName());
-            if (!StringUtils.hasText(user.getEmail())) throw new BizException(ResultEnum.PARAM_ERROR, "收件用户未配置邮箱: " + user.getName());
-            addresses.add(user.getEmail().trim());
+            UserReference user = users.get(userId);
+            if (!StringUtils.hasText(user.email())) throw new BizException(ResultEnum.PARAM_ERROR, "收件用户未配置邮箱: " + user.name());
+            addresses.add(user.email().trim());
         }
         return addresses;
     }

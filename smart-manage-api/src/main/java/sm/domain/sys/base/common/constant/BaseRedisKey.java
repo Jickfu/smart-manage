@@ -4,6 +4,7 @@ package sm.domain.sys.base.common.constant;
 public final class BaseRedisKey {
     public static final String PASSWORD_CHANGE_TICKET = BaseKeyPrefix.VALUE + "password-change:";
     public static final String TEMPORARY_LOGIN_GRANT = BaseKeyPrefix.VALUE + "temporary-login:";
+    public static final String OPENAPI_NONCE = BaseKeyPrefix.VALUE + "openapi:nonce:";
 
     private BaseRedisKey() {
     }

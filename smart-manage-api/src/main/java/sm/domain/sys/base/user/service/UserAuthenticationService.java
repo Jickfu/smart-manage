@@ -5,8 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.UserConstant;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
-import sm.domain.sys.base.org.mapper.OrgMapper;
-import sm.domain.sys.base.org.model.entity.OrgEntity;
+import sm.domain.sys.base.org.contract.OrgReference;
+import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
@@ -27,7 +27,7 @@ import java.util.List;
 public class UserAuthenticationService {
     private final UserMapper userMapper;
     private final UserAssignmentMapper userAssignmentMapper;
-    private final OrgMapper orgMapper;
+    private final OrgReferenceReader orgReferenceReader;
     private final UserTxService txService;
     private final AuthorizationStateHelper authorizationStateHelper;
 
@@ -79,16 +79,15 @@ public class UserAuthenticationService {
             return UserAuthentication.failed(hideStateReason
                     ? "用户名或密码错误" : "用户未配置主职组织，请联系管理员");
         }
-        OrgEntity primaryOrganization = orgMapper.selectById(primaryAssignment.getOrgId());
-        if (primaryOrganization == null || !Boolean.TRUE.equals(primaryOrganization.getEnabled())
-                || Boolean.TRUE.equals(primaryOrganization.getArchived())) {
+        OrgReference primaryOrganization = orgReferenceReader.require(primaryAssignment.getOrgId());
+        if (!primaryOrganization.enabled() || primaryOrganization.archived()) {
             return UserAuthentication.failed(hideStateReason
                     ? "用户名或密码错误" : "用户主职组织不可用，请联系管理员");
         }
         return new UserAuthentication(user.getId(), user.getUsername(), user.getName(),
                 hideStateReason ? false : Boolean.TRUE.equals(user.getPasswordReset()),
                 !hideStateReason && UserConstant.SUPER_ADMIN.equals(user.getUsername()),
-                primaryOrganization.getId(), null);
+                primaryOrganization.id(), null);
     }
 
     @BizLog(value = "重置用户密码", recordResponse = false)

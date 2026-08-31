@@ -4,6 +4,7 @@ import { Form } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
+import { EditFormFields } from '@/domain/common/page/EditFormFields';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -86,7 +87,26 @@ export default function ScriptEditPage(props: PageComponentProps) {
     <EditPage
       title="脚本"
       access={scriptAccess}
-      fields={fields}
+      sections={[
+        {
+          key: 'basic',
+          label: '基本信息',
+          content: (editable) => <EditFormFields fields={fields} editable={editable} />,
+        },
+        {
+          key: 'script-content',
+          label: '脚本内容',
+          content: (editable) => (
+            <Form.Item
+              name="content"
+              label="JavaScript"
+              rules={[{ required: true, message: '脚本内容不能为空' }]}
+            >
+              <ScriptEditor disabled={!editable} className="sm-script-edit-code" />
+            </Form.Item>
+          ),
+        },
+      ]}
       initialValues={initialValues}
       operationType={props.operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber: props.appNumber, tabKey: props.tabKey }}
@@ -95,15 +115,6 @@ export default function ScriptEditPage(props: PageComponentProps) {
       onRetry={() => detailQuery.refetch()}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
-      detailContent={(editable) => (
-        <Form.Item
-          name="content"
-          label="JavaScript"
-          rules={[{ required: true, message: '脚本内容不能为空' }]}
-        >
-          <ScriptEditor disabled={!editable} className="sm-script-edit-code" />
-        </Form.Item>
-      )}
       onExit={() => useWorkbenchStore.getState().removeContentTab(props.appNumber, props.tabKey)}
     />
   );

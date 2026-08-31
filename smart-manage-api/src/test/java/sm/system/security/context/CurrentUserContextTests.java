@@ -6,8 +6,10 @@ import cn.dev33.satoken.stp.StpUtil;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import sm.system.exception.BizException;
+import sm.system.openapi.OpenApiActorContext;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -65,6 +67,19 @@ class CurrentUserContextTests {
 			stpUtil.when(StpUtil::getTokenSession).thenReturn(session);
 
 			assertTrue(context.isAdministrator());
+		}
+	}
+
+	@Test
+	void openApiActorUsesFixedOrganizationAndNeverBecomesAdministrator() {
+		CurrentUserContext context = new CurrentUserContext();
+		try (OpenApiActorContext.Scope ignored = OpenApiActorContext.open(
+				20L, "partner", 30L, "normal-user", 40L, "request-123456")) {
+			assertTrue(context.isLogin());
+			assertFalse(context.isAdministrator());
+			assertEquals(30L, context.getUserId());
+			assertEquals(40L, context.getOrgId());
+			assertThrows(BizException.class, () -> context.setOrgId(41L));
 		}
 	}
 }

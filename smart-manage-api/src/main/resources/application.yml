@@ -84,5 +84,9 @@ smart-manage:
   system:
     security:
       no-need-login: /sys/base/login,/sys/base/captcha/challenge,/sys/base/captcha/verify
+    openapi:
+      # 加密信封和解密后响应分别限流，避免认证入口被超大报文耗尽内存。
+      max-envelope-bytes: 1048576
+      max-response-bytes: 2097152
     log:
       thread-name-prefix: biz-log-

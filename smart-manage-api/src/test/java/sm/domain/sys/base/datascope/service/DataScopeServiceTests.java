@@ -17,7 +17,8 @@ class DataScopeServiceTests {
         when(context.getUserId()).thenReturn(1L);
         when(context.isAdministrator()).thenReturn(true);
         DataScopeService service = new DataScopeService(context, mock(RoleDataScopeMapper.class),
-                mock(RoleDataScopeOrgMapper.class), mock(OrgMapper.class));
+                mock(RoleDataScopeOrgMapper.class),
+                new sm.domain.sys.base.org.service.OrgReferenceService(mock(OrgMapper.class)));
 
         var scope = service.resolve("scm.procurement.purchase-requisition", "VIEW");
 
@@ -36,7 +37,8 @@ class DataScopeServiceTests {
         when(mapper.selectEffectiveRules(10L, 20L, "scm.procurement.purchase-requisition", "VIEW"))
                 .thenReturn(List.of(orgRule, selfRule));
         DataScopeService service = new DataScopeService(context, mapper,
-                mock(RoleDataScopeOrgMapper.class), mock(OrgMapper.class));
+                mock(RoleDataScopeOrgMapper.class),
+                new sm.domain.sys.base.org.service.OrgReferenceService(mock(OrgMapper.class)));
 
         var scope = service.resolve("scm.procurement.purchase-requisition", "VIEW");
 

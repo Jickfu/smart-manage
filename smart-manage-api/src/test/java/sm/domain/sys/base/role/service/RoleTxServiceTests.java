@@ -1,8 +1,7 @@
 package sm.domain.sys.base.role.service;
 
 import org.junit.jupiter.api.Test;
-import sm.domain.sys.base.datascope.mapper.RoleDataScopeMapper;
-import sm.domain.sys.base.datascope.mapper.RoleDataScopeOrgMapper;
+import sm.domain.sys.base.datascope.service.DataScopeConfigurationService;
 import sm.domain.sys.base.role.mapper.RoleMapper;
 import sm.domain.sys.base.role.mapper.RolePermissionMapper;
 import sm.domain.sys.base.role.model.entity.RoleEntity;
@@ -51,8 +50,8 @@ class RoleTxServiceTests {
     }
 
     private RoleTxService service(RoleMapper mapper) {
-        return new RoleTxService(mapper, mock(RolePermissionMapper.class), mock(RoleDataScopeMapper.class),
-                mock(RoleDataScopeOrgMapper.class));
+        return new RoleTxService(mapper, mock(RolePermissionMapper.class),
+                mock(DataScopeConfigurationService.class));
     }
 
     private RoleSaveForm form(Long id, Integer version) {

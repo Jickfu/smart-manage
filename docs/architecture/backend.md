@@ -150,6 +150,7 @@ Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包�
 - Contract 只容纳稳定接口和 Command、Query、Reference、Result 等边界模型，禁止放入 Controller Form、VO、Entity、Mapper 或 TxService；
 - DataScope 跨领域消费者只依赖 `sm.system.datascope` Contract，解析实现与角色配置仍属于系统管理领域；
 - Controller 不得依赖 Mapper 或 TxService；
+- Service 和 TxService 只能依赖所属模块的 Mapper；跨模块读取或写入必须调用能力提供方发布的 Contract 或职责明确的公开 Service；
 - 公开 Service 不得声明事务，`@BizLog` 只允许标注公开 Service 的公开方法；
 - TxService 位于模块 `service` 包、保持包级可见、声明类级
   `@Transactional(rollbackFor = Exception.class)`，且只允许同包公开 Service 调用；

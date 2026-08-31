@@ -11,6 +11,7 @@
 | SQL 执行日志 | `t_sys_sql_log` | `t_sys_sql_log_history` | `create_time` | 180 天 | 730 天 |
 | 脚本执行日志 | `t_sys_script_log` | `t_sys_script_log_history` | `create_time` | 180 天 | 730 天 |
 | 调度执行实例 | `t_sys_job_log` | `t_sys_job_log_history` | `start_time` | 90 天 | 365 天 |
+| OpenAPI 调用审计 | `t_sys_openapi_invocation_log` | `t_sys_openapi_invocation_log_history` | `request_time` | 180 天 | 730 天 |
 
 保留天数是内置任务的默认参数，不是代码常量。管理员可以修改任务 `jobData`，但任务会拒绝缺失、未知、非整数或越界参数。
 
@@ -62,4 +63,4 @@
 7. 删除日志不会破坏业务状态、事务或外键关系；
 8. 生命周期处理器只使用代码白名单中的固定表定义。
 
-当前五类日志使用显式处理定义，不为尚未出现的业务建立动态日志注册平台。
+当前六类日志使用显式处理定义，不为尚未出现的业务建立动态日志注册平台。

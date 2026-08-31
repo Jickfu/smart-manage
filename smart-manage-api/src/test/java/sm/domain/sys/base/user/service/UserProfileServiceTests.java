@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.org.mapper.OrgMapper;
+import sm.domain.sys.base.org.service.OrgReferenceService;
 import sm.domain.sys.base.org.model.OrgType;
 import sm.domain.sys.base.org.model.entity.OrgEntity;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
@@ -66,6 +67,8 @@ class UserProfileServiceTests {
         when(assignmentMapper.selectOne(any())).thenReturn(new UserAssignmentEntity());
         OrgMapper orgMapper = mock(OrgMapper.class);
         OrgEntity organization = new OrgEntity();
+        organization.setId(20L);
+        organization.setOrgType(OrgType.DEPARTMENT);
         organization.setEnabled(true);
         organization.setArchived(false);
         when(orgMapper.selectById(20L)).thenReturn(organization);
@@ -121,7 +124,8 @@ class UserProfileServiceTests {
         when(context.getOrgId()).thenReturn(30L);
         UserConverter converter = mock(UserConverter.class);
         when(converter.toInfoVO(user)).thenReturn(new UserInfoVO());
-        UserProfileService service = new UserProfileService(userMapper, assignmentMapper, orgMapper,
+        UserProfileService service = new UserProfileService(userMapper, assignmentMapper,
+                new OrgReferenceService(orgMapper),
                 mock(AttachmentService.class), mock(UserTxService.class), mock(AuthorizationStateHelper.class),
                 mock(UserCacheAccessor.class), converter, context, mock(BrowserPasswordCipher.class));
 
@@ -144,7 +148,8 @@ class UserProfileServiceTests {
 
     private UserProfileService service(UserMapper mapper, UserAssignmentMapper assignmentMapper,
             OrgMapper orgMapper, CurrentUserContext context, AuthorizationStateHelper stateHelper) {
-        return new UserProfileService(mapper, assignmentMapper, orgMapper, mock(AttachmentService.class),
+        return new UserProfileService(mapper, assignmentMapper, new OrgReferenceService(orgMapper),
+                mock(AttachmentService.class),
                 mock(UserTxService.class), stateHelper, mock(UserCacheAccessor.class),
                 mock(UserConverter.class), context, mock(BrowserPasswordCipher.class));
     }

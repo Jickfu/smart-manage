@@ -19,6 +19,7 @@ class SystemLogLifecycleSettingsTests {
                 "sqlLogHotDays", 180,
                 "scriptLogHotDays", 180,
                 "jobLogHotDays", 90,
+                "openApiLogHotDays", 180,
                 "maxPartitionsPerRun", 12));
 
         SystemLogLifecycleSettings settings = SystemLogLifecycleSettings.archive(jobDataMap);
@@ -66,6 +67,7 @@ class SystemLogLifecycleSettingsTests {
                 "sqlLogRetentionDays", 730,
                 "scriptLogRetentionDays", 730,
                 "jobLogRetentionDays", 365,
+                "openApiLogRetentionDays", 730,
                 "maxPartitionsPerRun", 12));
     }
 }

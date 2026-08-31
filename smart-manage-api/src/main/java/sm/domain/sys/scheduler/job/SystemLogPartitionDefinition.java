@@ -8,7 +8,9 @@ enum SystemLogPartitionDefinition {
     OPERATE("operateLog", "t_sys_operate_log", "t_sys_operate_log_history", false),
     SQL("sqlLog", "t_sys_sql_log", "t_sys_sql_log_history", false),
     SCRIPT("scriptLog", "t_sys_script_log", "t_sys_script_log_history", false),
-    JOB("jobLog", "t_sys_job_log", "t_sys_job_log_history", true);
+    JOB("jobLog", "t_sys_job_log", "t_sys_job_log_history", true),
+    OPENAPI("openApiLog", "t_sys_openapi_invocation_log",
+            "t_sys_openapi_invocation_log_history", false);
 
     static final List<SystemLogPartitionDefinition> VALUES = List.of(values());
 

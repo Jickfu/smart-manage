@@ -5,8 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import sm.domain.sys.base.user.mapper.UserMapper;
-import sm.domain.sys.base.user.model.entity.UserEntity;
+import sm.domain.sys.base.user.contract.UserReferenceReader;
 import sm.domain.sys.message.inbox.contract.InboxNotificationCommand;
 import sm.domain.sys.message.inbox.mapper.InboxMessageMapper;
 import sm.domain.sys.message.inbox.mapper.InboxRecipientMapper;
@@ -28,7 +27,7 @@ import java.util.UUID;
 class InboxMessageTxService {
     private final InboxMessageMapper messageMapper;
     private final InboxRecipientMapper recipientMapper;
-    private final UserMapper userMapper;
+    private final UserReferenceReader userReferenceReader;
     private final CurrentUserContext currentUserContext;
 
     Long save(InboxMessageSaveForm form) {
@@ -152,11 +151,7 @@ class InboxMessageTxService {
     }
 
     void validateEnabledUsers(List<Long> userIds) {
-        long count = userMapper.selectCount(new LambdaQueryWrapper<UserEntity>()
-                .in(UserEntity::getId, userIds).eq(UserEntity::getEnabled, true));
-        if (count != userIds.size()) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "站内通知包含不存在或已停用的接收用户");
-        }
+        userReferenceReader.requireEnabledByIds(userIds);
     }
 
     private static void requireVersion(InboxMessageEntity entity, Integer version) {

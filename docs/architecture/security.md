@@ -10,7 +10,9 @@
 
 浏览器认证使用名为 `smtoken` 的持久化 HttpOnly Cookie，前端脚本不得读取、保存或在请求头中传递认证 token；服务端不再从请求头或请求体读取浏览器认证凭证。Cookie 固定使用 `Path=/`、`SameSite=Lax` 且不设置 `Domain`，`Secure` 由部署配置显式开启，未开启时不能抵御 HTTP 链路上的凭证窃取。SM2 和可选请求加密不能替代 TLS。
 
-登录会话创建时必须生成与当前 Token Session 绑定的独立 CSRF Token。Token 使用 16 字节安全随机数据编码为 32 个十六进制字符，通过会话初始化接口返回并只保存在前端内存；所有已认证的 `POST`、`PUT`、`PATCH`、`DELETE` 请求必须通过 `sm-csrf-token` 请求头提交。所有非安全方法（包括登录前公开接口）还必须校验 `Origin` 是否属于 `smart-manage.infrastructure.cors.allowed-origins`；`GET`、`HEAD`、`OPTIONS` 禁止承担状态修改。
+登录会话创建时必须生成与当前 Token Session 绑定的独立 CSRF Token。Token 使用 16 字节安全随机数据编码为 32 个十六进制字符，通过会话初始化接口返回并只保存在前端内存；所有已认证的 `POST`、`PUT`、`PATCH`、`DELETE` 请求必须通过 `sm-csrf-token` 请求头提交。浏览器接口的所有非安全方法（包括登录前公开接口）还必须校验 `Origin` 是否属于 `smart-manage.infrastructure.cors.allowed-origins`；`GET`、`HEAD`、`OPTIONS` 禁止承担状态修改。
+
+`/openapi/**` 是唯一的服务到服务入站边界，不读取 Cookie、Sa-Token 或浏览器 CSRF Token，也不要求 `Origin`。该路径必须先经过 OpenAPI 独立安全过滤器，完成已发布路由识别、Key ID 与应用状态校验、可信代理边界下的客户端 IP 策略、时间窗、密文摘要、HMAC 签名、Redis nonce 重放防护、API 授权和 GCM 报文解密，之后才能建立请求级代理用户与固定组织上下文。未知路由和认证失败默认拒绝，普通 `@SaIgnore` 接口不得借用该例外。
 
 正式登录必须从用户唯一的有效主职任职建立当前组织上下文；未分配主职、主职组织已停用或已封存时拒绝登录。当前组织不得回退到固定组织 ID，`administrator` 同样必须具有明确主职，但其高风险身份与全局功能权限仍按独立规则校验。
 

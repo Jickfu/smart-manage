@@ -40,7 +40,7 @@ class AttachmentServiceAuthorizationTests {
     private final BusinessResourceRegistry registry = new BusinessResourceRegistry(List.of(registration()), attachmentConfigService);
     private final AttachmentService service = new AttachmentService(
             mapper, bizMapper, storageFactory, txService, registry, currentOperatorProvider,
-            attachmentConfigService, userMapper);
+            attachmentConfigService, new sm.domain.sys.base.user.service.UserReferenceService(userMapper));
 
     @Test
     void temporaryAttachmentCanOnlyBeDownloadedByCreator() {

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import EditPage from '@/domain/common/page/EditPage';
+import { editFormSection } from '@/domain/common/page/editPageSection';
 import { OperationType } from '@/domain/common/page/types';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { useWorkbenchStore } from '@/stores/workbench';
@@ -89,7 +90,7 @@ const RoleEditPage = (props: PageComponentProps) => {
     <EditPage
       access={roleAccess}
       title="角色"
-      fields={fields}
+      sections={[editFormSection('basic', '基本信息', fields)]}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}

@@ -12,7 +12,7 @@ import sm.domain.sys.base.sysparam.model.vo.SysParamCreateNewDataVO;
 import sm.domain.sys.base.sysparam.model.vo.SysParamVO;
 import sm.domain.sys.base.sysparam.model.vo.SysParamDetailVO;
 import sm.domain.sys.base.sysparam.model.entity.SysParamEntity;
-import sm.domain.sys.base.feature.mapper.FeatureMapper;
+import sm.domain.sys.base.feature.service.FeatureReferenceService;
 import sm.domain.sys.base.feature.model.entity.FeatureEntity;
 import sm.domain.sys.base.common.model.vo.ReferenceVO;
 import sm.domain.sys.base.sysparam.mapper.SysParamMapper;
@@ -43,7 +43,7 @@ public class SysParamService {
     private final SysParamMapper mapper;
     private final SysParamTxService txService;
     private final SysParamCacheAccessor cacheAccessor;
-    private final FeatureMapper featureMapper;
+    private final FeatureReferenceService featureReferenceService;
 
     /** 管理端分页列表 */
     public PageData<SysParamVO> listPage(SysParamListForm form) {
@@ -70,8 +70,7 @@ public class SysParamService {
         detail.setDescription(entity.getDescription());
         detail.setIsSystem(entity.getIsSystem());
         if (entity.getFeatureId() != null) {
-            FeatureEntity feature = featureMapper.selectById(entity.getFeatureId());
-            if (feature == null) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "系统参数关联了无效功能");
+            FeatureEntity feature = featureReferenceService.require(entity.getFeatureId());
             String featureName = feature.getCustomName() == null ? feature.getDefaultName() : feature.getCustomName();
             detail.setFeature(new ReferenceVO(feature.getId(), feature.getFeatureKey(), featureName));
         }

@@ -19,7 +19,7 @@ import sm.domain.sys.base.basicdata.model.vo.BasicDataItemDetailVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataListVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataOptionVO;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataTreeVO;
-import sm.domain.sys.base.domain.mapper.DomainMapper;
+import sm.domain.sys.base.domain.service.DomainReferenceService;
 import sm.domain.sys.base.domain.model.entity.DomainEntity;
 import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.domain.sys.base.common.model.vo.ReferenceVO;
@@ -55,7 +55,7 @@ public class BasicDataService {
             Map.entry("description", ListQueryUtil.string(BasicDataItemEntity::getDescription, false)));
     private final BasicDataCategoryMapper categoryMapper;
     private final BasicDataItemMapper itemMapper;
-    private final DomainMapper domainMapper;
+    private final DomainReferenceService domainReferenceService;
     private final BasicDataTxService txService;
     private final BasicDataConverter converter;
     private final NumberRuleService numberRuleService;
@@ -71,8 +71,9 @@ public class BasicDataService {
         for (BasicDataCategoryEntity category : categories) {
             categoriesByDomain.computeIfAbsent(category.getDomainId(), ignored -> new ArrayList<>()).add(category);
         }
-        List<DomainEntity> domains = domainMapper.selectList(new LambdaQueryWrapper<DomainEntity>()
-                .orderByAsc(DomainEntity::getSeq).orderByAsc(DomainEntity::getId));
+        List<DomainEntity> domains = domainReferenceService.findAll().stream()
+                .sorted(java.util.Comparator.comparing(DomainEntity::getSeq).thenComparing(DomainEntity::getId))
+                .toList();
         List<BasicDataTreeVO> tree = new ArrayList<>(domains.size());
         for (DomainEntity domain : domains) {
             List<BasicDataTreeVO> children = new ArrayList<>();
@@ -89,8 +90,8 @@ public class BasicDataService {
     public BasicDataCategoryVO categoryDetail(Long id) {
         BasicDataCategoryEntity category = requireCategory(id);
         BasicDataCategoryVO result = converter.toCategoryVO(category);
-        DomainEntity domain = domainMapper.selectById(category.getDomainId());
-        result.setDomainName(domain == null ? null : domain.getName());
+        DomainEntity domain = domainReferenceService.require(category.getDomainId());
+        result.setDomainName(domain.getName());
         return result;
     }
 

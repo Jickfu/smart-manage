@@ -10,9 +10,9 @@ import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.enums.MenuTargetTypeEnum;
 import sm.domain.sys.base.menu.model.form.MenuSaveForm;
 import sm.domain.sys.base.menu.mapper.MenuMapper;
-import sm.domain.sys.base.permission.mapper.PermissionMapper;
+import sm.domain.sys.base.permission.service.PermissionReferenceService;
 import sm.domain.sys.base.permission.model.entity.PermissionEntity;
-import sm.domain.sys.base.feature.mapper.FeatureMapper;
+import sm.domain.sys.base.feature.service.FeatureReferenceService;
 import sm.domain.sys.base.feature.model.entity.FeatureEntity;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
@@ -39,8 +39,8 @@ class MenuTxService {
 
     private final CurrentUserContext currentUserContext;
     private final MenuMapper mapper;
-    private final PermissionMapper permissionMapper;
-    private final FeatureMapper featureMapper;
+    private final PermissionReferenceService permissionReferenceService;
+    private final FeatureReferenceService featureReferenceService;
 
     public Long save(MenuSaveForm form) {
         MenuEntity entity = new MenuEntity();
@@ -141,14 +141,14 @@ class MenuTxService {
             entity.setExternalOpenMode(null);
         }
         entity.setPermissionId(form.getPermissionId());
-        FeatureEntity feature = form.getFeatureId() == null ? null : featureMapper.selectById(form.getFeatureId());
+        FeatureEntity feature = form.getFeatureId() == null ? null : featureReferenceService.require(form.getFeatureId());
         if (form.getFeatureId() != null
                 && (feature == null || !java.util.Objects.equals(feature.getAppId(), form.getAppId()))) {
             throw new BizException(ResultEnum.PARAM_ERROR, "菜单与功能必须属于同一应用");
         }
         entity.setFeatureId(feature == null ? null : feature.getId());
         if (form.getPermissionId() != null) {
-            PermissionEntity permission = permissionMapper.selectById(form.getPermissionId());
+            PermissionEntity permission = permissionReferenceService.require(form.getPermissionId());
             boolean sameFeature = feature != null && permission != null
                     && java.util.Objects.equals(permission.getFeatureId(), feature.getId());
             boolean sameApplication = feature == null && permission != null && permission.getFeatureId() == null

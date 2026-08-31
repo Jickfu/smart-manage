@@ -40,8 +40,12 @@ class MenuServiceTests {
     private final MenuTxService txService = mock(MenuTxService.class);
     private final MenuConverter converter = mock(MenuConverter.class);
     private final MenuService service =
-            new MenuService(currentUserContext, mapper, appMapper, domainMapper, featureMapper,
-                    permissionMapper, txService, converter);
+            new MenuService(currentUserContext, mapper,
+                    new sm.domain.sys.base.app.service.AppReferenceService(appMapper),
+                    new sm.domain.sys.base.domain.service.DomainReferenceService(domainMapper),
+                    new sm.domain.sys.base.feature.service.FeatureReferenceService(featureMapper),
+                    new sm.domain.sys.base.permission.service.PermissionReferenceService(permissionMapper),
+                    txService, converter);
 
     @Test
     void detailAssemblesReferenceObjectsForEditForm() {
@@ -75,8 +79,9 @@ class MenuServiceTests {
     void treeListReturnsMatchedPageWithParentGroupAndAppName() {
         AppEntity app = new AppEntity();
         app.setId(20L);
+        app.setDomainId(10L);
         app.setName("系统管理");
-        when(appMapper.selectList(any())).thenReturn(List.of(app));
+        when(appMapper.selectList(null)).thenReturn(List.of(app));
 
         MenuEntity group = menu(100L, 20L, 0L, MenuLevelEnum.CATEGORY, "基础设置", null);
         MenuEntity page = menu(101L, 20L, 100L, MenuLevelEnum.PAGE, "用户", "/sys/base/user");
@@ -100,7 +105,7 @@ class MenuServiceTests {
         AppEntity app = new AppEntity();
         app.setId(32L);
         app.setName("任务调度");
-        when(appMapper.selectList(any())).thenReturn(List.of(app));
+        when(appMapper.selectList(null)).thenReturn(List.of(app));
 
         MenuEntity page = menu(201L, 32L, 0L, MenuLevelEnum.PAGE, "定时任务", "/sys/scheduler/job");
         when(mapper.selectList(any())).thenReturn(List.of(page));
@@ -122,7 +127,7 @@ class MenuServiceTests {
         selectedFeature.setId(501L);
         selectedFeature.setAppId(31L);
         when(featureMapper.selectById(501L)).thenReturn(selectedFeature);
-        when(appMapper.selectList(any())).thenReturn(List.of(app));
+        when(appMapper.selectList(null)).thenReturn(List.of(app));
 
         MenuEntity group = menu(100L, 31L, 0L, MenuLevelEnum.CATEGORY, "平台结构", null);
         MenuEntity selectedPage = menu(101L, 31L, 100L, MenuLevelEnum.PAGE, "菜单管理", "/menu");
@@ -158,9 +163,9 @@ class MenuServiceTests {
         feature.setFeatureKey("sys/base/menu");
         feature.setDefaultName("菜单管理");
         feature.setDefaultSeq(10);
-        when(domainMapper.selectList(any())).thenReturn(List.of(domain));
-        when(appMapper.selectList(any())).thenReturn(List.of(app));
-        when(featureMapper.selectList(any())).thenReturn(List.of(feature));
+        when(domainMapper.selectList(null)).thenReturn(List.of(domain));
+        when(appMapper.selectList(null)).thenReturn(List.of(app));
+        when(featureMapper.selectList(null)).thenReturn(List.of(feature));
 
         List<MenuCatalogNodeVO> result = service.catalog();
 

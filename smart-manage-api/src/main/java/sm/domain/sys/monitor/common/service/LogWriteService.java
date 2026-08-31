@@ -9,9 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import sm.domain.sys.monitor.loginlog.constant.LoginEventType;
 import sm.domain.sys.monitor.loginlog.model.entity.LoginLogEntity;
-import sm.domain.sys.monitor.loginlog.mapper.LoginLogMapper;
+import sm.domain.sys.monitor.loginlog.service.LoginLogPersistenceService;
 import sm.domain.sys.monitor.operatelog.model.entity.OperateLogEntity;
-import sm.domain.sys.monitor.operatelog.mapper.OperateLogMapper;
+import sm.domain.sys.monitor.operatelog.service.OperateLogPersistenceService;
 import sm.system.aop.log.OperateLogPayload;
 import sm.system.aop.log.OperateLogWriter;
 import sm.system.util.TraceIdUtil;
@@ -27,8 +27,8 @@ import java.time.LocalDateTime;
 @Slf4j
 @RequiredArgsConstructor
 public class LogWriteService implements OperateLogWriter {
-    private final LoginLogMapper loginLogMapper;
-    private final OperateLogMapper operateLogMapper;
+    private final LoginLogPersistenceService loginLogPersistenceService;
+    private final OperateLogPersistenceService operateLogPersistenceService;
     @Resource
     @Qualifier("logTaskExecutor")
     private ThreadPoolTaskExecutor logTaskExecutor;
@@ -52,7 +52,7 @@ public class LogWriteService implements OperateLogWriter {
         e.setTraceId(truncateColumn(e.getTraceId(), 64));
         e.setGrantId(truncateColumn(e.getGrantId(), 64));
         e.setGrantReason(truncateColumn(e.getGrantReason(), 500));
-        runAsync(() -> loginLogMapper.insert(e));
+        runAsync(() -> loginLogPersistenceService.write(e));
     }
 
     /**
@@ -71,7 +71,7 @@ public class LogWriteService implements OperateLogWriter {
         entity.setMethodName(truncateColumn(entity.getMethodName(), 128));
         entity.setUsername(truncateColumn(entity.getUsername(), 128));
         entity.setTraceId(truncateColumn(entity.getTraceId(), 64));
-        runAsync(() -> operateLogMapper.insert(entity));
+        runAsync(() -> operateLogPersistenceService.write(entity));
     }
 
     /**

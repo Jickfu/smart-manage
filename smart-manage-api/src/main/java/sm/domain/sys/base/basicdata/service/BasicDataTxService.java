@@ -14,7 +14,7 @@ import sm.domain.sys.base.basicdata.model.form.BasicDataCategorySaveForm;
 import sm.domain.sys.base.basicdata.model.form.BasicDataDeleteForm;
 import sm.domain.sys.base.basicdata.model.form.BasicDataItemSaveForm;
 import sm.domain.sys.base.basicdata.model.vo.BasicDataOptionVO;
-import sm.domain.sys.base.domain.mapper.DomainMapper;
+import sm.domain.sys.base.domain.service.DomainReferenceService;
 import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.system.exception.BizException;
 import sm.system.helper.CacheHelper;
@@ -41,15 +41,13 @@ class BasicDataTxService {
 
     private final BasicDataCategoryMapper categoryMapper;
     private final BasicDataItemMapper itemMapper;
-    private final DomainMapper domainMapper;
+    private final DomainReferenceService domainReferenceService;
     private final CacheHelper cacheHelper;
     private final NumberGeneratorAccessor numberGeneratorAccessor;
 
     public Long saveCategory(BasicDataCategorySaveForm form) {
         normalizeCategory(form);
-        if (domainMapper.selectById(form.getDomainId()) == null) {
-            throw new BizException(ResultEnum.NOT_FOUND, "所属领域不存在");
-        }
+        domainReferenceService.require(form.getDomainId());
         BasicDataCategoryEntity entity;
         String oldNumber = null;
         if (form.getId() == null) {

@@ -148,7 +148,18 @@ const EmailAccountEditPage = (props: PageComponentProps) => {
     <EditPage
       access={accountAccess}
       title="发信账号"
-      fields={basicFields}
+      sections={[
+        {
+          key: 'basic',
+          label: '基本信息',
+          content: (editable) => <EditFormFields fields={basicFields} editable={editable} />,
+        },
+        {
+          key: 'email-config',
+          label: '邮箱配置',
+          content: (editable) => <EditFormFields fields={emailFields} editable={editable} />,
+        },
+      ]}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
@@ -158,8 +169,6 @@ const EmailAccountEditPage = (props: PageComponentProps) => {
       onSave={async (values) => {
         await save.mutateAsync(values);
       }}
-      detailLabel="邮箱配置"
-      detailContent={(editable) => <EditFormFields fields={emailFields} editable={editable} />}
       saving={save.isPending}
       onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
     />

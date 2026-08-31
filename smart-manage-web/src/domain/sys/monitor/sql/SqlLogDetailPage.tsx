@@ -1,6 +1,7 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useQuery } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
+import { editFormSection } from '@/domain/common/page/editPageSection';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -40,7 +41,7 @@ export default function SqlLogDetailPage(props: PageComponentProps) {
   return (
     <EditPage
       title="SQL 执行记录"
-      fields={fields}
+      sections={[editFormSection('basic', '基本信息', fields)]}
       initialValues={query.data ? { ...query.data } : {}}
       operationType={OperationType.VIEW}
       loading={query.isLoading}

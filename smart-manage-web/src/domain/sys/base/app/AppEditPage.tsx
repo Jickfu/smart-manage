@@ -5,6 +5,7 @@ import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import type { EditField } from '@/domain/common/page/EditPage';
 import EditPage from '@/domain/common/page/EditPage';
+import { editFormSection } from '@/domain/common/page/editPageSection';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { OperationType } from '@/domain/common/page/types';
 import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
@@ -136,7 +137,7 @@ const AppEditPage = (props: PageComponentProps) => {
     <EditPage
       access={appAccess}
       title="应用"
-      fields={fields}
+      sections={[editFormSection('basic', '基本信息', fields)]}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}

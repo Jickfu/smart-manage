@@ -45,7 +45,7 @@ public class SaTokenConfig {
 	public SaServletFilter getSaServletFilter() {
 		return new SaServletFilter()
 				// 拦截所有，放行ico
-				.addInclude("/**").addExclude("/favicon.ico")
+				.addInclude("/**").addExclude("/favicon.ico", "/openapi/**")
 				// 认证函数: 每次请求执行
 				.setAuth(obj -> {
 					SaRouter.match("/**")

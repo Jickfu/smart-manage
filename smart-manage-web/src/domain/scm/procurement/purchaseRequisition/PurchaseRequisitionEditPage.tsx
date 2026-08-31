@@ -6,6 +6,9 @@ import type { FormListFieldData, FormListOperation } from 'antd/es/form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
 import type { EditField } from '@/domain/common/page/EditPage';
+import { EditFormFields } from '@/domain/common/page/EditFormFields';
+import { BusinessAttachmentPanel } from '@/domain/common/attachment/BusinessAttachmentPanel';
+import { useEditAttachments } from '@/domain/common/page/useEditAttachments';
 import {
   getDatePickerValueProps,
   normalizeDatePickerValue,
@@ -78,6 +81,7 @@ function isDetail(
 
 const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
   const [selectedEntryKeys, setSelectedEntryKeys] = useState<Key[]>([]);
+  const [attachmentRevision, setAttachmentRevision] = useState(0);
   const entryOperationsRef = useRef<FormListOperation | null>(null);
   const entryIndexByKeyRef = useRef(new Map<Key, number>());
   const { appNumber, tabKey, billId, operationType } = props;
@@ -95,6 +99,13 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
   });
   const source = sourceQuery.data;
   const detail = source && isDetail(source) ? source : undefined;
+  const attachmentController = useEditAttachments(
+    {
+      resourceType: ATTACHMENT_RESOURCE_TYPE,
+      initialAttachments: source?.attachments,
+    },
+    () => setAttachmentRevision((revision) => revision + 1),
+  );
   const initialValues = useMemo(
     () =>
       source
@@ -296,23 +307,43 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
     <EditPage
       access={purchaseRequisitionAccess}
       title="采购申请"
-      fields={fields}
+      sections={[
+        {
+          key: 'basic',
+          label: '基本信息',
+          content: (editable) => <EditFormFields fields={fields} editable={editable} />,
+        },
+        {
+          key: 'entries',
+          label: '明细信息',
+          content: renderEntries,
+          extra: renderEntryActions,
+        },
+        {
+          key: 'attachments',
+          label: '附件',
+          content: (editable) => (
+            <BusinessAttachmentPanel
+              resourceType={ATTACHMENT_RESOURCE_TYPE}
+              attachments={attachmentController.attachments}
+              editable={editable}
+              onChange={attachmentController.update}
+            />
+          ),
+        },
+      ]}
       initialValues={initialValues}
       billStatus={source?.billStatus as BillStatus | undefined}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
+      dirtyRevision={attachmentRevision}
+      transformValues={attachmentController.withValues}
       loading={sourceQuery.isLoading}
       error={sourceQuery.error as Error | null}
       onRetry={() => sourceQuery.refetch()}
       onSave={saveMutation.mutateAsync}
       onSubmit={submitMutation.mutateAsync}
       saving={saveMutation.isPending || submitMutation.isPending}
-      detailContent={renderEntries}
-      detailExtra={renderEntryActions}
-      attachmentResource={{
-        resourceType: ATTACHMENT_RESOURCE_TYPE,
-        initialAttachments: source?.attachments,
-      }}
       onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
     />
   );

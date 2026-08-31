@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
+import { editFormSection } from '@/domain/common/page/editPageSection';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -53,7 +54,7 @@ const ExecutionDetailPage = (props: PageComponentProps) => {
   return (
     <EditPage
       title="执行记录"
-      fields={fields}
+      sections={[editFormSection('basic', '基本信息', fields)]}
       initialValues={initialValues}
       operationType={OperationType.VIEW}
       loading={detailQuery.isLoading}

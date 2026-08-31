@@ -23,6 +23,9 @@ public class BrowserRequestSecurity {
     /** 所有非安全方法都必须来自配置的可信前端来源，包括登录前公开接口。 */
     public void validateOrigin() {
         HttpServletRequest request = ServletUtil.getRequest();
+        if (isOpenApiRequest(request)) {
+            return;
+        }
         if (SAFE_METHODS.contains(request.getMethod())) {
             return;
         }
@@ -35,6 +38,9 @@ public class BrowserRequestSecurity {
     /** 已认证的非安全方法在 Origin 校验之外还必须提交会话绑定的 CSRF Token。 */
     public void validateCsrfToken() {
         HttpServletRequest request = ServletUtil.getRequest();
+        if (isOpenApiRequest(request)) {
+            return;
+        }
         if (!SAFE_METHODS.contains(request.getMethod())) {
             csrfTokenManager.validateCurrentToken(request.getHeader(CsrfTokenManager.HEADER_NAME));
         }
@@ -44,5 +50,12 @@ public class BrowserRequestSecurity {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(corsProperties.allowedOrigins());
         return configuration.checkOrigin(origin) != null;
+    }
+
+    private boolean isOpenApiRequest(HttpServletRequest request) {
+        String contextPath = request.getContextPath();
+        String requestUri = request.getRequestURI();
+        String path = requestUri.substring(Math.min(contextPath.length(), requestUri.length()));
+        return path.equals("/openapi") || path.startsWith("/openapi/");
     }
 }

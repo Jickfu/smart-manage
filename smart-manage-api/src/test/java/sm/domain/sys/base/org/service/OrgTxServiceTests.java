@@ -112,7 +112,9 @@ class OrgTxServiceTests {
 		when(userMapper.selectByIds(List.of(10L))).thenReturn(List.of(user));
 
 		BizException exception = assertThrows(BizException.class,
-				() -> new OrgTxService(mapper, assignmentMapper, userMapper)
+				() -> new OrgTxService(mapper,
+						new sm.domain.sys.base.user.service.UserAssignmentReferenceService(
+								assignmentMapper, userMapper))
 						.updateEnabled(List.of(1L), false));
 
 		assertEquals(ResultEnum.BILL_STATUS_ERROR.getCode(), exception.getCode());
@@ -134,6 +136,8 @@ class OrgTxServiceTests {
     }
 
 	private static OrgTxService txService(OrgMapper mapper) {
-		return new OrgTxService(mapper, mock(UserAssignmentMapper.class), mock(UserMapper.class));
+		return new OrgTxService(mapper,
+				new sm.domain.sys.base.user.service.UserAssignmentReferenceService(
+						mock(UserAssignmentMapper.class), mock(UserMapper.class)));
 	}
 }

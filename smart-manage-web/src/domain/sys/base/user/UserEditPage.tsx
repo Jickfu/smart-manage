@@ -148,7 +148,128 @@ const UserEditPage = (props: PageComponentProps) => {
     <EditPage
       access={selfMode ? undefined : userAccess}
       title={selfMode ? '个人信息' : '用户'}
-      fields={[]}
+      sections={[
+        {
+          key: 'basic',
+          label: '基本信息',
+          content: (editable) =>
+            selfMode ? (
+              <FormFieldGrid>
+                <FormFieldCell>
+                  <Form.Item className="sm-edit-field-content" name="username" label="用户名">
+                    <Input variant="underlined" disabled />
+                  </Form.Item>
+                </FormFieldCell>
+                <FormFieldCell>
+                  <Form.Item className="sm-edit-field-content" name="number" label="工号">
+                    <Input variant="underlined" disabled />
+                  </Form.Item>
+                </FormFieldCell>
+                <FormFieldCell>
+                  <Form.Item
+                    className="sm-edit-field-content"
+                    name="name"
+                    label="姓名"
+                    rules={[{ required: true, message: '姓名不能为空' }]}
+                  >
+                    <Input variant="underlined" disabled={!editable} maxLength={50} />
+                  </Form.Item>
+                </FormFieldCell>
+                <FormFieldCell>
+                  <Form.Item className="sm-edit-field-content" name="gender" label="性别">
+                    <Select
+                      variant="underlined"
+                      disabled={!editable}
+                      allowClear
+                      options={[
+                        { value: 'MALE', label: '男' },
+                        { value: 'FEMALE', label: '女' },
+                      ]}
+                    />
+                  </Form.Item>
+                </FormFieldCell>
+                <FormFieldCell>
+                  <Form.Item className="sm-edit-field-content" name="birthday" label="生日">
+                    <DatePicker
+                      className="sm-edit-control-full"
+                      variant="underlined"
+                      disabled={!editable}
+                    />
+                  </Form.Item>
+                </FormFieldCell>
+                {[
+                  ['companyName', '公司'],
+                  ['currentOrgName', '部门'],
+                  ['phone', '手机'],
+                  ['email', '邮箱'],
+                ].map(([name, label]) => (
+                  <FormFieldCell key={name}>
+                    <Form.Item className="sm-edit-field-content" name={name} label={label}>
+                      <Input variant="underlined" disabled />
+                    </Form.Item>
+                  </FormFieldCell>
+                ))}
+              </FormFieldGrid>
+            ) : (
+              <UserProfileFields
+                editable={editable}
+                isAddNew={isAddNew}
+                canReadSensitive={canReadSensitive}
+              />
+            ),
+        },
+        {
+          key: 'assignments',
+          label: '部门信息',
+          content: (editable) =>
+            selfMode ? (
+              <Table
+                size="small"
+                pagination={false}
+                rowKey="id"
+                dataSource={currentUser?.assignments ?? []}
+                columns={[
+                  { title: '部门', render: (_, assignment) => assignment.org.name },
+                  { title: '部门长名称', dataIndex: 'orgNamePath' },
+                  {
+                    title: '岗位',
+                    dataIndex: 'position',
+                    width: 160,
+                    render: (value) => value || '-',
+                  },
+                  {
+                    title: '主职',
+                    dataIndex: 'isPrimary',
+                    width: 80,
+                    render: (value) => (value ? '是' : '否'),
+                  },
+                ]}
+              />
+            ) : (
+              <UserAssignmentTable
+                ref={assignmentTableRef}
+                editable={editable}
+                onSelectionChange={setHasSelectedAssignments}
+              />
+            ),
+          extra: (editable) =>
+            !selfMode && editable ? (
+              <div className="sm-user-assignment-actions">
+                <Button type="link" onClick={() => assignmentTableRef.current?.add()}>
+                  新增
+                </Button>
+                <Button
+                  type="link"
+                  danger
+                  disabled={!hasSelectedAssignments}
+                  onClick={() => assignmentTableRef.current?.removeSelected()}
+                >
+                  删除
+                </Button>
+              </div>
+            ) : undefined,
+        },
+      ]}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
@@ -157,117 +278,6 @@ const UserEditPage = (props: PageComponentProps) => {
       onRetry={() => detailQuery.refetch()}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
-      basicContent={(editable) =>
-        selfMode ? (
-          <FormFieldGrid>
-            <FormFieldCell>
-              <Form.Item className="sm-edit-field-content" name="username" label="用户名">
-                <Input variant="underlined" disabled />
-              </Form.Item>
-            </FormFieldCell>
-            <FormFieldCell>
-              <Form.Item className="sm-edit-field-content" name="number" label="工号">
-                <Input variant="underlined" disabled />
-              </Form.Item>
-            </FormFieldCell>
-            <FormFieldCell>
-              <Form.Item
-                className="sm-edit-field-content"
-                name="name"
-                label="姓名"
-                rules={[{ required: true, message: '姓名不能为空' }]}
-              >
-                <Input variant="underlined" disabled={!editable} maxLength={50} />
-              </Form.Item>
-            </FormFieldCell>
-            <FormFieldCell>
-              <Form.Item className="sm-edit-field-content" name="gender" label="性别">
-                <Select
-                  variant="underlined"
-                  disabled={!editable}
-                  allowClear
-                  options={[
-                    { value: 'MALE', label: '男' },
-                    { value: 'FEMALE', label: '女' },
-                  ]}
-                />
-              </Form.Item>
-            </FormFieldCell>
-            <FormFieldCell>
-              <Form.Item className="sm-edit-field-content" name="birthday" label="生日">
-                <DatePicker
-                  className="sm-edit-control-full"
-                  variant="underlined"
-                  disabled={!editable}
-                />
-              </Form.Item>
-            </FormFieldCell>
-            {[
-              ['companyName', '公司'],
-              ['currentOrgName', '部门'],
-              ['phone', '手机'],
-              ['email', '邮箱'],
-            ].map(([name, label]) => (
-              <FormFieldCell key={name}>
-                <Form.Item className="sm-edit-field-content" name={name} label={label}>
-                  <Input variant="underlined" disabled />
-                </Form.Item>
-              </FormFieldCell>
-            ))}
-          </FormFieldGrid>
-        ) : (
-          <UserProfileFields
-            editable={editable}
-            isAddNew={isAddNew}
-            canReadSensitive={canReadSensitive}
-          />
-        )
-      }
-      detailLabel="部门信息"
-      detailContent={(editable) =>
-        selfMode ? (
-          <Table
-            size="small"
-            pagination={false}
-            rowKey="id"
-            dataSource={currentUser?.assignments ?? []}
-            columns={[
-              { title: '部门', render: (_, assignment) => assignment.org.name },
-              { title: '部门长名称', dataIndex: 'orgNamePath' },
-              { title: '岗位', dataIndex: 'position', width: 160, render: (value) => value || '-' },
-              {
-                title: '主职',
-                dataIndex: 'isPrimary',
-                width: 80,
-                render: (value) => (value ? '是' : '否'),
-              },
-            ]}
-          />
-        ) : (
-          <UserAssignmentTable
-            ref={assignmentTableRef}
-            editable={editable}
-            onSelectionChange={setHasSelectedAssignments}
-          />
-        )
-      }
-      detailExtra={(editable) =>
-        !selfMode && editable ? (
-          <div className="sm-user-assignment-actions">
-            <Button type="link" onClick={() => assignmentTableRef.current?.add()}>
-              新增
-            </Button>
-            <Button
-              type="link"
-              danger
-              disabled={!hasSelectedAssignments}
-              onClick={() => assignmentTableRef.current?.removeSelected()}
-            >
-              删除
-            </Button>
-          </div>
-        ) : undefined
-      }
       onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
     />
   );

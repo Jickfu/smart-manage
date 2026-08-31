@@ -10,8 +10,8 @@ import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
-import sm.domain.sys.base.org.mapper.OrgMapper;
-import sm.domain.sys.base.org.model.entity.OrgEntity;
+import sm.domain.sys.base.org.contract.OrgReference;
+import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
 import sm.domain.sys.base.user.model.form.UserAssignmentForm;
 import sm.domain.sys.base.user.model.entity.UserEntity;
@@ -47,7 +47,7 @@ class UserTxService {
     private final UserMapper mapper;
     private final UserRoleMapper userRoleMapper;
     private final UserAssignmentMapper userAssignmentMapper;
-    private final OrgMapper orgMapper;
+    private final OrgReferenceReader orgReferenceReader;
     private final CurrentUserContext currentUserContext;
 
     /** 新增/编辑用户 */
@@ -326,10 +326,9 @@ class UserTxService {
 		if (!assignedUserIds.containsAll(userIds)) {
 			throw new BizException(ResultEnum.BILL_STATUS_ERROR, "启用用户前必须配置主职组织");
 		}
-		List<OrgEntity> organizations = orgMapper.selectByIds(organizationIds);
+		var organizations = orgReferenceReader.findByIds(organizationIds);
 		if (organizations.size() != organizationIds.size()
-				|| organizations.stream().anyMatch(org -> !Boolean.TRUE.equals(org.getEnabled())
-						|| Boolean.TRUE.equals(org.getArchived()))) {
+				|| organizations.values().stream().anyMatch(org -> !org.enabled() || org.archived())) {
 			throw new BizException(ResultEnum.BILL_STATUS_ERROR, "用户主职组织不存在或不可用");
 		}
 	}
@@ -413,9 +412,9 @@ class UserTxService {
 			throw new BizException(ResultEnum.PARAM_ERROR, "存在任职时必须且只能设置一个主职");
 		}
 		if (!orgIds.isEmpty()) {
-			List<OrgEntity> organizations = orgMapper.selectByIds(orgIds);
+			var organizations = orgReferenceReader.findByIds(orgIds);
 			if (organizations.size() != orgIds.size()
-					|| organizations.stream().anyMatch(org -> !Boolean.TRUE.equals(org.getEnabled()) || Boolean.TRUE.equals(org.getArchived()))) {
+					|| organizations.values().stream().anyMatch(org -> !org.enabled() || org.archived())) {
 				throw new BizException(ResultEnum.PARAM_ERROR, "任职部门不存在或不可用");
 			}
 		}

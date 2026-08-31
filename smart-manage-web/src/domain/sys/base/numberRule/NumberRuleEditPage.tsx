@@ -6,6 +6,7 @@ import type { ColumnsType } from 'antd/es/table';
 import type { FormListOperation } from 'antd/es/form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
+import { editFormSection } from '@/domain/common/page/editPageSection';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
@@ -553,30 +554,34 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
     <EditPage
       access={numberRuleAccess}
       title="编号规则"
-      fields={fields}
-      detailLabel="编号格式"
-      detailContent={(editable) => (
-        <SegmentEditor
-          editable={editable}
-          selectedRowKeys={selectedSegmentKeys}
-          onSelectedRowKeysChange={setSelectedSegmentKeys}
-          onSelectedIndexChange={setSelectedSegmentIndex}
-          operationsRef={segmentOperationsRef}
-          indexByKeyRef={segmentIndexByKeyRef}
-        />
-      )}
-      detailExtra={(editable) =>
-        editable ? (
-          <SegmentActions
-            selectedRowKeys={selectedSegmentKeys}
-            selectedIndex={selectedSegmentIndex}
-            onSelectedRowKeysChange={setSelectedSegmentKeys}
-            onSelectedIndexChange={setSelectedSegmentIndex}
-            operationsRef={segmentOperationsRef}
-            indexByKeyRef={segmentIndexByKeyRef}
-          />
-        ) : null
-      }
+      sections={[
+        editFormSection('basic', '基本信息', fields),
+        {
+          key: 'segments',
+          label: '编号格式',
+          content: (editable) => (
+            <SegmentEditor
+              editable={editable}
+              selectedRowKeys={selectedSegmentKeys}
+              onSelectedRowKeysChange={setSelectedSegmentKeys}
+              onSelectedIndexChange={setSelectedSegmentIndex}
+              operationsRef={segmentOperationsRef}
+              indexByKeyRef={segmentIndexByKeyRef}
+            />
+          ),
+          extra: (editable) =>
+            editable ? (
+              <SegmentActions
+                selectedRowKeys={selectedSegmentKeys}
+                selectedIndex={selectedSegmentIndex}
+                onSelectedRowKeysChange={setSelectedSegmentKeys}
+                onSelectedIndexChange={setSelectedSegmentIndex}
+                operationsRef={segmentOperationsRef}
+                indexByKeyRef={segmentIndexByKeyRef}
+              />
+            ) : null,
+        },
+      ]}
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}

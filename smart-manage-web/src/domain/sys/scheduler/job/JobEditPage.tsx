@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import EditPage from '@/domain/common/page/EditPage';
+import { editFormSection } from '@/domain/common/page/editPageSection';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
 import { OperationType } from '@/domain/common/page/types';
@@ -217,7 +218,7 @@ const JobEditPage = (props: PageComponentProps) => {
     <EditPage
       title="定时任务"
       access={jobAccess}
-      fields={fields}
+      sections={[editFormSection('basic', '基本信息', fields)]}
       initialValues={initialValues}
       operationType={props.operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber: props.appNumber, tabKey: props.tabKey }}

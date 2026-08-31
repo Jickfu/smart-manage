@@ -22,8 +22,8 @@ import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
-import sm.domain.sys.base.org.mapper.OrgMapper;
-import sm.domain.sys.base.org.model.entity.OrgEntity;
+import sm.domain.sys.base.org.contract.OrgReference;
+import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
 import sm.domain.sys.base.user.model.vo.UserAssignmentVO;
 import sm.domain.sys.base.common.model.vo.ReferenceVO;
@@ -60,7 +60,7 @@ public class UserService {
 	private final UserMapper mapper;
 	private final UserRoleMapper userRoleMapper;
 	private final UserAssignmentMapper userAssignmentMapper;
-	private final OrgMapper orgMapper;
+	private final OrgReferenceReader orgReferenceReader;
 	private final AttachmentService attachmentService;
 	private final UserTxService txService;
 	private final AuthorizationStateHelper authorizationStateHelper;
@@ -147,15 +147,12 @@ public class UserService {
 
 	private List<Long> resolveScopedOrgIds(UserListForm form) {
 		if (Boolean.TRUE.equals(form.getUnassigned()) || form.getOrgId() == null) return null;
-		OrgEntity selected = orgMapper.selectById(form.getOrgId());
-		if (selected == null) throw new BizException(ResultEnum.NOT_FOUND, "组织不存在");
-		if (!Boolean.TRUE.equals(form.getIncludeDescendants())) return List.of(selected.getId());
-		String prefix = selected.getNumberPath() + "/";
-		return orgMapper.selectList(new LambdaQueryWrapper<OrgEntity>()
-				.select(OrgEntity::getId)
-				.and(scope -> scope.eq(OrgEntity::getId, selected.getId())
-						.or().likeRight(OrgEntity::getNumberPath, prefix)))
-				.stream().map(OrgEntity::getId).toList();
+		OrgReference selected = orgReferenceReader.require(form.getOrgId());
+		if (!Boolean.TRUE.equals(form.getIncludeDescendants())) return List.of(selected.id());
+		String prefix = selected.numberPath() + "/";
+		return orgReferenceReader.findAll().stream()
+				.filter(org -> org.id().equals(selected.id()) || (org.numberPath() != null && org.numberPath().startsWith(prefix)))
+				.map(OrgReference::id).toList();
 	}
 
 	private void assembleAssignments(List<UserListVO> users, List<Long> userIds, List<Long> scopedOrgIds) {
@@ -172,18 +169,15 @@ public class UserService {
 				.orderByAsc(UserAssignmentEntity::getOrgId);
 		List<UserAssignmentEntity> assignments = userAssignmentMapper.selectList(query);
 		Set<Long> orgIds = assignments.stream().map(UserAssignmentEntity::getOrgId).collect(Collectors.toSet());
-		Map<Long, OrgEntity> orgById = new HashMap<>();
-		if (!orgIds.isEmpty()) {
-			for (OrgEntity org : orgMapper.selectByIds(orgIds)) orgById.put(org.getId(), org);
-		}
+		Map<Long, OrgReference> orgById = orgReferenceReader.findByIds(orgIds);
 		Map<Long, List<UserAssignmentVO>> result = new HashMap<>();
 		for (UserAssignmentEntity assignment : assignments) {
-			OrgEntity org = orgById.get(assignment.getOrgId());
+			OrgReference org = orgById.get(assignment.getOrgId());
 			if (org == null) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "用户任职关联了无效组织");
 			UserAssignmentVO vo = new UserAssignmentVO();
 			vo.setId(assignment.getId());
-			vo.setOrg(new ReferenceVO(org.getId(), org.getNumber(), org.getName()));
-			vo.setOrgNamePath(org.getNamePath());
+			vo.setOrg(new ReferenceVO(org.id(), org.number(), org.name()));
+			vo.setOrgNamePath(org.namePath());
 			vo.setPosition(assignment.getPosition());
 			vo.setIsOrgLeader(assignment.getIsOrgLeader());
 			vo.setIsPrimary(assignment.getIsPrimary());

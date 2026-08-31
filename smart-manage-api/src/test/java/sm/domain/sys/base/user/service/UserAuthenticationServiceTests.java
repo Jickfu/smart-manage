@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.org.mapper.OrgMapper;
+import sm.domain.sys.base.org.service.OrgReferenceService;
 import sm.domain.sys.base.org.model.entity.OrgEntity;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.user.mapper.UserMapper;
@@ -36,11 +37,13 @@ class UserAuthenticationServiceTests {
         OrgMapper orgMapper = mock(OrgMapper.class);
         OrgEntity organization = new OrgEntity();
         organization.setId(20L);
+        organization.setOrgType(sm.domain.sys.base.org.model.OrgType.DEPARTMENT);
         organization.setEnabled(true);
         organization.setArchived(false);
         when(orgMapper.selectById(20L)).thenReturn(organization);
         UserAuthenticationService service = new UserAuthenticationService(mapper, assignmentMapper,
-                orgMapper, mock(UserTxService.class), mock(AuthorizationStateHelper.class));
+                new OrgReferenceService(orgMapper), mock(UserTxService.class),
+                mock(AuthorizationStateHelper.class));
 
         try (MockedStatic<Argon2Helper> helper = mockStatic(Argon2Helper.class)) {
             helper.when(() -> Argon2Helper.verify("encoded", "password")).thenReturn(true);
@@ -59,7 +62,7 @@ class UserAuthenticationServiceTests {
         user.setEnabled(true);
         when(mapper.selectById(1L)).thenReturn(user);
         UserAuthenticationService service = new UserAuthenticationService(mapper,
-                mock(UserAssignmentMapper.class), mock(OrgMapper.class),
+                mock(UserAssignmentMapper.class), new OrgReferenceService(mock(OrgMapper.class)),
                 mock(UserTxService.class), mock(AuthorizationStateHelper.class));
 
         assertFalse(service.authenticateTemporaryLogin(1L, "administrator").successful());

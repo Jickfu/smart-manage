@@ -4,8 +4,7 @@ import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.role.mapper.RoleMapper;
 import sm.domain.sys.base.role.mapper.RolePermissionMapper;
-import sm.domain.sys.base.datascope.mapper.RoleDataScopeMapper;
-import sm.domain.sys.base.datascope.mapper.RoleDataScopeOrgMapper;
+import sm.domain.sys.base.datascope.service.DataScopeConfigurationService;
 import sm.system.resource.BusinessResourceRegistry;
 import sm.domain.sys.base.role.model.entity.RoleEntity;
 import sm.domain.sys.base.role.model.form.RoleDataScopeAssignForm;
@@ -45,7 +44,7 @@ class RoleServiceTests {
                 mock(RolePermissionMapper.class),
                 mock(RoleTxService.class),
                 mock(AuthorizationStateHelper.class),
-                new RoleConverterImpl(), mock(RoleDataScopeMapper.class), mock(RoleDataScopeOrgMapper.class),
+                new RoleConverterImpl(), mock(DataScopeConfigurationService.class),
                 mock(BusinessResourceRegistry.class));
 
         RoleSelectForm form = new RoleSelectForm();
@@ -68,7 +67,7 @@ class RoleServiceTests {
                 mock(RolePermissionMapper.class),
                 mock(RoleTxService.class),
                 mock(AuthorizationStateHelper.class),
-                new RoleConverterImpl(), mock(RoleDataScopeMapper.class), mock(RoleDataScopeOrgMapper.class),
+                new RoleConverterImpl(), mock(DataScopeConfigurationService.class),
                 mock(BusinessResourceRegistry.class));
 
         assertEquals(List.of("operator", "reviewer"), service.getUserRoleNumbers(10L, 20L));
@@ -110,7 +109,7 @@ class RoleServiceTests {
                 mock(RolePermissionMapper.class),
                 txService,
                 mock(AuthorizationStateHelper.class),
-                new RoleConverterImpl(), mock(RoleDataScopeMapper.class), mock(RoleDataScopeOrgMapper.class),
+                new RoleConverterImpl(), mock(DataScopeConfigurationService.class),
                 resourceRegistry);
     }
 

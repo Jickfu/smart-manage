@@ -23,8 +23,8 @@ import sm.system.resource.BusinessResourceAction;
 import sm.system.resource.BusinessResourceRegistry;
 import sm.system.util.TransactionUtil;
 import sm.domain.sys.base.attachmentconfig.service.AttachmentConfigService;
-import sm.domain.sys.base.user.mapper.UserMapper;
-import sm.domain.sys.base.user.model.entity.UserEntity;
+import sm.domain.sys.base.user.contract.UserReference;
+import sm.domain.sys.base.user.contract.UserReferenceReader;
 
 import java.io.IOException;
 import java.security.MessageDigest;
@@ -57,7 +57,7 @@ public class AttachmentService implements AttachmentGateway {
     private final BusinessResourceRegistry resourceRegistry;
     private final CurrentOperatorProvider currentOperatorProvider;
     private final AttachmentConfigService attachmentConfigService;
-    private final UserMapper userMapper;
+    private final UserReferenceReader userReferenceReader;
 
     /** 上传附件：传 bizType 时存入临时目录（需 promote），否则直接存 sys 系统目录 */
     @BizLog(value = "上传附件", recordRequest = false)
@@ -344,11 +344,10 @@ public class AttachmentService implements AttachmentGateway {
         if (uploaderIds.isEmpty()) {
             return;
         }
-        Map<Long, UserEntity> users = userMapper.selectBatchIds(uploaderIds).stream()
-                .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+        Map<Long, UserReference> users = userReferenceReader.findByIds(uploaderIds);
         for (AttachmentReference attachment : attachments) {
-            UserEntity uploader = users.get(attachment.getUploaderId());
-            attachment.setUploaderName(uploader == null ? null : uploader.getName());
+            UserReference uploader = users.get(attachment.getUploaderId());
+            attachment.setUploaderName(uploader == null ? null : uploader.name());
         }
     }
 

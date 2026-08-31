@@ -43,7 +43,8 @@ class AttachmentServiceStorageConsistencyTests {
     private final AttachmentConfigService attachmentConfigService = mock(AttachmentConfigService.class);
     private final AttachmentService service = new AttachmentService(
             mapper, mock(BizAttachmentMapper.class), storageFactory, txService, resourceRegistry,
-            mock(CurrentOperatorProvider.class), attachmentConfigService, mock(UserMapper.class));
+            mock(CurrentOperatorProvider.class), attachmentConfigService,
+            new sm.domain.sys.base.user.service.UserReferenceService(mock(UserMapper.class)));
 
     @BeforeEach
     void setUp() {

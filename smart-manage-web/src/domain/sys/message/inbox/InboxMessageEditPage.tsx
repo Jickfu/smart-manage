@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
+import { editFormSection } from '@/domain/common/page/editPageSection';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
@@ -123,7 +124,7 @@ const InboxMessageEditPage = (props: PageComponentProps) => {
     <EditPage
       access={inboxBroadcastAccess}
       title="消息发布"
-      fields={fields}
+      sections={[editFormSection('basic', '基本信息', fields)]}
       initialValues={initialValues as Record<string, unknown>}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}

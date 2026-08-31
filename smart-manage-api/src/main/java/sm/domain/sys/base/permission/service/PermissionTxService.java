@@ -7,7 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.base.permission.model.entity.PermissionEntity;
 import sm.domain.sys.base.permission.model.form.PermissionSaveForm;
 import sm.domain.sys.base.permission.mapper.PermissionMapper;
-import sm.domain.sys.base.feature.mapper.FeatureMapper;
+import sm.domain.sys.base.feature.service.FeatureReferenceService;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -22,7 +22,7 @@ import sm.system.response.ResultEnum;
 @Transactional(rollbackFor = Exception.class)
 class PermissionTxService {
     private final PermissionMapper mapper;
-    private final FeatureMapper featureMapper;
+    private final FeatureReferenceService featureReferenceService;
 
     public Long save(PermissionSaveForm form) {
         PermissionEntity entity;
@@ -42,9 +42,7 @@ class PermissionTxService {
         }
         entity.setName(form.getName());
         entity.setNumber(form.getNumber());
-        if (featureMapper.selectById(form.getFeatureId()) == null) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "所属功能不存在");
-        }
+        featureReferenceService.require(form.getFeatureId());
         entity.setFeatureId(form.getFeatureId());
         entity.setAppId(null);
         if (form.getId() == null) {

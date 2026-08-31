@@ -1,6 +1,7 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
 import EditPage from '@/domain/common/page/EditPage';
+import { editFormSection } from '@/domain/common/page/editPageSection';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -102,7 +103,7 @@ const EmailComposePage = (props: PageComponentProps) => {
     <EditPage
       access={composeAccess}
       title="发送邮件"
-      fields={fields}
+      sections={[editFormSection('basic', '基本信息', fields)]}
       initialValues={{ toUsers: [], ccUsers: [], bccUsers: [] }}
       operationType={OperationType.EDIT}
       onSave={handleSend}

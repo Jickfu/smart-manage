@@ -5,8 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.common.model.vo.ReferenceVO;
-import sm.domain.sys.base.org.mapper.OrgMapper;
-import sm.domain.sys.base.org.model.entity.OrgEntity;
+import sm.domain.sys.base.org.contract.OrgReference;
+import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.permission.service.PermissionService;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.user.mapper.UserMapper;
@@ -39,7 +39,7 @@ public class UserAuthorizationService {
     private final UserMapper userMapper;
     private final UserRoleMapper userRoleMapper;
     private final UserAssignmentMapper userAssignmentMapper;
-    private final OrgMapper orgMapper;
+    private final OrgReferenceReader orgReferenceReader;
     private final UserTxService txService;
     private final PermissionService permissionService;
     private final AuthorizationStateHelper authorizationStateHelper;
@@ -93,16 +93,15 @@ public class UserAuthorizationService {
                         .orderByDesc(UserAssignmentEntity::getIsPrimary)
                         .orderByAsc(UserAssignmentEntity::getOrgId));
         Set<Long> orgIds = assignments.stream().map(UserAssignmentEntity::getOrgId).collect(Collectors.toSet());
-        Map<Long, OrgEntity> orgById = new HashMap<>();
-        if (!orgIds.isEmpty()) orgMapper.selectByIds(orgIds).forEach(org -> orgById.put(org.getId(), org));
+        Map<Long, OrgReference> orgById = orgReferenceReader.findByIds(orgIds);
         List<UserAssignmentVO> result = new ArrayList<>();
         for (UserAssignmentEntity assignment : assignments) {
-            OrgEntity org = orgById.get(assignment.getOrgId());
+            OrgReference org = orgById.get(assignment.getOrgId());
             if (org == null) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "用户任职关联了无效组织");
             UserAssignmentVO item = new UserAssignmentVO();
             item.setId(assignment.getId());
-            item.setOrg(new ReferenceVO(org.getId(), org.getNumber(), org.getName()));
-            item.setOrgNamePath(org.getNamePath());
+            item.setOrg(new ReferenceVO(org.id(), org.number(), org.name()));
+            item.setOrgNamePath(org.namePath());
             item.setPosition(assignment.getPosition());
             item.setIsOrgLeader(assignment.getIsOrgLeader());
             item.setIsPrimary(assignment.getIsPrimary());

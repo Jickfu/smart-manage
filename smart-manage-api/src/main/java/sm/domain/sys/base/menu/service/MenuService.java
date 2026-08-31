@@ -6,12 +6,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.app.model.entity.AppEntity;
-import sm.domain.sys.base.app.mapper.AppMapper;
+import sm.domain.sys.base.app.service.AppReferenceService;
 import sm.domain.sys.base.common.enums.MenuLevelEnum;
 import sm.system.security.context.CurrentUserContext;
-import sm.domain.sys.base.feature.mapper.FeatureMapper;
+import sm.domain.sys.base.feature.service.FeatureReferenceService;
 import sm.domain.sys.base.feature.model.entity.FeatureEntity;
-import sm.domain.sys.base.domain.mapper.DomainMapper;
+import sm.domain.sys.base.domain.service.DomainReferenceService;
 import sm.domain.sys.base.domain.model.entity.DomainEntity;
 import sm.domain.sys.base.menu.model.entity.MenuEntity;
 import sm.domain.sys.base.menu.model.form.MenuListForm;
@@ -20,7 +20,7 @@ import sm.domain.sys.base.menu.model.form.MenuSelectForm;
 import sm.domain.sys.base.menu.model.form.MenuTreeListForm;
 import sm.domain.sys.base.menu.model.vo.*;
 import sm.domain.sys.base.menu.mapper.MenuMapper;
-import sm.domain.sys.base.permission.mapper.PermissionMapper;
+import sm.domain.sys.base.permission.service.PermissionReferenceService;
 import sm.domain.sys.base.permission.model.entity.PermissionEntity;
 import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
@@ -59,10 +59,10 @@ public class MenuService {
 			"enabled", ListSqlQuery.bool("enabled", false));
 	private final CurrentUserContext currentUserContext;
 	private final MenuMapper mapper;
-	private final AppMapper appMapper;
-	private final DomainMapper domainMapper;
-	private final FeatureMapper featureMapper;
-	private final PermissionMapper permissionMapper;
+	private final AppReferenceService appReferenceService;
+	private final DomainReferenceService domainReferenceService;
+	private final FeatureReferenceService featureReferenceService;
+	private final PermissionReferenceService permissionReferenceService;
 	private final MenuTxService txService;
 	private final MenuConverter converter;
 
@@ -119,25 +119,18 @@ public class MenuService {
 	public List<MenuTreeVO> listTree(MenuTreeListForm form) {
 		FeatureEntity selectedFeature = null;
 		if (form.getFeatureId() != null) {
-			selectedFeature = featureMapper.selectById(form.getFeatureId());
-			if (selectedFeature == null) {
-				return List.of();
-			}
+			selectedFeature = featureReferenceService.require(form.getFeatureId());
 			if (form.getAppId() != null
 					&& !java.util.Objects.equals(form.getAppId(), selectedFeature.getAppId())) {
 				return List.of();
 			}
 		}
-		LambdaQueryWrapper<AppEntity> appWrapper = new LambdaQueryWrapper<AppEntity>()
-				.eq(selectedFeature != null, AppEntity::getId,
-						selectedFeature == null ? null : selectedFeature.getAppId())
-				.eq(selectedFeature == null && form.getAppId() != null,
-						AppEntity::getId, form.getAppId())
-				.eq(form.getAppId() == null && form.getDomainId() != null,
-						AppEntity::getDomainId, form.getDomainId())
-				.orderByAsc(AppEntity::getSeq)
-				.orderByAsc(AppEntity::getId);
-		List<AppEntity> apps = appMapper.selectList(appWrapper);
+		Long selectedAppId = selectedFeature == null ? form.getAppId() : selectedFeature.getAppId();
+		List<AppEntity> apps = appReferenceService.findAll().stream()
+				.filter(app -> selectedAppId == null || java.util.Objects.equals(app.getId(), selectedAppId))
+				.filter(app -> form.getAppId() != null || form.getDomainId() == null
+						|| java.util.Objects.equals(app.getDomainId(), form.getDomainId()))
+				.sorted(Comparator.comparing(AppEntity::getSeq).thenComparing(AppEntity::getId)).toList();
 		if (apps.isEmpty()) {
 			return List.of();
 		}
@@ -185,15 +178,14 @@ public class MenuService {
 
 	/** 菜单管理专用目录，避免页面额外依赖应用管理或功能管理权限。 */
 	public List<MenuCatalogNodeVO> catalog() {
-		List<DomainEntity> domains = domainMapper.selectList(new LambdaQueryWrapper<DomainEntity>()
-				.orderByAsc(DomainEntity::getSeq).orderByAsc(DomainEntity::getId));
-		List<AppEntity> applications = appMapper.selectList(new LambdaQueryWrapper<AppEntity>()
-				.orderByAsc(AppEntity::getDomainId).orderByAsc(AppEntity::getSeq)
-				.orderByAsc(AppEntity::getId));
-		List<FeatureEntity> features = new ArrayList<>(featureMapper.selectList(
-				new LambdaQueryWrapper<FeatureEntity>()
-						.orderByAsc(FeatureEntity::getAppId).orderByAsc(FeatureEntity::getDefaultSeq)
-						.orderByAsc(FeatureEntity::getId)));
+		List<DomainEntity> domains = domainReferenceService.findAll().stream()
+				.sorted(Comparator.comparing(DomainEntity::getSeq).thenComparing(DomainEntity::getId)).toList();
+		List<AppEntity> applications = appReferenceService.findAll().stream()
+				.sorted(Comparator.comparing(AppEntity::getDomainId).thenComparing(AppEntity::getSeq)
+						.thenComparing(AppEntity::getId)).toList();
+		List<FeatureEntity> features = new ArrayList<>(featureReferenceService.findAll().stream()
+				.sorted(Comparator.comparing(FeatureEntity::getAppId).thenComparing(FeatureEntity::getDefaultSeq)
+						.thenComparing(FeatureEntity::getId)).toList());
 
 		Map<Long, MenuCatalogNodeVO> domainNodes = new HashMap<>();
 		Map<Long, MenuCatalogNodeVO> applicationNodes = new HashMap<>();
@@ -432,9 +424,8 @@ public class MenuService {
 			empty.setRoutes(new ArrayList<>());
 			return empty;
 		}
-		AppEntity app = appMapper.selectOne(new LambdaQueryWrapper<AppEntity>()
-				.eq(AppEntity::getNumber, appNumber)
-				.eq(AppEntity::getEnabled, true));
+		AppEntity app = appReferenceService.findByNumber(appNumber);
+		if (app != null && !Boolean.TRUE.equals(app.getEnabled())) app = null;
 		Long appId = app == null ? null : app.getId();
 		if (appId == null) {
 			MenuVO empty = new MenuVO();
@@ -453,11 +444,11 @@ public class MenuService {
 			throw new BizException(ResultEnum.NOT_FOUND, "菜单不存在");
 		}
 		MenuDetailVO vo = converter.toDetailVO(entity);
-		AppEntity appEntity = appMapper.selectById(entity.getAppId());
+		AppEntity appEntity = appReferenceService.require(entity.getAppId());
 		if (appEntity != null) {
 			vo.setApp(toReferenceInfo(appEntity.getId(), appEntity.getNumber(), appEntity.getName()));
 		}
-		FeatureEntity featureEntity = featureMapper.selectById(entity.getFeatureId());
+		FeatureEntity featureEntity = entity.getFeatureId() == null ? null : featureReferenceService.require(entity.getFeatureId());
 		if (featureEntity != null) {
 			String featureName = featureEntity.getCustomName() == null || featureEntity.getCustomName().isBlank()
 					? featureEntity.getDefaultName() : featureEntity.getCustomName();
@@ -472,7 +463,7 @@ public class MenuService {
 			}
 		}
 		if (entity.getPermissionId() != null) {
-			PermissionEntity permissionEntity = permissionMapper.selectById(entity.getPermissionId());
+			PermissionEntity permissionEntity = permissionReferenceService.require(entity.getPermissionId());
 			if (permissionEntity != null) {
 				vo.setPermission(toReferenceInfo(
 						permissionEntity.getId(), permissionEntity.getNumber(), permissionEntity.getName()));

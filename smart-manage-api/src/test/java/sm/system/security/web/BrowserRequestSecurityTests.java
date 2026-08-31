@@ -71,6 +71,19 @@ class BrowserRequestSecurityTests {
         assertEquals(ResultEnum.CSRF_TOKEN_INVALID.getCode(), exception.getCode());
     }
 
+    @Test
+    void openApiWriteRequestUsesIndependentSecurityChain() {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "POST", "/smart-manage-api/openapi/sys/base/basic-data/v1/items/query");
+        request.setContextPath("/smart-manage-api");
+        bindRequest(request);
+
+        security.validateOrigin();
+        security.validateCsrfToken();
+
+        verifyNoInteractions(csrfTokenManager);
+    }
+
     private void bindRequest(MockHttpServletRequest request) {
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
     }

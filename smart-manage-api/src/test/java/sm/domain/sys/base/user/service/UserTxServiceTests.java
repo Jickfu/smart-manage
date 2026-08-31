@@ -8,6 +8,7 @@ import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.org.mapper.OrgMapper;
+import sm.domain.sys.base.org.service.OrgReferenceService;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserAssignmentForm;
@@ -41,7 +42,7 @@ class UserTxServiceTests {
 		when(userMapper.selectById(1L)).thenReturn(existing);
 		UserTxService service = new UserTxService(
 				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-				mock(OrgMapper.class), mock(CurrentUserContext.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class));
 
 		try (MockedStatic<Argon2Helper> argon2Helper = mockStatic(Argon2Helper.class)) {
 			argon2Helper.when(() -> Argon2Helper.verify("encoded-password", "wrong-password"))
@@ -61,7 +62,7 @@ class UserTxServiceTests {
 		when(userMapper.selectById(1L)).thenReturn(existing);
 		UserTxService service = new UserTxService(
 				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-				mock(OrgMapper.class), mock(CurrentUserContext.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class));
 
 		try (MockedStatic<Argon2Helper> argon2Helper = mockStatic(Argon2Helper.class)) {
 			argon2Helper.when(() -> Argon2Helper.verify("encoded-password", "wrong-password"))
@@ -82,7 +83,7 @@ class UserTxServiceTests {
 		when(userMapper.updateById(existing)).thenReturn(1);
 		UserTxService service = new UserTxService(
 				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-				mock(OrgMapper.class), mock(CurrentUserContext.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class));
 
 		service.updateCurrentProfile(1L, " 新姓名 ", null, null, 20L);
 
@@ -98,7 +99,7 @@ class UserTxServiceTests {
 		when(userMapper.selectCount(any())).thenReturn(0L);
 		UserTxService service = new UserTxService(
 				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-				mock(OrgMapper.class), mock(CurrentUserContext.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class));
 		UserSaveForm form = newUserForm();
 		form.setAssignments(List.of(assignment(10L, false), assignment(11L, false)));
 
@@ -111,7 +112,7 @@ class UserTxServiceTests {
 		when(userMapper.selectCount(any())).thenReturn(0L);
 		UserTxService service = new UserTxService(
 				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-				mock(OrgMapper.class), mock(CurrentUserContext.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class));
 		UserSaveForm form = newUserForm();
 		form.setAssignments(List.of(assignment(10L, true), assignment(10L, false)));
 
@@ -129,7 +130,7 @@ class UserTxServiceTests {
 		when(userMapper.selectById(1L)).thenReturn(existing);
 		UserTxService service = new UserTxService(
 				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-				mock(OrgMapper.class), mock(CurrentUserContext.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class));
 		UserSaveForm form = new UserSaveForm();
 		form.setId(1L);
 		form.setVersion(0);
@@ -145,7 +146,7 @@ class UserTxServiceTests {
         UserMapper userMapper = mock(UserMapper.class);
         UserTxService service = new UserTxService(
                 userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-                mock(OrgMapper.class), mock(CurrentUserContext.class));
+                new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class));
         UserSaveForm form = new UserSaveForm();
         form.setUsername("new-user");
         form.setPassword("InitialPassword1!");
@@ -168,7 +169,7 @@ class UserTxServiceTests {
 	void enableRejectsUserWithoutPrimaryOrganization() {
 		UserTxService service = new UserTxService(
 				mock(UserMapper.class), mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-				mock(OrgMapper.class), mock(CurrentUserContext.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class));
 
 		assertThrows(sm.system.exception.BizException.class,
 				() -> service.updateEnabled(List.of(10L), true));
@@ -190,7 +191,7 @@ class UserTxServiceTests {
 		when(userRoleMapper.insert(any(UserRoleEntity.class))).thenReturn(1);
 		UserTxService service = new UserTxService(
 				userMapper, userRoleMapper, userAssignmentMapper,
-				mock(OrgMapper.class), currentUserContext);
+				new OrgReferenceService(mock(OrgMapper.class)), currentUserContext);
 		UserRoleAssignmentSaveForm form = new UserRoleAssignmentSaveForm();
 		form.setUserId(10L);
 		form.setAssignments(List.of(organizationRoles(20L, 30L, 31L), organizationRoles(21L, 32L)));
@@ -215,7 +216,7 @@ class UserTxServiceTests {
 		when(userAssignmentMapper.selectList(any())).thenReturn(List.of(assignment));
 		UserTxService service = new UserTxService(
 				userMapper, userRoleMapper, userAssignmentMapper,
-				mock(OrgMapper.class), mock(CurrentUserContext.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class));
 		UserRoleAssignmentSaveForm form = new UserRoleAssignmentSaveForm();
 		form.setUserId(10L);
 		form.setAssignments(List.of(organizationRoles(99L, 30L)));
@@ -241,7 +242,7 @@ class UserTxServiceTests {
 		removedAssignment.setOrgId(20L);
 		when(userAssignmentMapper.selectList(any())).thenReturn(List.of(removedAssignment));
 		UserTxService service = new UserTxService(
-				userMapper, userRoleMapper, userAssignmentMapper, orgMapper,
+				userMapper, userRoleMapper, userAssignmentMapper, new OrgReferenceService(orgMapper),
 				mock(CurrentUserContext.class));
 		UserSaveForm form = new UserSaveForm();
 		form.setId(10L);

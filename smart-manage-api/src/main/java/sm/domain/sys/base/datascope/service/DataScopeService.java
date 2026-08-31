@@ -10,8 +10,8 @@ import sm.system.datascope.DataScope;
 import sm.domain.sys.base.datascope.model.DataScopeType;
 import sm.domain.sys.base.datascope.model.entity.RoleDataScopeEntity;
 import sm.domain.sys.base.datascope.model.entity.RoleDataScopeOrgEntity;
-import sm.domain.sys.base.org.mapper.OrgMapper;
-import sm.domain.sys.base.org.model.entity.OrgEntity;
+import sm.domain.sys.base.org.contract.OrgReference;
+import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.system.datascope.DataScopeResolver;
 
 import java.util.ArrayDeque;
@@ -29,7 +29,7 @@ public class DataScopeService implements DataScopeResolver {
     private final CurrentUserContext currentUserContext;
     private final RoleDataScopeMapper ruleMapper;
     private final RoleDataScopeOrgMapper ruleOrgMapper;
-    private final OrgMapper orgMapper;
+    private final OrgReferenceReader orgReferenceReader;
 
     @Override
     public DataScope resolve(String resourceType, String action) {
@@ -67,12 +67,11 @@ public class DataScopeService implements DataScopeResolver {
     }
 
     private Set<Long> orgAndChildren(Long rootOrgId) {
-        List<OrgEntity> organizations = orgMapper.selectList(new LambdaQueryWrapper<OrgEntity>()
-                .select(OrgEntity::getId, OrgEntity::getParentId));
+        List<OrgReference> organizations = orgReferenceReader.findAll();
         Map<Long, List<Long>> childrenByParent = new HashMap<>();
-        for (OrgEntity organization : organizations) {
-            childrenByParent.computeIfAbsent(organization.getParentId(), ignored -> new ArrayList<>())
-                    .add(organization.getId());
+        for (OrgReference organization : organizations) {
+            childrenByParent.computeIfAbsent(organization.parentId(), ignored -> new ArrayList<>())
+                    .add(organization.id());
         }
         Set<Long> result = new HashSet<>();
         ArrayDeque<Long> pending = new ArrayDeque<>();

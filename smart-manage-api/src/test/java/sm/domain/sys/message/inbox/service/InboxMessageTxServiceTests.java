@@ -24,7 +24,8 @@ class InboxMessageTxServiceTests {
     private final InboxMessageMapper messageMapper = mock(InboxMessageMapper.class);
     private final InboxRecipientMapper recipientMapper = mock(InboxRecipientMapper.class);
     private final InboxMessageTxService service = new InboxMessageTxService(messageMapper, recipientMapper,
-            mock(UserMapper.class), mock(CurrentUserContext.class));
+            new sm.domain.sys.base.user.service.UserReferenceService(mock(UserMapper.class)),
+            mock(CurrentUserContext.class));
 
     @Test
     void distributeCommitsRecipientSnapshotBeforePublishedState() {

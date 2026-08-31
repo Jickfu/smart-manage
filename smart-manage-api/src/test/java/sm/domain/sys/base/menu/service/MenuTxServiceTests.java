@@ -30,7 +30,9 @@ class MenuTxServiceTests {
     private final MenuMapper mapper = mock(MenuMapper.class);
     private final PermissionMapper permissionMapper = mock(PermissionMapper.class);
     private final FeatureMapper featureMapper = mock(FeatureMapper.class);
-    private final MenuTxService txService = new MenuTxService(currentUserContext, mapper, permissionMapper, featureMapper);
+    private final MenuTxService txService = new MenuTxService(currentUserContext, mapper,
+            new sm.domain.sys.base.permission.service.PermissionReferenceService(permissionMapper),
+            new sm.domain.sys.base.feature.service.FeatureReferenceService(featureMapper));
 
     @Test
     void staleVersionCannotOverwriteMenu() {
