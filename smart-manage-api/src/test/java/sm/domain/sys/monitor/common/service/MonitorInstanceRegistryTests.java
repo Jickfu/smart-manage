@@ -8,7 +8,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.SmartLifecycle;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -18,6 +22,64 @@ import sm.system.exception.BizException;
 import tools.jackson.databind.json.JsonMapper;
 
 class MonitorInstanceRegistryTests {
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void unregistersBeforeSmartLifecycleInfrastructureStops() {
+    List<String> shutdownOrder = new ArrayList<>();
+    StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+    ZSetOperations<String, String> zSet = mock(ZSetOperations.class);
+    when(redisTemplate.execute(
+            any(org.springframework.data.redis.core.script.RedisScript.class),
+            anyList(),
+            any(Object[].class)))
+        .thenAnswer(
+            invocation -> {
+              shutdownOrder.add("unregister");
+              return 1L;
+            });
+    when(redisTemplate.opsForZSet()).thenReturn(zSet);
+    MonitorProperties properties = new MonitorProperties();
+    properties.setHostId("test-host");
+    properties.getCluster().setInternalBaseUrl("http://127.0.0.1:8080");
+    MonitorInstanceRegistry registry =
+        new MonitorInstanceRegistry(
+            redisTemplate,
+            JsonMapper.builder().build(),
+            properties,
+            mock(MonitorCatalogAccessor.class));
+    ReflectionTestUtils.setField(registry, "instanceId", "instance1");
+
+    try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+      context.registerBean(MonitorInstanceRegistry.class, () -> registry);
+      context.registerBean(
+          SmartLifecycle.class,
+          () ->
+              new SmartLifecycle() {
+                private boolean running;
+
+                @Override
+                public void start() {
+                  running = true;
+                }
+
+                @Override
+                public void stop() {
+                  shutdownOrder.add("infrastructure-stop");
+                  running = false;
+                }
+
+                @Override
+                public boolean isRunning() {
+                  return running;
+                }
+              });
+      context.refresh();
+    }
+
+    org.junit.jupiter.api.Assertions.assertEquals(
+        List.of("unregister", "infrastructure-stop"), shutdownOrder);
+  }
 
   @Test
   void redisUnavailableAbortsApplicationReadyAndExposesRuntimeHeartbeatFailure() {

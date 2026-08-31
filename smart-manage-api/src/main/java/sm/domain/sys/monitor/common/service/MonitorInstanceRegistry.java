@@ -1,6 +1,5 @@
 package sm.domain.sys.monitor.common.service;
 
-import jakarta.annotation.PreDestroy;
 import java.lang.management.ManagementFactory;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -14,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -178,7 +178,11 @@ return 0
     return resolveHostId();
   }
 
-  @PreDestroy
+  /**
+   * 在 Spring 停止 SmartLifecycle Bean 前注销实例，确保 LettuceConnectionFactory 此时仍可用。
+   * ContextClosedEvent 早于普通 Bean 的销毁回调，不可改回 PreDestroy。
+   */
+  @EventListener(ContextClosedEvent.class)
   public void unregister() {
     try {
       Long released =
