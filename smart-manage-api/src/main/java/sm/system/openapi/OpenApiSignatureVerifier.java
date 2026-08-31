@@ -1,5 +1,13 @@
 package sm.system.openapi;
 
+import com.authlete.hms.ComponentIdentifier;
+import com.authlete.hms.SignatureBase;
+import com.authlete.hms.SignatureBaseBuilder;
+import com.authlete.hms.SignatureEntry;
+import com.authlete.hms.SignatureField;
+import com.authlete.hms.SignatureInputField;
+import com.authlete.hms.SignatureMetadata;
+import com.authlete.hms.SignatureMetadataParameters;
 import org.springframework.stereotype.Component;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
@@ -8,11 +16,24 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.SignatureException;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 
-/** RFC 9421 风格的固定 HMAC-SHA256 应用配置文件。 */
+/** 严格 RFC 9421 的固定 HMAC-SHA256 应用配置文件。 */
 @Component
 public class OpenApiSignatureVerifier {
+    private static final String SIGNATURE_LABEL = "sm1";
+    private static final String ALGORITHM = "hmac-sha256";
+    private static final List<ComponentIdentifier> COVERED_COMPONENTS = List.of(
+            new ComponentIdentifier("@method"),
+            new ComponentIdentifier("@path"),
+            new ComponentIdentifier("content-digest"),
+            new ComponentIdentifier("x-sm-key-id"),
+            new ComponentIdentifier("x-sm-timestamp"),
+            new ComponentIdentifier("x-sm-nonce"));
+
     public void verify(byte[] rawBody, String method, String path, String keyId, long created,
                        String nonce, String contentDigest, String signatureInput,
                        String signature, byte[] secret) {
@@ -21,24 +42,51 @@ public class OpenApiSignatureVerifier {
                 safe(contentDigest).getBytes(StandardCharsets.US_ASCII))) {
             reject();
         }
-        String expectedInput = "sm1=(\"@method\" \"@path\" \"content-digest\" \"x-sm-key-id\" "
-                + "\"x-sm-timestamp\" \"x-sm-nonce\");created=" + created + ";keyid=\"" + keyId
-                + "\";alg=\"hmac-sha256\"";
-        if (!expectedInput.equals(signatureInput)) {
+        try {
+            SignatureEntry entry = parseSingleSignature(signatureInput, signature);
+            SignatureMetadata expectedMetadata = expectedMetadata(created, keyId, nonce);
+            if (!entry.getMetadata().equals(expectedMetadata)
+                    || !entry.getMetadata().serialize().equals(expectedMetadata.serialize())) {
+                reject();
+            }
+            SignatureBase signatureBase = new SignatureBaseBuilder((metadata, identifier) -> switch (
+                    identifier.getComponentName()) {
+                case "@method" -> method;
+                case "@path" -> path;
+                case "content-digest" -> expectedDigest;
+                case "x-sm-key-id" -> keyId;
+                case "x-sm-timestamp" -> Long.toString(created);
+                case "x-sm-nonce" -> nonce;
+                default -> null;
+            }).build(entry.getMetadata());
+            boolean valid = signatureBase.verify((base, actual) ->
+                    MessageDigest.isEqual(hmac(base, secret), actual), entry.getSignature());
+            if (!valid) {
+                reject();
+            }
+        } catch (SignatureException | IllegalArgumentException | IllegalStateException exception) {
             reject();
         }
-        String signatureBase = "\"@method\": " + method.toLowerCase() + "\n"
-                + "\"@path\": " + path + "\n"
-                + "\"content-digest\": " + expectedDigest + "\n"
-                + "\"x-sm-key-id\": " + keyId + "\n"
-                + "\"x-sm-timestamp\": " + created + "\n"
-                + "\"x-sm-nonce\": " + nonce + "\n"
-                + "\"@signature-params\": " + expectedInput.substring("sm1=".length());
-        byte[] expected = hmac(signatureBase.getBytes(StandardCharsets.UTF_8), secret);
-        byte[] actual = parseSignature(signature);
-        if (!MessageDigest.isEqual(expected, actual)) {
+    }
+
+    private SignatureEntry parseSingleSignature(String signatureInput, String signature)
+            throws SignatureException {
+        SignatureInputField inputField = SignatureInputField.parse(signatureInput);
+        SignatureField signatureField = SignatureField.parse(signature);
+        Map<String, SignatureEntry> entries = SignatureEntry.scan(signatureField, inputField);
+        if (entries == null || entries.size() != 1 || !entries.containsKey(SIGNATURE_LABEL)) {
             reject();
         }
+        return entries.get(SIGNATURE_LABEL);
+    }
+
+    private SignatureMetadata expectedMetadata(long created, String keyId, String nonce) {
+        SignatureMetadataParameters parameters = new SignatureMetadataParameters()
+                .setCreated(created)
+                .setKeyid(keyId)
+                .setNonce(nonce)
+                .setAlg(ALGORITHM);
+        return new SignatureMetadata(COVERED_COMPONENTS, parameters);
     }
 
     private byte[] sha256(byte[] value) {
@@ -56,18 +104,6 @@ public class OpenApiSignatureVerifier {
             return mac.doFinal(value);
         } catch (Exception exception) {
             throw new IllegalStateException(exception);
-        }
-    }
-
-    private byte[] parseSignature(String value) {
-        if (value == null || !value.startsWith("sm1=:") || !value.endsWith(":")) {
-            reject();
-        }
-        try {
-            return Base64.getDecoder().decode(value.substring(5, value.length() - 1));
-        } catch (RuntimeException exception) {
-            reject();
-            return new byte[0];
         }
     }
 

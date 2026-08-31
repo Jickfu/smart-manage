@@ -16,7 +16,7 @@ class OpenApiSignatureVerifierTests {
     private final OpenApiSignatureVerifier verifier = new OpenApiSignatureVerifier();
 
     @Test
-    void fixedRfc9421ProfileAcceptsValidSignatureAndRejectsTampering() throws Exception {
+    void strictRfc9421ProfileAcceptsValidSignatureAndRejectsTampering() throws Exception {
         byte[] body = "{\"ciphertext\":\"abc\"}".getBytes(StandardCharsets.UTF_8);
         byte[] secret = "01234567890123456789012345678901".getBytes(StandardCharsets.UTF_8);
         String keyId = "sm_test_key";
@@ -27,8 +27,8 @@ class OpenApiSignatureVerifierTests {
                 MessageDigest.getInstance("SHA-256").digest(body)) + ":";
         String input = "sm1=(\"@method\" \"@path\" \"content-digest\" \"x-sm-key-id\" "
                 + "\"x-sm-timestamp\" \"x-sm-nonce\");created=" + created + ";keyid=\"" + keyId
-                + "\";alg=\"hmac-sha256\"";
-        String base = "\"@method\": post\n\"@path\": " + path
+                + "\";nonce=\"" + nonce + "\";alg=\"hmac-sha256\"";
+        String base = "\"@method\": POST\n\"@path\": " + path
                 + "\n\"content-digest\": " + digest
                 + "\n\"x-sm-key-id\": " + keyId
                 + "\n\"x-sm-timestamp\": " + created
@@ -44,5 +44,33 @@ class OpenApiSignatureVerifierTests {
         assertThrows(BizException.class, () -> verifier.verify(
                 "tampered".getBytes(StandardCharsets.UTF_8), "POST", path, keyId, created,
                 nonce, digest, input, signature, secret));
+    }
+
+    @Test
+    void legacyLowercaseMethodAndMissingNonceParameterAreRejected() throws Exception {
+        byte[] body = "{}".getBytes(StandardCharsets.UTF_8);
+        byte[] secret = "01234567890123456789012345678901".getBytes(StandardCharsets.UTF_8);
+        String keyId = "sm_test_key";
+        String nonce = "nonce-123456";
+        long created = 1788163200L;
+        String path = "/openapi/test";
+        String digest = "sha-256=:" + Base64.getEncoder().encodeToString(
+                MessageDigest.getInstance("SHA-256").digest(body)) + ":";
+        String legacyInput = "sm1=(\"@method\" \"@path\" \"content-digest\" \"x-sm-key-id\" "
+                + "\"x-sm-timestamp\" \"x-sm-nonce\");created=" + created + ";keyid=\"" + keyId
+                + "\";alg=\"hmac-sha256\"";
+        String legacyBase = "\"@method\": post\n\"@path\": " + path
+                + "\n\"content-digest\": " + digest
+                + "\n\"x-sm-key-id\": " + keyId
+                + "\n\"x-sm-timestamp\": " + created
+                + "\n\"x-sm-nonce\": " + nonce
+                + "\n\"@signature-params\": " + legacyInput.substring("sm1=".length());
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(secret, "HmacSHA256"));
+        String legacySignature = "sm1=:" + Base64.getEncoder().encodeToString(
+                mac.doFinal(legacyBase.getBytes(StandardCharsets.UTF_8))) + ":";
+
+        assertThrows(BizException.class, () -> verifier.verify(body, "POST", path, keyId, created,
+                nonce, digest, legacyInput, legacySignature, secret));
     }
 }

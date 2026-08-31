@@ -29,6 +29,14 @@ class ClientIpResolverTests {
     }
 
     @Test
+    void trustedIpv6ProxyChainUsesTheSameStrictAddressRules() {
+        ClientIpResolver resolver = resolver("2001:db8:1::/48");
+        HttpServletRequest request = request("2001:db8:1::5", "2001:db8:2::9, 2001:db8:1::10");
+
+        assertEquals("2001:db8:2::9", resolver.resolve(request));
+    }
+
+    @Test
     void trustedProxyWithoutForwardedHeaderFallsBackToRemoteAddress() {
         ClientIpResolver resolver = resolver("10.0.0.0/8");
         HttpServletRequest request = request("10.0.0.5", null);
@@ -40,6 +48,14 @@ class ClientIpResolverTests {
     void forwardedHostNameIsRejectedWithoutNameResolution() {
         ClientIpResolver resolver = resolver("10.0.0.0/8");
         HttpServletRequest request = request("10.0.0.5", "attacker.example");
+
+        assertEquals("10.0.0.5", resolver.resolve(request));
+    }
+
+    @Test
+    void oneInvalidForwardedElementRejectsTheWholeChain() {
+        ClientIpResolver resolver = resolver("10.0.0.0/8");
+        HttpServletRequest request = request("10.0.0.5", "198.51.100.9, attacker.example, 10.0.0.8");
 
         assertEquals("10.0.0.5", resolver.resolve(request));
     }

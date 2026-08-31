@@ -56,6 +56,8 @@
         <hutool.version>5.8.46</hutool.version>
         <argon2.version>2.12</argon2.version>
         <bouncycastle.version>1.84</bouncycastle.version>
+        <http-message-signatures.version>1.8</http-message-signatures.version>
+        <ipaddress.version>5.6.2</ipaddress.version>
         <tianai-captcha.version>1.5.5</tianai-captcha.version>
         <oshi.version>6.9.1</oshi.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
@@ -259,6 +261,20 @@
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
             <version>${bouncycastle.version}</version>
+        </dependency>
+
+        <!-- RFC 9421 HTTP Message Signatures：解析 Structured Fields 并构造标准签名基串。 -->
+        <dependency>
+            <groupId>com.authlete</groupId>
+            <artifactId>http-message-signatures</artifactId>
+            <version>${http-message-signatures.version}</version>
+        </dependency>
+
+        <!-- 严格的 IPv4/IPv6 字面量、CIDR 与子网包含判断。 -->
+        <dependency>
+            <groupId>com.github.seancfoley</groupId>
+            <artifactId>ipaddress</artifactId>
+            <version>${ipaddress.version}</version>
         </dependency>
 
         <!-- 行为验证码核心：仅复用图片生成和轨迹匹配，不引入其 Spring 自动配置 -->

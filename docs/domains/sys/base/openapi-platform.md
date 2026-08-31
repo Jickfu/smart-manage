@@ -14,7 +14,7 @@ OpenAPI 平台为外部系统提供独立于浏览器会话的服务到服务调
 - 外部请求只在当前线程建立代理身份，不创建登录会话，不继承代理用户的浏览器 Token，也不允许切换组织。
 - 一期认证类型固定为 `HMAC_SHA256`；认证校验器保持独立组件，后续认证方式必须按真实需求扩展，不在一期建立空实现。
 - 报文加密可以选择 `NONE`、`AES_256_GCM` 或 `SM4_GCM`。`NONE` 仍必须执行 HMAC-SHA256 签名、防重放、授权和代理身份校验，只是不使用加密信封；AES/SM4 模式的请求和响应都必须加密。
-- IP 策略支持不限制、白名单和黑名单。地址来自受信代理边界解析结果，配置每行一个 IPv4/IPv6 地址或 CIDR。
+- IP 策略支持不限制、白名单和黑名单。地址来自受信代理边界解析结果，配置每行一个 IPv4/IPv6 地址或 CIDR；不接受主机名、zone ID、端口、通配符或地址范围。保存 CIDR 时规范化为网络地址。
 
 ## 凭据包
 
@@ -37,19 +37,19 @@ OpenAPI 平台为外部系统提供独立于浏览器会话的服务到服务调
 | `X-Sm-Nonce` | 每次请求唯一的 8～100 位字母数字及 `._-` 字符串 |
 | `X-Sm-Request-Id` | 调用方请求标识，规则同 nonce |
 | `Content-Digest` | `sha-256=:Base64(SHA-256(原始请求体)):` |
-| `Signature-Input` | 固定 RFC 9421 风格签名参数 |
+| `Signature-Input` | 固定 RFC 9421 签名参数；不接受旧版私有格式 |
 | `Signature` | `sm1=:Base64(HMAC-SHA256(签名基串)):` |
 
 固定 `Signature-Input` 为：
 
 ```text
-sm1=("@method" "@path" "content-digest" "x-sm-key-id" "x-sm-timestamp" "x-sm-nonce");created={timestamp};keyid="{keyId}";alg="hmac-sha256"
+sm1=("@method" "@path" "content-digest" "x-sm-key-id" "x-sm-timestamp" "x-sm-nonce");created={timestamp};keyid="{keyId}";nonce="{nonce}";alg="hmac-sha256"
 ```
 
-签名基串按以下顺序拼接，HTTP 方法使用小写，路径不含域名和查询串：
+签名基串由 RFC 9421 实现按 Structured Fields 和组件规范化规则构造。HTTP 方法保留请求中的原始大小写，标准 `POST` 请求必须签为大写；路径不含域名和查询串：
 
 ```text
-"@method": post
+"@method": POST
 "@path": /openapi/sys/base/basic-data/v1/items/query
 "content-digest": {Content-Digest}
 "x-sm-key-id": {keyId}
@@ -59,6 +59,8 @@ sm1=("@method" "@path" "content-digest" "x-sm-key-id" "x-sm-timestamp" "x-sm-non
 ```
 
 签名覆盖传输中的原始加密信封字节，而不是解密后的业务 JSON。调用方必须在序列化信封后计算摘要和签名，发送前不得再次格式化 JSON。
+
+服务端只接受一个标签为 `sm1` 的签名，并严格要求上述覆盖组件、顺序和 `created`、`keyid`、`nonce`、`alg` 参数及其顺序。`created`、`keyid`、`nonce` 必须分别与对应请求头一致；不提供旧版小写方法签名或缺少 nonce 元数据参数的兼容路径。
 
 ## 加密信封
 
@@ -124,6 +126,7 @@ Controller 的正常 `Result<T>` 完整序列化后作为响应加密明文，�
 - 浏览器非安全方法继续要求合法 Origin；`/openapi/**` 不要求 Origin，但没有完整签名、加密和授权时必须拒绝。
 - AES-256-GCM 与 SM4-GCM 均能往返解密；密文、标签或 AAD 任一变化必须失败。
 - 请求摘要或签名变化必须失败；同一 `keyId + nonce` 只能成功消费一次。
+- 非标准 Structured Fields、额外或缺失签名、覆盖组件/参数变化、旧版小写方法签名或缺少 nonce 元数据参数必须失败。
 - 停用应用、停用/过期凭据、下线版本、未授权操作、不可用代理身份或不匹配 IP 均默认拒绝。
 - 管理接口不返回任何历史密钥；一次性凭据关闭后不能再次读取。
 - 首个基础资料 API 的有效叶子语义与内部业务选项接口一致。
