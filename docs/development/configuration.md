@@ -91,7 +91,7 @@ smart-manage/
 │  ├─ application.yml
 │  └─ application-prod.yml
 ├─ logs/
-└─ upload/
+└─ smfiles/
 ```
 
 以仓库中的 `smart-manage-api/src/main/resources/application-prod.yml` 为配置项参考，在部署目录创建不纳入版本控制的

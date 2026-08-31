@@ -186,7 +186,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
                         >
                           <Input
                             variant="underlined"
-                            placeholder="例如 /data/smart-manage/upload/"
+                            placeholder="例如 /data/smart-manage/smfiles/"
                           />
                         </Form.Item>
                       </FormFieldCell>

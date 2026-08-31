@@ -37,7 +37,7 @@ public class LocalFileStorageService implements FileStorageService {
     private String getBaseDir() {
         String dir = configProvider.getFileStorageConfig().localDir();
         if (dir == null || dir.isBlank()) {
-            dir = "./upload/";
+            dir = "./smfiles/";
         }
         if (!dir.endsWith("/") && !dir.endsWith("\\")) {
             dir = dir + "/";

@@ -22,7 +22,11 @@ public class DispatchEmailJob extends QuartzJobBean {
                         ? number.intValue() : Integer.parseInt(rawBatchSize.toString());
             }
         } catch (Exception exception) { throw new IllegalArgumentException("邮件派发任务参数必须是包含 batchSize 的 JSON 对象", exception); }
-        int claimed=emailService.dispatchPending(batchSize);
-        log.info("邮件派发完成: claimed={}",claimed);
+        int claimed = emailService.dispatchPending(batchSize);
+        if (claimed > 0) {
+            log.info("邮件派发完成: claimed={}", claimed);
+        } else {
+            log.debug("邮件派发完成: claimed=0");
+        }
     }
 }

@@ -27,6 +27,10 @@ public class DispatchInboxMessageJob extends QuartzJobBean {
             throw new IllegalArgumentException("站内消息派发任务参数必须是包含 batchSize 的 JSON 对象", exception);
         }
         int claimed = service.dispatchPending(batchSize);
-        log.info("站内消息派发完成: claimed={}", claimed);
+        if (claimed > 0) {
+            log.info("站内消息派发完成: claimed={}", claimed);
+        } else {
+            log.debug("站内消息派发完成: claimed=0");
+        }
     }
 }

@@ -37,8 +37,8 @@ public class FileConfigService implements FileStorageConfigProvider {
     private final SM4Helper sm4Helper;
     private final FileConfigConverter converter;
     private final AtomicBoolean defaultStorageWarningLogged = new AtomicBoolean();
-    @Value("${smart-manage.system.upload.dir:./upload/}")
-    private String defaultLocalDir = "./upload/";
+    @Value("${smart-manage.system.upload.dir:./smfiles/}")
+    private String defaultLocalDir = "./smfiles/";
 
     /** 单例管理页读取；尚未配置时返回本地存储默认值。 */
     public FileConfigDetailVO singleton() {

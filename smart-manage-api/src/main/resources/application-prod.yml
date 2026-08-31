@@ -161,7 +161,7 @@ smart-manage:
           public-key: ${SMART_MANAGE_SM2_PUBLIC_KEY}
     upload:
       # 单实例使用 Local 时必须指向持久化并纳入备份的目录；S3/FTP 模式不会读取该目录。
-      dir: ${SMART_MANAGE_UPLOAD_DIR:./upload/}
+      dir: ${SMART_MANAGE_UPLOAD_DIR:./smfiles/}
     log:
       core-pool-size: 10
       max-pool-size: 20
