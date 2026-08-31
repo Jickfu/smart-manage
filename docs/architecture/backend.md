@@ -23,16 +23,18 @@
 
 本文中的 `A -> B` 表示 A 依赖 B。不同顶级 Domain 默认相互隔离，不允许直接依赖其他 Domain 的内部实现。`sm.domain.sys` 与其他顶级 Domain 适用完全相同的规则，不具有特殊的公共领域地位。
 
-当真实业务首次产生跨领域协作需求时，由能力提供方基于该实际用例按需暴露最小稳定 Contract，调用方只能依赖目标 Domain 的 `contract` 包。Contract 可以包含公开接口、当前用例必要的 Command、Query、边界 DTO、稳定枚举和值对象；不得暴露具体 Service、Mapper、Entity、TxService、持久化 Wrapper 或 MyBatis 类型。
+当真实业务首次产生跨领域协作需求时，由能力提供方基于该实际用例按需暴露最小稳定 Contract，调用方只能依赖目标 Domain 的 `contract` 包。Contract 是领域对外发布的稳定业务语言，不是 Service 的模型镜像或形式上的代理接口；可以包含公开接口、当前用例必要的 Command、Query、Reference、Result、稳定枚举和值对象，不使用面向 Controller 的 Form、VO，也不得暴露具体 Service、Mapper、Entity、TxService、持久化 Wrapper 或 MyBatis 类型。
 
 ```text
 Domain A
     -> Domain B.contract
 ```
 
-Smart Manage 遵循：**先实现领域，后发现协作，再提取 Contract。** Contract 由真实消费者和真实用例塑造，而不是由对未来需求的猜测产生。没有真实跨领域消费者的 Domain 不需要 `contract` 包；同一顶级 Domain 内的应用和模块也不因潜在复用而提前升级为独立边界。
+Smart Manage 遵循：**先实现领域，后发现协作，再提取 Contract。** Contract 由真实消费者和真实用例塑造，而不是由对未来需求的猜测产生。真实消费者可以位于当前仓库，也可以位于已经存在且用例可核实的独立扩展项目；不得仅因某能力未来可能复用而提前建设 Contract。没有真实跨领域消费者的 Domain 不需要 `contract` 包；同一顶级 Domain 内的应用和模块也不因潜在复用而提前升级为独立边界。
 
-当前附件和编号规则存在采购领域这一真实消费者，因此其最小跨领域接口和边界模型位于 `sm.domain.sys` 对应模块的 `contract` 包。不得据此给用户、组织、角色、菜单、库存等尚无真实跨领域调用方的模块提前建设 Contract。
+当前附件和编号规则存在采购领域这一真实消费者，用户引用与状态校验也存在已核实的独立业务领域消费者，因此其最小跨领域接口和边界模型位于 `sm.domain.sys` 对应模块的 `contract` 包。消费者项目只用于证明用例，不反向成为 Smart Manage 的架构或业务事实来源。
+
+`sm.system` 中不属于任何业务领域的稳定系统机制可以由所有 Domain 直接依赖；`sm.domain.sys` 仍是系统管理业务领域，不因基础性或通用性获得跨领域直连 Service 的例外。提供方模块内部可以使用 Mapper、内部协作者或 Service；同一顶级 Domain 的其他应用需要领域内部能力时可以依赖职责明确的公开 Service，只需要已发布 Contract 的相同语义时优先使用 Contract；其他顶级 Domain 必须使用目标 Domain 的 Contract，禁止自行查询目标领域数据表、复制状态判断或维护目标领域数据缓存。
 
 公开 `*Service` 按清晰、内聚的业务职责划分；同一模块可以有多个不同语义的公开 Service，例如用户管理、当前用户资料、认证和授权边界。不形成独立业务入口的技术协作者不得命名为 `*Service`，应按职责使用 `*Accessor`、`*Gateway` 等名称并尽量保持包级可见。`sm.system.storage` 只能通过 `FileStorageConfigProvider` 获取配置，不得依赖 `sm.domain.sys` 的实体或 Service。
 
@@ -145,6 +147,7 @@ Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包�
 - `domain -> system -> infrastructure` 的顶层依赖方向，禁止遗留 `sm.framework` 包；
 - Domain 对 Infrastructure 仅允许依赖显式开放的技术 Contract，当前为 `SmMapperConfig`；
 - 任意不同顶级 Domain 之间只能依赖目标 Domain 的显式稳定 `contract` API，所有 Domain 一视同仁，禁止跨领域实现级耦合；
+- Contract 只容纳稳定接口和 Command、Query、Reference、Result 等边界模型，禁止放入 Controller Form、VO、Entity、Mapper 或 TxService；
 - DataScope 跨领域消费者只依赖 `sm.system.datascope` Contract，解析实现与角色配置仍属于系统管理领域；
 - Controller 不得依赖 Mapper 或 TxService；
 - 公开 Service 不得声明事务，`@BizLog` 只允许标注公开 Service 的公开方法；

@@ -16,8 +16,8 @@ import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserDetailVO;
 import sm.domain.sys.base.user.model.vo.UserListVO;
-import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
-import sm.domain.sys.base.attachment.contract.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
+import sm.domain.sys.base.attachment.contract.AttachmentReference;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
@@ -207,13 +207,13 @@ public class UserService {
 
 	private void promoteAvatar(Long avatarAttachmentId, Map<Long, String> uploadSessions, Long userId) {
 		if (avatarAttachmentId == null || !uploadSessions.containsKey(avatarAttachmentId)) return;
-		AttachmentPromoteForm promoteForm = new AttachmentPromoteForm();
-		promoteForm.setAttachmentIds(List.of(avatarAttachmentId));
-		promoteForm.setBizType(UserResourceRegistration.RESOURCE_TYPE);
-		promoteForm.setBizId(String.valueOf(userId));
-		promoteForm.setUploadSessions(uploadSessions);
+		AttachmentPromoteCommand promoteCommand = new AttachmentPromoteCommand();
+		promoteCommand.setAttachmentIds(List.of(avatarAttachmentId));
+		promoteCommand.setBizType(UserResourceRegistration.RESOURCE_TYPE);
+		promoteCommand.setBizId(String.valueOf(userId));
+		promoteCommand.setUploadSessions(uploadSessions);
 		try {
-			attachmentService.promoteForAggregate(promoteForm);
+			attachmentService.promoteForAggregate(promoteCommand);
 		} catch (IOException exception) {
 			throw new BizException(ResultEnum.CONFIG_ERROR, "用户头像确认失败: " + exception.getMessage());
 		}
@@ -223,7 +223,7 @@ public class UserService {
 		if (attachmentId == null) return null;
 		return attachmentService.listByIds(List.of(attachmentId)).stream()
 				.filter(attachment -> Boolean.TRUE.equals(attachment.getIsTemp()))
-				.map(AttachmentVO::getId).findFirst().orElse(null);
+				.map(AttachmentReference::getId).findFirst().orElse(null);
 	}
 
 	private void deleteReplacedAvatar(Long previousAvatarAttachmentId, Long nextAvatarId) {

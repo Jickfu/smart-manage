@@ -2,7 +2,7 @@ package sm.domain.sys.base.uiconfig.service;
 
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
-import sm.domain.sys.base.attachment.contract.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.contract.AttachmentReference;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.uiconfig.mapper.UiConfigMapper;
 import sm.domain.sys.base.uiconfig.model.entity.UiConfigEntity;
@@ -30,7 +30,7 @@ class UiConfigServiceTests {
     void activeConfigUsesBusinessImageEndpointInsteadOfStorageUrl() {
         UiConfigEntity config = config(100L, 11L);
         UiConfigDetailVO detail = new UiConfigDetailVO();
-        AttachmentVO attachment = new AttachmentVO();
+        AttachmentReference attachment = new AttachmentReference();
         attachment.setId(11L);
         when(mapper.selectList(null)).thenReturn(List.of(config));
         when(converter.toDetailVO(config)).thenReturn(detail);

@@ -12,9 +12,10 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
-import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.domain.sys.base.attachment.model.form.AttachmentRemarkUpdateForm;
-import sm.domain.sys.base.attachment.contract.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.contract.AttachmentReference;
+import sm.domain.sys.base.attachment.model.form.AttachmentListForm;
 import sm.domain.sys.base.attachment.model.vo.AttachmentDownloadAccessVO;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.system.form.IdForm;
@@ -42,15 +43,15 @@ public class AttachmentController {
 
     @PostMapping("/sys/base/attachment/upload")
     @Operation(summary = "上传附件", description = "上传文件到临时目录")
-    public Result<AttachmentVO> upload(@RequestParam("file") MultipartFile file,
+    public Result<AttachmentReference> upload(@RequestParam("file") MultipartFile file,
                                        @RequestParam("bizType") String bizType) throws IOException {
         return Result.success(service.upload(file, bizType));
     }
 
     @PostMapping("/sys/base/attachment/promote")
     @Operation(summary = "提升附件", description = "将临时附件关联到业务单据并移出临时目录")
-    public Result<String> promote(@Valid @RequestBody AttachmentPromoteForm form) throws IOException {
-        service.promote(form);
+    public Result<String> promote(@Valid @RequestBody AttachmentPromoteCommand command) throws IOException {
+        service.promote(command);
         return Result.success();
     }
 
@@ -64,7 +65,7 @@ public class AttachmentController {
 
     @PostMapping("/sys/base/attachment/updateRemark")
     @Operation(summary = "更新附件备注", description = "更新附件在当前业务资源中的备注")
-    public Result<AttachmentVO> updateRemark(
+    public Result<AttachmentReference> updateRemark(
             @RequestBody @Valid AttachmentRemarkUpdateForm form,
             @RequestHeader(value = "X-Upload-Session", required = false) String uploadSessionId) {
         return Result.success(service.updateRemark(
@@ -73,7 +74,7 @@ public class AttachmentController {
 
     @PostMapping("/sys/base/attachment/listByBiz")
     @Operation(summary = "按业务查询附件", description = "根据业务类型和单据ID查询附件列表")
-    public Result<List<AttachmentVO>> listByBiz(@RequestBody AttachmentPromoteForm form) {
+    public Result<List<AttachmentReference>> listByBiz(@Valid @RequestBody AttachmentListForm form) {
         return Result.success(service.listByBiz(form.getBizType(), form.getBizId()));
     }
 

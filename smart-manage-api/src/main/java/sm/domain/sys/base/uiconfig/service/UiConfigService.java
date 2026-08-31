@@ -8,9 +8,9 @@ import sm.domain.sys.base.uiconfig.model.entity.UiConfigEntity;
 import sm.domain.sys.base.uiconfig.model.form.UiConfigSaveForm;
 import sm.domain.sys.base.uiconfig.model.vo.UiConfigDetailVO;
 import sm.domain.sys.base.uiconfig.mapper.UiConfigMapper;
-import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
-import sm.domain.sys.base.attachment.contract.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.contract.AttachmentReference;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
@@ -110,13 +110,13 @@ public class UiConfigService {
         if (attachmentIds.isEmpty()) {
             return;
         }
-        AttachmentPromoteForm promoteForm = new AttachmentPromoteForm();
-        promoteForm.setAttachmentIds(List.copyOf(attachmentIds));
-        promoteForm.setBizType(UiConfigResourceRegistration.RESOURCE_TYPE);
-        promoteForm.setBizId(String.valueOf(configId));
-        promoteForm.setUploadSessions(form.getAttachmentUploadSessions());
+        AttachmentPromoteCommand promoteCommand = new AttachmentPromoteCommand();
+        promoteCommand.setAttachmentIds(List.copyOf(attachmentIds));
+        promoteCommand.setBizType(UiConfigResourceRegistration.RESOURCE_TYPE);
+        promoteCommand.setBizId(String.valueOf(configId));
+        promoteCommand.setUploadSessions(form.getAttachmentUploadSessions());
         try {
-            attachmentService.promoteForAggregate(promoteForm);
+            attachmentService.promoteForAggregate(promoteCommand);
         } catch (IOException exception) {
             throw new BizException(ResultEnum.CONFIG_ERROR, "界面图片确认失败: " + exception.getMessage());
         }
@@ -132,7 +132,7 @@ public class UiConfigService {
                 .toList();
         return attachmentService.listByIds(attachmentIds).stream()
                 .filter(attachment -> Boolean.TRUE.equals(attachment.getIsTemp()))
-                .map(AttachmentVO::getId)
+                .map(AttachmentReference::getId)
                 .toList();
     }
 
@@ -155,8 +155,8 @@ public class UiConfigService {
                         entity.getHeaderLogoAttachmentId())
                 .filter(java.util.Objects::nonNull)
                 .toList();
-        Map<Long, AttachmentVO> attachmentMap = attachmentService.listByIds(attachmentIds).stream()
-                .collect(Collectors.toMap(AttachmentVO::getId, Function.identity()));
+        Map<Long, AttachmentReference> attachmentMap = attachmentService.listByIds(attachmentIds).stream()
+                .collect(Collectors.toMap(AttachmentReference::getId, Function.identity()));
         if (entity.getLoginBannerAttachmentId() != null) {
             Long attachmentId = entity.getLoginBannerAttachmentId();
             detail.setLoginBanner(resolveUrl(attachmentMap, attachmentId, LOGIN_BANNER_IMAGE));
@@ -172,8 +172,8 @@ public class UiConfigService {
         return detail;
     }
 
-    private String resolveUrl(Map<Long, AttachmentVO> attachmentMap, Long attachmentId, String imageType) {
-        AttachmentVO attachment = attachmentMap.get(attachmentId);
+    private String resolveUrl(Map<Long, AttachmentReference> attachmentMap, Long attachmentId, String imageType) {
+        AttachmentReference attachment = attachmentMap.get(attachmentId);
         return attachment == null ? null : PUBLIC_IMAGE_PATH + imageType + "?v=" + attachmentId;
     }
 

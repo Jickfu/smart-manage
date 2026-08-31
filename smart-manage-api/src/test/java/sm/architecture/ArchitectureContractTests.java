@@ -67,7 +67,15 @@ class ArchitectureContractTests {
                 .should().haveSimpleNameEndingWith("Mapper")
                 .orShould().haveSimpleNameEndingWith("Entity")
                 .orShould().haveSimpleNameEndingWith("TxService")
-                .because("跨领域 contract 只能暴露稳定 API 和边界模型，不得容纳持久化或事务实现")
+                .orShould().haveSimpleNameEndingWith("Form")
+                .orShould().haveSimpleNameEndingWith("VO")
+                .because("跨领域 contract 只能暴露稳定 API 和 Command、Query、Reference、Result 等边界模型")
+                .check(productionClasses);
+
+        noClasses().that().resideInAPackage("sm.domain..contract..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "..service..", "..mapper..", "..model.entity..", "..model.form..", "..model.vo..")
+                .because("跨领域 contract 不得反向依赖领域内部实现或 Controller 模型")
                 .check(productionClasses);
     }
 

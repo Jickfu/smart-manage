@@ -5,7 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
+import sm.domain.sys.base.attachment.contract.AttachmentReference;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.common.constant.BaseCacheName;
@@ -218,13 +219,13 @@ public class UserProfileService {
 
     private void promoteAvatar(Long attachmentId, Map<Long, String> uploadSessions, Long userId) {
         if (attachmentId == null || !uploadSessions.containsKey(attachmentId)) return;
-        AttachmentPromoteForm form = new AttachmentPromoteForm();
-        form.setAttachmentIds(List.of(attachmentId));
-        form.setBizType(UserResourceRegistration.RESOURCE_TYPE);
-        form.setBizId(String.valueOf(userId));
-        form.setUploadSessions(uploadSessions);
+        AttachmentPromoteCommand command = new AttachmentPromoteCommand();
+        command.setAttachmentIds(List.of(attachmentId));
+        command.setBizType(UserResourceRegistration.RESOURCE_TYPE);
+        command.setBizId(String.valueOf(userId));
+        command.setUploadSessions(uploadSessions);
         try {
-            attachmentService.promoteForAggregate(form);
+            attachmentService.promoteForAggregate(command);
         } catch (IOException exception) {
             throw new BizException(ResultEnum.CONFIG_ERROR, "用户头像确认失败: " + exception.getMessage());
         }
@@ -234,7 +235,7 @@ public class UserProfileService {
         if (attachmentId == null) return null;
         return attachmentService.listByIds(List.of(attachmentId)).stream()
                 .filter(attachment -> Boolean.TRUE.equals(attachment.getIsTemp()))
-                .map(sm.domain.sys.base.attachment.contract.model.vo.AttachmentVO::getId)
+                .map(AttachmentReference::getId)
                 .findFirst().orElse(null);
     }
 

@@ -7,7 +7,7 @@ import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.entity.BizAttachmentEntity;
-import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.system.exception.BizException;
 
 import java.util.List;
@@ -52,7 +52,7 @@ class AttachmentTxServiceTests {
 		entity.setObjectKey("temp/stored.txt");
 		entity.setStorageType("LOCAL");
 		entity.setStatus("TEMP");
-		AttachmentPromoteForm form = new AttachmentPromoteForm();
+		AttachmentPromoteCommand form = new AttachmentPromoteCommand();
 		form.setAttachmentIds(List.of(1L));
 		form.setBizType("purchase-requisition");
 		form.setBizId("100");
@@ -72,7 +72,7 @@ class AttachmentTxServiceTests {
 		AttachmentEntity entity = new AttachmentEntity();
 		entity.setId(1L);
 		entity.setStatus("DELETED");
-		AttachmentPromoteForm form = new AttachmentPromoteForm();
+		AttachmentPromoteCommand form = new AttachmentPromoteCommand();
 		form.setAttachmentIds(List.of(1L));
 		form.setBizType("sys.base.ui-config");
 		form.setBizId("100");
@@ -86,7 +86,7 @@ class AttachmentTxServiceTests {
 		AttachmentEntity entity = new AttachmentEntity();
 		entity.setId(1L);
 		entity.setStatus("TEMP");
-		AttachmentPromoteForm form = new AttachmentPromoteForm();
+		AttachmentPromoteCommand form = new AttachmentPromoteCommand();
 		form.setAttachmentIds(List.of(1L));
 		form.setBizType("sys.base.ui-config");
 		form.setBizId("100");

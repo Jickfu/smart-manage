@@ -17,7 +17,7 @@ import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.util.BillStatusUtil;
-import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.domain.sys.base.attachment.contract.AttachmentGateway;
 import sm.domain.sys.base.numberrule.contract.NumberRuleKeys;
 import sm.domain.sys.base.numberrule.contract.model.NumberGenerationContext;
@@ -158,14 +158,14 @@ class PurchaseRequisitionTxService {
         if (form.getAttachmentIds() == null || form.getAttachmentIds().isEmpty()) {
             return;
         }
-        AttachmentPromoteForm attachmentForm = new AttachmentPromoteForm();
-        attachmentForm.setAttachmentIds(form.getAttachmentIds().stream().distinct().toList());
-        attachmentForm.setUploadSessions(form.getAttachmentUploadSessions());
-        attachmentForm.setBizType(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE);
-        attachmentForm.setBizId(String.valueOf(purchaseRequisitionId));
+        AttachmentPromoteCommand attachmentCommand = new AttachmentPromoteCommand();
+        attachmentCommand.setAttachmentIds(form.getAttachmentIds().stream().distinct().toList());
+        attachmentCommand.setUploadSessions(form.getAttachmentUploadSessions());
+        attachmentCommand.setBizType(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE);
+        attachmentCommand.setBizId(String.valueOf(purchaseRequisitionId));
         try {
             // 与采购申请写操作加入同一数据库事务；对象键不因 TEMP 提升而移动。
-            attachmentGateway.promoteForAggregate(attachmentForm);
+            attachmentGateway.promoteForAggregate(attachmentCommand);
         } catch (java.io.IOException exception) {
             throw new BizException(ResultEnum.PERSISTENCE_ERROR, "采购申请附件确认失败: " + exception.getMessage());
         }

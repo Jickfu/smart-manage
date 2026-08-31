@@ -10,8 +10,8 @@ import sm.system.response.ResultEnum;
 import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.entity.BizAttachmentEntity;
-import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
-import sm.domain.sys.base.attachment.contract.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
+import sm.domain.sys.base.attachment.contract.AttachmentReference;
 import sm.domain.sys.base.attachment.model.vo.AttachmentDownloadAccessVO;
 import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
@@ -61,7 +61,7 @@ public class AttachmentService implements AttachmentGateway {
 
     /** 上传附件：传 bizType 时存入临时目录（需 promote），否则直接存 sys 系统目录 */
     @BizLog(value = "上传附件", recordRequest = false)
-    public AttachmentVO upload(MultipartFile file, String bizType) throws IOException {
+    public AttachmentReference upload(MultipartFile file, String bizType) throws IOException {
         if (bizType == null || bizType.isBlank()) {
             throw new BizException(ResultEnum.PARAM_ERROR, "附件业务资源类型不能为空");
         }
@@ -72,7 +72,7 @@ public class AttachmentService implements AttachmentGateway {
         String sha256 = sha256(file);
         FileStorageService storage = storageFactory.getService();
         FileStoreResult storedObject = storage.store(resourceRegistry.objectPrefix(bizType), file);
-        AttachmentVO attachment;
+        AttachmentReference attachment;
         try {
             attachment = txService.persistUpload(
                     originalName, storedObject.getStoredPath(), storedObject.getFileSize(), file.getContentType(),
@@ -89,10 +89,10 @@ public class AttachmentService implements AttachmentGateway {
 
     /** 提升附件：关联业务单据 + 移出临时目录 */
     @BizLog("确认附件")
-    public void promote(AttachmentPromoteForm form) throws IOException {
-        requireTemporaryAttachmentOwnership(form.getAttachmentIds(), form.getUploadSessions());
-        resourceRegistry.requireAllowed(form.getBizType(), form.getBizId(), BusinessResourceAction.ATTACH);
-        txService.promote(form);
+    public void promote(AttachmentPromoteCommand command) throws IOException {
+        requireTemporaryAttachmentOwnership(command.getAttachmentIds(), command.getUploadSessions());
+        resourceRegistry.requireAllowed(command.getBizType(), command.getBizId(), BusinessResourceAction.ATTACH);
+        txService.promote(command);
     }
 
     /**
@@ -100,10 +100,10 @@ public class AttachmentService implements AttachmentGateway {
      * 新聚合保存前目标记录尚不存在，因此这里校验注册类型和临时附件所有权，不反查目标记录。
      */
     @Override
-    public void promoteForAggregate(AttachmentPromoteForm form) throws IOException {
-        requireTemporaryAttachmentOwnership(form.getAttachmentIds(), form.getUploadSessions());
-        resourceRegistry.requireRegistered(form.getBizType());
-        txService.promote(form);
+    public void promoteForAggregate(AttachmentPromoteCommand command) throws IOException {
+        requireTemporaryAttachmentOwnership(command.getAttachmentIds(), command.getUploadSessions());
+        resourceRegistry.requireRegistered(command.getBizType());
+        txService.promote(command);
     }
 
     /** 删除附件（物理文件 + 映射 + 元数据） */
@@ -152,30 +152,30 @@ public class AttachmentService implements AttachmentGateway {
 
     /** 按业务单据查询附件列表 */
     @Override
-    public List<AttachmentVO> listByBiz(String bizType, String bizId) {
+    public List<AttachmentReference> listByBiz(String bizType, String bizId) {
         resourceRegistry.requireAllowed(bizType, bizId, BusinessResourceAction.READ);
         List<AttachmentEntity> entities = mapper.selectByBiz(bizType, bizId);
         List<BizAttachmentEntity> mappings = bizMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BizAttachmentEntity>()
                         .eq(BizAttachmentEntity::getBizType, bizType)
                         .eq(BizAttachmentEntity::getBizId, bizId));
-        return assembleAttachmentVOs(entities, mappings);
+        return assembleAttachmentReferences(entities, mappings);
     }
 
     /** 列出可用附件；删除中和已删除记录不再属于可引用资源。 */
-    public List<AttachmentVO> listByIds(List<Long> ids) {
+    public List<AttachmentReference> listByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
         List<AttachmentEntity> entities = mapper.selectByIds(ids).stream()
                 .filter(entity -> "TEMP".equals(entity.getStatus()) || "ACTIVE".equals(entity.getStatus()))
                 .toList();
-        return assembleAttachmentVOs(entities, selectMappings(entities));
+        return assembleAttachmentReferences(entities, selectMappings(entities));
     }
 
     /** 更新附件备注；正式附件继承业务资源维护权限，临时附件校验上传会话。 */
     @BizLog("更新附件备注")
-    public AttachmentVO updateRemark(Long id, Long businessAttachmentId, String remark, String uploadSessionId) {
+    public AttachmentReference updateRemark(Long id, Long businessAttachmentId, String remark, String uploadSessionId) {
         AttachmentEntity entity = mapper.selectById(id);
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "附件不存在");
@@ -186,7 +186,7 @@ public class AttachmentService implements AttachmentGateway {
         mapping.setId(businessAttachmentId);
         mapping.setAttachmentId(id);
         mapping.setRemark(remark == null || remark.isBlank() ? null : remark.trim());
-        return assembleAttachmentVOs(List.of(entity), List.of(mapping)).getFirst();
+        return assembleAttachmentReferences(List.of(entity), List.of(mapping)).getFirst();
     }
 
     public AttachmentEntity requireDownloadableAttachment(Long id, String uploadSessionId) {
@@ -289,8 +289,8 @@ public class AttachmentService implements AttachmentGateway {
         }
     }
 
-    private AttachmentVO assembleAttachmentVO(AttachmentEntity entity) {
-        AttachmentVO vo = new AttachmentVO();
+    private AttachmentReference assembleAttachmentReference(AttachmentEntity entity) {
+        AttachmentReference vo = new AttachmentReference();
         vo.setId(entity.getId());
         vo.setOriginalName(entity.getOriginalName());
         vo.setFileSize(entity.getFileSize());
@@ -305,16 +305,16 @@ public class AttachmentService implements AttachmentGateway {
         return vo;
     }
 
-    private List<AttachmentVO> assembleAttachmentVOs(
+    private List<AttachmentReference> assembleAttachmentReferences(
             List<AttachmentEntity> entities, List<BizAttachmentEntity> mappings) {
         if (entities.isEmpty()) {
             return List.of();
         }
-        List<AttachmentVO> attachments = entities.stream().map(this::assembleAttachmentVO).toList();
+        List<AttachmentReference> attachments = entities.stream().map(this::assembleAttachmentReference).toList();
         Map<Long, BizAttachmentEntity> mappingsByAttachmentId = mappings.stream()
                 .collect(Collectors.toMap(BizAttachmentEntity::getAttachmentId,
                         Function.identity(), (left, right) -> left));
-        for (AttachmentVO attachment : attachments) {
+        for (AttachmentReference attachment : attachments) {
             BizAttachmentEntity mapping = mappingsByAttachmentId.get(attachment.getId());
             if (mapping != null) {
                 attachment.setBusinessAttachmentId(mapping.getId());
@@ -335,9 +335,9 @@ public class AttachmentService implements AttachmentGateway {
                                 entities.stream().map(AttachmentEntity::getId).toList()));
     }
 
-    private void attachUploaderNames(List<AttachmentVO> attachments) {
+    private void attachUploaderNames(List<AttachmentReference> attachments) {
         List<Long> uploaderIds = attachments.stream()
-                .map(AttachmentVO::getUploaderId)
+                .map(AttachmentReference::getUploaderId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
@@ -346,7 +346,7 @@ public class AttachmentService implements AttachmentGateway {
         }
         Map<Long, UserEntity> users = userMapper.selectBatchIds(uploaderIds).stream()
                 .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
-        for (AttachmentVO attachment : attachments) {
+        for (AttachmentReference attachment : attachments) {
             UserEntity uploader = users.get(attachment.getUploaderId());
             attachment.setUploaderName(uploader == null ? null : uploader.getName());
         }

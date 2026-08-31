@@ -8,8 +8,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.entity.BizAttachmentEntity;
-import sm.domain.sys.base.attachment.contract.model.form.AttachmentPromoteForm;
-import sm.domain.sys.base.attachment.contract.model.vo.AttachmentVO;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
+import sm.domain.sys.base.attachment.contract.AttachmentReference;
 import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.system.exception.BizException;
@@ -35,7 +35,7 @@ class AttachmentTxService {
     private final BizAttachmentMapper bizMapper;
 
     /** 在对象已经写入后，以短事务保存附件元数据和临时业务映射。 */
-    public AttachmentVO persistUpload(String originalName, String objectKey, long fileSize, String mimeType,
+    public AttachmentReference persistUpload(String originalName, String objectKey, long fileSize, String mimeType,
             String fileExt, String storageType, String sha256, String bizType, int tempExpireHours) {
         boolean isTemp = bizType != null && !bizType.isBlank();
         AttachmentEntity entity = new AttachmentEntity();
@@ -61,17 +61,17 @@ class AttachmentTxService {
             if (bizMapper.insert(biz) != 1) {
                 throw new BizException(ResultEnum.PERSISTENCE_ERROR, "聚合明细写入失败");
             }
-            AttachmentVO attachment = assembleAttachmentVO(entity);
+            AttachmentReference attachment = assembleAttachmentReference(entity);
             attachment.setBusinessAttachmentId(biz.getId());
             return attachment;
         }
-        return assembleAttachmentVO(entity);
+        return assembleAttachmentReference(entity);
     }
 
     /** 提升附件：关联业务单据 + 移出临时目录 */
-    public void promote(AttachmentPromoteForm form) throws IOException {
+    public void promote(AttachmentPromoteCommand command) throws IOException {
         try {
-            for (Long attachmentId : form.getAttachmentIds()) {
+            for (Long attachmentId : command.getAttachmentIds()) {
                 AttachmentEntity entity = mapper.selectById(attachmentId);
                 if (entity == null) {
                     throw new BizException(ResultEnum.NOT_FOUND, "附件不存在: " + attachmentId);
@@ -84,13 +84,13 @@ class AttachmentTxService {
                 if (bizEntity == null) {
                     throw new BizException(ResultEnum.PERMISSION_ERROR, "附件缺少业务资源归属");
                 }
-                if (!form.getBizType().equals(bizEntity.getBizType())) {
+                if (!command.getBizType().equals(bizEntity.getBizType())) {
                     throw new BizException(ResultEnum.PERMISSION_ERROR, "附件业务资源类型不匹配");
                 }
                 if (temporary && bizEntity.getBizId() != null) {
                     throw new BizException(ResultEnum.PERMISSION_ERROR, "临时附件已绑定业务单据");
                 }
-                if (!temporary && !form.getBizId().equals(bizEntity.getBizId())) {
+                if (!temporary && !command.getBizId().equals(bizEntity.getBizId())) {
                     throw new BizException(ResultEnum.PERMISSION_ERROR, "已确认附件不能绑定到其他业务单据");
                 }
                 if (temporary) {
@@ -102,7 +102,7 @@ class AttachmentTxService {
                     }
                 }
                 if (temporary) {
-                    bizEntity.setBizId(form.getBizId());
+                    bizEntity.setBizId(command.getBizId());
                     if (bizMapper.updateById(bizEntity) != 1) {
                         throw new BizException(ResultEnum.PERSISTENCE_ERROR, "聚合明细写入失败");
                     }
@@ -111,7 +111,8 @@ class AttachmentTxService {
         } catch (RuntimeException exception) {
             throw exception;
         }
-        log.info("附件提升: ids={}, bizType={}, bizId={}", form.getAttachmentIds(), form.getBizType(), form.getBizId());
+        log.info("附件提升: ids={}, bizType={}, bizId={}",
+                command.getAttachmentIds(), command.getBizType(), command.getBizId());
     }
 
     /** 短事务解除业务映射并标记待删除；外部对象由事务提交后的调用方处理。 */
@@ -170,8 +171,8 @@ class AttachmentTxService {
                 .eq(BizAttachmentEntity::getAttachmentId, attachmentId));
     }
 
-    private AttachmentVO assembleAttachmentVO(AttachmentEntity entity) {
-        AttachmentVO vo = new AttachmentVO();
+    private AttachmentReference assembleAttachmentReference(AttachmentEntity entity) {
+        AttachmentReference vo = new AttachmentReference();
         vo.setId(entity.getId());
         vo.setOriginalName(entity.getOriginalName());
         vo.setFileSize(entity.getFileSize());

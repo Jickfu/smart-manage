@@ -1,14 +1,10 @@
-package sm.domain.sys.base.attachment.contract.model.vo;
+package sm.domain.sys.base.attachment.contract;
 
 import lombok.Data;
 
-/**
- * 附件 VO
- *
- * @author Chekfu
- */
+/** 附件领域向业务领域发布的只读引用信息。 */
 @Data
-public class AttachmentVO {
+public class AttachmentReference {
 
     private Long id;
     private Long businessAttachmentId;
