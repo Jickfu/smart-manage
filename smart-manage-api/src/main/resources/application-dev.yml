@@ -128,7 +128,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        exclude: "*"
   endpoint:
     health:
       show-details: always

@@ -137,3 +137,5 @@ Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
 当前密文格式固定为带 `sm4-gcm:v1:` 版本前缀的 SM4/GCM 认证密文，不兼容旧的无版本 SM4/CBC 密文。项目尚无真实生产密文时应重新保存相关凭据；如果未来存在生产迁移需求，必须先设计离线迁移和回滚方案，不得在运行时代码中长期保留 CBC 兼容分支。
 
 配置的最终权威来源是 `smart-manage-api/src/main/resources/application-*.yml`；新增或删除配置项时必须同步更新本文档。
+
+所有内置环境均通过 `management.endpoints.web.exposure.exclude: "*"` 禁止 Actuator Web 暴露。内建监控直接调用进程内的 `HealthEndpoint` Bean，不依赖 `/actuator/**` HTTP 地址；当前部署也不提供外部存活与就绪探针。

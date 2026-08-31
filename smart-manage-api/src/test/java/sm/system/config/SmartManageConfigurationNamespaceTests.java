@@ -94,6 +94,22 @@ class SmartManageConfigurationNamespaceTests {
         }
     }
 
+    @Test
+    void allProfilesMustDisableActuatorWebExposure() throws IOException {
+        for (String resourceName : List.of(
+                "application-dev.yml", "application-test.yml", "application-prod.yml")) {
+            PropertySource<?> source = loadSingle(resourceName);
+
+            // 内建监控直接使用 Actuator Bean，禁止为此开放任何 Actuator HTTP 入口。
+            assertThat(source.getProperty("management.endpoints.web.exposure.exclude"))
+                    .as(resourceName + " 必须禁止 Actuator Web 暴露")
+                    .isEqualTo("*");
+            assertThat(source.getProperty("management.endpoints.web.exposure.include"))
+                    .as(resourceName + " 不得重新声明 Actuator Web 暴露白名单")
+                    .isNull();
+        }
+    }
+
     private boolean belongsToAllowedLayer(String propertyName) {
         String remainingPath = propertyName.substring("smart-manage.".length());
         int separatorIndex = remainingPath.indexOf('.');

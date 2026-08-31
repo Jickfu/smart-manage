@@ -111,13 +111,11 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        exclude: "*"
   endpoint:
     health:
       show-details: never
       show-components: never
-      probes:
-        enabled: true
   server:
     add-application-context-header: false
 
