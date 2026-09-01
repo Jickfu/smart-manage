@@ -36,6 +36,7 @@ OpenAPI 平台为外部系统提供独立于浏览器会话的服务到服务调
 | `X-Sm-Timestamp` | Unix 秒时间戳 |
 | `X-Sm-Nonce` | 每次请求唯一的 8～100 位字母数字及 `._-` 字符串 |
 | `X-Sm-Request-Id` | 调用方请求标识，规则同 nonce |
+| `Content-Type` | 固定为 `application/json`，不接受参数或其他等价写法 |
 | `Content-Digest` | `sha-256=:Base64(SHA-256(原始请求体)):` |
 | `Signature-Input` | 固定 RFC 9421 签名参数；不接受旧版私有格式 |
 | `Signature` | `sm1=:Base64(HMAC-SHA256(签名基串)):` |
@@ -43,7 +44,7 @@ OpenAPI 平台为外部系统提供独立于浏览器会话的服务到服务调
 固定 `Signature-Input` 为：
 
 ```text
-sm1=("@method" "@path" "content-digest" "x-sm-key-id" "x-sm-timestamp" "x-sm-nonce");created={timestamp};keyid="{keyId}";nonce="{nonce}";alg="hmac-sha256"
+sm1=("@method" "@path" "@query" "content-type" "content-digest" "x-sm-key-id" "x-sm-timestamp" "x-sm-nonce");created={timestamp};keyid="{keyId}";nonce="{nonce}";alg="hmac-sha256"
 ```
 
 签名基串由 RFC 9421 实现按 Structured Fields 和组件规范化规则构造。HTTP 方法保留请求中的原始大小写，标准 `POST` 请求必须签为大写；路径不含域名和查询串：
@@ -51,6 +52,8 @@ sm1=("@method" "@path" "content-digest" "x-sm-key-id" "x-sm-timestamp" "x-sm-non
 ```text
 "@method": POST
 "@path": /openapi/sys/base/basic-data/v1/items/query
+"@query": ?
+"content-type": application/json
 "content-digest": {Content-Digest}
 "x-sm-key-id": {keyId}
 "x-sm-timestamp": {timestamp}
@@ -58,7 +61,7 @@ sm1=("@method" "@path" "content-digest" "x-sm-key-id" "x-sm-timestamp" "x-sm-non
 "@signature-params": {Signature-Input 去掉 sm1= 前缀}
 ```
 
-签名覆盖传输中的原始加密信封字节，而不是解密后的业务 JSON。调用方必须在序列化信封后计算摘要和签名，发送前不得再次格式化 JSON。
+`@query` 覆盖包含前导 `?` 的原始查询串，不进行解码、参数排序或重新编码；请求没有查询串时固定签为 `?`。签名覆盖传输中的原始加密信封字节，而不是解密后的业务 JSON。调用方必须在序列化信封后计算摘要和签名，发送前不得再次格式化 JSON。
 
 服务端只接受一个标签为 `sm1` 的签名，并严格要求上述覆盖组件、顺序和 `created`、`keyid`、`nonce`、`alg` 参数及其顺序。`created`、`keyid`、`nonce` 必须分别与对应请求头一致；不提供旧版小写方法签名或缺少 nonce 元数据参数的兼容路径。
 
@@ -86,6 +89,7 @@ keyId={keyId}
 direction={request|response}
 method={大写HTTP方法}
 path={请求路径}
+query={包含前导 ? 的原始查询串；无查询串时为 ?}
 created={timestamp}
 nonce={nonce}
 requestId={requestId}
@@ -124,8 +128,8 @@ Controller 的正常 `Result<T>` 完整序列化后作为响应加密明文，�
 ## 验收基线
 
 - 浏览器非安全方法继续要求合法 Origin；`/openapi/**` 不要求 Origin，但没有完整签名、加密和授权时必须拒绝。
-- AES-256-GCM 与 SM4-GCM 均能往返解密；密文、标签或 AAD 任一变化必须失败。
-- 请求摘要或签名变化必须失败；同一 `keyId + nonce` 只能成功消费一次。
+- AES-256-GCM 与 SM4-GCM 均能往返解密；密文、标签、路径或查询串 AAD 任一变化必须失败。
+- 请求摘要、查询串、`Content-Type` 或签名变化必须失败；同一 `keyId + nonce` 只能成功消费一次。
 - 非标准 Structured Fields、额外或缺失签名、覆盖组件/参数变化、旧版小写方法签名或缺少 nonce 元数据参数必须失败。
 - 停用应用、停用/过期凭据、下线版本、未授权操作、不可用代理身份或不匹配 IP 均默认拒绝。
 - 管理接口不返回任何历史密钥；一次性凭据关闭后不能再次读取。

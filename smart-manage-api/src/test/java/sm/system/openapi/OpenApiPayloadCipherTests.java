@@ -28,7 +28,7 @@ class OpenApiPayloadCipherTests {
         byte[] plaintext = "{\"categoryNumber\":\"device-type\"}".getBytes(StandardCharsets.UTF_8);
         OpenApiAssociatedData associatedData = new OpenApiAssociatedData(
                 "1", algorithm, "sm_test_key", "request", "POST",
-                "/openapi/sys/base/basic-data/v1/items/query", 1788163200L,
+                "/openapi/sys/base/basic-data/v1/items/query", "?status=ENABLED", 1788163200L,
                 "nonce-123456", "request-123456");
 
         OpenApiEncryptedPayload payload = cipher.encrypt(
@@ -37,8 +37,14 @@ class OpenApiPayloadCipherTests {
         assertArrayEquals(plaintext, cipher.decrypt(payload, key, associatedData));
         OpenApiAssociatedData tampered = new OpenApiAssociatedData(
                 "1", algorithm, "sm_test_key", "response", "POST",
-                "/openapi/sys/base/basic-data/v1/items/query", 1788163200L,
+                "/openapi/sys/base/basic-data/v1/items/query", "?status=ENABLED", 1788163200L,
                 "nonce-123456", "request-123456");
         assertThrows(BizException.class, () -> cipher.decrypt(payload, key, tampered));
+
+        OpenApiAssociatedData tamperedQuery = new OpenApiAssociatedData(
+                "1", algorithm, "sm_test_key", "request", "POST",
+                "/openapi/sys/base/basic-data/v1/items/query", "?status=DISABLED", 1788163200L,
+                "nonce-123456", "request-123456");
+        assertThrows(BizException.class, () -> cipher.decrypt(payload, key, tamperedQuery));
     }
 }

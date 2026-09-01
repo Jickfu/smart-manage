@@ -50,6 +50,7 @@ import java.util.regex.Pattern;
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
 @RequiredArgsConstructor
 public class OpenApiSecurityFilter extends OncePerRequestFilter {
+    private static final String REQUIRED_CONTENT_TYPE = "application/json";
     private static final Pattern HEADER_TOKEN = Pattern.compile("[A-Za-z0-9._-]{8,100}");
     private static final long ALLOWED_CLOCK_SKEW_SECONDS = 300;
     private final OpenApiOperationRegistry operationRegistry;
@@ -80,6 +81,7 @@ public class OpenApiSecurityFilter extends OncePerRequestFilter {
         String traceId = TraceIdUtil.generateTraceId(request);
         TraceIdUtil.setTraceId(traceId);
         String path = requestPath(request);
+        String query = requestQuery(request);
         String clientIp = clientIpResolver.resolve(request);
         String keyId = request.getHeader("X-Sm-Key-Id");
         String requestId = request.getHeader("X-Sm-Request-Id");
@@ -100,11 +102,14 @@ public class OpenApiSecurityFilter extends OncePerRequestFilter {
             validateHeaderToken(requestId);
             String nonce = request.getHeader("X-Sm-Nonce");
             validateHeaderToken(nonce);
+            String contentType = request.getHeader("Content-Type");
+            validateContentType(contentType);
             long created = parseCreated(request.getHeader("X-Sm-Timestamp"));
             byte[] envelopeBytes = readBody(request);
             requestBytes = envelopeBytes.length;
             material = accessService.authenticate(keyId, clientIp);
-            signatureVerifier.verify(envelopeBytes, request.getMethod(), path, keyId, created, nonce,
+            signatureVerifier.verify(envelopeBytes, request.getMethod(), path, query, contentType,
+                    keyId, created, nonce,
                     request.getHeader("Content-Digest"), request.getHeader("Signature-Input"),
                     request.getHeader("Signature"), material.signingSecret());
             nonceService.consume(keyId, nonce);
@@ -131,7 +136,7 @@ public class OpenApiSecurityFilter extends OncePerRequestFilter {
                 responseWrapper.copyBodyToResponse();
             } else {
                 OpenApiAssociatedData responseAad = new OpenApiAssociatedData("1", material.algorithm(), keyId,
-                        "response", request.getMethod(), path, created, nonce, requestId);
+                        "response", request.getMethod(), path, query, created, nonce, requestId);
                 OpenApiEncryptedPayload encryptedResponse = payloadCipher.encrypt(plaintextResponse,
                         material.algorithm(), keyId, material.responseEncryptionKey(), responseAad);
                 byte[] outerResponse = jsonMapper.writeValueAsBytes(Result.success(encryptedResponse));
@@ -192,7 +197,7 @@ public class OpenApiSecurityFilter extends OncePerRequestFilter {
             throw new BizException(ResultEnum.UNAUTHORIZED, "OpenAPI 请求认证失败");
         }
         OpenApiAssociatedData requestAad = new OpenApiAssociatedData("1", material.algorithm(), keyId,
-                "request", request.getMethod(), requestPath(request), created, nonce, requestId);
+                "request", request.getMethod(), requestPath(request), requestQuery(request), created, nonce, requestId);
         return payloadCipher.decrypt(envelope, material.requestEncryptionKey(), requestAad);
     }
 
@@ -221,7 +226,7 @@ public class OpenApiSecurityFilter extends OncePerRequestFilter {
         try {
             long created = Long.parseLong(value);
             long now = Instant.now().getEpochSecond();
-            if (Math.abs(now - created) > ALLOWED_CLOCK_SKEW_SECONDS) {
+            if (!isWithinClockSkew(created, now)) {
                 throw new NumberFormatException();
             }
             return created;
@@ -230,9 +235,22 @@ public class OpenApiSecurityFilter extends OncePerRequestFilter {
         }
     }
 
+    static boolean isWithinClockSkew(long created, long now) {
+        // 当前 epoch seconds 远离 long 边界，先计算允许区间可避免 now - created 的减法溢出。
+        long earliest = now - ALLOWED_CLOCK_SKEW_SECONDS;
+        long latest = now + ALLOWED_CLOCK_SKEW_SECONDS;
+        return created >= earliest && created <= latest;
+    }
+
     private void validateHeaderToken(String value) {
         if (value == null || !HEADER_TOKEN.matcher(value).matches()) {
             throw new BizException(ResultEnum.UNAUTHORIZED, "OpenAPI 请求认证失败");
+        }
+    }
+
+    void validateContentType(String contentType) {
+        if (!REQUIRED_CONTENT_TYPE.equals(contentType)) {
+            throw new BizException(ResultEnum.BAD_REQUEST, "OpenAPI Content-Type 必须为 application/json");
         }
     }
 
@@ -251,6 +269,12 @@ public class OpenApiSecurityFilter extends OncePerRequestFilter {
         String contextPath = request.getContextPath();
         String requestUri = request.getRequestURI();
         return requestUri.substring(Math.min(contextPath.length(), requestUri.length()));
+    }
+
+    String requestQuery(HttpServletRequest request) {
+        String rawQuery = request.getQueryString();
+        // RFC 9421 规定 @query 始终包含前导问号；查询串缺失时组件值为单个问号。
+        return rawQuery == null ? "?" : "?" + rawQuery;
     }
 
     private static final class ByteArrayRequestWrapper extends HttpServletRequestWrapper {

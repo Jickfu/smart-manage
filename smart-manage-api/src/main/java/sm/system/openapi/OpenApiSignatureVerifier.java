@@ -29,13 +29,15 @@ public class OpenApiSignatureVerifier {
     private static final List<ComponentIdentifier> COVERED_COMPONENTS = List.of(
             new ComponentIdentifier("@method"),
             new ComponentIdentifier("@path"),
+            new ComponentIdentifier("@query"),
+            new ComponentIdentifier("content-type"),
             new ComponentIdentifier("content-digest"),
             new ComponentIdentifier("x-sm-key-id"),
             new ComponentIdentifier("x-sm-timestamp"),
             new ComponentIdentifier("x-sm-nonce"));
 
-    public void verify(byte[] rawBody, String method, String path, String keyId, long created,
-                       String nonce, String contentDigest, String signatureInput,
+    public void verify(byte[] rawBody, String method, String path, String query, String contentType,
+                       String keyId, long created, String nonce, String contentDigest, String signatureInput,
                        String signature, byte[] secret) {
         String expectedDigest = "sha-256=:" + Base64.getEncoder().encodeToString(sha256(rawBody)) + ":";
         if (!MessageDigest.isEqual(expectedDigest.getBytes(StandardCharsets.US_ASCII),
@@ -53,6 +55,8 @@ public class OpenApiSignatureVerifier {
                     identifier.getComponentName()) {
                 case "@method" -> method;
                 case "@path" -> path;
+                case "@query" -> query;
+                case "content-type" -> contentType;
                 case "content-digest" -> expectedDigest;
                 case "x-sm-key-id" -> keyId;
                 case "x-sm-timestamp" -> Long.toString(created);

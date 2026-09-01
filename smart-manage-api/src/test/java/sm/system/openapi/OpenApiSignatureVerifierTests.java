@@ -23,12 +23,16 @@ class OpenApiSignatureVerifierTests {
         String nonce = "nonce-123456";
         long created = 1788163200L;
         String path = "/openapi/sys/base/basic-data/v1/items/query";
+        String query = "?status=ENABLED&page=1";
+        String contentType = "application/json";
         String digest = "sha-256=:" + Base64.getEncoder().encodeToString(
                 MessageDigest.getInstance("SHA-256").digest(body)) + ":";
-        String input = "sm1=(\"@method\" \"@path\" \"content-digest\" \"x-sm-key-id\" "
+        String input = "sm1=(\"@method\" \"@path\" \"@query\" \"content-type\" \"content-digest\" \"x-sm-key-id\" "
                 + "\"x-sm-timestamp\" \"x-sm-nonce\");created=" + created + ";keyid=\"" + keyId
                 + "\";nonce=\"" + nonce + "\";alg=\"hmac-sha256\"";
         String base = "\"@method\": POST\n\"@path\": " + path
+                + "\n\"@query\": " + query
+                + "\n\"content-type\": " + contentType
                 + "\n\"content-digest\": " + digest
                 + "\n\"x-sm-key-id\": " + keyId
                 + "\n\"x-sm-timestamp\": " + created
@@ -39,11 +43,17 @@ class OpenApiSignatureVerifierTests {
         String signature = "sm1=:" + Base64.getEncoder().encodeToString(
                 mac.doFinal(base.getBytes(StandardCharsets.UTF_8))) + ":";
 
-        assertDoesNotThrow(() -> verifier.verify(body, "POST", path, keyId, created, nonce,
+        assertDoesNotThrow(() -> verifier.verify(body, "POST", path, query, contentType, keyId, created, nonce,
                 digest, input, signature, secret));
         assertThrows(BizException.class, () -> verifier.verify(
-                "tampered".getBytes(StandardCharsets.UTF_8), "POST", path, keyId, created,
+                "tampered".getBytes(StandardCharsets.UTF_8), "POST", path, query, contentType, keyId, created,
                 nonce, digest, input, signature, secret));
+        assertThrows(BizException.class, () -> verifier.verify(body, "POST", path,
+                "?status=DISABLED&page=1", contentType, keyId, created, nonce,
+                digest, input, signature, secret));
+        assertThrows(BizException.class, () -> verifier.verify(body, "POST", path, query,
+                "application/json;charset=UTF-8", keyId, created, nonce,
+                digest, input, signature, secret));
     }
 
     @Test
@@ -70,7 +80,7 @@ class OpenApiSignatureVerifierTests {
         String legacySignature = "sm1=:" + Base64.getEncoder().encodeToString(
                 mac.doFinal(legacyBase.getBytes(StandardCharsets.UTF_8))) + ":";
 
-        assertThrows(BizException.class, () -> verifier.verify(body, "POST", path, keyId, created,
-                nonce, digest, legacyInput, legacySignature, secret));
+        assertThrows(BizException.class, () -> verifier.verify(body, "POST", path, "?",
+                "application/json", keyId, created, nonce, digest, legacyInput, legacySignature, secret));
     }
 }
