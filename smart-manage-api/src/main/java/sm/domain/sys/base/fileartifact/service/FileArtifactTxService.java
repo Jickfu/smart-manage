@@ -56,6 +56,13 @@ class FileArtifactTxService {
         if (mapper.updateById(entity) != 1) throw new BizException(ResultEnum.DATA_CONFLICT, "文件制品下载资格已变化");
     }
 
+    /** 一次性秘密的传输结果不确定时失效制品，不恢复下载资格。 */
+    void invalidateStaleClaim(FileArtifactEntity entity) {
+        entity.setStatus("PENDING_DELETE");
+        clearClaim(entity);
+        if (mapper.updateById(entity) != 1) throw new BizException(ResultEnum.DATA_CONFLICT, "文件制品下载资格已变化");
+    }
+
     private FileArtifactEntity requireClaim(FileArtifactDownloadClaim claim) {
         FileArtifactEntity entity = mapper.selectById(claim.artifact().getId());
         if (entity == null || !"DOWNLOADING".equals(entity.getStatus())

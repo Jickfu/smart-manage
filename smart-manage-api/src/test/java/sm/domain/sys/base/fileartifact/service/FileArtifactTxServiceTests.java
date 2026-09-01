@@ -63,6 +63,23 @@ class FileArtifactTxServiceTests {
     }
 
     @Test
+    void shouldInvalidateUncertainStaleOneTimeClaim() {
+        FileArtifactMapper mapper = mock(FileArtifactMapper.class);
+        FileArtifactEntity entity = activeEntity();
+        entity.setStatus("DOWNLOADING");
+        entity.setDownloadClaimToken("claim-1");
+        entity.setDownloadClaimedAt(LocalDateTime.now().minusHours(2));
+        when(mapper.updateById(entity)).thenReturn(1);
+
+        new FileArtifactTxService(mapper).invalidateStaleClaim(entity);
+
+        assertThat(entity.getStatus()).isEqualTo("PENDING_DELETE");
+        assertThat(entity.getDownloadClaimToken()).isNull();
+        assertThat(entity.getDownloadClaimedAt()).isNull();
+        verify(mapper).updateById(entity);
+    }
+
+    @Test
     void shouldAllowOnlyOneConcurrentClaimToUpdateState() {
         FileArtifactMapper mapper = mock(FileArtifactMapper.class);
         FileArtifactEntity entity = activeEntity();

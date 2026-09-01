@@ -111,10 +111,16 @@ public class FileArtifactService implements FileArtifactGateway {
         int failed = 0;
         for (FileArtifactEntity staleClaim : staleClaims) {
             try {
-                txService.releaseStaleClaim(staleClaim);
+                if (FileStoragePurpose.ONE_TIME_CREDENTIAL.name().equals(staleClaim.getPurpose())) {
+                    // 一次性秘密的传输结果无法确认时必须 fail-closed，绝不能重新开放下载资格。
+                    txService.invalidateStaleClaim(staleClaim);
+                } else {
+                    txService.releaseStaleClaim(staleClaim);
+                }
             } catch (RuntimeException exception) {
                 failed++;
-                log.warn("文件制品超时下载资格释放失败: id={}", staleClaim.getId(), exception);
+                log.warn("文件制品超时下载声明处理失败: id={}, purpose={}",
+                        staleClaim.getId(), staleClaim.getPurpose(), exception);
             }
         }
         for (FileArtifactEntity entity : candidates) {
