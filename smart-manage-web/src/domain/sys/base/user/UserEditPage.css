@@ -25,6 +25,11 @@
   background: transparent;
 }
 
+/* 大尺寸上传头像需要同步放大文字占位，避免沿用 Avatar 默认的 18px 字号。 */
+.sm-user-avatar-upload > .ant-avatar .ant-avatar-string {
+  font-size: 40px;
+}
+
 .sm-user-avatar-upload-mask {
   position: absolute;
   right: 0;
