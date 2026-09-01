@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { Key } from 'react';
-import { Button, Form, Input, InputNumber, Table } from 'antd';
+import { Form, Input, InputNumber, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormListFieldData } from 'antd/es/form';
 import { useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { EditSectionCollapse } from '@/domain/common/page/EditSectionCollapse';
+import { EditSectionActionButton } from '@/domain/common/page/EditSectionActionButton';
 import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -69,11 +70,8 @@ function StringRuleTable({
             <div className="sm-attachment-config-rule-toolbar">
               <span className="sm-attachment-config-rule-title">{title}</span>
               <div className="sm-attachment-config-rule-actions">
-                <Button type="link" onClick={() => add('')}>
-                  新增
-                </Button>
-                <Button
-                  type="link"
+                <EditSectionActionButton onClick={() => add('')}>新增</EditSectionActionButton>
+                <EditSectionActionButton
                   danger
                   disabled={selectedRowKeys.length === 0}
                   onClick={() => {
@@ -85,7 +83,7 @@ function StringRuleTable({
                   }}
                 >
                   删除
-                </Button>
+                </EditSectionActionButton>
               </div>
             </div>
             <Table

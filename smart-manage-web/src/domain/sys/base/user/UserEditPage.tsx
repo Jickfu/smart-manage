@@ -1,10 +1,11 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
-import { Button, DatePicker, Form, Input, Select, Table } from 'antd';
+import { DatePicker, Form, Input, Select, Table } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { EditSectionActionButton } from '@/domain/common/page/EditSectionActionButton';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import EditPage from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
@@ -255,17 +256,16 @@ const UserEditPage = (props: PageComponentProps) => {
           extra: (editable) =>
             !selfMode && editable ? (
               <div className="sm-user-assignment-actions">
-                <Button type="link" onClick={() => assignmentTableRef.current?.add()}>
+                <EditSectionActionButton onClick={() => assignmentTableRef.current?.add()}>
                   新增
-                </Button>
-                <Button
-                  type="link"
+                </EditSectionActionButton>
+                <EditSectionActionButton
                   danger
                   disabled={!hasSelectedAssignments}
                   onClick={() => assignmentTableRef.current?.removeSelected()}
                 >
                   删除
-                </Button>
+                </EditSectionActionButton>
               </div>
             ) : undefined,
         },

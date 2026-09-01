@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import type { Key } from 'react';
-import { Button, DatePicker, Form, Input, InputNumber } from 'antd';
+import { DatePicker, Form, Input, InputNumber } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormListFieldData, FormListOperation } from 'antd/es/form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,6 +16,7 @@ import {
 import { BillStatus, OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { EditSectionActionButton } from '@/domain/common/page/EditSectionActionButton';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
 import {
@@ -283,11 +284,10 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
   const renderEntryActions = (editable: boolean) =>
     editable ? (
       <div className="sm-purchase-entry-actions">
-        <Button type="link" onClick={() => entryOperationsRef.current?.add({ quantity: 1 })}>
+        <EditSectionActionButton onClick={() => entryOperationsRef.current?.add({ quantity: 1 })}>
           新增
-        </Button>
-        <Button
-          type="link"
+        </EditSectionActionButton>
+        <EditSectionActionButton
           danger
           disabled={selectedEntryKeys.length === 0}
           onClick={() => {
@@ -299,7 +299,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
           }}
         >
           删除
-        </Button>
+        </EditSectionActionButton>
       </div>
     ) : undefined;
 

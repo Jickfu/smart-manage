@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Key } from 'react';
-import { Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/EditPage';
@@ -14,6 +13,7 @@ import type { PageComponentProps } from '@/domain/common/page/types';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { EditSectionActionButton } from '@/domain/common/page/EditSectionActionButton';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { useUserRefSelector } from '@/domain/sys/base/user/refSelector/useUserRefSelector';
 import { useOrgRefSelector } from '@/domain/sys/base/org/refSelector/useOrgRefSelector';
@@ -234,7 +234,7 @@ const OpenApiApplicationEditPage = (props: PageComponentProps) => {
         { title: '功能', dataIndex: 'featureName', width: 130 },
         { title: '所属应用', dataIndex: 'applicationName' },
       ]}
-      trigger={<Button type="primary">增加</Button>}
+      trigger={<EditSectionActionButton>增加</EditSectionActionButton>}
     />
   );
 
@@ -270,17 +270,16 @@ const OpenApiApplicationEditPage = (props: PageComponentProps) => {
                 extra: (editable: boolean) =>
                   detail && editable && can(openApiApplicationAccess.permissions.credential) ? (
                     <>
-                      <Button type="primary" onClick={() => credentialRef.current?.create()}>
+                      <EditSectionActionButton onClick={() => credentialRef.current?.create()}>
                         创建凭据
-                      </Button>
-                      <Button
-                        type="primary"
+                      </EditSectionActionButton>
+                      <EditSectionActionButton
                         disabled={!selectedCredential}
                         danger={selectedCredential?.enabled}
                         onClick={() => credentialRef.current?.toggleSelected()}
                       >
                         {selectedCredential?.enabled ? '停用' : '启用'}
-                      </Button>
+                      </EditSectionActionButton>
                     </>
                   ) : undefined,
               },
@@ -303,8 +302,8 @@ const OpenApiApplicationEditPage = (props: PageComponentProps) => {
             editable && can(openApiApplicationAccess.permissions.grant) ? (
               <>
                 {grantSelector}
-                <Button
-                  type="primary"
+                <EditSectionActionButton
+                  danger
                   disabled={selectedGrantKeys.length === 0}
                   onClick={() => {
                     const removedKeys = new Set(selectedGrantKeys.map(String));
@@ -316,7 +315,7 @@ const OpenApiApplicationEditPage = (props: PageComponentProps) => {
                   }}
                 >
                   删除
-                </Button>
+                </EditSectionActionButton>
               </>
             ) : undefined,
         },

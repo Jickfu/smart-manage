@@ -11,6 +11,7 @@ import type { EditField } from '@/domain/common/page/EditPage';
 import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { EditSectionActionButton } from '@/domain/common/page/EditSectionActionButton';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -285,8 +286,7 @@ const SegmentActions = ({
   const segmentCount = segments?.length ?? 0;
   return (
     <div className="sm-number-rule-segment-actions">
-      <Button
-        type="link"
+      <EditSectionActionButton
         onClick={() => {
           const currentSegments = (form.getFieldValue('segments') ?? []) as NumberRuleSegment[];
           const sequenceIndex = currentSegments.findIndex(
@@ -303,9 +303,8 @@ const SegmentActions = ({
         }}
       >
         添加格式段
-      </Button>
-      <Button
-        type="link"
+      </EditSectionActionButton>
+      <EditSectionActionButton
         disabled={selectedIndex === undefined || selectedIndex === 0}
         onClick={() => {
           if (selectedIndex === undefined) return;
@@ -314,9 +313,8 @@ const SegmentActions = ({
         }}
       >
         上移
-      </Button>
-      <Button
-        type="link"
+      </EditSectionActionButton>
+      <EditSectionActionButton
         disabled={selectedIndex === undefined || selectedIndex === segmentCount - 1}
         onClick={() => {
           if (selectedIndex === undefined) return;
@@ -325,9 +323,8 @@ const SegmentActions = ({
         }}
       >
         下移
-      </Button>
-      <Button
-        type="link"
+      </EditSectionActionButton>
+      <EditSectionActionButton
         danger
         disabled={selectedRowKeys.length === 0}
         onClick={() => {
@@ -340,7 +337,7 @@ const SegmentActions = ({
         }}
       >
         删除
-      </Button>
+      </EditSectionActionButton>
     </div>
   );
 };
