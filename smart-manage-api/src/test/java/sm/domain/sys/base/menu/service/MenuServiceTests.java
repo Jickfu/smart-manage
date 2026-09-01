@@ -1,5 +1,7 @@
 package sm.domain.sys.base.menu.service;
 
+import sm.domain.sys.base.menu.converter.MenuConverter;
+
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.app.mapper.AppMapper;
 import sm.domain.sys.base.feature.mapper.FeatureMapper;

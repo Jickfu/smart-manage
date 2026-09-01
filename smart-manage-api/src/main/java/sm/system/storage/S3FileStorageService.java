@@ -38,17 +38,25 @@ public class S3FileStorageService implements FileStorageService {
 
     @Override
     public FileStoreResult store(String subDir, MultipartFile file) throws IOException {
+        try (InputStream inputStream = file.getInputStream()) {
+            return store(subDir, file.getOriginalFilename(), file.getContentType(), file.getSize(), inputStream);
+        }
+    }
+
+    @Override
+    public FileStoreResult store(String subDir, String originalName, String contentType,
+                                 long fileSize, InputStream inputStream) throws IOException {
         FileStorageConfig config = config();
-        String objectKey = objectKey(subDir, file.getOriginalFilename());
+        String objectKey = objectKey(subDir, originalName);
         try {
             S3Client client = clients(config).client();
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(config.s3Bucket())
                     .key(objectKey)
-                    .contentType(file.getContentType())
+                    .contentType(contentType)
                     .build();
-            client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
-            return FileStoreResult.of(objectKey.substring(objectKey.lastIndexOf('/') + 1), objectKey, file.getSize());
+            client.putObject(request, RequestBody.fromInputStream(inputStream, fileSize));
+            return FileStoreResult.of(objectKey.substring(objectKey.lastIndexOf('/') + 1), objectKey, fileSize);
         } catch (RuntimeException exception) {
             throw new IOException("S3 对象上传失败", exception);
         }

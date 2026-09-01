@@ -1,5 +1,7 @@
 package sm.domain.sys.base.org.service;
 
+import sm.domain.sys.base.org.converter.OrgConverter;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;

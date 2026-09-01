@@ -14,6 +14,9 @@ import { purchaseRequisitionQueryKeys } from './queryKeys';
 import type { PurchaseRequisitionListVO } from './types';
 import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
+import { serializeListFilters } from '@/domain/common/page/listQuery';
+import { useArtifactExport } from '@/domain/common/dataExchange/useArtifactExport';
+import { DataExchangeActions } from '@/domain/common/dataExchange/DataExchangeActions';
 
 const EDIT_COMPONENT_KEY = componentKeys.purchaseRequisitionEdit;
 
@@ -61,6 +64,7 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
       await listQuery.query.refetch();
     },
   });
+  const exportMutation = useArtifactExport(purchaseRequisitionApi.export, '采购申请导出完成');
 
   const openDetail = (record: PurchaseRequisitionListVO) => {
     const operationType =
@@ -133,6 +137,25 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
       selectMode="checkbox"
       selectedRowKeys={selectedRowKeys}
       onSelectChange={setSelectedRowKeys}
+      toolbarExtra={
+        <DataExchangeActions
+          permissionPrefix={purchaseRequisitionAccess.prefix}
+          exportPermission={purchaseRequisitionAccess.permissions.export}
+          exporting={exportMutation.isPending}
+          onExport={(layout) => {
+            exportMutation.mutate({
+              pageNum: 1,
+              pageSize: 10000,
+              keyword: listQuery.keyword || undefined,
+              filters: serializeListFilters(listQuery.columnFilters),
+              sortField: listQuery.columnSort?.field,
+              sortOrder: listQuery.columnSort?.order,
+              ids: selectedRowKeys.length ? selectedRowKeys.map(String) : undefined,
+              layout,
+            });
+          }}
+        />
+      }
     />
   );
 };

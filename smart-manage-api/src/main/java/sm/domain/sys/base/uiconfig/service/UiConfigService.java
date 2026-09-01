@@ -1,5 +1,7 @@
 package sm.domain.sys.base.uiconfig.service;
 
+import sm.domain.sys.base.uiconfig.converter.UiConfigConverter;
+
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

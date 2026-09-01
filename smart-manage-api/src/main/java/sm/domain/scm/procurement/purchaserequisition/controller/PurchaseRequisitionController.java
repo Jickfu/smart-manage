@@ -14,6 +14,8 @@ import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisit
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionDeleteForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSaveForm;
 import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionSubmitForm;
+import sm.domain.scm.procurement.purchaserequisition.model.form.PurchaseRequisitionExportForm;
+import sm.domain.sys.base.fileartifact.contract.FileArtifactReference;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionCreateNewDataVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionDetailVO;
 import sm.domain.scm.procurement.purchaserequisition.model.vo.PurchaseRequisitionListVO;
@@ -28,6 +30,12 @@ import sm.system.response.Result;
 @Tag(name = "采购管理-采购申请", description = "采购申请单接口")
 public class PurchaseRequisitionController {
     private final PurchaseRequisitionService service;
+
+    @PostMapping("/scm/procurement/purchase-requisition/export")
+    @SaCheckPermission(PurchaseRequisitionPermission.EXPORT)
+    public Result<FileArtifactReference> export(@RequestBody @Valid PurchaseRequisitionExportForm form) {
+        return Result.success(service.export(form));
+    }
 
     @PostMapping("/scm/procurement/purchase-requisition/listPage")
     @SaCheckPermission(PurchaseRequisitionPermission.LIST)

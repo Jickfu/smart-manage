@@ -1,5 +1,7 @@
 package sm.domain.sys.base.user.service;
 
+import sm.domain.sys.base.user.converter.UserConverter;
+
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;

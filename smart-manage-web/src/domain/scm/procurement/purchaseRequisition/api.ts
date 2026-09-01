@@ -10,6 +10,8 @@ import type {
   PurchaseRequisitionSubmitForm,
   PurchaseRequisitionHomeSummaryVO,
 } from './types';
+import type { FileArtifactReference } from '@/domain/common/fileArtifactApi';
+import type { DataExportLayout } from '@/domain/common/dataExchange/DataExchangeActions';
 
 const baseUrl = '/scm/procurement/purchase-requisition';
 
@@ -36,4 +38,8 @@ export const purchaseRequisitionApi = {
     request.post<Result<string>>(`${baseUrl}/submit`, form).then((response) => response.data.data),
   delete: (form: PurchaseRequisitionDeleteForm) =>
     request.post<Result<string>>(`${baseUrl}/delete`, form).then((response) => response.data.data),
+  export: (form: PurchaseRequisitionListForm & { ids?: string[]; layout: DataExportLayout }) =>
+    request
+      .post<Result<FileArtifactReference>>(`${baseUrl}/export`, form)
+      .then((response) => response.data.data),
 };

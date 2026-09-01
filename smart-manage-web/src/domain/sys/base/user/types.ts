@@ -10,6 +10,11 @@ export interface UserListForm extends PageForm {
   unassigned?: boolean;
 }
 
+export interface UserExportForm extends UserListForm {
+  layout: import('@/domain/common/dataExchange/DataExchangeActions').DataExportLayout;
+  ids?: string[];
+}
+
 export type Gender = 'MALE' | 'FEMALE';
 
 export interface UserAssignmentVO {
@@ -99,4 +104,16 @@ export interface ResetPasswordVO {
 export interface TemporaryLoginGrantVO {
   credential: string;
   expiresAt: string;
+}
+
+export type UserImportMode = 'CREATE_ONLY' | 'UPDATE_ONLY' | 'UPSERT';
+export type UserImportTransactionMode = 'ATOMIC' | 'BATCH';
+
+export interface UserImportResultVO {
+  total: number;
+  success: number;
+  failed: number;
+  errors: string[];
+  credentialFile?: import('@/domain/common/fileArtifactApi').FileArtifactReference;
+  errorFile?: import('@/domain/common/fileArtifactApi').FileArtifactReference;
 }

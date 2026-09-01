@@ -1,5 +1,7 @@
 package sm.domain.sys.base.user.service;
 
+import sm.domain.sys.base.user.converter.UserConverter;
+
 import com.alicp.jetcache.anno.CacheInvalidate;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;

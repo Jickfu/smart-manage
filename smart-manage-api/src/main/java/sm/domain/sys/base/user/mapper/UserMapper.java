@@ -19,6 +19,7 @@ public interface UserMapper extends BaseMapper<UserEntity> {
 			@Param("keyword") String keyword,
 			@Param("orgIds") List<Long> orgIds,
 			@Param("unassigned") boolean unassigned,
+			@Param("ids") List<Long> ids,
 			@Param("listQuery") ListSqlQuery listQuery);
 
 	List<UserAssignedRoleVO> selectAssignedRoles(@Param("userId") Long userId);

@@ -1,5 +1,7 @@
 package sm.domain.sys.base.role.service;
 
+import sm.domain.sys.base.role.converter.RoleConverterImpl;
+
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.role.mapper.RoleMapper;

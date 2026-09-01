@@ -1,5 +1,7 @@
 package sm.domain.sys.base.fileconfig.service;
 
+import sm.domain.sys.base.fileconfig.converter.FileConfigConverterImpl;
+
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.fileconfig.mapper.FileConfigMapper;
 import sm.domain.sys.base.fileconfig.model.entity.FileConfigEntity;

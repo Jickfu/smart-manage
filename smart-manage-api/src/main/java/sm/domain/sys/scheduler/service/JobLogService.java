@@ -1,5 +1,7 @@
 package sm.domain.sys.scheduler.service;
 
+import sm.domain.sys.scheduler.converter.JobLogConverter;
+
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;

@@ -106,11 +106,14 @@ public class FtpFileStorageService implements FileStorageService {
 
     @Override
     public FileStoreResult store(String subDir, MultipartFile file) throws IOException {
-        return doStore(file, subDir);
+        try (InputStream inputStream = file.getInputStream()) {
+            return store(subDir, file.getOriginalFilename(), file.getContentType(), file.getSize(), inputStream);
+        }
     }
 
-    private FileStoreResult doStore(MultipartFile file, String subDir) throws IOException {
-        String originalName = file.getOriginalFilename();
+    @Override
+    public FileStoreResult store(String subDir, String originalName, String contentType,
+                                 long fileSize, InputStream inputStream) throws IOException {
         String ext = "";
         if (originalName != null && originalName.contains(".")) {
             ext = originalName.substring(originalName.lastIndexOf("."));
@@ -126,13 +129,11 @@ public class FtpFileStorageService implements FileStorageService {
             }
             String remotePath = subDir != null && !subDir.isEmpty()
                     ? subDir + "/" + storedName : storedName;
-            try (InputStream is = file.getInputStream()) {
-                if (!ftp.storeFile(storedName, is)) {
-                    throw new IOException("FTP 上传失败: " + ftp.getReplyString());
-                }
+            if (!ftp.storeFile(storedName, inputStream)) {
+                throw new IOException("FTP 上传失败: " + ftp.getReplyString());
             }
             log.info("FTP 文件存储: {}", remotePath);
-            return FileStoreResult.of(storedName, remotePath, file.getSize());
+            return FileStoreResult.of(storedName, remotePath, fileSize);
         } finally {
             disconnect(ftp);
         }

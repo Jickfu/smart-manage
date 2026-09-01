@@ -11,4 +11,6 @@ export const userAccess = defineAccessResource('sys:base:user', {
   resetPassword: 'resetPassword',
   temporaryLogin: 'temporaryLogin',
   readSensitive: 'sensitive:read',
+  import: 'import',
+  export: 'export',
 });

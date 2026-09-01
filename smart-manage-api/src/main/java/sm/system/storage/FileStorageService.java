@@ -15,6 +15,10 @@ public interface FileStorageService {
     /** 存储文件到指定子目录（如 sys、biz/expense_report、other） */
     FileStoreResult store(String subDir, MultipartFile file) throws IOException;
 
+    /** 存储由服务端生成的文件；目录必须由受控用途生成，调用方不得传入物理路径。 */
+    FileStoreResult store(String subDir, String originalName, String contentType,
+                          long fileSize, InputStream inputStream) throws IOException;
+
     /** 删除文件 */
     void delete(String storedPath) throws IOException;
 

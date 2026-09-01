@@ -90,7 +90,7 @@ Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包�
 
 ## 映射与组装
 
-模块内 `*Converter` 使用 MapStruct 完成 Entity 到列表、选择、明细和基础详情 VO 的纯字段映射。Converter 不得依赖 Mapper、Service、缓存、安全上下文或外部资源。
+模块内 `*Converter` 位于独立的 `converter` 包，使用 MapStruct 完成 Entity 到列表、选择、明细和基础详情 VO 的纯字段映射。Converter 不得依赖 Mapper、Service、缓存、安全上下文或外部资源。
 
 需要查询、权限判断、默认值、状态规则、树结构或主从聚合的转换属于业务组装，保留在公开 Service 并使用 `assemble*` 命名。MyBatis 联表查询可以直接投影 VO。
 
@@ -122,6 +122,8 @@ Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包�
 - 用户认证状态使用 Redis。
 - 缓存监控只通过公开 `CacheService` 提供业务入口；Redis 原始访问属于模块内部技术能力，不形成第二个公开 Service。
 - `FileStorageService` 抽象 Local、FTP、S3/MinIO 等存储实现；单实例生产可以使用具备持久化、备份和恢复能力的 Local，生产多实例部署必须使用所有实例可访问的共享对象存储。
+- 文件存储同时支持客户端上传和服务端生成流。对象前缀必须由 `FileStoragePurpose` 或业务资源注册产生，业务代码不得自行拼接物理目录。附件、导入源、导出结果、错误报告和一次性凭据共享存储适配，但分别维护授权与生命周期。
+- 有下载次数、有效期或清理状态的生成文件必须登记为受管理制品；一次性文件成功下载后进入待删除状态，物理删除失败由集群任务幂等重试。
 - 附件上传大小、扩展名、MIME 和临时有效期由 `t_sys_attachment_config` 单例统一管理；业务资源注册只负责稳定资源身份、上传权限和对象级授权，禁止各单据复制全局文件限制。
 - 数据库事务和外部文件存储不能原子提交，写操作必须定义补偿语义。
 - 异步日志、线程池和 Quartz 执行必须显式传播并清理 Trace ID。

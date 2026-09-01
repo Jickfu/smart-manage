@@ -12,8 +12,9 @@ public final class UserPermission {
     public static final String RESET_PASSWORD = "sys:base:user:resetPassword";
     public static final String TEMPORARY_LOGIN = "sys:base:user:temporaryLogin";
     public static final String READ_SENSITIVE = "sys:base:user:sensitive:read";
+    public static final String IMPORT = "sys:base:user:import";
+    public static final String EXPORT = "sys:base:user:export";
 
     private UserPermission() {
     }
 }
-

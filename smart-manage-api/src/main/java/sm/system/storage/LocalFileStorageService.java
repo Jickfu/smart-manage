@@ -47,11 +47,15 @@ public class LocalFileStorageService implements FileStorageService {
 
     @Override
     public FileStoreResult store(String subDir, MultipartFile file) throws IOException {
-        return doStore(file, getBaseDir() + subDir + "/");
+        try (InputStream inputStream = file.getInputStream()) {
+            return store(subDir, file.getOriginalFilename(), file.getContentType(), file.getSize(), inputStream);
+        }
     }
 
-    private FileStoreResult doStore(MultipartFile file, String dir) throws IOException {
-        String originalName = file.getOriginalFilename();
+    @Override
+    public FileStoreResult store(String subDir, String originalName, String contentType,
+                                 long fileSize, InputStream inputStream) throws IOException {
+        String dir = getBaseDir() + subDir + "/";
         String ext = "";
         if (originalName != null && originalName.contains(".")) {
             ext = originalName.substring(originalName.lastIndexOf("."));
@@ -62,9 +66,9 @@ public class LocalFileStorageService implements FileStorageService {
             Files.createDirectories(dirPath);
         }
         Path filePath = dirPath.resolve(storedName);
-        file.transferTo(filePath.toFile());
+        Files.copy(inputStream, filePath);
         log.info("本地文件存储: {}", filePath);
-        return FileStoreResult.of(storedName, filePath.toString(), file.getSize());
+        return FileStoreResult.of(storedName, filePath.toString(), fileSize);
     }
 
     @Override

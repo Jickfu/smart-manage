@@ -11,6 +11,7 @@ import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.user.model.entity.UserEntity;
+import sm.domain.sys.base.user.converter.UserConverter;
 import sm.domain.sys.base.user.model.form.UserListForm;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
@@ -75,7 +76,7 @@ public class UserService {
 		Page<UserEntity> page = new Page<>(form.getPageNum(), form.getPageSize());
 		String keyword = form.getKeyword() == null ? null : form.getKeyword().trim();
 		Page<UserEntity> result = mapper.selectScopedPage(page, keyword, scopedOrgIds,
-				Boolean.TRUE.equals(form.getUnassigned()), ListSqlQuery.of(form, LIST_FIELDS));
+				Boolean.TRUE.equals(form.getUnassigned()), null, ListSqlQuery.of(form, LIST_FIELDS));
 		var vos = result.getRecords().stream().map(converter::toListVO).collect(Collectors.toList());
 		for (UserListVO vo : vos) vo.setAvatar(avatarUrl(vo.getId(), vo.getAvatarAttachmentId()));
 		assembleAssignments(vos, result.getRecords().stream().map(UserEntity::getId).toList(), scopedOrgIds);

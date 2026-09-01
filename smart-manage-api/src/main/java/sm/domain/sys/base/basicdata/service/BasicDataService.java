@@ -1,5 +1,7 @@
 package sm.domain.sys.base.basicdata.service;
 
+import sm.domain.sys.base.basicdata.converter.BasicDataConverter;
+
 import com.alicp.jetcache.anno.CacheType;
 import com.alicp.jetcache.anno.Cached;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;

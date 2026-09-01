@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import sm.domain.sys.base.user.constant.UserPermission;
 import sm.domain.sys.base.user.model.form.UserListForm;
+import sm.domain.sys.base.user.model.form.UserExportForm;
+import sm.domain.sys.base.fileartifact.contract.FileArtifactReference;
 import sm.domain.sys.base.user.model.form.UserPermissionsForm;
 import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.form.UserRoleAssignmentSaveForm;
@@ -37,6 +39,11 @@ import sm.domain.sys.base.user.service.UserAuthenticationService;
 import sm.domain.sys.base.user.service.UserAuthorizationService;
 import sm.domain.sys.base.user.service.UserProfileService;
 import sm.domain.sys.base.user.service.UserEmailPasswordService;
+import sm.domain.sys.base.user.service.UserImportService;
+import sm.domain.sys.base.user.service.UserExportService;
+import sm.domain.sys.base.user.model.enums.UserImportMode;
+import sm.domain.sys.base.user.model.enums.UserImportTransactionMode;
+import sm.domain.sys.base.user.model.vo.UserImportResultVO;
 import sm.system.form.IdForm;
 import sm.system.form.IdsForm;
 import sm.system.response.PageData;
@@ -52,6 +59,8 @@ import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.system.storage.FileStorageService;
 import sm.system.storage.FileStorageServiceFactory;
 import sm.system.security.crypto.BrowserPasswordCipher;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 用户管理
@@ -70,6 +79,31 @@ public class UserController {
 	private final TemporaryLoginService temporaryLoginService;
 	private final BrowserPasswordCipher browserPasswordCipher;
 	private final UserEmailPasswordService userEmailPasswordService;
+	private final UserImportService userImportService;
+	private final UserExportService userExportService;
+
+	@PostMapping("/sys/base/user/export")
+	@SaCheckPermission(UserPermission.EXPORT)
+	public Result<FileArtifactReference> export(@RequestBody @Valid UserExportForm form) {
+		return Result.success(userExportService.export(form));
+	}
+
+	@GetMapping("/sys/base/user/import/template")
+	@SaCheckPermission(UserPermission.IMPORT)
+	public ResponseEntity<byte[]> importTemplate() {
+		byte[] content = userImportService.template();
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''user-import-template.xlsx")
+				.body(content);
+	}
+
+	@PostMapping(value = "/sys/base/user/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@SaCheckPermission(UserPermission.IMPORT)
+	public Result<UserImportResultVO> importUsers(@RequestParam("file") MultipartFile file,
+			@RequestParam UserImportMode mode, @RequestParam UserImportTransactionMode transactionMode) {
+		return Result.success(userImportService.importUsers(file, mode, transactionMode));
+	}
 
 	@GetMapping("/sys/base/user/avatar/{userId}")
 	public ResponseEntity<StreamingResponseBody> avatar(@PathVariable Long userId) {

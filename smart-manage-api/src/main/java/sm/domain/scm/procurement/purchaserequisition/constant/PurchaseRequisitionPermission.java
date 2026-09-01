@@ -8,6 +8,7 @@ public final class PurchaseRequisitionPermission {
     public static final String SAVE = PREFIX + ":save";
     public static final String SUBMIT = PREFIX + ":submit";
     public static final String DELETE = PREFIX + ":delete";
+    public static final String EXPORT = PREFIX + ":export";
 
     private PurchaseRequisitionPermission() {
     }

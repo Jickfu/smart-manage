@@ -1,5 +1,7 @@
 package sm.domain.sys.monitor.sql.service;
 
+import sm.domain.sys.monitor.sql.converter.SqlLogConverter;
+
 import org.junit.jupiter.api.Test;
 import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.sysparam.service.SysParamService;

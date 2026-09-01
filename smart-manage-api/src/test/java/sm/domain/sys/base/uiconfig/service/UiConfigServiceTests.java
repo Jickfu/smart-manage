@@ -1,5 +1,7 @@
 package sm.domain.sys.base.uiconfig.service;
 
+import sm.domain.sys.base.uiconfig.converter.UiConfigConverter;
+
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.contract.AttachmentReference;

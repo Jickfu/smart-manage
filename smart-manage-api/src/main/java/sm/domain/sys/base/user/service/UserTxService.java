@@ -50,6 +50,13 @@ class UserTxService {
     private final OrgReferenceReader orgReferenceReader;
     private final CurrentUserContext currentUserContext;
 
+    /** 导入批次在同一事务中写入，任一用户失败则整个批次回滚。 */
+    public List<Long> saveBatch(List<UserSaveForm> forms) {
+        List<Long> ids = new java.util.ArrayList<>();
+        for (UserSaveForm form : forms) ids.add(save(form));
+        return ids;
+    }
+
     /** 新增/编辑用户 */
     public Long save(UserSaveForm form) {
         return save(form, form.getId());

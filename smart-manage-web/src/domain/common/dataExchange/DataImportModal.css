@@ -1,0 +1,124 @@
+.sm-data-import-modal .ant-modal-body {
+  padding: 20px;
+  background: var(--ant-color-fill-quaternary);
+}
+
+.sm-data-import-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.16fr 1fr;
+  gap: 16px;
+}
+
+.sm-data-import-section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 300px;
+  padding: 18px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+}
+
+.sm-data-import-section .ant-upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+.sm-data-import-section .ant-upload-drag {
+  box-sizing: border-box;
+  min-height: 0;
+  flex: 1;
+}
+
+.sm-data-import-section .ant-upload-list {
+  min-width: 0;
+  flex: none;
+}
+
+.sm-data-import-section .ant-upload-list-item-container,
+.sm-data-import-section .ant-upload-list-item,
+.sm-data-import-section .ant-upload-list-item-name {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sm-data-import-section .ant-upload-list-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-data-import-section .ant-typography {
+  margin-top: 0;
+}
+
+.sm-data-import-option-group {
+  width: 100%;
+}
+
+.sm-data-import-option {
+  width: 100%;
+  margin: 0;
+  padding: 11px 10px;
+  border-radius: var(--ant-border-radius);
+}
+
+.sm-data-import-option:hover,
+.sm-data-import-option:has(.ant-radio-checked) {
+  background: var(--ant-color-primary-bg);
+}
+
+.sm-data-import-option-label,
+.sm-data-import-option-description {
+  display: block;
+}
+
+.sm-data-import-option-label {
+  color: var(--ant-color-text);
+  font-weight: 500;
+}
+
+.sm-data-import-option-description {
+  margin-top: 2px;
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sm-data-import-rule {
+  min-height: 64px;
+  padding: 12px;
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-fill-quaternary);
+  color: var(--ant-color-text-secondary);
+  line-height: 1.7;
+}
+
+.sm-data-import-template {
+  height: auto;
+  margin: 10px 0 18px;
+  padding-inline: 0;
+}
+
+.sm-data-import-upload-icon {
+  color: var(--ant-color-primary);
+  font-size: 42px;
+}
+
+.sm-data-import-notice {
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .sm-data-import-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sm-data-import-section {
+    min-height: auto;
+  }
+}

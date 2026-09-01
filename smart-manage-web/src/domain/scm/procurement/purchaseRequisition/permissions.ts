@@ -8,5 +8,6 @@ export const purchaseRequisitionAccess = defineAccessResource(
     save: 'save',
     submit: 'submit',
     delete: 'delete',
+    export: 'export',
   },
 );

@@ -1,5 +1,7 @@
 package sm.domain.sys.base.role.service;
 
+import sm.domain.sys.base.role.converter.RoleConverter;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;

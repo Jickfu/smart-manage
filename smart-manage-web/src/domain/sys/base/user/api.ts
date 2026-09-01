@@ -9,9 +9,32 @@ import type {
   UserSaveForm,
   UserRoleAssignmentSaveForm,
   UserRoleAssignmentWorkspaceVO,
+  UserImportMode,
+  UserImportTransactionMode,
+  UserImportResultVO,
+  UserExportForm,
 } from './types';
+import type { FileArtifactReference } from '@/domain/common/fileArtifactApi';
 
 export const userApi = {
+  export: (form: UserExportForm) =>
+    request
+      .post<Result<FileArtifactReference>>('/sys/base/user/export', form)
+      .then((response) => response.data.data),
+  importTemplate: () =>
+    request
+      .get<Blob>('/sys/base/user/import/template', { responseType: 'blob' })
+      .then((response) => response.data),
+
+  importUsers: (file: File, mode: UserImportMode, transactionMode: UserImportTransactionMode) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mode', mode);
+    formData.append('transactionMode', transactionMode);
+    return request
+      .post<Result<UserImportResultVO>>('/sys/base/user/import', formData)
+      .then((response) => response.data.data);
+  },
   listPage: (form: UserListForm) =>
     request
       .post<Result<PageData<UserListVO>>>('/sys/base/user/listPage', form)

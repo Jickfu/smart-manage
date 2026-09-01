@@ -1,0 +1,38 @@
+package sm.domain.sys.base.fileartifact.controller;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import sm.domain.sys.base.fileartifact.model.entity.FileArtifactEntity;
+import sm.domain.sys.base.fileartifact.service.FileArtifactService;
+import sm.system.form.IdForm;
+import sm.system.storage.FileStorageServiceFactory;
+
+import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
+
+@RestController
+@RequiredArgsConstructor
+public class FileArtifactController {
+    private final FileArtifactService service;
+    private final FileStorageServiceFactory storageFactory;
+
+    @PostMapping("/sys/base/file-artifact/download")
+    public ResponseEntity<StreamingResponseBody> download(@RequestBody @Valid IdForm form) {
+        FileArtifactEntity entity = service.consume(form.getId());
+        StreamingResponseBody body = outputStream -> {
+            try (var inputStream = storageFactory.getService(entity.getStorageType()).openStream(entity.getObjectKey())) {
+                inputStream.transferTo(outputStream);
+            }
+        };
+        String encodedName = java.net.URLEncoder.encode(entity.getOriginalName(), StandardCharsets.UTF_8).replace("+", "%20");
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(entity.getMimeType()))
+                .contentLength(entity.getFileSize()).header("X-Content-Type-Options", "nosniff")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedName).body(body);
+    }
+}

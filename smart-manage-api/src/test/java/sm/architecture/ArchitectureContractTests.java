@@ -172,7 +172,7 @@ class ArchitectureContractTests {
                 .should().resideInAPackage("..service")
                 .check(productionClasses);
         classes().that().resideInAPackage("sm.domain..").and().haveSimpleNameEndingWith("Converter")
-                .should().resideInAPackage("..service")
+                .should().resideInAPackage("..converter")
                 .check(productionClasses);
         classes().that().resideInAPackage("sm.domain..").and().haveSimpleNameEndingWith("Entity")
                 .should().resideInAPackage("..model.entity")

@@ -60,6 +60,7 @@
         <ipaddress.version>5.6.2</ipaddress.version>
         <tianai-captcha.version>1.5.5</tianai-captcha.version>
         <oshi.version>6.9.1</oshi.version>
+        <fesod.version>2.0.2-incubating</fesod.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
     </properties>
     <dependencies>
@@ -240,6 +241,13 @@
             <groupId>org.apache.tika</groupId>
             <artifactId>tika-core</artifactId>
             <version>${tika.version}</version>
+        </dependency>
+
+        <!-- Excel 流式读写；第三方类型只允许出现在 infrastructure.excel 适配边界。 -->
+        <dependency>
+            <groupId>org.apache.fesod</groupId>
+            <artifactId>fesod-sheet</artifactId>
+            <version>${fesod.version}</version>
         </dependency>
 
         <!-- 通用工具：只引入 Core，密码能力统一直接使用受控密码库 -->

@@ -30,6 +30,10 @@ import AppModal from '@/domain/common/component/AppModal';
 import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
 import './UserListPage.css';
 import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import { serializeListFilters } from '@/domain/common/page/listQuery';
+import UserImportModal from './UserImportModal';
+import { DataExchangeActions } from '@/domain/common/dataExchange/DataExchangeActions';
+import { useArtifactExport } from '@/domain/common/dataExchange/useArtifactExport';
 
 const columnFeatures: ListColumnFeatures = {
   name: { label: '姓名', filter: { type: 'string' }, sorter: true },
@@ -83,6 +87,7 @@ const AssignmentCells = ({
 
 const UserListPage = (props: PageComponentProps) => {
   const feedback = useOperationFeedback();
+  const [importOpen, setImportOpen] = useState(false);
   const confirmOperation = useOperationConfirm();
   const [selectedTreeKey, setSelectedTreeKey] = useState<string>();
   const [treeKeyword, setTreeKeyword] = useState('');
@@ -132,6 +137,7 @@ const UserListPage = (props: PageComponentProps) => {
     setSelectedRowKeys([]);
     await query.refetch();
   });
+  const exportMutation = useArtifactExport(userApi.export, '用户导出完成');
   const resetPasswordMutation = useCommandMutation({
     mutationFn: (id: string) => userApi.resetPassword(id),
     onSuccess: (result) => setResetPassword(result.password),
@@ -403,6 +409,30 @@ const UserListPage = (props: PageComponentProps) => {
             },
           },
         ]}
+        toolbarExtra={
+          <DataExchangeActions
+            permissionPrefix={userAccess.prefix}
+            importPermission={userAccess.permissions.import}
+            exportPermission={userAccess.permissions.export}
+            exporting={exportMutation.isPending}
+            onImport={() => setImportOpen(true)}
+            onExport={(layout) =>
+              exportMutation.mutate({
+                pageNum: 1,
+                pageSize: 10000,
+                keyword: keyword || undefined,
+                orgId: unassigned ? undefined : effectiveTreeKey,
+                unassigned,
+                includeDescendants: unassigned ? false : includeDescendants,
+                filters: serializeListFilters(columnQueryProps.columnFilters),
+                sortField: columnQueryProps.columnSort?.field,
+                sortOrder: columnQueryProps.columnSort?.order,
+                ids: selectedRowKeys.length ? selectedRowKeys.map(String) : undefined,
+                layout,
+              })
+            }
+          />
+        }
         onRefresh={onRefresh}
         onQuickSearch={onSearch}
         onPageChange={onPageChange}
@@ -414,6 +444,11 @@ const UserListPage = (props: PageComponentProps) => {
         selectMode="checkbox"
         selectedRowKeys={selectedRowKeys}
         onSelectChange={setSelectedRowKeys}
+      />
+      <UserImportModal
+        open={importOpen}
+        onCancel={() => setImportOpen(false)}
+        onImported={() => query.refetch().then(() => undefined)}
       />
       <Modal
         title="密码重置成功"
