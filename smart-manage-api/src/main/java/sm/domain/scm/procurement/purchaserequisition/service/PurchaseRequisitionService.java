@@ -79,8 +79,13 @@ public class PurchaseRequisitionService {
         if (!parentIds.isEmpty()) {
             for (PurchaseRequisitionEntryEntity entry : entryMapper.selectList(
                     new LambdaQueryWrapper<PurchaseRequisitionEntryEntity>().in(PurchaseRequisitionEntryEntity::getParentId, parentIds)
-                            .orderByAsc(PurchaseRequisitionEntryEntity::getParentId).orderByAsc(PurchaseRequisitionEntryEntity::getSort))) {
+                            .orderByAsc(PurchaseRequisitionEntryEntity::getParentId).orderByAsc(PurchaseRequisitionEntryEntity::getSort)
+                            .last("LIMIT " + (ExcelWorkbookService.MAX_ROWS + 1)))) {
                 entriesByParent.computeIfAbsent(entry.getParentId(), ignored -> new ArrayList<>()).add(entry);
+            }
+            int entryCount = entriesByParent.values().stream().mapToInt(List::size).sum();
+            if (entryCount > ExcelWorkbookService.MAX_ROWS) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "采购申请展开明细后超过 Excel 最大 10000 行");
             }
         }
         List<String> headers = switch (form.getLayout()) {
@@ -94,8 +99,10 @@ public class PurchaseRequisitionService {
             OrgReference org = orgReferenceReader.require(entity.getOrgId());
             UserReference applicant = userReferenceReader.require(entity.getApplicantId());
             List<PurchaseRequisitionEntryEntity> entries = entriesByParent.getOrDefault(entity.getId(), List.of());
-            if (entries.isEmpty()) rows.add(exportRow(entity, null, org, applicant, form.getLayout()));
-            else for (PurchaseRequisitionEntryEntity entry : entries) rows.add(exportRow(entity, entry, org, applicant, form.getLayout()));
+            if (entries.isEmpty()) addExportRow(rows, exportRow(entity, null, org, applicant, form.getLayout()));
+            else for (PurchaseRequisitionEntryEntity entry : entries) {
+                addExportRow(rows, exportRow(entity, entry, org, applicant, form.getLayout()));
+            }
         }
         byte[] content = excelWorkbookService.write("采购申请", headers, rows);
         return fileArtifactGateway.create(FileStoragePurpose.DATA_EXPORT_RESULT, exportFileName(form.getLayout()),
@@ -107,6 +114,13 @@ public class PurchaseRequisitionService {
             case EXPORT_TEMPLATE -> "采购申请-完整信息.xlsx";
             case IMPORT_TEMPLATE -> "采购申请-导入模板.xlsx";
         };
+    }
+
+    private void addExportRow(List<List<?>> rows, List<?> row) {
+        if (rows.size() >= ExcelWorkbookService.MAX_ROWS) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "采购申请展开明细后超过 Excel 最大 10000 行");
+        }
+        rows.add(row);
     }
 
     private List<?> exportRow(PurchaseRequisitionEntity entity, PurchaseRequisitionEntryEntity entry,

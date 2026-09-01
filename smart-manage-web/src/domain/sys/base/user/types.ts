@@ -114,6 +114,7 @@ export interface UserImportResultVO {
   success: number;
   failed: number;
   errors: string[];
-  credentialFile?: import('@/domain/common/fileArtifactApi').FileArtifactReference;
+  warnings: string[];
+  credentialFiles: import('@/domain/common/fileArtifactApi').FileArtifactReference[];
   errorFile?: import('@/domain/common/fileArtifactApi').FileArtifactReference;
 }

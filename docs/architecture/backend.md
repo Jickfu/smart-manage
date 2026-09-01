@@ -72,7 +72,9 @@ Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包�
 
 公开 `*Service` 是其所属业务职责的入口，负责该职责内的查询、业务命令、权限补充校验、操作日志入口和业务组装。同一模块的多个公开 Service 必须保持边界明确，禁止出现职责重叠或为绕过内部边界而拆分的空壳 Service。
 
-写操作委托给同目录、包级可见的 `*TxService`。TxService 使用类级 `@Transactional(rollbackFor = Exception.class)`，可以由同模块内不同职责的公开 Service 共享，Controller 和其他模块不能直接依赖它。事务内的存在性、唯一性和状态检查直接使用 Mapper，避免绕过事务边界调用 Service 缓存方法。
+写操作委托给同目录、包级可见的 `*TxService`。TxService 是业务动作的事务边界所有者，使用类级 `@Transactional(rollbackFor = Exception.class)`，可以由同模块内不同职责的公开 Service 共享，Controller 和其他模块不能直接依赖它。事务内的存在性、唯一性和状态检查直接使用 Mapper，避免绕过事务边界调用 Service 缓存方法。
+
+TxService 默认不得调用其他 TxService。多个写能力需要在同一事务组合时，应抽取同模块 package-private、无事务注解的 `*Writer`，由新的 TxService 统一协调；Writer 只承载可复用的持久化写入和事务内校验，不成为业务入口或事务 owner。跨模块组合不能直接暴露 Mapper 或 package-private Writer，由能力提供方发布最小事务参与 Contract；其实现本身不创建事务，并应在无活动事务时拒绝执行。只有业务明确要求独立提交和失败隔离时，才允许评审 `REQUIRES_NEW` 等嵌套事务边界，且必须先用 ADR 明确传播行为、失败语义和调用方可见结果；当前自动化契约仍禁止 TxService 互调。
 
 资源不存在、状态非法、无权限、参数不合法或持久化结果异常时必须抛出明确异常，禁止用 `null` 或静默忽略表示失败。
 
@@ -156,6 +158,7 @@ Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包�
 - 公开 Service 不得声明事务，`@BizLog` 只允许标注公开 Service 的公开方法；
 - TxService 位于模块 `service` 包、保持包级可见、声明类级
   `@Transactional(rollbackFor = Exception.class)`，且只允许同包公开 Service 调用；
+- `*Writer` 位于模块 `service` 包、保持包级可见且不得声明事务；多个 TxService 通过 Writer 复用事务内写能力，禁止 TxService 互调；跨模块事务参与通过不创建事务的最小 Contract 暴露；
 - 领域 Controller、Service、TxService、Mapper、Converter、Entity、Form 和 VO 的包位置；
 - Controller、模型和常量不得依赖 Mapper，Converter 不得依赖 Mapper、Service、缓存、安全上下文或外部资源；
 - Entity、Form、VO 不得反向依赖 Controller、Service 或 Mapper；

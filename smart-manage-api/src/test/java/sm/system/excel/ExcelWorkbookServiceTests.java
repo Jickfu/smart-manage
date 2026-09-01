@@ -50,4 +50,23 @@ class ExcelWorkbookServiceTests {
                 .isInstanceOf(sm.system.exception.BizException.class)
                 .hasMessageContaining("表头");
     }
+
+    @Test
+    void shouldRejectTooManyExportRows() {
+        List<List<String>> rows = java.util.stream.IntStream.rangeClosed(1, ExcelWorkbookService.MAX_ROWS + 1)
+                .mapToObj(index -> List.of("row-" + index)).toList();
+
+        assertThatThrownBy(() -> service.write("用户", List.of("账号"), rows))
+                .isInstanceOf(sm.system.exception.BizException.class)
+                .hasMessageContaining("最大 10000 行");
+    }
+
+    @Test
+    void shouldRejectTooLongExportCell() {
+        String value = "x".repeat(ExcelWorkbookService.MAX_CELL_LENGTH + 1);
+
+        assertThatThrownBy(() -> service.write("用户", List.of("账号"), List.of(List.of(value))))
+                .isInstanceOf(sm.system.exception.BizException.class)
+                .hasMessageContaining("最大 4000 字符");
+    }
 }

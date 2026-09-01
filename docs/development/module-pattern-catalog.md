@@ -35,6 +35,7 @@
 | 操作确认 | `smart-manage-web/src/domain/common/component/useOperationConfirm.ts`、`OperationConfirmProvider.tsx`、`OperationConfirmModal.tsx`；观察风险类型、遮罩行为、危险操作键盘限制和统一按钮区 |
 | 操作结果反馈 | `smart-manage-web/src/domain/common/component/useOperationFeedback.tsx`、`operationFeedbackPolicy.ts`；观察默认自动关闭、可选常驻与关闭按钮、语义颜色、最大宽度和稳定错误码分类 |
 | 公开 Service 与 TxService | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/service` |
+| 多事务入口复用写能力 | 用户保存与导入：`sm.domain.sys.base.user.service.UserTxService`、`UserImportTxService`、`UserWriter`；跨模块事务参与见 `FileArtifactRegistrar` |
 | 权限常量 | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/constant/PurchaseRequisitionPermission.java` |
 | 架构边界测试 | `smart-manage-api/src/test/java/sm/architecture/SystemDependencyBoundaryTests.java` |
 | 状态、事务与并发测试 | `smart-manage-api/src/test/java/sm/domain/scm/procurement/purchaserequisition/service/PurchaseRequisitionTxServiceTests.java` |

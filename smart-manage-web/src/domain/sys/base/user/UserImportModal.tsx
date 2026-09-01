@@ -76,8 +76,12 @@ const UserImportModal = ({ open, onCancel, onImported }: UserImportModalProps) =
         setImporting(true);
         try {
           const result = await userApi.importUsers(file, mode, failurePolicy);
-          await downloadArtifacts([result.credentialFile, result.errorFile]);
-          if (result.failed)
+          await downloadArtifacts([...result.credentialFiles, result.errorFile]);
+          if (result.warnings.length)
+            feedback.warning(
+              `导入完成：成功 ${result.success}，失败 ${result.failed}；${result.warnings.join('；')}`,
+            );
+          else if (result.failed)
             feedback.warning(`导入完成：成功 ${result.success}，失败 ${result.failed}`);
           else feedback.success(`成功导入 ${result.success} 个用户`);
           await onImported();

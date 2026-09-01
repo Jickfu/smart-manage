@@ -23,12 +23,36 @@ public class ExcelWorkbookService {
     public static final int MAX_ROWS = 10_000;
     public static final int MAX_COLUMNS = 64;
     public static final int MAX_CELL_LENGTH = 4_000;
+    public static final int MAX_OUTPUT_BYTES = 20 * 1024 * 1024;
 
     public byte[] write(String sheetName, List<String> headers, List<? extends List<?>> rows) {
+        validateWriteInput(headers, rows);
         List<List<String>> head = headers.stream().map(List::of).toList();
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ByteArrayOutputStream outputStream = new LimitedByteArrayOutputStream(MAX_OUTPUT_BYTES);
         FesodSheet.write(outputStream).head(head).sheet(sheetName).doWrite(rows);
         return outputStream.toByteArray();
+    }
+
+    private void validateWriteInput(List<String> headers, List<? extends List<?>> rows) {
+        if (rows.size() > MAX_ROWS) throw new BizException(ResultEnum.PARAM_ERROR, "Excel 导出超过最大 10000 行");
+        if (headers.isEmpty() || headers.size() > MAX_COLUMNS) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "Excel 导出列数必须在 1～64 列之间");
+        }
+        for (String header : headers) validateCellLength(header);
+        for (List<?> row : rows) {
+            if (row.size() > MAX_COLUMNS || row.size() > headers.size()) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "Excel 导出超过最大 64 列或表头范围");
+            }
+            for (Object value : row) {
+                if (value instanceof CharSequence text) validateCellLength(text.toString());
+            }
+        }
+    }
+
+    private void validateCellLength(String value) {
+        if (value != null && value.length() > MAX_CELL_LENGTH) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "Excel 导出单元格超过最大 4000 字符");
+        }
     }
 
     public List<Map<String, String>> read(byte[] content) {
@@ -44,7 +68,8 @@ public class ExcelWorkbookService {
         List<Map<Integer, String>> rawRows = new ArrayList<>();
         FesodSheet.read(new ByteArrayInputStream(content), new ReadListener<Map<Integer, String>>() {
             @Override public void invoke(Map<Integer, String> row, AnalysisContext context) {
-                if (rawRows.size() >= MAX_ROWS) throw new BizException(ResultEnum.PARAM_ERROR, "Excel 超过最大 10000 行");
+                // rawRows 包含表头，因此允许 10000 个数据行再加 1 个表头行。
+                if (rawRows.size() >= MAX_ROWS + 1) throw new BizException(ResultEnum.PARAM_ERROR, "Excel 超过最大 10000 行");
                 rawRows.add(new LinkedHashMap<>(row));
             }
             @Override public void doAfterAllAnalysed(AnalysisContext context) { }
@@ -106,5 +131,32 @@ public class ExcelWorkbookService {
     public String safeText(String value) {
         if (value == null || value.isEmpty()) return value;
         return "=+-@".indexOf(value.charAt(0)) >= 0 ? "'" + value : value;
+    }
+
+    /** 生成过程中即阻止超限，避免先在堆内形成任意大的 XLSX 后再检查。 */
+    private static final class LimitedByteArrayOutputStream extends ByteArrayOutputStream {
+        private final int maxBytes;
+
+        private LimitedByteArrayOutputStream(int maxBytes) {
+            this.maxBytes = maxBytes;
+        }
+
+        @Override
+        public synchronized void write(int value) {
+            ensureCapacityWithinLimit(1);
+            super.write(value);
+        }
+
+        @Override
+        public synchronized void write(byte[] bytes, int offset, int length) {
+            ensureCapacityWithinLimit(length);
+            super.write(bytes, offset, length);
+        }
+
+        private void ensureCapacityWithinLimit(int additionalBytes) {
+            if ((long) count + additionalBytes > maxBytes) {
+                throw new BizException(ResultEnum.PARAM_ERROR, "Excel 导出文件超过最大 20MB");
+            }
+        }
     }
 }

@@ -28,6 +28,8 @@ public class FileArtifactEntity extends BaseEntity {
     private LocalDateTime expiresAt;
     private Integer downloadCount;
     private Integer maxDownloads;
+    private String downloadClaimToken;
+    private LocalDateTime downloadClaimedAt;
     @Version
     private Integer version;
 }

@@ -8,6 +8,7 @@ import sm.domain.sys.base.fileartifact.mapper.FileArtifactMapper;
 import sm.domain.sys.base.fileartifact.model.entity.FileArtifactEntity;
 import sm.domain.sys.base.fileartifact.contract.FileArtifactReference;
 import sm.domain.sys.base.fileartifact.contract.FileArtifactGateway;
+import sm.domain.sys.base.fileartifact.contract.PreparedFileArtifact;
 import sm.system.exception.BizException;
 import sm.system.helper.CurrentOperatorProvider;
 import sm.system.response.ResultEnum;
@@ -35,6 +36,18 @@ public class FileArtifactService implements FileArtifactGateway {
     @Override
     public FileArtifactReference create(FileStoragePurpose purpose, String originalName, String mimeType,
                                         byte[] content, Duration ttl, Integer maxDownloads) {
+        PreparedFileArtifact prepared = prepare(purpose, originalName, mimeType, content, ttl, maxDownloads);
+        try {
+            return registerWithOwnTransaction(prepared);
+        } catch (RuntimeException exception) {
+            discardQuietly(prepared, exception);
+            throw exception;
+        }
+    }
+
+    /** 只写物理对象，不登记数据库；用于和调用方业务事务组合。 */
+    public PreparedFileArtifact prepare(FileStoragePurpose purpose, String originalName, String mimeType,
+                                        byte[] content, Duration ttl, Integer maxDownloads) {
         Long ownerUserId = currentOperatorProvider.getCurrentUserIdOrNull();
         if (ownerUserId == null) throw new BizException(ResultEnum.PERMISSION_ERROR, "未识别文件制品所有者");
         FileStorageService storage = storageFactory.getService();
@@ -45,30 +58,41 @@ public class FileArtifactService implements FileArtifactGateway {
         } catch (IOException exception) {
             throw new BizException(ResultEnum.CONFIG_ERROR, "文件制品存储失败: " + exception.getMessage());
         }
-        FileArtifactEntity entity = new FileArtifactEntity();
-        entity.setPurpose(purpose.name());
-        entity.setOwnerUserId(ownerUserId);
-        entity.setOriginalName(originalName);
-        entity.setStorageType(storage.getType());
-        entity.setObjectKey(stored.getStoredPath());
-        entity.setMimeType(mimeType);
-        entity.setFileSize(stored.getFileSize());
-        entity.setStatus("ACTIVE");
-        entity.setExpiresAt(LocalDateTime.now().plus(ttl));
-        entity.setDownloadCount(0);
-        entity.setMaxDownloads(maxDownloads);
-        entity.setVersion(0);
-        try {
-            txService.insert(entity);
-        } catch (RuntimeException exception) {
-            try { storage.delete(stored.getStoredPath()); } catch (IOException cleanupException) { exception.addSuppressed(cleanupException); }
-            throw exception;
-        }
-        return new FileArtifactReference(entity.getId(), originalName, entity.getExpiresAt());
+        return new PreparedFileArtifact(purpose, ownerUserId, originalName, storage.getType(), stored.getStoredPath(),
+                mimeType, stored.getFileSize(), LocalDateTime.now().plus(ttl), maxDownloads);
     }
 
-    public FileArtifactEntity consume(Long id) {
-        return txService.consume(id, currentOperatorProvider.getCurrentUserIdOrNull());
+    private FileArtifactReference registerWithOwnTransaction(PreparedFileArtifact prepared) {
+        FileArtifactEntity entity = FileArtifactEntityFactory.fromPrepared(prepared);
+        txService.insert(entity);
+        return new FileArtifactReference(entity.getId(), prepared.originalName(), entity.getExpiresAt());
+    }
+
+    public void discardQuietly(PreparedFileArtifact prepared, Throwable originalFailure) {
+        try {
+            storageFactory.getService(prepared.storageType()).delete(prepared.objectKey());
+        } catch (IOException | RuntimeException cleanupException) {
+            originalFailure.addSuppressed(cleanupException);
+            log.warn("未登记文件制品的物理对象补偿删除失败: purpose={}, objectKey={}",
+                    prepared.purpose(), prepared.objectKey(), cleanupException);
+        }
+    }
+
+    public FileArtifactDownloadClaim claim(Long id) {
+        return txService.claim(id, currentOperatorProvider.getCurrentUserIdOrNull(), java.util.UUID.randomUUID().toString());
+    }
+
+    public void complete(FileArtifactDownloadClaim claim) {
+        txService.complete(claim);
+    }
+
+    public void releaseQuietly(FileArtifactDownloadClaim claim, Throwable transferFailure) {
+        try {
+            txService.release(claim);
+        } catch (RuntimeException releaseFailure) {
+            transferFailure.addSuppressed(releaseFailure);
+            log.warn("文件下载失败后的资格释放失败: id={}", claim.artifact().getId(), releaseFailure);
+        }
     }
 
     public int cleanupExpiredAndPending() {
@@ -78,7 +102,18 @@ public class FileArtifactService implements FileArtifactGateway {
                         .lt(FileArtifactEntity::getUpdateTime, LocalDateTime.now().minusMinutes(10)))
                 .or(wrapper -> wrapper.eq(FileArtifactEntity::getStatus, "ACTIVE")
                         .lt(FileArtifactEntity::getExpiresAt, LocalDateTime.now())));
+        List<FileArtifactEntity> staleClaims = mapper.selectList(new LambdaQueryWrapper<FileArtifactEntity>()
+                .eq(FileArtifactEntity::getStatus, "DOWNLOADING")
+                .lt(FileArtifactEntity::getDownloadClaimedAt, LocalDateTime.now().minusMinutes(10)));
         int failed = 0;
+        for (FileArtifactEntity staleClaim : staleClaims) {
+            try {
+                txService.releaseStaleClaim(staleClaim);
+            } catch (RuntimeException exception) {
+                failed++;
+                log.warn("文件制品超时下载资格释放失败: id={}", staleClaim.getId(), exception);
+            }
+        }
         for (FileArtifactEntity entity : candidates) {
             try {
                 storageFactory.getService(entity.getStorageType()).delete(entity.getObjectKey());

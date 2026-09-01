@@ -160,6 +160,18 @@ class ArchitectureContractTests {
     }
 
     @Test
+    void writersMustBeModuleInternalAndMustNotOwnTransactions() {
+        classes().that().resideInAPackage("sm.domain..service")
+                .and().haveSimpleNameEndingWith("Writer")
+                .should().resideInAPackage("..service")
+                .andShould().notBePublic()
+                .andShould().notBeAnnotatedWith(Transactional.class)
+                .because("Writer 只复用事务内写能力，事务边界必须由 TxService 持有")
+                .allowEmptyShould(true)
+                .check(productionClasses);
+    }
+
+    @Test
     void coreTypesMustFollowPackageConventions() {
         classes().that().resideInAPackage("sm.domain..").and().haveSimpleNameEndingWith("Controller")
                 .should().resideInAPackage("..controller")

@@ -15,18 +15,62 @@ import static org.mockito.Mockito.when;
 
 class FileArtifactTxServiceTests {
     @Test
-    void shouldMakeOneTimeArtifactUnavailableBeforeReturningIt() {
+    void shouldClaimOneTimeArtifactWithoutConsumingDownload() {
         FileArtifactMapper mapper = mock(FileArtifactMapper.class);
         FileArtifactEntity entity = activeEntity();
         entity.setMaxDownloads(1);
         when(mapper.selectById(1L)).thenReturn(entity);
         when(mapper.updateById(entity)).thenReturn(1);
 
-        FileArtifactEntity consumed = new FileArtifactTxService(mapper).consume(1L, 7L);
+        FileArtifactDownloadClaim claim = new FileArtifactTxService(mapper).claim(1L, 7L, "claim-1");
 
-        assertThat(consumed.getStatus()).isEqualTo("PENDING_DELETE");
-        assertThat(consumed.getDownloadCount()).isEqualTo(1);
+        assertThat(claim.artifact().getStatus()).isEqualTo("DOWNLOADING");
+        assertThat(claim.artifact().getDownloadCount()).isZero();
+        assertThat(claim.claimToken()).isEqualTo("claim-1");
         verify(mapper).updateById(entity);
+    }
+
+    @Test
+    void shouldConsumeOneTimeArtifactOnlyAfterTransferCompletes() {
+        FileArtifactMapper mapper = mock(FileArtifactMapper.class);
+        FileArtifactEntity entity = activeEntity();
+        entity.setMaxDownloads(1);
+        entity.setStatus("DOWNLOADING");
+        entity.setDownloadClaimToken("claim-1");
+        when(mapper.selectById(1L)).thenReturn(entity);
+        when(mapper.updateById(entity)).thenReturn(1);
+
+        new FileArtifactTxService(mapper).complete(new FileArtifactDownloadClaim(entity, "claim-1"));
+
+        assertThat(entity.getStatus()).isEqualTo("PENDING_DELETE");
+        assertThat(entity.getDownloadCount()).isEqualTo(1);
+        assertThat(entity.getDownloadClaimToken()).isNull();
+    }
+
+    @Test
+    void shouldReleaseClaimWithoutConsumingDownloadWhenTransferFails() {
+        FileArtifactMapper mapper = mock(FileArtifactMapper.class);
+        FileArtifactEntity entity = activeEntity();
+        entity.setStatus("DOWNLOADING");
+        entity.setDownloadClaimToken("claim-1");
+        when(mapper.selectById(1L)).thenReturn(entity);
+        when(mapper.updateById(entity)).thenReturn(1);
+
+        new FileArtifactTxService(mapper).release(new FileArtifactDownloadClaim(entity, "claim-1"));
+
+        assertThat(entity.getStatus()).isEqualTo("ACTIVE");
+        assertThat(entity.getDownloadCount()).isZero();
+    }
+
+    @Test
+    void shouldAllowOnlyOneConcurrentClaimToUpdateState() {
+        FileArtifactMapper mapper = mock(FileArtifactMapper.class);
+        FileArtifactEntity entity = activeEntity();
+        when(mapper.selectById(1L)).thenReturn(entity);
+        when(mapper.updateById(entity)).thenReturn(0);
+
+        assertThatThrownBy(() -> new FileArtifactTxService(mapper).claim(1L, 7L, "claim-1"))
+                .isInstanceOf(BizException.class).hasMessageContaining("状态已变化");
     }
 
     @Test
@@ -34,7 +78,7 @@ class FileArtifactTxServiceTests {
         FileArtifactMapper mapper = mock(FileArtifactMapper.class);
         when(mapper.selectById(1L)).thenReturn(activeEntity());
 
-        assertThatThrownBy(() -> new FileArtifactTxService(mapper).consume(1L, 8L))
+        assertThatThrownBy(() -> new FileArtifactTxService(mapper).claim(1L, 8L, "claim-1"))
                 .isInstanceOf(BizException.class);
     }
 
