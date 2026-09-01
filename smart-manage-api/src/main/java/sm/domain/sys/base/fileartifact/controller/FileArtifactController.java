@@ -29,7 +29,6 @@ public class FileArtifactController {
         StreamingResponseBody body = outputStream -> {
             try (var inputStream = storageFactory.getService(entity.getStorageType()).openStream(entity.getObjectKey())) {
                 inputStream.transferTo(outputStream);
-                service.complete(claim);
             } catch (java.io.IOException exception) {
                 service.releaseQuietly(claim, exception);
                 throw exception;
@@ -37,6 +36,8 @@ public class FileArtifactController {
                 service.releaseQuietly(claim, exception);
                 throw exception;
             }
+            // 内容已经完整交给响应流后，完成状态失败也不能重新开放一次性凭据。
+            service.complete(claim);
         };
         String encodedName = java.net.URLEncoder.encode(entity.getOriginalName(), StandardCharsets.UTF_8).replace("+", "%20");
         return ResponseEntity.ok().contentType(MediaType.parseMediaType(entity.getMimeType()))

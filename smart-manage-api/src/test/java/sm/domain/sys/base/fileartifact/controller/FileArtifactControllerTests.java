@@ -15,6 +15,7 @@ import java.io.InputStream;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -58,6 +59,21 @@ class FileArtifactControllerTests {
                 () -> fixture.controller().download(idForm()).getBody().writeTo(new ByteArrayOutputStream()));
 
         verify(fixture.service()).releaseQuietly(fixture.claim(), failure);
+    }
+
+    @Test
+    void completeFailureMustNotReleaseTransferredOneTimeArtifact() throws Exception {
+        Fixture fixture = fixture();
+        RuntimeException failure = new RuntimeException("database unavailable");
+        when(fixture.storage().openStream("credential.xlsx"))
+                .thenReturn(new ByteArrayInputStream(new byte[]{1, 2, 3}));
+        org.mockito.Mockito.doThrow(failure).when(fixture.service()).complete(fixture.claim());
+
+        assertThrows(RuntimeException.class,
+                () -> fixture.controller().download(idForm()).getBody().writeTo(new ByteArrayOutputStream()));
+
+        verify(fixture.service()).complete(fixture.claim());
+        verify(fixture.service(), never()).releaseQuietly(fixture.claim(), failure);
     }
 
     private Fixture fixture() {

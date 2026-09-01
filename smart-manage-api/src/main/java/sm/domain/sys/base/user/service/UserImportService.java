@@ -23,6 +23,7 @@ import sm.domain.sys.base.user.model.vo.UserImportResultVO;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.excel.ExcelWorkbookService;
+import sm.system.excel.ExcelDataRow;
 import sm.system.response.ResultEnum;
 import sm.system.security.authorization.AdministratorOnly;
 import sm.system.auth.SessionTerminationReason;
@@ -69,7 +70,7 @@ public class UserImportService {
                 file.getOriginalFilename() == null ? "用户导入.xlsx" : file.getOriginalFilename(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 content, Duration.ofHours(24), null);
-        List<Map<String, String>> rows = excelWorkbookService.read(content, HEADERS);
+        List<ExcelDataRow> rows = excelWorkbookService.read(content, HEADERS);
         ImportPlan plan = buildPlan(rows, mode);
         if (transactionMode == UserImportTransactionMode.ATOMIC && !plan.errors().isEmpty()) {
             return new UserImportResultVO(rows.size(), 0, rows.size(), plan.errors(), List.of(), List.of(),
@@ -106,10 +107,11 @@ public class UserImportService {
                 createErrorFile(errors));
     }
 
-    private ImportPlan buildPlan(List<Map<String, String>> rows, UserImportMode mode) {
+    private ImportPlan buildPlan(List<ExcelDataRow> rows, UserImportMode mode) {
         Map<String, UserEntity> existingByUsername = new HashMap<>();
         Set<String> importedUsernames = new HashSet<>();
-        for (Map<String, String> row : rows) {
+        for (ExcelDataRow excelRow : rows) {
+            Map<String, String> row = excelRow.values();
             String username = row.getOrDefault(HEADERS.get(0), "").trim();
             if (!username.isBlank()) importedUsernames.add(username);
         }
@@ -127,9 +129,9 @@ public class UserImportService {
         Map<String, Integer> numberRows = new HashMap<>();
         Map<String, Integer> emailRows = new HashMap<>();
         Map<String, Integer> phoneRows = new HashMap<>();
-        for (int index = 0; index < rows.size(); index++) {
-            int rowNumber = index + 2;
-            Map<String, String> row = rows.get(index);
+        for (ExcelDataRow excelRow : rows) {
+            int rowNumber = excelRow.rowNumber();
+            Map<String, String> row = excelRow.values();
             String username = row.getOrDefault(HEADERS.get(0), "").trim();
             String name = row.getOrDefault(HEADERS.get(1), "").trim();
             if (username.isBlank() || name.isBlank()) { errors.add("第 " + rowNumber + " 行：登录账号和姓名不能为空"); continue; }

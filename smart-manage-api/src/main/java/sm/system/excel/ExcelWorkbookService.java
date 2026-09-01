@@ -55,44 +55,50 @@ public class ExcelWorkbookService {
         }
     }
 
-    public List<Map<String, String>> read(byte[] content) {
+    public List<ExcelDataRow> read(byte[] content) {
         return readInternal(content, null);
     }
 
-    public List<Map<String, String>> read(byte[] content, List<String> expectedHeaders) {
+    public List<ExcelDataRow> read(byte[] content, List<String> expectedHeaders) {
         return readInternal(content, expectedHeaders);
     }
 
-    private List<Map<String, String>> readInternal(byte[] content, List<String> expectedHeaders) {
+    private List<ExcelDataRow> readInternal(byte[] content, List<String> expectedHeaders) {
         validateSafeWorkbook(content);
-        List<Map<Integer, String>> rawRows = new ArrayList<>();
+        List<RawExcelRow> rawRows = new ArrayList<>();
         FesodSheet.read(new ByteArrayInputStream(content), new ReadListener<Map<Integer, String>>() {
             @Override public void invoke(Map<Integer, String> row, AnalysisContext context) {
                 // rawRows 包含表头，因此允许 10000 个数据行再加 1 个表头行。
                 if (rawRows.size() >= MAX_ROWS + 1) throw new BizException(ResultEnum.PARAM_ERROR, "Excel 超过最大 10000 行");
-                rawRows.add(new LinkedHashMap<>(row));
+                rawRows.add(new RawExcelRow(context.readRowHolder().getRowIndex() + 1,
+                        new LinkedHashMap<>(row)));
             }
             @Override public void doAfterAllAnalysed(AnalysisContext context) { }
         }).headRowNumber(0).sheet(0).doRead();
         if (rawRows.isEmpty()) throw new BizException(ResultEnum.PARAM_ERROR, "Excel 数据为空");
-        Map<Integer, String> header = rawRows.removeFirst();
+        Map<Integer, String> header = rawRows.removeFirst().values();
         if (header.size() > MAX_COLUMNS) throw new BizException(ResultEnum.PARAM_ERROR, "Excel 超过最大 64 列");
         if (expectedHeaders != null && !new ArrayList<>(header.values()).equals(expectedHeaders)) {
             throw new BizException(ResultEnum.PARAM_ERROR, "Excel 表头与当前模板不一致，请重新下载模板");
         }
-        List<Map<String, String>> result = new ArrayList<>();
-        for (Map<Integer, String> rawRow : rawRows) {
+        List<ExcelDataRow> result = new ArrayList<>();
+        for (RawExcelRow rawRow : rawRows) {
             Map<String, String> row = new LinkedHashMap<>();
             for (Map.Entry<Integer, String> column : header.entrySet()) {
-                String value = rawRow.get(column.getKey());
+                String value = rawRow.values().get(column.getKey());
                 if (value != null && value.length() > MAX_CELL_LENGTH) {
                     throw new BizException(ResultEnum.PARAM_ERROR, "Excel 单元格超过最大 4000 字符");
                 }
                 row.put(column.getValue(), value == null ? "" : value.trim());
             }
-            if (row.values().stream().anyMatch(value -> !value.isBlank())) result.add(row);
+            if (row.values().stream().anyMatch(value -> !value.isBlank())) {
+                result.add(new ExcelDataRow(rawRow.rowNumber(), Map.copyOf(row)));
+            }
         }
         return result;
+    }
+
+    private record RawExcelRow(int rowNumber, Map<Integer, String> values) {
     }
 
     /** 在映射业务行前拒绝公式和外部链接，避免导入文件携带可执行或远程引用语义。 */

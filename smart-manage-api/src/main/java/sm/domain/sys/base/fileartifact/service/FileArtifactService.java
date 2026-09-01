@@ -28,6 +28,7 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class FileArtifactService implements FileArtifactGateway {
+    private static final long DOWNLOAD_CLAIM_LEASE_HOURS = 1;
     private final FileArtifactMapper mapper;
     private final FileArtifactTxService txService;
     private final FileStorageServiceFactory storageFactory;
@@ -104,7 +105,9 @@ public class FileArtifactService implements FileArtifactGateway {
                         .lt(FileArtifactEntity::getExpiresAt, LocalDateTime.now())));
         List<FileArtifactEntity> staleClaims = mapper.selectList(new LambdaQueryWrapper<FileArtifactEntity>()
                 .eq(FileArtifactEntity::getStatus, "DOWNLOADING")
-                .lt(FileArtifactEntity::getDownloadClaimedAt, LocalDateTime.now().minusMinutes(10)));
+                // 20MB 平台文件采用保守租约，避免正常慢速传输期间重新开放一次性凭据。
+                .lt(FileArtifactEntity::getDownloadClaimedAt,
+                        LocalDateTime.now().minusHours(DOWNLOAD_CLAIM_LEASE_HOURS)));
         int failed = 0;
         for (FileArtifactEntity staleClaim : staleClaims) {
             try {

@@ -16,7 +16,23 @@ class ExcelWorkbookServiceTests {
                 List.of(List.of("zhangsan", "张三")));
 
         assertThat(service.read(content)).containsExactly(
-                java.util.Map.of("登录账号*", "zhangsan", "姓名*", "张三"));
+                new ExcelDataRow(2, java.util.Map.of("登录账号*", "zhangsan", "姓名*", "张三")));
+    }
+
+    @Test
+    void shouldPreservePhysicalRowNumberAcrossBlankRows() throws Exception {
+        byte[] content;
+        try (var workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+             var output = new java.io.ByteArrayOutputStream()) {
+            var sheet = workbook.createSheet("用户");
+            sheet.createRow(0).createCell(0).setCellValue("登录账号*");
+            sheet.createRow(1).createCell(0).setCellValue("user001");
+            sheet.createRow(3).createCell(0).setCellValue("user002");
+            workbook.write(output);
+            content = output.toByteArray();
+        }
+
+        assertThat(service.read(content)).extracting(ExcelDataRow::rowNumber).containsExactly(2, 4);
     }
 
     @Test

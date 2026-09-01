@@ -15,6 +15,7 @@ import sm.domain.sys.base.user.model.enums.UserImportMode;
 import sm.domain.sys.base.user.model.enums.UserImportTransactionMode;
 import sm.domain.sys.base.user.model.vo.UserImportResultVO;
 import sm.system.excel.ExcelWorkbookService;
+import sm.system.excel.ExcelDataRow;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -33,7 +34,7 @@ import static org.mockito.Mockito.doThrow;
 class UserImportServiceTests {
     @Test
     void batchFailureReportsOriginalNonContiguousExcelRows() {
-        Fixture fixture = fixture(List.of(
+        Fixture fixture = fixture(excelRows(
                 row("user-1", "用户1", "N001"),
                 row("", "非法行", "N002"),
                 row("user-3", "用户3", "N003"),
@@ -52,7 +53,7 @@ class UserImportServiceTests {
 
     @Test
     void atomicPrevalidationRejectsDuplicateBusinessNumbersBeforeWrite() {
-        Fixture fixture = fixture(List.of(
+        Fixture fixture = fixture(excelRows(
                 row("user-1", "用户1", "N001"),
                 row("user-2", "用户2", "N001")));
         when(fixture.userMapper().selectList(any())).thenReturn(List.of(), List.of());
@@ -66,7 +67,7 @@ class UserImportServiceTests {
 
     @Test
     void batchReturnsOneCredentialArtifactForSuccessfulTransactionUnit() {
-        Fixture fixture = fixture(List.of(row("user-1", "用户1", "N001")));
+        Fixture fixture = fixture(excelRows(row("user-1", "用户1", "N001")));
         when(fixture.userMapper().selectList(any())).thenReturn(List.of(), List.of());
         PreparedFileArtifact prepared = mock(PreparedFileArtifact.class);
         when(fixture.fileArtifactService().prepare(any(), any(), any(), any(), any(), any())).thenReturn(prepared);
@@ -84,7 +85,7 @@ class UserImportServiceTests {
 
     @Test
     void authorizationRefreshFailureDoesNotChangeCommittedBatchToFailure() {
-        Fixture fixture = fixture(List.of(row("user-1", "用户1", "N001")));
+        Fixture fixture = fixture(excelRows(row("user-1", "用户1", "N001")));
         when(fixture.userMapper().selectList(any())).thenReturn(List.of(), List.of());
         when(fixture.importTxService().commitBatch(any(), any())).thenReturn(
                 new UserImportTxService.BatchCommitResult(List.of(1L), Map.of(), null));
@@ -99,7 +100,7 @@ class UserImportServiceTests {
         assertThat(result.warnings()).anyMatch(warning -> warning.contains("授权状态刷新失败"));
     }
 
-    private Fixture fixture(List<Map<String, String>> rows) {
+    private Fixture fixture(List<ExcelDataRow> rows) {
         ExcelWorkbookService excelWorkbookService = mock(ExcelWorkbookService.class);
         UserMapper userMapper = mock(UserMapper.class);
         OrgReferenceReader orgReferenceReader = mock(OrgReferenceReader.class);
@@ -114,6 +115,13 @@ class UserImportServiceTests {
         UserImportService service = new UserImportService(excelWorkbookService, userMapper, orgReferenceReader,
                 importTxService, fileArtifactService, validator, authorizationStateHelper);
         return new Fixture(service, userMapper, importTxService, fileArtifactService, authorizationStateHelper);
+    }
+
+    @SafeVarargs
+    private final List<ExcelDataRow> excelRows(Map<String, String>... rows) {
+        return java.util.stream.IntStream.range(0, rows.length)
+                .mapToObj(index -> new ExcelDataRow(index + 2, rows[index]))
+                .toList();
     }
 
     private Map<String, String> row(String username, String name, String number) {
