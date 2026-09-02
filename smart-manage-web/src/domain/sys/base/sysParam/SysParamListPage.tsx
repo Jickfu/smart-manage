@@ -10,6 +10,7 @@ import ListPage from '@/domain/common/page/ListPage';
 import ListTreePanel from '@/domain/common/page/ListTreePanel';
 import ListTree from '@/domain/common/page/ListTree';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
+import { useListSelection } from '@/domain/common/page/useListSelection';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
@@ -49,7 +50,6 @@ const SysParamListPage = (props: PageComponentProps) => {
   const feedback = useOperationFeedback();
   const confirmOperation = useOperationConfirm();
   const [scope, setScope] = useState<Scope>({ type: 'all' });
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
   const queryClient = useQueryClient();
@@ -85,10 +85,12 @@ const SysParamListPage = (props: PageComponentProps) => {
     queryKey: sysParamQueryKeys.list(scopeParams),
     queryFn: (params) => sysParamApi.listPage({ ...params, ...scopeParams }),
   });
+  const { selectedRowKeys, setSelectedRowKeys, selectedRecords, clearSelection } =
+    useListSelection(records);
   const deleteMutation = useCommandMutation({
     mutationFn: sysParamApi.delete,
     onSuccess: async () => {
-      setSelectedRowKeys([]);
+      clearSelection();
       await queryClient.invalidateQueries({ queryKey: sysParamQueryKeys.all });
       feedback.success('删除成功');
     },
@@ -148,7 +150,6 @@ const SysParamListPage = (props: PageComponentProps) => {
       render: (value) => (value ? <Tag color="blue">系统内置</Tag> : <Tag>自定义</Tag>),
     },
   ];
-  const selectedRecords = records.filter((record) => selectedRowKeys.includes(record.id));
   return (
     <ListPage<SysParamVO>
       {...props}
@@ -174,7 +175,7 @@ const SysParamListPage = (props: PageComponentProps) => {
             ]}
             onSelect={(keys) => {
               const key = String(keys[0] ?? 'all');
-              setSelectedRowKeys([]);
+              clearSelection();
               resetPage();
               if (key === 'global') setScope({ type: 'global' });
               else if (key.startsWith('domain:'))

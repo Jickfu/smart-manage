@@ -80,6 +80,7 @@
 2. 定义 `types.ts`、`api.ts`、`permissions.ts`、`queryKeys.ts` 和 `pageRegistration.ts`；前端 ID 一律为 `string`。业务单据 Query Key Factory 至少包含 `all`、`lists`、`list(params)`、`details` 和 `detail(id)`。
 3. 页面注册显式声明稳定 `featureKey`，同一功能的 LIST、EDIT、CUSTOM 页面共享该身份。
 4. 列表优先使用 `ListPage` 和 `useListPageQuery`；编辑优先使用 `EditPage`；实体引用优先复用或新增 `use*RefSelector`。
+   列表选择状态优先复用 `useListSelection`，仅负责键、命令 ID 和当前页记录派生；树切换、分页、刷新及命令完成时是否清空，由领域页面显式决定，不得在共享 Hook 中隐式重置。
 5. 领域页面负责状态流转、Mutation、缓存失效、详情回显和页签替换，不在页面壳层重复实现通用 loading 与错误提示。
 6. 删除、清空、覆盖等操作确认通过 `useOperationConfirm` 声明风险类型；保存、提交、审核等结果通过 `useOperationFeedback` 展示，禁止直接调用 Ant Design 的 `Modal.confirm`、`Popconfirm` 或 `message.*`。
 7. 完成列表选择、命令启用条件、编辑/查看模式、脏数据保护和首次保存后的临时页签替换。

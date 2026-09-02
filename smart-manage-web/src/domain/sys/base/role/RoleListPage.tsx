@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Button } from 'antd';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import type { ColumnsType } from 'antd/es/table';
 import ListPage from '@/domain/common/page/ListPage';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
+import { useListSelection } from '@/domain/common/page/useListSelection';
 import { useRoleDeleteMutation } from './useRoleDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { getRegisteredTabTitle } from '@/domain/common/registry/componentRegistry';
@@ -46,12 +47,13 @@ const RoleListPage = (props: PageComponentProps) => {
     queryFn: (params) => roleApi.listPage(params),
   });
 
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const openBillTab = useWorkbenchStore((s) => s.openBillTab);
-  const openAddNewTab = useWorkbenchStore((s) => s.openAddNewTab);
+  const { selectedRowKeys, setSelectedRowKeys, selectedIds, clearSelection } =
+    useListSelection(records);
+  const openBillTab = useWorkbenchStore((state) => state.openBillTab);
+  const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
   const addContentTab = useWorkbenchStore((state) => state.addContentTab);
   const deleteMutation = useRoleDeleteMutation(async () => {
-    setSelectedRowKeys([]);
+    clearSelection();
     await query.refetch();
   });
 
@@ -74,9 +76,9 @@ const RoleListPage = (props: PageComponentProps) => {
       description: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
       confirmText: '删除',
       cancelText: '取消',
-      onConfirm: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
+      onConfirm: () => deleteMutation.mutateAsync(selectedIds),
     });
-  }, [selectedRowKeys, deleteMutation, confirmOperation]);
+  }, [selectedRowKeys, selectedIds, deleteMutation, confirmOperation]);
 
   const handleAssignPermissions = useCallback(() => {
     if (selectedRowKeys.length !== 1) return;

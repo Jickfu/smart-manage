@@ -9,6 +9,7 @@ import ListPage from '@/domain/common/page/ListPage';
 import ListTree from '@/domain/common/page/ListTree';
 import ListTreePanel from '@/domain/common/page/ListTreePanel';
 import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
+import { useListSelection } from '@/domain/common/page/useListSelection';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { OperationType } from '@/domain/common/page/types';
@@ -76,7 +77,6 @@ const NumberRuleListPage = (props: PageComponentProps) => {
   const feedback = useOperationFeedback();
   const confirmOperation = useOperationConfirm();
   const [scope, setScope] = useState<NumberRuleScope>({ type: 'all' });
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
   const queryClient = useQueryClient();
@@ -105,23 +105,25 @@ const NumberRuleListPage = (props: PageComponentProps) => {
     queryKey: numberRuleQueryKeys.list(scopeParams),
     queryFn: (params) => numberRuleApi.listPage({ ...params, ...scopeParams }),
   });
+  const { selectedRowKeys, setSelectedRowKeys, selectedIds, selectedRecords, clearSelection } =
+    useListSelection(records);
   const deleteMutation = useCommandMutation({
     mutationFn: ({ id, version }: { id: string; version: number }) =>
       numberRuleApi.delete(id, version),
     onSuccess: async () => {
-      setSelectedRowKeys([]);
+      clearSelection();
       await queryClient.invalidateQueries({ queryKey: numberRuleQueryKeys.all });
       feedback.success('删除成功');
     },
   });
   const enabledMutation = useEnabledMutation(numberRuleApi.setEnabled, async () => {
-    setSelectedRowKeys([]);
+    clearSelection();
     await queryClient.invalidateQueries({ queryKey: numberRuleQueryKeys.all });
   });
   const setDefaultMutation = useCommandMutation({
     mutationFn: numberRuleApi.setDefault,
     onSuccess: async () => {
-      setSelectedRowKeys([]);
+      clearSelection();
       await queryClient.invalidateQueries({ queryKey: numberRuleQueryKeys.all });
       feedback.success('默认规则已切换');
     },
@@ -166,7 +168,6 @@ const NumberRuleListPage = (props: PageComponentProps) => {
       render: (enabled) => (enabled ? <Tag color="green">启用</Tag> : <Tag>停用</Tag>),
     },
   ];
-  const selectedRecords = records.filter((record) => selectedRowKeys.includes(record.id));
   return (
     <ListPage<NumberRuleVO>
       {...props}
@@ -196,15 +197,14 @@ const NumberRuleListPage = (props: PageComponentProps) => {
         </ListTreePanel>
       }
       onAddNew={() => openAddNewTab(props.appNumber, componentKeys.numberRuleEdit)}
-      onEnable={() => enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: true })}
+      onEnable={() => enabledMutation.mutate({ ids: selectedIds, enabled: true })}
       onDisable={() =>
         void confirmOperation({
           type: 'warning',
           title: '确认停用所选编号规则？',
           description: '正在使用的规则会被后端拒绝停用，请先切换对应业务引用。',
           confirmText: '停用',
-          onConfirm: () =>
-            enabledMutation.mutateAsync({ ids: selectedRowKeys.map(String), enabled: false }),
+          onConfirm: () => enabledMutation.mutateAsync({ ids: selectedIds, enabled: false }),
         })
       }
       enabledCommandLoading={enabledMutation.isPending}
