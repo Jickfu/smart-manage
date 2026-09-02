@@ -35,7 +35,7 @@ export async function runEditSavePostCommit({
 export function getEditSavePostCommitFeedback(
   result: EditSavePostCommitResult,
   isAddNew: boolean,
-): { type: 'success' | 'warning'; message: string } {
+): { type: 'success' | 'warning' | 'error'; message: string } {
   if (result === 'success') {
     return { type: 'success', message: isAddNew ? '新增成功' : '保存成功' };
   }
@@ -44,5 +44,8 @@ export function getEditSavePostCommitFeedback(
     'cache-refresh-failed': '保存已成功，但页面数据刷新失败',
     'tab-sync-and-cache-refresh-failed': '保存已成功，但页签同步和页面数据刷新均失败',
   };
-  return { type: 'warning', message: warnings[result] };
+  return {
+    type: result === 'cache-refresh-failed' ? 'warning' : 'error',
+    message: warnings[result],
+  };
 }

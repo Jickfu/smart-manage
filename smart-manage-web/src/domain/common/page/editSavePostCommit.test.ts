@@ -30,7 +30,10 @@ describe('编辑保存后的本地同步', () => {
     });
     expect(refreshCache).toHaveBeenCalledOnce();
     expect(result).toBe('tab-sync-failed');
-    expect(getEditSavePostCommitFeedback(result, true).type).toBe('warning');
+    expect(getEditSavePostCommitFeedback(result, true)).toEqual({
+      type: 'error',
+      message: '保存已成功，但工作台页签同步失败',
+    });
   });
 
   it('缓存失败不否定已经完成的页签同步', async () => {
@@ -41,6 +44,10 @@ describe('编辑保存后的本地同步', () => {
     });
     expect(syncTab).toHaveBeenCalledOnce();
     expect(result).toBe('cache-refresh-failed');
+    expect(getEditSavePostCommitFeedback(result, false)).toEqual({
+      type: 'warning',
+      message: '保存已成功，但页面数据刷新失败',
+    });
   });
 
   it('两个阶段均失败时保留完整结果', async () => {
@@ -50,7 +57,7 @@ describe('编辑保存后的本地同步', () => {
     });
     expect(result).toBe('tab-sync-and-cache-refresh-failed');
     expect(getEditSavePostCommitFeedback(result, false)).toEqual({
-      type: 'warning',
+      type: 'error',
       message: '保存已成功，但页签同步和页面数据刷新均失败',
     });
     expect(getEditSavePostCommitFeedback('success', false).message).toBe('保存成功');

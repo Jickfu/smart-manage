@@ -112,6 +112,32 @@ describe('workbench store', () => {
     ).toBe(true);
   });
 
+  it('保存期间新增页签已关闭时拒绝晋升，不产生悬空激活键', async () => {
+    const store = useWorkbenchStore.getState();
+    store.openAddNewTab(APP_NUMBER, COMPONENT_KEY);
+    const temporaryTab = useWorkbenchStore
+      .getState()
+      .workspaces[APP_NUMBER]!.contentTabs.find((tab) => tab.temporary)!;
+    const lifecycle = createEditTabLifecycle({
+      appNumber: APP_NUMBER,
+      tabKey: temporaryTab.key,
+      componentKey: COMPONENT_KEY,
+      operationType: OperationType.ADDNEW,
+    });
+    await lifecycle.exit();
+    const previousWorkspace = useWorkbenchStore.getState().workspaces[APP_NUMBER]!;
+    expect(() => lifecycle.promoteToPersistedTab('saved-after-close')).toThrow('已关闭');
+    const workspace = useWorkbenchStore.getState().workspaces[APP_NUMBER]!;
+    expect(workspace).toBe(previousWorkspace);
+    expect(workspace.contentTabs.some((tab) => tab.key === workspace.activeContentTabKey)).toBe(
+      true,
+    );
+    expect(workspace.contentTabs.some((tab) => tab.billId === 'saved-after-close')).toBe(false);
+    await store.closeWorkspace(APP_NUMBER);
+    expect(() => lifecycle.promoteToPersistedTab('saved-after-close')).toThrow('已关闭');
+    expect(useWorkbenchStore.getState().workspaces[APP_NUMBER]).toBeUndefined();
+  });
+
   it('新增页签保留调用页面传入的初始化上下文', () => {
     const store = useWorkbenchStore.getState();
 

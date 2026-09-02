@@ -23,6 +23,10 @@ export function createEditTabLifecycle({
       if (!isAddNew) return;
       const nextKey = createBillTabKey(componentKey, savedId);
       const workbench = useWorkbenchStore.getState();
+      // 远端保存期间原页签可能已关闭；不能激活不存在的目标页签。
+      if (!workbench.workspaces[appNumber]?.contentTabs.some((tab) => tab.key === tabKey)) {
+        throw new Error('待晋升的新增页签已关闭');
+      }
       workbench.replaceContentTab(appNumber, tabKey, {
         key: nextKey,
         closable: true,
