@@ -1,0 +1,1 @@
+org.springframework.boot.actuate.autoconfigure.endpoint.condition.EndpointExposureOutcomeContributor=sm.infrastructure.monitoring.InternalHealthEndpointExposure

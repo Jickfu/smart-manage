@@ -4,6 +4,8 @@
 
 Smart Manage 内建监控是运维中心的固定业务能力，使用 OSHI、JDK Management、Micrometer 和 Actuator，不依赖 Prometheus、Grafana 或通用时序数据库。Redis 是在线注册和当前快照的权威来源；PostgreSQL 保存目录、历史、规则、事件和邮件通知发件箱。
 
+健康采样在进程内调用 `HealthEndpoint`。`InternalHealthEndpointExposure` 通过 Spring Boot 的可用性扩展保留该 Bean；它不匹配显式 Web/JMX 暴露检查，不覆盖端点 access 禁用设置。所有环境继续关闭 Actuator Web 暴露，不能为修复 Bean 缺失而开放管理端点。
+
 ## 身份与生命周期
 
 - `Host` 与 `Application Instance` 是 1:N，`hostId` 是部署主机稳定身份，`instanceId` 在集群内唯一。
