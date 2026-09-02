@@ -5,6 +5,7 @@ import sm.domain.sys.monitor.script.converter.ScriptConverter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Service;
 import sm.system.security.context.CurrentUserContext;
 import sm.system.security.authorization.AdministratorOnly;
@@ -20,7 +21,6 @@ import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.system.web.ClientIpResolver;
-import sm.system.util.StringUtil;
 import sm.domain.sys.monitor.common.util.LogQueryValidator;
 import sm.system.query.ListQueryUtil;
 
@@ -89,7 +89,7 @@ public class ScriptService {
 
     public PageData<ScriptListVO> listPage(ScriptListForm form) {
         LambdaQueryWrapper<ScriptEntity> query = new LambdaQueryWrapper<>();
-        query.and(StringUtil.isNotBlank(form.getKeyword()), wrapper -> wrapper
+        query.and(StrUtil.isNotBlank(form.getKeyword()), wrapper -> wrapper
                         .like(ScriptEntity::getNumber, form.getKeyword())
                         .or().like(ScriptEntity::getName, form.getKeyword()));
         ListQueryUtil.apply(query, form, SCRIPT_LIST_FIELDS);
@@ -133,11 +133,11 @@ public class ScriptService {
                         ScriptLogEntity::getTransactionMode, ScriptLogEntity::getExecuteStatus,
                         ScriptLogEntity::getExecuteDuration, ScriptLogEntity::getTransactionResult,
                         ScriptLogEntity::getCreateName, ScriptLogEntity::getCreateIp, ScriptLogEntity::getCreateTime)
-                .and(StringUtil.isNotBlank(form.getKeyword()), wrapper -> wrapper
+                .and(StrUtil.isNotBlank(form.getKeyword()), wrapper -> wrapper
                         .like(ScriptLogEntity::getScriptName, form.getKeyword())
                         .or().like(ScriptLogEntity::getScriptContent, form.getKeyword()))
-                .eq(StringUtil.isNotBlank(form.getStatus()), ScriptLogEntity::getExecuteStatus, form.getStatus())
-                .eq(StringUtil.isNotBlank(form.getTransactionMode()), ScriptLogEntity::getTransactionMode,
+                .eq(StrUtil.isNotBlank(form.getStatus()), ScriptLogEntity::getExecuteStatus, form.getStatus())
+                .eq(StrUtil.isNotBlank(form.getTransactionMode()), ScriptLogEntity::getTransactionMode,
                         form.getTransactionMode())
                 .ge(form.getStartTime() != null, ScriptLogEntity::getCreateTime, form.getStartTime())
                 .le(form.getEndTime() != null, ScriptLogEntity::getCreateTime, form.getEndTime());
@@ -233,10 +233,10 @@ public class ScriptService {
 
     private void validateLogForm(ScriptLogListForm form) {
         LogQueryValidator.validateTimeRange(form.getStartTime(), form.getEndTime());
-        if (StringUtil.isNotBlank(form.getStatus()) && !STATUSES.contains(form.getStatus())) {
+        if (StrUtil.isNotBlank(form.getStatus()) && !STATUSES.contains(form.getStatus())) {
             throw new BizException(ResultEnum.PARAM_ERROR, "执行状态不合法");
         }
-        if (StringUtil.isNotBlank(form.getTransactionMode())
+        if (StrUtil.isNotBlank(form.getTransactionMode())
                 && !TRANSACTION_MODES.contains(form.getTransactionMode())) {
             throw new BizException(ResultEnum.PARAM_ERROR, "事务模式不合法");
         }

@@ -10,7 +10,7 @@ import sm.domain.sys.base.openapi.model.entity.OpenApiCredentialEntity;
 import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.user.contract.UserAssignmentReader;
 import sm.domain.sys.base.user.contract.UserReferenceReader;
-import sm.system.helper.SM4Helper;
+import sm.system.security.crypto.Sm4Cipher;
 
 import java.util.Base64;
 
@@ -27,7 +27,7 @@ class OpenApiRuntimeAccessServiceTests {
     void unencryptedApplicationOnlyLoadsSigningSecret() {
         OpenApiCredentialMapper credentialMapper = mock(OpenApiCredentialMapper.class);
         OpenApiApplicationMapper applicationMapper = mock(OpenApiApplicationMapper.class);
-        SM4Helper sm4Helper = mock(SM4Helper.class);
+        Sm4Cipher sm4Helper = mock(Sm4Cipher.class);
         OpenApiCredentialEntity credential = new OpenApiCredentialEntity();
         credential.setApplicationId(10L);
         credential.setKeyId("sm_credential_key");

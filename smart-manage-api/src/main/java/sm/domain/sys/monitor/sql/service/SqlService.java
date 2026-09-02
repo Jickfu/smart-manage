@@ -5,6 +5,7 @@ import sm.domain.sys.monitor.sql.converter.SqlLogConverter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Service;
 import sm.system.security.context.CurrentUserContext;
 import sm.system.security.authorization.AdministratorOnly;
@@ -21,7 +22,6 @@ import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.system.web.ClientIpResolver;
-import sm.system.util.StringUtil;
 import sm.domain.sys.monitor.common.util.LogQueryValidator;
 import sm.system.query.ListQueryUtil;
 
@@ -72,8 +72,8 @@ public class SqlService {
         query.select(SqlLogEntity::getId, SqlLogEntity::getSqlText, SqlLogEntity::getExecuteDuration,
                         SqlLogEntity::getResultType, SqlLogEntity::getRowCount, SqlLogEntity::getCreateName,
                         SqlLogEntity::getCreateIp, SqlLogEntity::getCreateTime)
-                .like(StringUtil.isNotBlank(form.getKeyword()), SqlLogEntity::getSqlText, form.getKeyword())
-                .eq(StringUtil.isNotBlank(form.getResultType()), SqlLogEntity::getResultType, form.getResultType())
+                .like(StrUtil.isNotBlank(form.getKeyword()), SqlLogEntity::getSqlText, form.getKeyword())
+                .eq(StrUtil.isNotBlank(form.getResultType()), SqlLogEntity::getResultType, form.getResultType())
                 .ge(form.getStartTime() != null, SqlLogEntity::getCreateTime, form.getStartTime())
                 .le(form.getEndTime() != null, SqlLogEntity::getCreateTime, form.getEndTime());
         ListQueryUtil.apply(query, form, LIST_FIELDS);
@@ -104,7 +104,7 @@ public class SqlService {
 
     private void validateListForm(SqlLogListForm form) {
         LogQueryValidator.validateTimeRange(form.getStartTime(), form.getEndTime());
-        if (StringUtil.isNotBlank(form.getResultType()) && !RESULT_TYPES.contains(form.getResultType())) {
+        if (StrUtil.isNotBlank(form.getResultType()) && !RESULT_TYPES.contains(form.getResultType())) {
             throw new BizException(ResultEnum.PARAM_ERROR, "SQL 结果类型不合法");
         }
     }

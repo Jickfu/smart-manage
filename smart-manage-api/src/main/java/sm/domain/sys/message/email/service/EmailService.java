@@ -18,7 +18,7 @@ import sm.domain.sys.message.email.model.entity.*;
 import sm.domain.sys.message.email.model.form.*;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
-import sm.system.helper.SM4Helper;
+import sm.system.security.crypto.Sm4Cipher;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
 import sm.system.util.TraceIdUtil;
@@ -59,7 +59,7 @@ public class EmailService implements EmailNotificationSender {
     private final EmailTaskMapper taskMapper;
     private final EmailAttemptMapper attemptMapper;
     private final EmailTxService txService;
-    private final SM4Helper sm4Helper;
+    private final Sm4Cipher sm4Helper;
     private final JsonMapper jsonMapper;
     @Value("${smart-manage.system.runtime.instance-id:unknown}") private String instanceId;
 

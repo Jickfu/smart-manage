@@ -6,7 +6,7 @@ import cn.dev33.satoken.exception.SaTokenContextException;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import sm.system.helper.CurrentOperatorProvider;
+import sm.system.security.context.CurrentOperatorProvider;
 
 /** 基于当前 Sa-Token 会话提供审计操作人。 */
 @Component

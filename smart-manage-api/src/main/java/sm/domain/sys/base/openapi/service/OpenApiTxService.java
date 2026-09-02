@@ -18,7 +18,7 @@ import sm.domain.sys.base.user.contract.UserAssignmentReader;
 import sm.domain.sys.base.user.contract.UserReference;
 import sm.domain.sys.base.user.contract.UserReferenceReader;
 import sm.system.exception.BizException;
-import sm.system.helper.SM4Helper;
+import sm.system.security.crypto.Sm4Cipher;
 import sm.system.response.ResultEnum;
 import sm.system.security.context.CurrentUserContext;
 
@@ -39,7 +39,7 @@ class OpenApiTxService {
     private final UserReferenceReader userReferenceReader;
     private final UserAssignmentReader userAssignmentReader;
     private final OrgReferenceReader orgReferenceReader;
-    private final SM4Helper sm4Helper;
+    private final Sm4Cipher sm4Helper;
     private final CurrentUserContext currentUserContext;
 
     Long saveApplication(OpenApiApplicationSaveForm form) {

@@ -5,7 +5,7 @@ import sm.domain.sys.base.fileconfig.mapper.FileConfigMapper;
 import sm.domain.sys.base.fileconfig.model.entity.FileConfigEntity;
 import sm.domain.sys.base.fileconfig.model.form.FileConfigSaveForm;
 import sm.system.exception.BizException;
-import sm.system.helper.SM4Helper;
+import sm.system.security.crypto.Sm4Cipher;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -14,7 +14,7 @@ import static org.mockito.Mockito.when;
 class FileConfigTxServiceTests {
 
     private final FileConfigMapper mapper = mock(FileConfigMapper.class);
-    private final FileConfigTxService txService = new FileConfigTxService(mapper, mock(SM4Helper.class));
+    private final FileConfigTxService txService = new FileConfigTxService(mapper, mock(Sm4Cipher.class));
 
     @Test
     void rejectsStaleVersion() {

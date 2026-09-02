@@ -10,7 +10,7 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import sm.system.helper.CurrentOperatorProvider;
+import sm.system.security.context.CurrentOperatorProvider;
 import sm.system.util.ServletUtil;
 import sm.system.util.TraceIdUtil;
 import sm.system.web.ClientIpResolver;

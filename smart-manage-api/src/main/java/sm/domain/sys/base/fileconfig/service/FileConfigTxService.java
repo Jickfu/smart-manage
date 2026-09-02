@@ -10,7 +10,7 @@ import sm.domain.sys.base.fileconfig.model.form.FileConfigSaveForm;
 import sm.domain.sys.base.fileconfig.mapper.FileConfigMapper;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
-import sm.system.helper.SM4Helper;
+import sm.system.security.crypto.Sm4Cipher;
 
 import java.util.Objects;
 
@@ -25,7 +25,7 @@ import java.util.Objects;
 @Transactional(rollbackFor = Exception.class)
 class FileConfigTxService {
     private final FileConfigMapper mapper;
-    private final SM4Helper sm4Helper;
+    private final Sm4Cipher sm4Helper;
 
     public Long save(FileConfigSaveForm form) {
         FileConfigEntity entity;

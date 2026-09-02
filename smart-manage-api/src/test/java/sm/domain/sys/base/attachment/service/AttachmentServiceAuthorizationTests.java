@@ -6,7 +6,7 @@ import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.model.entity.BizAttachmentEntity;
 import sm.system.exception.BizException;
-import sm.system.helper.CurrentOperatorProvider;
+import sm.system.security.context.CurrentOperatorProvider;
 import sm.system.resource.BusinessResourceAccessPolicy;
 import sm.system.resource.BusinessResourceAction;
 import sm.system.resource.BusinessResourceRegistration;

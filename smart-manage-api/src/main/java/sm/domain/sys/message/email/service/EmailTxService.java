@@ -8,7 +8,7 @@ import sm.domain.sys.message.email.mapper.*;
 import sm.domain.sys.message.email.model.entity.*;
 import sm.domain.sys.message.email.model.form.AccountSaveForm;
 import sm.system.exception.BizException;
-import sm.system.helper.SM4Helper;
+import sm.system.security.crypto.Sm4Cipher;
 import sm.system.response.ResultEnum;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -20,7 +20,7 @@ class EmailTxService {
     private final EmailAccountMapper accountMapper;
     private final EmailTaskMapper taskMapper;
     private final EmailAttemptMapper attemptMapper;
-    private final SM4Helper sm4Helper;
+    private final Sm4Cipher sm4Helper;
 
     Long saveAccount(AccountSaveForm form) {
         EmailAccountEntity entity = form.id() == null ? new EmailAccountEntity() : requireAccount(form.id());

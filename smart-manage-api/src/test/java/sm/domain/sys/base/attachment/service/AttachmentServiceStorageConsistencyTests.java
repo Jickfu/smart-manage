@@ -11,7 +11,7 @@ import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachmentconfig.service.AttachmentConfigService;
 import sm.domain.sys.base.user.mapper.UserMapper;
-import sm.system.helper.CurrentOperatorProvider;
+import sm.system.security.context.CurrentOperatorProvider;
 import sm.system.resource.AttachmentUploadPolicy;
 import sm.system.resource.BusinessResourceRegistry;
 import sm.system.storage.FileStorageService;

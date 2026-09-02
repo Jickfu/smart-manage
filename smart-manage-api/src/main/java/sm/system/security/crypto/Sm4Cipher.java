@@ -1,10 +1,9 @@
-package sm.system.helper;
+package sm.system.security.crypto;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.stereotype.Component;
-import sm.system.config.Sm4Properties;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -25,7 +24,7 @@ import java.util.Base64;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class SM4Helper {
+public class Sm4Cipher {
 
     private static final String CIPHERTEXT_PREFIX = "sm4-gcm:v1:";
     private static final String TRANSFORMATION = "SM4/GCM/NoPadding";

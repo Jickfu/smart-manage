@@ -1,4 +1,4 @@
-package sm.system.config;
+package sm.system.security.crypto;
 
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;

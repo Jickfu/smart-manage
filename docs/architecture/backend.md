@@ -50,7 +50,11 @@ DataScope 的角色配置、Entity、Mapper 和规则解析实现保留在 `sm.d
 | Jackson 配置与 Long 序列化 | `sm.infrastructure.json` |
 | MapStruct 公共配置 | `sm.infrastructure.mapping` |
 | 出站 HTTP 客户端配置 | `sm.infrastructure.http` |
+| Quartz 与调度基础配置 | `sm.infrastructure.scheduler` |
 | Sa-Token 配置、浏览器请求安全 | `sm.system.security` 子包 |
+| 浏览器密码解密与服务端敏感配置加密机制 | `sm.system.security.crypto` |
+| 当前安全主体与操作人上下文 | `sm.system.security.context` |
+| 基础实体审计填充 | `sm.system.persistence.audit` |
 
 ## 接口基础设施
 

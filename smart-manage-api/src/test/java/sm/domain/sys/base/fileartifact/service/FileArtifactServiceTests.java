@@ -3,7 +3,7 @@ package sm.domain.sys.base.fileartifact.service;
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.fileartifact.mapper.FileArtifactMapper;
 import sm.domain.sys.base.fileartifact.model.entity.FileArtifactEntity;
-import sm.system.helper.CurrentOperatorProvider;
+import sm.system.security.context.CurrentOperatorProvider;
 import sm.system.storage.FileStoragePurpose;
 import sm.system.storage.FileStorageServiceFactory;
 

@@ -15,7 +15,7 @@ import sm.domain.sys.base.fileconfig.mapper.FileConfigMapper;
 import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.ResultEnum;
-import sm.system.helper.SM4Helper;
+import sm.system.security.crypto.Sm4Cipher;
 import sm.system.storage.FileStorageConfig;
 import sm.system.storage.FileStorageConfigProvider;
 import sm.system.security.authorization.AdministratorOnly;
@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class FileConfigService implements FileStorageConfigProvider {
     private final FileConfigMapper mapper;
     private final FileConfigTxService txService;
-    private final SM4Helper sm4Helper;
+    private final Sm4Cipher sm4Helper;
     private final FileConfigConverter converter;
     private final AtomicBoolean defaultStorageWarningLogged = new AtomicBoolean();
     @Value("${smart-manage.system.upload.dir:./smfiles/}")

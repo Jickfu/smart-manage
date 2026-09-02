@@ -1,5 +1,6 @@
 package sm.system.util;
 
+import cn.hutool.core.util.StrUtil;
 import sm.system.enums.BillStatusEnum;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
@@ -18,14 +19,14 @@ public class BillStatusUtil {
 	}
 
 	public static String defaultSaved(String billStatus) {
-		if (StringUtil.isBlank(billStatus)) {
+		if (StrUtil.isBlank(billStatus)) {
 			return BillStatusEnum.SAVED.getValue();
 		}
 		return billStatus;
 	}
 
 	public static void requireCanSave(String currentBillStatus) {
-		if (StringUtil.isBlank(currentBillStatus)) {
+		if (StrUtil.isBlank(currentBillStatus)) {
 			return;
 		}
 		BillStatusEnum currentStatus = BillStatusEnum.fromValue(currentBillStatus);
@@ -35,7 +36,7 @@ public class BillStatusUtil {
 	}
 
 	public static void requireCanSubmit(String currentBillStatus) {
-		if (StringUtil.isBlank(currentBillStatus)) {
+		if (StrUtil.isBlank(currentBillStatus)) {
 			throw new BizException(ResultEnum.BILL_STATUS_ERROR, "单据状态为空，不能提交");
 		}
 		BillStatusEnum currentStatus = BillStatusEnum.fromValue(currentBillStatus);

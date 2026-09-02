@@ -1,11 +1,11 @@
-package sm.system.handler;
+package sm.system.persistence.audit;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import lombok.RequiredArgsConstructor;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.stereotype.Component;
 import sm.system.entity.BaseEntity;
-import sm.system.helper.CurrentOperatorProvider;
+import sm.system.security.context.CurrentOperatorProvider;
 
 import java.time.LocalDateTime;
 
@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  */
 @Component
 @RequiredArgsConstructor
-public class MyBatisPlusMetaObjectHandler implements MetaObjectHandler {
+public class BaseEntityAuditMetaObjectHandler implements MetaObjectHandler {
 
     private final CurrentOperatorProvider currentOperatorProvider;
 

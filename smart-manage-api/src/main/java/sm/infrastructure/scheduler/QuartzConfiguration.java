@@ -1,4 +1,4 @@
-package sm.system.config;
+package sm.infrastructure.scheduler;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import org.quartz.spi.JobFactory;
@@ -20,7 +20,7 @@ import java.util.List;
  * @author Chekfu
  */
 @Configuration
-public class QuartzConfig {
+public class QuartzConfiguration {
 
     @Value("${spring.datasource.url}")
     private String url;

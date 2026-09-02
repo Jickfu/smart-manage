@@ -17,7 +17,7 @@ import sm.domain.sys.base.user.contract.UserAssignmentReader;
 import sm.domain.sys.base.user.contract.UserReference;
 import sm.domain.sys.base.user.contract.UserReferenceReader;
 import sm.system.exception.BizException;
-import sm.system.helper.SM4Helper;
+import sm.system.security.crypto.Sm4Cipher;
 import sm.system.openapi.OpenApiOperation;
 import sm.system.response.ResultEnum;
 
@@ -36,7 +36,7 @@ public class OpenApiRuntimeAccessService {
     private final UserReferenceReader userReferenceReader;
     private final UserAssignmentReader userAssignmentReader;
     private final OrgReferenceReader orgReferenceReader;
-    private final SM4Helper sm4Helper;
+    private final Sm4Cipher sm4Helper;
 
     public AccessMaterial authenticate(String keyId, String clientIp) {
         OpenApiCredentialEntity credential = credentialMapper.selectOne(

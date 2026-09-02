@@ -1,8 +1,6 @@
-package sm.system.helper;
+package sm.system.security.crypto;
 
 import org.junit.jupiter.api.Test;
-import sm.system.config.Sm4Properties;
-
 import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -10,14 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class SM4HelperTests {
+class Sm4CipherTests {
 
     @Test
     void encryptsAndDecryptsWithConfiguredKeyAndRandomIv() {
         Sm4Properties properties = new Sm4Properties();
         properties.setKeyBase64(Base64.getEncoder().encodeToString(new byte[16]));
         properties.afterPropertiesSet();
-        SM4Helper helper = new SM4Helper(properties);
+        Sm4Cipher helper = new Sm4Cipher(properties);
 
         String firstCipher = helper.encrypt("ftp-password");
         String secondCipher = helper.encrypt("ftp-password");
@@ -33,7 +31,7 @@ class SM4HelperTests {
         Sm4Properties properties = new Sm4Properties();
         properties.setKeyBase64(Base64.getEncoder().encodeToString(new byte[16]));
         properties.afterPropertiesSet();
-        SM4Helper helper = new SM4Helper(properties);
+        Sm4Cipher helper = new Sm4Cipher(properties);
         String cipherText = helper.encrypt("s3-secret");
         char replacement = cipherText.endsWith("A") ? 'B' : 'A';
 

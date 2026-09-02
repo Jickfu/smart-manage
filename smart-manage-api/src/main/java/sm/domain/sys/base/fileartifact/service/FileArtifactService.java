@@ -10,7 +10,7 @@ import sm.domain.sys.base.fileartifact.contract.FileArtifactReference;
 import sm.domain.sys.base.fileartifact.contract.FileArtifactGateway;
 import sm.domain.sys.base.fileartifact.contract.PreparedFileArtifact;
 import sm.system.exception.BizException;
-import sm.system.helper.CurrentOperatorProvider;
+import sm.system.security.context.CurrentOperatorProvider;
 import sm.system.response.ResultEnum;
 import sm.system.storage.FileStoragePurpose;
 import sm.system.storage.FileStorageService;

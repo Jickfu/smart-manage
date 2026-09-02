@@ -5,7 +5,7 @@ import sm.domain.sys.base.fileconfig.converter.FileConfigConverterImpl;
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.fileconfig.mapper.FileConfigMapper;
 import sm.domain.sys.base.fileconfig.model.entity.FileConfigEntity;
-import sm.system.helper.SM4Helper;
+import sm.system.security.crypto.Sm4Cipher;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,7 +24,7 @@ class FileConfigServiceTests {
         when(mapper.selectList(null)).thenReturn(List.of(entity));
 
         FileConfigService service = new FileConfigService(
-                mapper, mock(FileConfigTxService.class), mock(SM4Helper.class),
+                mapper, mock(FileConfigTxService.class), mock(Sm4Cipher.class),
                 new FileConfigConverterImpl());
 
         assertTrue(service.singleton().getFtpPasswordConfigured());

@@ -1,4 +1,4 @@
-package sm.system.config;
+package sm.system.security.crypto;
 
 import org.junit.jupiter.api.Test;
 

@@ -18,7 +18,7 @@ import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.system.storage.FileStorageServiceFactory;
 import sm.system.storage.FileStorageService;
 import sm.system.storage.FileStoreResult;
-import sm.system.helper.CurrentOperatorProvider;
+import sm.system.security.context.CurrentOperatorProvider;
 import sm.system.resource.BusinessResourceAction;
 import sm.system.resource.BusinessResourceRegistry;
 import sm.system.util.TransactionUtil;
