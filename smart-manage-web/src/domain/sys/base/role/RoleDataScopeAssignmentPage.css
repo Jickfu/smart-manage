@@ -1,14 +1,5 @@
 .sm-data-scope-page {
   display: flex;
-  min-height: 100%;
-  padding: 10px;
-  flex-direction: column;
-  gap: 10px;
-  background: var(--sm-layout-bg);
-}
-.sm-data-scope-page .ant-spin-nested-loading,
-.sm-data-scope-page .ant-spin-container {
-  display: flex;
   flex-direction: column;
   gap: 10px;
 }
@@ -22,10 +13,5 @@
   grid-template-columns:
     minmax(220px, 2fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(220px, 2fr)
     auto;
-  gap: 8px;
-}
-.sm-data-scope-actions {
-  display: flex;
-  justify-content: flex-end;
   gap: 8px;
 }
