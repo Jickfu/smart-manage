@@ -2,13 +2,16 @@ import { useOperationFeedback } from '@/domain/common/component/useOperationFeed
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { createBillTabKey } from '@/domain/common/page/tabKeys';
+import { useEditTabLifecycle } from '@/domain/common/page/useEditTabLifecycle';
+import {
+  getEditSavePostCommitFeedback,
+  runEditSavePostCommit,
+} from '@/domain/common/page/editSavePostCommit';
 import EditPage from '@/domain/common/page/EditPage';
 import { editFormSection } from '@/domain/common/page/editPageSection';
 import type { EditField } from '@/domain/common/page/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
-import { useWorkbenchStore } from '@/stores/workbench';
 import { useFeatureRefSelector } from '@/domain/sys/base/feature/refSelector';
 import { sysParamApi } from './api';
 import { sysParamAccess } from './permissions';
@@ -18,9 +21,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
   const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const { appNumber, tabKey, operationType, billId } = props;
-  const isAddNew = operationType === OperationType.ADDNEW;
-  const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
-  const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
+  const { isAddNew, promoteToPersistedTab, exit } = useEditTabLifecycle(props);
   const featureRefSelector = useFeatureRefSelector();
   const detailQuery = useQuery({
     queryKey: sysParamQueryKeys.detail(billId),
@@ -88,20 +89,19 @@ const SysParamEditPage = (props: PageComponentProps) => {
         description: String(values.description ?? ''),
         featureId: feature?.id,
       });
-      if (isAddNew) {
-        const nextKey = createBillTabKey(props.componentKey, savedId);
-        replaceContentTab(appNumber, tabKey, {
-          key: nextKey,
-          closable: true,
-          componentKey: props.componentKey,
-          pageType: 'EDIT',
-          operationType: OperationType.EDIT,
-          billId: savedId,
-        });
-        activateContentTab(appNumber, nextKey);
-      }
-      await queryClient.invalidateQueries({ queryKey: sysParamQueryKeys.all });
-      feedback.success(isAddNew ? '新增成功' : '保存成功');
+      return savedId;
+    },
+    onSuccess: async (savedId) => {
+      const result = await runEditSavePostCommit({
+        syncTab: () => promoteToPersistedTab(savedId),
+        refreshCache: () =>
+          queryClient.invalidateQueries(
+            { queryKey: sysParamQueryKeys.all },
+            { throwOnError: true },
+          ),
+      });
+      const resultFeedback = getEditSavePostCommitFeedback(result, isAddNew);
+      feedback[resultFeedback.type](resultFeedback.message);
     },
   });
   return (
@@ -115,9 +115,11 @@ const SysParamEditPage = (props: PageComponentProps) => {
       loading={detailQuery.isLoading}
       error={detailQuery.error as Error | null}
       onRetry={() => detailQuery.refetch()}
-      onSave={saveMutation.mutateAsync}
+      onSave={async (values) => {
+        await saveMutation.mutateAsync(values);
+      }}
       saving={saveMutation.isPending}
-      onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
+      onExit={exit}
     />
   );
 };

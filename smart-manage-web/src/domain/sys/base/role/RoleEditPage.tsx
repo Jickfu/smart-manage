@@ -2,12 +2,15 @@ import { useOperationFeedback } from '@/domain/common/component/useOperationFeed
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { createBillTabKey } from '@/domain/common/page/tabKeys';
+import { useEditTabLifecycle } from '@/domain/common/page/useEditTabLifecycle';
+import {
+  getEditSavePostCommitFeedback,
+  runEditSavePostCommit,
+} from '@/domain/common/page/editSavePostCommit';
 import EditPage from '@/domain/common/page/EditPage';
 import { editFormSection } from '@/domain/common/page/editPageSection';
 import { OperationType } from '@/domain/common/page/types';
 import type { EditField } from '@/domain/common/page/EditPage';
-import { useWorkbenchStore } from '@/stores/workbench';
 import { roleApi } from './api';
 import { roleAccess } from './permissions';
 import { roleQueryKeys } from './queryKeys';
@@ -39,9 +42,7 @@ const RoleEditPage = (props: PageComponentProps) => {
   const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const { appNumber, tabKey, operationType, billId } = props;
-  const isAddNew = operationType === OperationType.ADDNEW;
-  const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
-  const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
+  const { isAddNew, promoteToPersistedTab, exit } = useEditTabLifecycle(props);
   const detailQuery = useQuery({
     queryKey: roleQueryKeys.detail(billId),
     queryFn: () => roleApi.detail(billId!),
@@ -69,20 +70,16 @@ const RoleEditPage = (props: PageComponentProps) => {
         number: (values.number as string).trim(),
         description: String(values.description ?? '').trim(),
       });
-      if (isAddNew) {
-        const nextKey = createBillTabKey(props.componentKey, savedId);
-        replaceContentTab(appNumber, tabKey, {
-          key: nextKey,
-          closable: true,
-          componentKey: props.componentKey,
-          pageType: 'EDIT',
-          operationType: OperationType.EDIT,
-          billId: savedId,
-        });
-        activateContentTab(appNumber, nextKey);
-      }
-      await queryClient.invalidateQueries({ queryKey: roleQueryKeys.all });
-      feedback.success(isAddNew ? '新增成功' : '保存成功');
+      return savedId;
+    },
+    onSuccess: async (savedId) => {
+      const result = await runEditSavePostCommit({
+        syncTab: () => promoteToPersistedTab(savedId),
+        refreshCache: () =>
+          queryClient.invalidateQueries({ queryKey: roleQueryKeys.all }, { throwOnError: true }),
+      });
+      const resultFeedback = getEditSavePostCommitFeedback(result, isAddNew);
+      feedback[resultFeedback.type](resultFeedback.message);
     },
   });
 
@@ -97,9 +94,11 @@ const RoleEditPage = (props: PageComponentProps) => {
       loading={detailQuery.isLoading}
       error={detailQuery.error as Error | null}
       onRetry={() => detailQuery.refetch()}
-      onSave={saveMutation.mutateAsync}
+      onSave={async (values) => {
+        await saveMutation.mutateAsync(values);
+      }}
       saving={saveMutation.isPending}
-      onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
+      onExit={exit}
     />
   );
 };

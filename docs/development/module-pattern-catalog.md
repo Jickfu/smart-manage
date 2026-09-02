@@ -26,7 +26,7 @@
 | --- | --- |
 | 页面注册 | `smart-manage-web/src/domain/scm/procurement/purchaseRequisition/pageRegistration.ts` |
 | 标准列表 | `smart-manage-web/src/domain/scm/procurement/purchaseRequisition/PurchaseRequisitionListPage.tsx` |
-| 标准编辑 | `smart-manage-web/src/domain/sys/base/sysParam/SysParamEditPage.tsx` |
+| 标准编辑 | `smart-manage-web/src/domain/sys/base/sysParam/SysParamEditPage.tsx`；`useEditTabLifecycle` 只处理页签动作，`editSavePostCommit` 区分保存后的页签同步与缓存刷新结果，保存参数与 Query Key 保留在领域页面 |
 | 通用表单字段布局 | 公共组件见 `smart-manage-web/src/domain/common/page/FormFieldLayout.tsx` 和 `FormFieldLayout.css`；数据驱动表单见 `EditFormFields.tsx`；四列标准编辑参考 `EditPage.tsx`，两列弹框参考 `ModalEditPage.tsx` 和 `sys/monitor/alert/MonitorAlertPage.tsx`，头像复合布局参考 `sys/base/user/UserProfileFields.tsx`，单列参数弹框参考 `layouts/PersonalCredentialModal.tsx`。保持 `FormFieldGrid > FormFieldCell > Form.Item.sm-edit-field-content` 结构，不在领域页面复制或覆盖公共宽度与断点 |
 | 编辑页可编辑明细表格与操作区 | 公共骨架见 `smart-manage-web/src/domain/common/component/EditableDetailTable.tsx`；动态明细见 `smart-manage-web/src/domain/sys/base/numberRule/NumberRuleEditPage.tsx`；标准主从明细见 `smart-manage-web/src/domain/scm/procurement/purchaseRequisition/PurchaseRequisitionEditPage.tsx`；实体引用明细见 `smart-manage-web/src/domain/sys/base/user/UserAssignmentTable.tsx`。复用统一密度、选择、焦点和校验反馈，通过 `detailExtra` 将新增、删除、排序等操作归集到明细折叠面板标题栏右侧 |
 | 实体引用选择器 | 公共交互见 `smart-manage-web/src/domain/common/component/RefSelector.tsx`；树表选择见 `smart-manage-web/src/domain/sys/base/org/refSelector/useOrgRefSelector.ts`；领域多选与组织范围见 `smart-manage-web/src/domain/sys/base/user/refSelector/useUserRefSelector.ts`；账号选择见 `smart-manage-web/src/domain/sys/message/email/refSelector/useEmailAccountRefSelector.ts` |

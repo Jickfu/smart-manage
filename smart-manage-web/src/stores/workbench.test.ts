@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OperationType } from '@/domain/common/page/types';
 import { createBillTabKey, createExternalLinkTabKey } from '@/domain/common/page/tabKeys';
+import { createEditTabLifecycle } from '@/domain/common/page/useEditTabLifecycle';
 import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import type { AppVO } from '@/domain/sys/base/app/types';
 import { useWorkbenchStore } from './workbench';
@@ -47,19 +48,68 @@ describe('workbench store', () => {
 
     const billId = '1987654321098765432';
     const realTabKey = createBillTabKey(COMPONENT_KEY, billId);
-    store.replaceContentTab(APP_NUMBER, temporaryTab!.key, {
-      key: realTabKey,
-      closable: true,
+    const lifecycle = createEditTabLifecycle({
+      appNumber: APP_NUMBER,
+      tabKey: temporaryTab!.key,
       componentKey: COMPONENT_KEY,
-      pageType: 'EDIT',
-      operationType: OperationType.EDIT,
-      billId,
+      operationType: OperationType.ADDNEW,
     });
+    lifecycle.promoteToPersistedTab(billId);
 
     const workspace = useWorkbenchStore.getState().workspaces[APP_NUMBER]!;
     expect(workspace.activeContentTabKey).toBe(realTabKey);
     expect(workspace.contentTabs.some((tab) => tab.key === temporaryTab!.key)).toBe(false);
     expect(workspace.contentTabs.find((tab) => tab.key === realTabKey)?.billId).toBe(billId);
+  });
+
+  it('页签晋升迁移关闭守卫，并在保存期间切换页签后激活真实单据', () => {
+    const store = useWorkbenchStore.getState();
+    store.openAddNewTab(APP_NUMBER, COMPONENT_KEY);
+    const temporaryTab = useWorkbenchStore
+      .getState()
+      .workspaces[APP_NUMBER]!.contentTabs.find((tab) => tab.temporary)!;
+    const guard = vi.fn().mockResolvedValue(false);
+    store.registerBeforeClose(APP_NUMBER, temporaryTab.key, guard);
+    store.activateContentTab(APP_NUMBER, '__home__');
+
+    createEditTabLifecycle({
+      appNumber: APP_NUMBER,
+      tabKey: temporaryTab.key,
+      componentKey: COMPONENT_KEY,
+      operationType: OperationType.ADDNEW,
+    }).promoteToPersistedTab('new-id');
+
+    const realTabKey = createBillTabKey(COMPONENT_KEY, 'new-id');
+    const state = useWorkbenchStore.getState();
+    expect(state.workspaces[APP_NUMBER]!.activeContentTabKey).toBe(realTabKey);
+    expect(state.beforeCloseCallbacks[`${APP_NUMBER}:${temporaryTab.key}`]).toBeUndefined();
+    expect(state.beforeCloseCallbacks[`${APP_NUMBER}:${realTabKey}`]).toBe(guard);
+  });
+
+  it('编辑模式不晋升页签，退出仍经过当前页签关闭守卫', async () => {
+    const store = useWorkbenchStore.getState();
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, 'persisted', OperationType.EDIT);
+    const tabKey = createBillTabKey(COMPONENT_KEY, 'persisted');
+    const guard = vi.fn().mockResolvedValue(false);
+    store.registerBeforeClose(APP_NUMBER, tabKey, guard);
+    const lifecycle = createEditTabLifecycle({
+      appNumber: APP_NUMBER,
+      tabKey,
+      componentKey: COMPONENT_KEY,
+      operationType: OperationType.EDIT,
+    });
+    const previousWorkspace = useWorkbenchStore.getState().workspaces[APP_NUMBER];
+
+    lifecycle.promoteToPersistedTab('different-id');
+    expect(lifecycle.isAddNew).toBe(false);
+    expect(useWorkbenchStore.getState().workspaces[APP_NUMBER]).toBe(previousWorkspace);
+    await lifecycle.exit();
+    expect(guard).toHaveBeenCalledOnce();
+    expect(
+      useWorkbenchStore
+        .getState()
+        .workspaces[APP_NUMBER]!.contentTabs.some((tab) => tab.key === tabKey),
+    ).toBe(true);
   });
 
   it('新增页签保留调用页面传入的初始化上下文', () => {
