@@ -39,6 +39,7 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
+  font-size: var(--ant-font-size-lg);
 }
 
 .sm-operation-confirm-illustration {

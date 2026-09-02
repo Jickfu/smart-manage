@@ -2,6 +2,7 @@
   display: flex;
   align-items: center;
   min-height: var(--ant-control-height);
+  font-size: var(--ant-font-size-lg);
   border-bottom: var(--ant-line-width) var(--ant-line-type) var(--ant-color-border);
   cursor: pointer;
   transition: border-color 0.2s;
@@ -80,11 +81,6 @@
   gap: 12px;
 }
 
-.sm-icon-selector-meta .ant-pagination,
-.sm-icon-selector-meta .ant-pagination .ant-select {
-  font-size: 12px;
-}
-
 .sm-icon-selector-meta {
   flex-shrink: 0;
   display: flex;
@@ -93,7 +89,6 @@
   min-height: 36px;
   padding: 4px 8px;
   color: var(--ant-color-text-secondary);
-  font-size: var(--ant-font-size-sm);
   border-bottom: 1px solid var(--ant-color-border-secondary);
 }
 

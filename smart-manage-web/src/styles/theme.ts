@@ -63,9 +63,10 @@ export function createThemeConfig(themeColor?: string | null): ThemeConfig {
       controlHeightLG: 32,
       lineHeight: 1.5,
 
-      fontSize: 14,
+      // ERP/MES 工作区正文、标签和操作控件使用 12px；可录入或选择的字段值由组件主题提升到 14px。
+      fontSize: 12,
       fontSizeSM: 12,
-      fontSizeLG: 16,
+      fontSizeLG: 14,
       fontSizeXL: 18,
       fontSizeHeading1: 24,
       fontSizeHeading2: 20,
@@ -75,7 +76,7 @@ export function createThemeConfig(themeColor?: string | null): ThemeConfig {
       Button: {
         contentFontSize: 12,
         contentFontSizeSM: 12,
-        contentFontSizeLG: 12,
+        contentFontSizeLG: 14,
         paddingInline: 12,
         paddingInlineSM: 8,
         paddingInlineLG: 16,
@@ -95,11 +96,29 @@ export function createThemeConfig(themeColor?: string | null): ThemeConfig {
         paddingInlineSM: 6,
       },
       InputNumber: {
+        inputFontSize: 14,
         inputFontSizeSM: 12,
+        inputFontSizeLG: 14,
       },
       Select: {
+        fontSize: 14,
         optionFontSize: 12,
         optionHeight: 28,
+      },
+      TreeSelect: {
+        fontSize: 14,
+      },
+      Cascader: {
+        fontSize: 14,
+      },
+      DatePicker: {
+        fontSize: 14,
+      },
+      Mentions: {
+        fontSize: 14,
+      },
+      ColorPicker: {
+        fontSize: 14,
       },
       Menu: {
         darkItemBg: '#343848',

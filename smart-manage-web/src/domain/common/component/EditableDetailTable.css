@@ -1,7 +1,6 @@
 .sm-editable-detail-table {
   width: 100%;
   min-width: 0;
-  font-size: var(--ant-font-size-sm);
 }
 
 .sm-editable-detail-table .ant-form-item {
@@ -39,24 +38,28 @@
 .sm-editable-detail-table .ant-input-number,
 .sm-editable-detail-table .ant-picker,
 .sm-editable-detail-table .ant-select,
-.sm-editable-detail-table .sm-ref-selector-trigger {
+.sm-editable-detail-table .sm-ref-selector-trigger,
+.sm-editable-detail-table .sm-icon-selector-trigger {
   width: 100%;
   border-radius: 0;
-  font-size: var(--ant-font-size-sm);
+  /* 明细表属于经过验证的紧凑输入边界，不继承普通表单字段值的 14px。 */
+  font-size: var(--ant-font-size);
 }
 
 .sm-editable-detail-table .ant-input-number-input,
 .sm-editable-detail-table .ant-picker-input > input,
 .sm-editable-detail-table .ant-select-selection-item,
-.sm-editable-detail-table .ant-select-selection-placeholder {
-  font-size: var(--ant-font-size-sm);
+.sm-editable-detail-table .ant-select-selection-placeholder,
+.sm-editable-detail-table .sm-ref-selector-trigger-input {
+  font-size: var(--ant-font-size);
 }
 
 .sm-editable-detail-table .ant-input,
 .sm-editable-detail-table .ant-input-number,
 .sm-editable-detail-table .ant-picker,
 .sm-editable-detail-table .ant-select .ant-select-selector,
-.sm-editable-detail-table .sm-ref-selector-trigger {
+.sm-editable-detail-table .sm-ref-selector-trigger,
+.sm-editable-detail-table .sm-icon-selector-trigger {
   background: var(--ant-color-bg-container) !important;
 }
 
@@ -161,7 +164,6 @@
   border-radius: var(--ant-border-radius-sm);
   background: var(--ant-color-error-bg);
   box-shadow: var(--ant-box-shadow-secondary);
-  font-size: 12px;
 }
 
 .sm-editable-detail-table .ant-form-item:focus-within .ant-form-item-explain {

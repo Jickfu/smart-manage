@@ -63,5 +63,4 @@
 .sm-number-rule-preview-hint {
   grid-column: 2;
   color: var(--ant-color-text-tertiary);
-  font-size: 12px;
 }

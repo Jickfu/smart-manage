@@ -27,6 +27,7 @@
   align-items: stretch;
   height: 100%;
   min-width: 0;
+  /* 应用级导航高于 14px 内容页签和 12px 页面正文，保留产品骨架层级。 */
   font-size: 16px;
 }
 
@@ -142,7 +143,7 @@
   bottom: 4px;
   padding: 0;
   color: inherit;
-  font-size: 12px;
+  font-size: var(--ant-font-size);
   line-height: 1;
   background: none;
   border: 0;
@@ -396,7 +397,6 @@
   height: 26px;
   margin: 2px auto 8px;
   padding: 0 4px;
-  font-size: 12px;
 }
 
 .sm-organization-modal .ant-modal-container {
@@ -428,10 +428,6 @@
   height: 100%;
   padding: 8px 6px;
   overflow: auto;
-}
-
-.sm-organization-tree .ant-tree {
-  font-size: 12px;
 }
 
 .sm-organization-table {
@@ -533,7 +529,6 @@
   max-width: 520px;
   margin: 0 auto;
   padding: 0;
-  font-size: 12px;
 }
 
 .sm-personal-settings-card .sm-personal-settings-avatar {
@@ -585,14 +580,6 @@
 }
 
 .sm-personal-settings-modal .ant-btn,
-.sm-personal-settings-modal button,
-.sm-personal-settings-modal input,
-.sm-personal-settings-modal .ant-select,
-.sm-personal-settings-modal .ant-form-item,
-.sm-personal-settings-modal .ant-typography {
-  font-size: 12px;
-}
-
 .sm-personal-credential {
   padding: 4px 36px 8px;
 }
@@ -604,7 +591,6 @@
 .sm-personal-credential-email-tip {
   margin-bottom: 20px;
   color: var(--sm-text-secondary);
-  font-size: 12px;
   line-height: 1.6;
 }
 

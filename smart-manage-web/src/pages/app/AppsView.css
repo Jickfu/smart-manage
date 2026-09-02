@@ -91,7 +91,6 @@
 }
 
 .sm-app-card-desc {
-  font-size: 12px;
   color: #999;
   text-overflow: ellipsis;
   overflow: hidden;

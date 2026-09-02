@@ -12,7 +12,7 @@
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-conventions.ps1
 ```
 
-该脚本检查文档与 skill 路由、页面注册字段、前端内联样式和 Controller 权限注解常量等文件或前端源码约束。Java 类型、包、注解和依赖边界统一由后端 ArchUnit 测试验证，脚本不重复扫描 Java import。业务状态、数据安全和交互语义仍必须通过评审及风险驱动测试验证。
+该脚本检查文档与 skill 路由、页面注册字段、前端内联样式、重复默认字号和 Controller 权限注解常量等文件或前端源码约束。Java 类型、包、注解和依赖边界统一由后端 ArchUnit 测试验证，脚本不重复扫描 Java import。业务状态、数据安全和交互语义仍必须通过评审及风险驱动测试验证。
 
 当前检查清单如下：
 
@@ -21,6 +21,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-
 | 治理文件 | 模块开发指南、模块模式目录、模块开发 skill 及其代理配置必须存在 | 恢复规定文件；规范调整时同步更新仓库治理入口 |
 | 文档与 skill 路由 | 根目录及前后端 `AGENTS.md` 必须指向模块开发指南，模块开发 skill 必须调用本脚本 | 补充明确的文档路由或校验步骤，不能仅依赖代理记忆 |
 | 前端样式 | `smart-manage-web/src/domain` 下的 TSX 文件不得使用内联 `style` | 使用项目既有样式文件、组件能力或设计 token |
+| 前端字号 | `smart-manage-web/src` 下的 CSS 不得重复声明 `font-size: 12px` 或 `font-size: var(--ant-font-size-sm)` | 由全局主题提供默认密度；标题、骨架、图标和特殊展示按明确语义使用 token 或保留必要字号 |
 | 操作反馈 | 除统一封装自身外，前端不得直接调用 Ant Design `message` 的操作反馈方法 | 改用 `useOperationFeedback` |
 | 操作确认 | 前端不得直接调用 `Modal.confirm` 或使用 `Popconfirm` | 改用 `useOperationConfirm` |
 | 后端权限 | Controller 的 `@SaCheckPermission` 不得直接填写权限编码字符串 | 引用对应模块的权限常量 |

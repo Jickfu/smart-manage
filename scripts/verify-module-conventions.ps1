@@ -12,6 +12,7 @@
 6. 前端操作确认必须统一使用 useOperationConfirm。
 7. Controller 权限注解必须引用权限常量，禁止直接填写字符串。
 8. 页面注册文件必须存在，每个注册项必须声明非空 featureKey 和 pageType。
+9. 前端 CSS 禁止重复声明全局 12px 默认字号或 fontSizeSM。
 
 本脚本只负责适合源码静态扫描的确定性约束。Java 架构边界由 ArchUnit 测试校验；
 业务状态、数据安全和交互语义仍需通过代码评审及风险驱动测试验证。
@@ -131,6 +132,13 @@ Assert-NoFileMatch `
     -Pattern '\bstyle\s*=' `
     -Message 'Domain TSX must not use inline style'
 
+# 12px 默认字号与 small 字号已由全局主题统一提供，禁止继续积累局部密度补丁。
+Assert-NoFileMatch `
+    -RelativeDirectory 'smart-manage-web/src' `
+    -Filter '*.css' `
+    -Pattern 'font-size\s*:\s*(?:12px|var\(\s*--ant-font-size-sm\s*\))' `
+    -Message 'Frontend CSS must use the global typography baseline instead of repeating 12px or fontSizeSM'
+
 # 操作结果反馈必须经过统一封装，保持反馈级别和交互语义一致。
 $frontendSourceRoot = Resolve-RepositoryPath 'smart-manage-web/src'
 $operationFeedbackImplementation = Resolve-RepositoryPath 'smart-manage-web/src/domain/common/component/useOperationFeedback.tsx'
@@ -198,4 +206,4 @@ if ($violations.Count -gt 0) {
     exit 1
 }
 
-Write-Host "Module convention verification passed for governance routing, $($registrationFiles.Count) page registration file(s), frontend operation interactions, inline styles, and backend permission constants." -ForegroundColor Green
+Write-Host "Module convention verification passed for governance routing, $($registrationFiles.Count) page registration file(s), frontend operation interactions, typography, inline styles, and backend permission constants." -ForegroundColor Green

@@ -58,11 +58,6 @@
 
 .sm-workspace-sidebar .ant-menu {
   width: 122px;
-  font-size: 12px;
-}
-
-.sm-workspace-sidebar-popup {
-  font-size: 12px;
 }
 
 .sm-workspace-sidebar--collapsed .ant-menu {

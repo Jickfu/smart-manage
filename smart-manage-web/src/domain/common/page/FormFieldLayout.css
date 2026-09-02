@@ -160,7 +160,6 @@
 
 .sm-edit-form .ant-form-item-label > label {
   height: 17px;
-  font-size: 12px;
   line-height: 17px;
 }
 
@@ -187,7 +186,6 @@
 .sm-edit-form .ant-form-item-extra {
   margin-top: 4px;
   color: var(--ant-color-text-tertiary);
-  font-size: 12px;
   line-height: 18px;
 }
 

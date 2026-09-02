@@ -40,7 +40,6 @@
   align-items: center;
   color: #fff;
   background: rgb(0 0 0 / 55%);
-  font-size: 12px;
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -75,7 +74,7 @@
   border: 0;
   color: #fff;
   background: transparent;
-  font-size: 12px;
+  font: inherit;
   cursor: pointer;
 }
 

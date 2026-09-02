@@ -19,12 +19,6 @@
 
 .sm-list-tree-footer {
   border-top: 1px solid var(--sm-color-divider);
-  font-size: var(--ant-font-size-sm);
-}
-
-/* Checkbox 自带 14px 字号，需直接覆盖控件根节点才能继承树底部的小号文本。 */
-.sm-list-tree-footer .ant-checkbox-wrapper {
-  font-size: var(--ant-font-size-sm);
 }
 
 .sm-list-tree-content {

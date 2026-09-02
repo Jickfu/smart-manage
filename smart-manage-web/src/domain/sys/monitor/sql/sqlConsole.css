@@ -102,7 +102,7 @@
 .sm-sql-column-title small {
   overflow: hidden;
   color: var(--ant-color-text-tertiary);
-  font-size: 12px;
+  font-size: inherit;
   font-weight: normal;
   text-overflow: ellipsis;
   white-space: nowrap;

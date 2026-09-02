@@ -24,6 +24,10 @@
   overflow-wrap: anywhere;
 }
 
+.sm-operation-feedback-title {
+  font-size: var(--ant-font-size-lg);
+}
+
 .sm-operation-feedback-close {
   margin-inline-start: 16px;
 }
