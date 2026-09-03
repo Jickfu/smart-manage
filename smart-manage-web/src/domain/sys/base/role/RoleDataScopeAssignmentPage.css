@@ -1,17 +1,5 @@
-.sm-data-scope-page {
+.sm-data-scope-actions {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.sm-data-scope-rules {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.sm-data-scope-rule {
-  display: grid;
-  grid-template-columns:
-    minmax(220px, 2fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(220px, 2fr)
-    auto;
+  align-items: center;
   gap: 8px;
 }

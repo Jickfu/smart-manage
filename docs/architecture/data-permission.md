@@ -24,6 +24,8 @@ CUSTOM_ORGS         指定组织集合
 
 同一用户在当前组织下拥有多个角色时，授权范围按并集合并；`administrator` 固定为 `ALL`。切换当前组织后必须重新解析数据范围，不能复用其他组织上下文中的结果。
 
+这里的 `administrator` 指由统一安全上下文确认的管理员账号身份，与角色编码无关。所有新建角色（包括编码为 `admin` 的角色）默认 `SELF`，数据范围统一通过专用分配命令维护；普通角色资料保存不得改写已有范围，也不得因角色编码赋予 `ALL` 或禁止配置。既有角色的授权值不因取消编码特判自动重置。角色配置交互见[角色管理](../domains/sys/base/role.md)。
+
 ## 后端边界
 
 系统公共能力提供 `DataScopeService.resolve(resourceType, action)`，返回合并后的 `all`、`selfIncluded`、组织 ID 集合和当前用户 ID。

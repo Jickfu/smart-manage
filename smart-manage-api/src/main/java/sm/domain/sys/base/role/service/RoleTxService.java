@@ -65,7 +65,7 @@ class RoleTxService {
         entity.setDescription(form.getDescription());
         // 角色资料保存不能修改数据权限；新角色从最小范围开始，后续仅由专用命令调整。
         if (form.getId() == null) {
-            entity.setDefaultDataScope("admin".equals(entity.getNumber()) ? "ALL" : "SELF");
+            entity.setDefaultDataScope("SELF");
         }
 
         if (form.getId() == null) {
@@ -118,9 +118,6 @@ class RoleTxService {
         if (role == null) throw new BizException(ResultEnum.NOT_FOUND, "角色不存在");
         if (!Objects.equals(role.getVersion(), form.getVersion())) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "角色已被其他用户修改，请刷新后重试");
-        }
-        if ("admin".equals(role.getNumber())) {
-            throw new BizException(ResultEnum.PERMISSION_ERROR, "系统管理员固定拥有全部数据范围");
         }
         var uniqueRules = new HashSet<String>();
         for (var ruleForm : form.getRules()) {

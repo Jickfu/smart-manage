@@ -1,6 +1,8 @@
 package sm.domain.sys.base.role.service;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import sm.domain.sys.base.datascope.service.DataScopeConfigurationService;
 import sm.domain.sys.base.role.mapper.RoleMapper;
 import sm.domain.sys.base.role.mapper.RolePermissionMapper;
@@ -25,8 +27,9 @@ import static org.mockito.Mockito.when;
 
 class RoleTxServiceTests {
 
-    @Test
-    void createUsesSafeSelfScopeWithoutAcceptingItFromRoleSave() {
+    @ParameterizedTest
+    @ValueSource(strings = {"buyer", "admin", "administrator"})
+    void createUsesSafeSelfScopeWithoutAcceptingItFromRoleSave(String roleNumber) {
         RoleMapper mapper = mock(RoleMapper.class);
         when(mapper.selectCount(any())).thenReturn(0L);
         when(mapper.insert(any(RoleEntity.class))).thenAnswer(invocation -> {
@@ -37,39 +40,43 @@ class RoleTxServiceTests {
         });
         RoleTxService service = service(mapper);
         RoleSaveForm form = form(null, null);
+        form.setNumber(roleNumber);
 
         assertEquals(10L, service.save(form));
     }
 
-    @Test
-    void updatePreservesExistingDataScope() {
+    @ParameterizedTest
+    @ValueSource(strings = {"buyer", "admin"})
+    void updatePreservesExistingDataScope(String roleNumber) {
         RoleMapper mapper = mock(RoleMapper.class);
         RoleEntity entity = new RoleEntity();
         entity.setId(10L);
         entity.setVersion(2);
-        entity.setNumber("buyer");
-        entity.setDefaultDataScope("ORG");
+        entity.setNumber(roleNumber);
+        entity.setDefaultDataScope("ALL");
         when(mapper.selectCount(any())).thenReturn(0L);
         when(mapper.selectById(10L)).thenReturn(entity);
         when(mapper.updateById(entity)).thenReturn(1);
 
-        service(mapper).save(form(10L, 2));
+        RoleSaveForm form = form(10L, 2);
+        form.setNumber(roleNumber);
+        service(mapper).save(form);
 
-        assertEquals("ORG", entity.getDefaultDataScope());
+        assertEquals("ALL", entity.getDefaultDataScope());
         verify(mapper).updateById(entity);
     }
 
     @Test
-    void dataScopeAssignmentRejectsAdminBeforeWrites() {
+    void dataScopeAssignmentTreatsAdminAsOrdinaryRole() {
         RoleMapper mapper = scopeMapper("admin");
         DataScopeConfigurationService configuration = mock(DataScopeConfigurationService.class);
         RoleTxService service = new RoleTxService(mapper, mock(RolePermissionMapper.class), configuration);
 
-        BizException error = assertThrows(BizException.class, () -> service.assignDataScopes(scopeForm(List.of())));
+        service.assignDataScopes(scopeForm(List.of()));
 
-        assertEquals(ResultEnum.PERMISSION_ERROR.getCode(), error.getCode());
-        verify(mapper, never()).updateById(any(RoleEntity.class));
-        verifyNoInteractions(configuration);
+        assertEquals("ORG", mapper.selectById(10L).getDefaultDataScope());
+        verify(mapper).updateById(any(RoleEntity.class));
+        verify(configuration).replaceRoleRules(10L, List.of());
     }
 
     @Test

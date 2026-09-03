@@ -17,6 +17,8 @@ interface AssignmentPageProps {
   onRetry: () => void;
   access: AccessResource<{ save: string }>;
   subject?: ReactNode;
+  /** 是否呈现顶部右侧摘要；不影响脏数据关闭保护。 */
+  showHeaderContext?: boolean;
   selectedCount?: number;
   totalCount?: number;
   dirty?: boolean;
@@ -35,6 +37,7 @@ export function AssignmentPage({
   onRetry,
   access,
   subject,
+  showHeaderContext = true,
   selectedCount,
   totalCount,
   dirty = false,
@@ -66,15 +69,17 @@ export function AssignmentPage({
             ]}
           />
         </div>
-        <div className="sm-assignment-header-context">
-          {subject && <span className="sm-assignment-subject">{subject}</span>}
-          {selectedCount !== undefined && totalCount !== undefined && (
-            <span>
-              已选 {selectedCount} / {totalCount}
-            </span>
-          )}
-          {dirty && <span className="sm-assignment-dirty">有未保存修改</span>}
-        </div>
+        {showHeaderContext && (
+          <div className="sm-assignment-header-context">
+            {subject && <span className="sm-assignment-subject">{subject}</span>}
+            {selectedCount !== undefined && totalCount !== undefined && (
+              <span>
+                已选 {selectedCount} / {totalCount}
+              </span>
+            )}
+            {dirty && <span className="sm-assignment-dirty">有未保存修改</span>}
+          </div>
+        )}
       </div>
       <div
         className="sm-edit-body sm-assignment-body"
