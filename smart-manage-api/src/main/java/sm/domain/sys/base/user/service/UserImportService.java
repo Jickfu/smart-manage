@@ -8,7 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import sm.domain.sys.base.fileartifact.contract.FileArtifactReference;
 import sm.domain.sys.base.fileartifact.contract.PreparedFileArtifact;
 import sm.domain.sys.base.fileartifact.service.FileArtifactService;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
+import sm.domain.sys.base.common.helper.UserCacheInvalidator;
 import sm.domain.sys.base.org.contract.OrgReference;
 import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.user.mapper.UserMapper;
@@ -26,7 +26,6 @@ import sm.system.excel.ExcelWorkbookService;
 import sm.system.excel.ExcelDataRow;
 import sm.system.response.ResultEnum;
 import sm.system.security.authorization.AdministratorOnly;
-import sm.system.auth.SessionTerminationReason;
 import sm.system.storage.FileStoragePurpose;
 import sm.system.util.PasswordGeneratorUtil;
 
@@ -54,7 +53,7 @@ public class UserImportService {
     private final UserImportTxService importTxService;
     private final FileArtifactService fileArtifactService;
     private final Validator validator;
-    private final AuthorizationStateHelper authorizationStateHelper;
+    private final UserCacheInvalidator userCacheInvalidator;
 
     @AdministratorOnly
     public byte[] template() {
@@ -291,31 +290,24 @@ public class UserImportService {
                 ? List.of() : List.of(committed.credentialFile()), warnings);
     }
 
-    /** 数据库提交结果已经确定；授权刷新失败只形成警告，不能把已提交批次改报为写入失败。 */
+    /** 数据库提交结果已经确定；展示缓存刷新失败只形成警告，不能把已提交批次改报为写入失败。 */
     private List<String> refreshAfterCommit(List<PlannedUserImportRow> plannedRows,
                                             UserImportTxService.BatchCommitResult committed) {
         List<PlannedUserImportRow> failedRows = new ArrayList<>();
         for (int index = 0; index < plannedRows.size(); index++) {
             PlannedUserImportRow plannedRow = plannedRows.get(index);
-            UserSaveForm form = plannedRow.form();
             Long userId = committed.savedIds().get(index);
             try {
-                for (Long orgId : committed.previousOrgIds().getOrDefault(userId, List.of())) {
-                    authorizationStateHelper.refreshUserAuthorization(userId, orgId);
-                }
-                authorizationStateHelper.refreshUsers(List.of(userId));
-                if (form.getAssignments().isEmpty()) {
-                    authorizationStateHelper.terminateUsers(List.of(userId), SessionTerminationReason.ACCOUNT_DISABLED);
-                }
+                userCacheInvalidator.refreshUsers(List.of(userId));
             } catch (RuntimeException exception) {
                 failedRows.add(plannedRow);
-                log.warn("用户导入记录已提交，但授权状态刷新失败: row={}, userId={}",
+                log.warn("用户导入记录已提交，但用户展示缓存刷新失败: row={}, userId={}",
                         plannedRow.sourceRowNumber(), userId, exception);
             }
         }
         if (failedRows.isEmpty()) return List.of();
         return List.of(formatRowNumbers(failedRows)
-                + "已写入成功，但授权状态刷新失败；缓存将在过期后按数据库状态重建");
+                + "已写入成功，但用户展示缓存刷新失败；缓存将在过期后按数据库状态重建");
     }
 
     private String formatRowNumbers(List<PlannedUserImportRow> plannedRows) {

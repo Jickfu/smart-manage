@@ -60,7 +60,7 @@ try {
         "-DsmartManage.testDbUrl=jdbc:postgresql://${DbHost}:${DbPort}/${verifyDatabase}"
         "-DsmartManage.testDbUser=$DbUser"
         "-DsmartManage.testDbPassword=$DbPassword"
-        '-Dtest=RoleDataScopeMapperPostgresTests,MonitorCatalogAccessorPostgresTests,MonitorPersistencePostgresTests,MonitorAlertConcurrencyPostgresTests'
+        '-Dtest=*PostgresTests'
         'test'
     )
     Write-Host "Running Flyway with project: $backendPomPath"

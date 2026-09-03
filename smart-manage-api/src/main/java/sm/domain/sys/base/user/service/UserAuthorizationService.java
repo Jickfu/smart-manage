@@ -3,7 +3,6 @@ package sm.domain.sys.base.user.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.common.model.vo.ReferenceVO;
 import sm.domain.sys.base.org.contract.OrgReference;
 import sm.domain.sys.base.org.contract.OrgReferenceReader;
@@ -42,7 +41,6 @@ public class UserAuthorizationService {
     private final OrgReferenceReader orgReferenceReader;
     private final UserTxService txService;
     private final PermissionService permissionService;
-    private final AuthorizationStateHelper authorizationStateHelper;
     private final CurrentUserContext currentUserContext;
 
     public UserRoleAssignmentWorkspaceVO roleAssignmentWorkspace(Long userId) {
@@ -72,12 +70,7 @@ public class UserAuthorizationService {
 
     @BizLog("分配用户角色")
     public void saveRoleAssignment(UserRoleAssignmentSaveForm form) {
-        LinkedHashSet<Long> affectedOrgIds = new LinkedHashSet<>(
-                userRoleMapper.selectOrgIdsByUserId(form.getUserId()));
-        form.getAssignments().forEach(assignment -> affectedOrgIds.add(assignment.getOrgId()));
         txService.saveRoleAssignment(form);
-        affectedOrgIds.forEach(orgId ->
-                authorizationStateHelper.refreshUserAuthorization(form.getUserId(), orgId));
     }
 
     public List<String> permissions(String prefix) {

@@ -11,6 +11,9 @@ import sm.domain.sys.base.role.model.entity.RoleEntity;
 @Mapper
 public interface RoleMapper extends BaseMapper<RoleEntity> {
 
+    /** 锁定聚合根，即使权限集合为空也必须串行替换。 */
+    RoleEntity selectForUpdate(@Param("id") Long id);
+
     java.util.List<String> selectUserRoleNumbers(
             @Param("userId") Long userId,
             @Param("orgId") Long orgId);

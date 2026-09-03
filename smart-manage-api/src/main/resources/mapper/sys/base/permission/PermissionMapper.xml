@@ -78,7 +78,7 @@
         WHERE a.id = #{id}
     </select>
 
-    <select id="selectUserPermissionNumbers" resultType="java.lang.String">
+    <select id="selectUserPermissionNumbers" resultType="java.lang.String" flushCache="true" useCache="false">
         SELECT DISTINCT a.number
         FROM t_sys_permission a
         INNER JOIN t_sys_role_perms b ON b.permission_id = a.id

@@ -37,8 +37,7 @@ class PermissionServiceTests {
         mapperPage.setRecords(List.of(record));
         when(mapper.selectListPage(any(Page.class), same(form), any(ListSqlQuery.class))).thenReturn(mapperPage);
 
-        PermissionService service = new PermissionService(mapper, mock(PermissionTxService.class),
-                mock(sm.domain.sys.base.common.helper.AuthorizationStateHelper.class));
+        PermissionService service = new PermissionService(mapper, mock(PermissionTxService.class));
 
         PageData<PermissionListVO> result = service.listPage(form);
 

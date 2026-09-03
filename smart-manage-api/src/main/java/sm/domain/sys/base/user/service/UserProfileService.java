@@ -12,7 +12,7 @@ import sm.domain.sys.base.attachment.contract.AttachmentReference;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.common.constant.BaseCacheName;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
+import sm.domain.sys.base.common.helper.UserCacheInvalidator;
 import sm.domain.sys.base.common.model.vo.ReferenceVO;
 import sm.domain.sys.base.org.contract.OrgReference;
 import sm.domain.sys.base.org.contract.OrgReferenceReader;
@@ -28,7 +28,6 @@ import sm.domain.sys.base.user.model.form.CurrentUserProfileForm;
 import sm.domain.sys.base.user.model.vo.UserAssignmentVO;
 import sm.domain.sys.base.user.model.vo.UserInfoVO;
 import sm.system.aop.log.BizLog;
-import sm.system.auth.SessionTerminationReason;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.security.crypto.BrowserPasswordCipher;
@@ -53,7 +52,7 @@ public class UserProfileService {
     private final OrgReferenceReader orgReferenceReader;
     private final AttachmentService attachmentService;
     private final UserTxService txService;
-    private final AuthorizationStateHelper authorizationStateHelper;
+    private final UserCacheInvalidator userCacheInvalidator;
     private final UserCacheAccessor userCacheAccessor;
     private final UserConverter converter;
     private final CurrentUserContext currentUserContext;
@@ -71,9 +70,9 @@ public class UserProfileService {
     public UserInfoVO current() {
         Long userId = currentUserContext.getUserId();
         UserEntity user = userMapper.selectById(userId);
-        if (user == null) invalidateCurrentSession(userId, SessionTerminationReason.ACCOUNT_DELETED);
+        if (user == null) invalidateCurrentSession(userId);
         if (!Boolean.TRUE.equals(user.getEnabled())) {
-            invalidateCurrentSession(userId, SessionTerminationReason.ACCOUNT_DISABLED);
+            invalidateCurrentSession(userId);
         }
         UserInfoVO result = converter.toInfoVO(user);
         result.setAvatar(avatarUrl(user.getId(), user.getAvatarAttachmentId()));
@@ -81,8 +80,8 @@ public class UserProfileService {
         return result;
     }
 
-    private void invalidateCurrentSession(Long userId, SessionTerminationReason reason) {
-        authorizationStateHelper.terminateUsers(List.of(userId), reason);
+    private void invalidateCurrentSession(Long userId) {
+        userCacheInvalidator.tryRefreshUsers(List.of(userId));
         throw new BizException(ResultEnum.UNAUTHORIZED, "登录状态已失效，请重新登录");
     }
 
@@ -149,8 +148,7 @@ public class UserProfileService {
         }
         Long userId = currentUserContext.getUserId();
         txService.updateCurrentPassword(userId, currentPassword, newPassword);
-        authorizationStateHelper.terminateUsers(
-                List.of(userId), SessionTerminationReason.PASSWORD_RESET_TERMINATED);
+        userCacheInvalidator.tryRefreshUsers(List.of(userId));
     }
 
     @BizLog("修改个人主题")

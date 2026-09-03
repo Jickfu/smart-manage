@@ -33,6 +33,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import sm.system.util.EnabledCommandUtil;
+import sm.domain.sys.base.common.constant.UserConstant;
+import sm.domain.sys.base.user.model.UserCredentialSnapshot;
 
 /**
  * 用户事务服务 —— 所有写操作在类级别事务中执行
@@ -61,11 +63,23 @@ class UserTxService {
         return userWriter.save(form, desiredId);
     }
 
-    /** 管理员重置密码，明文只通过本次调用返回。 */
+    /** 普通目标重置路径不得接收超级管理员，即使未来上层路由有误也必须拒绝。 */
     public String resetPassword(Long userId) {
+        return resetPasswordTarget(userId, false);
+    }
+
+    /** 只能由独立 @AdministratorOnly 命令边界调用。 */
+    public String resetAdministratorPassword(Long userId) {
+        return resetPasswordTarget(userId, true);
+    }
+
+    private String resetPasswordTarget(Long userId, boolean administratorTarget) {
         UserEntity entity = mapper.selectById(userId);
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+        }
+        if (UserConstant.SUPER_ADMIN.equals(entity.getUsername()) != administratorTarget) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "目标用户不属于此凭据重置入口");
         }
         String password = PasswordGeneratorUtil.generate(12);
         entity.setPassword(Argon2Helper.encode(password));
@@ -77,17 +91,17 @@ class UserTxService {
     }
 
     /** 使用一次性改单凭证设置正式密码。 */
-    public void changeResetPassword(Long userId, String newPassword) {
+    public void changeResetPassword(Long userId, Long expectedGeneration, String newPassword) {
         UserEntity entity = mapper.selectById(userId);
-        if (entity == null || !Boolean.TRUE.equals(entity.getPasswordReset())) {
+        if (entity == null || !Boolean.TRUE.equals(entity.getPasswordReset())
+                || !Boolean.TRUE.equals(entity.getEnabled()) || expectedGeneration == null
+                || !expectedGeneration.equals(entity.getCredentialGeneration())) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "改密状态已失效，请重新登录");
         }
         if (Argon2Helper.verify(entity.getPassword(), newPassword)) {
             throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能与临时密码相同");
         }
-        entity.setPassword(Argon2Helper.encode(newPassword));
-        entity.setPasswordReset(false);
-        if (mapper.updateById(entity) == 0) {
+        if (mapper.changeResetPassword(userId, expectedGeneration, Argon2Helper.encode(newPassword)) != 1) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请重新登录");
         }
     }
@@ -164,31 +178,26 @@ class UserTxService {
     }
 
     /** 邮箱验证码已经在事务外原子消费，本事务只完成密码安全事件写入。 */
-    public void updatePasswordByVerifiedEmail(Long userId, String newPassword) {
-        UserEntity entity = mapper.selectById(userId);
+    public void updatePasswordByVerifiedEmail(UserCredentialSnapshot snapshot, String newPassword) {
+        UserEntity entity = mapper.selectById(snapshot.userId());
         if (entity == null || entity.getEmailVerifiedAt() == null || !Boolean.TRUE.equals(entity.getEnabled())) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "邮箱验证状态已变化，请重新获取验证码");
         }
         if (Argon2Helper.verify(entity.getPassword(), newPassword)) {
             throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能与原密码相同");
         }
-        entity.setPassword(Argon2Helper.encode(newPassword));
-        entity.setPasswordReset(false);
-        if (mapper.updateById(entity) == 0) {
+        // 最终 SQL 必须再次比较签发快照；事务外消费成功不等于此刻仍有改密权限。
+        if (mapper.updatePasswordByVerifiedEmail(snapshot, Argon2Helper.encode(newPassword)) != 1) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请重新获取验证码");
         }
     }
 
     /** 验证码发送到新邮箱并成功消费后，才正式绑定并标记邮箱已验证。 */
-    public void bindVerifiedEmail(Long userId, String email) {
+    public void bindVerifiedEmail(UserCredentialSnapshot snapshot, String email) {
         String normalizedEmail = normalizeEmail(email);
-        assertContactUnique(normalizedEmail, null, userId);
-        UserEntity entity = mapper.selectById(userId);
-        if (entity == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
-        entity.setEmail(normalizedEmail);
-        entity.setEmailVerifiedAt(LocalDateTime.now());
+        assertContactUnique(normalizedEmail, null, snapshot.userId());
         try {
-            if (mapper.updateById(entity) == 0) {
+            if (mapper.bindVerifiedEmail(snapshot, normalizedEmail) != 1) {
                 throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请重新验证邮箱");
             }
         } catch (DuplicateKeyException exception) {

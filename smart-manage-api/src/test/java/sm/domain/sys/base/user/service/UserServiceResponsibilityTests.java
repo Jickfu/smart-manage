@@ -4,12 +4,11 @@ import sm.domain.sys.base.user.converter.UserConverter;
 
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.attachment.service.AttachmentService;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
+import sm.domain.sys.base.common.helper.UserCacheInvalidator;
 import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.org.service.OrgReferenceService;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.user.mapper.UserMapper;
-import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.system.auth.SessionTerminationReason;
 import sm.system.exception.BizException;
@@ -28,51 +27,49 @@ import static org.mockito.Mockito.when;
 
 class UserServiceResponsibilityTests {
     @Test
-    void deletingUserTerminatesSessionsOnlyAfterDeleteSucceeds() {
+    void deletingUserRefreshesDisplayCacheOnlyAfterDeleteSucceeds() {
         UserMapper mapper = mock(UserMapper.class);
         UserEntity user = new UserEntity();
         user.setId(10L);
         when(mapper.selectById(10L)).thenReturn(user);
         UserTxService txService = mock(UserTxService.class);
-        AuthorizationStateHelper authorizationStateHelper = mock(AuthorizationStateHelper.class);
-        UserService service = service(mapper, txService, authorizationStateHelper);
+        UserCacheInvalidator userCacheInvalidator = mock(UserCacheInvalidator.class);
+        UserService service = service(mapper, txService, userCacheInvalidator);
 
         service.deleteById(10L);
 
         verify(txService).deleteById(10L);
-        verify(authorizationStateHelper).terminateUsers(
-                List.of(10L), SessionTerminationReason.ACCOUNT_DELETED);
+        verify(userCacheInvalidator).tryRefreshUsers(List.of(10L));
     }
 
     @Test
-    void failedDeleteDoesNotTerminateSessions() {
+    void failedDeleteDoesNotRefreshDisplayCache() {
         UserTxService txService = mock(UserTxService.class);
         doThrow(new BizException(ResultEnum.DATA_CONFLICT)).when(txService).deleteById(10L);
-        AuthorizationStateHelper authorizationStateHelper = mock(AuthorizationStateHelper.class);
-        UserService service = service(mock(UserMapper.class), txService, authorizationStateHelper);
+        UserCacheInvalidator userCacheInvalidator = mock(UserCacheInvalidator.class);
+        UserService service = service(mock(UserMapper.class), txService, userCacheInvalidator);
 
         assertThrows(BizException.class, () -> service.deleteById(10L));
 
-        verify(authorizationStateHelper, never()).terminateUsers(any(), any());
+        verify(userCacheInvalidator, never()).tryRefreshUsers(any());
     }
 
     @Test
-    void disablingUsersTerminatesSessionsOnlyAfterUpdateSucceeds() {
+    void disablingUsersRefreshesDisplayCacheOnlyAfterUpdateSucceeds() {
         UserTxService txService = mock(UserTxService.class);
-        AuthorizationStateHelper authorizationStateHelper = mock(AuthorizationStateHelper.class);
-        UserService service = service(mock(UserMapper.class), txService, authorizationStateHelper);
+        UserCacheInvalidator userCacheInvalidator = mock(UserCacheInvalidator.class);
+        UserService service = service(mock(UserMapper.class), txService, userCacheInvalidator);
 
         service.disable(List.of(10L));
 
         verify(txService).updateEnabled(List.of(10L), false);
-        verify(authorizationStateHelper).terminateUsers(
-                List.of(10L), SessionTerminationReason.ACCOUNT_DISABLED);
+        verify(userCacheInvalidator).tryRefreshUsers(List.of(10L));
     }
 
     private UserService service(UserMapper mapper, UserTxService txService,
-            AuthorizationStateHelper authorizationStateHelper) {
-        return new UserService(mapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
+            UserCacheInvalidator userCacheInvalidator) {
+        return new UserService(mapper, mock(UserAssignmentMapper.class),
                 new OrgReferenceService(mock(OrgMapper.class)), mock(AttachmentService.class), txService,
-                authorizationStateHelper, mock(UserConverter.class), mock(CurrentUserContext.class));
+                userCacheInvalidator, mock(UserConverter.class), mock(CurrentUserContext.class));
     }
 }

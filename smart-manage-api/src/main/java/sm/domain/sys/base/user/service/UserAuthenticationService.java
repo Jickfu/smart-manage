@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.UserConstant;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
+import sm.domain.sys.base.common.helper.UserCacheInvalidator;
 import sm.domain.sys.base.org.contract.OrgReference;
 import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
@@ -13,8 +13,6 @@ import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.model.vo.ResetPasswordVO;
 import sm.domain.sys.base.user.model.vo.UserAuthentication;
-import sm.system.aop.log.BizLog;
-import sm.system.auth.SessionTerminationReason;
 import sm.system.exception.BizException;
 import sm.system.helper.Argon2Helper;
 import sm.system.response.ResultEnum;
@@ -29,7 +27,9 @@ public class UserAuthenticationService {
     private final UserAssignmentMapper userAssignmentMapper;
     private final OrgReferenceReader orgReferenceReader;
     private final UserTxService txService;
-    private final AuthorizationStateHelper authorizationStateHelper;
+    private final UserCacheInvalidator userCacheInvalidator;
+    private final RegularUserCredentialService regularUserCredentialService;
+    private final AdministratorUserCredentialService administratorUserCredentialService;
 
     public UserAuthentication authenticate(String username, String password) {
         UserEntity user = userMapper.selectOne(
@@ -87,23 +87,23 @@ public class UserAuthenticationService {
         return new UserAuthentication(user.getId(), user.getUsername(), user.getName(),
                 hideStateReason ? false : Boolean.TRUE.equals(user.getPasswordReset()),
                 !hideStateReason && UserConstant.SUPER_ADMIN.equals(user.getUsername()),
-                primaryOrganization.id(), null);
+                primaryOrganization.id(), user.getCredentialGeneration(), null);
     }
 
-    @BizLog(value = "重置用户密码", recordResponse = false)
+    /** 这里只按不可变用户名路由；日志与管理员身份校验位于真正的命令 Bean。 */
     public ResetPasswordVO resetPassword(Long userId) {
-        String password = txService.resetPassword(userId);
-        authorizationStateHelper.terminateUsers(
-                List.of(userId), SessionTerminationReason.PASSWORD_RESET_TERMINATED);
-        return new ResetPasswordVO(password);
+        UserEntity target = userMapper.selectById(userId);
+        if (target == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
+        return UserConstant.SUPER_ADMIN.equals(target.getUsername())
+                ? administratorUserCredentialService.resetPassword(userId)
+                : regularUserCredentialService.resetPassword(userId);
     }
 
-    public void changeResetPassword(Long userId, String newPassword) {
+    public void changeResetPassword(Long userId, Long expectedGeneration, String newPassword) {
         if (newPassword == null || newPassword.isBlank()) {
             throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能为空");
         }
-        txService.changeResetPassword(userId, newPassword);
-        authorizationStateHelper.terminateUsers(
-                List.of(userId), SessionTerminationReason.PASSWORD_RESET_TERMINATED);
+        txService.changeResetPassword(userId, expectedGeneration, newPassword);
+        userCacheInvalidator.tryRefreshUsers(List.of(userId));
     }
 }

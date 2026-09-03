@@ -31,6 +31,39 @@ class RequestSecurityChainIntegrationTests {
 
     private MockMvc mockMvc;
 
+    @Test
+    void persistentGenerationGuardRejectsOldSessionAndPreservesDatabaseFailureMeaning() throws Exception {
+        new SaTokenContextRegister();
+        var handlerMapping = mock(RequestMappingHandlerMapping.class);
+        when(handlerMapping.getHandlerMethods()).thenReturn(Map.of());
+        var userMapper = mock(sm.domain.sys.base.user.mapper.UserMapper.class);
+        var guard = new sm.system.security.SessionCredentialGuard(
+                new sm.domain.sys.base.user.service.UserSessionStateVerifier(userMapper));
+        var config = new SaTokenConfig(handlerMapping, JsonMapper.builder().build(),
+                mock(BrowserRequestSecurity.class), guard);
+        ReflectionTestUtils.setField(config, "noNeedLogin", new String[]{"/public-test"});
+        var protectedMvc = MockMvcBuilders.standaloneSetup(new TestController())
+                .addFilters(new SaTokenContextFilterForJakartaServlet(), config.getSaServletFilter()).build();
+        var session = mock(cn.dev33.satoken.session.SaSession.class);
+        var logic = mock(cn.dev33.satoken.stp.StpLogic.class);
+        when(logic.getTokenSession(false)).thenReturn(session);
+        when(session.get(sm.system.security.SessionCredentialGuard.GENERATION_CLAIM)).thenReturn("1");
+        var user = new sm.domain.sys.base.user.model.entity.UserEntity();
+        user.setEnabled(true);
+        user.setCredentialGeneration(2L);
+        when(userMapper.selectSecurityState(1L)).thenReturn(user);
+        // 仅替换登录存储，实际过滤器、代际守卫和持久状态判定均参与请求。
+        try (var authentication = org.mockito.Mockito.mockStatic(cn.dev33.satoken.stp.StpUtil.class)) {
+            authentication.when(cn.dev33.satoken.stp.StpUtil::getStpLogic).thenReturn(logic);
+            authentication.when(cn.dev33.satoken.stp.StpUtil::getLoginIdAsLong).thenReturn(1L);
+            protectedMvc.perform(get("/protected-test")).andExpect(jsonPath("$.code").value(100401));
+            when(session.get(sm.system.security.SessionCredentialGuard.GENERATION_CLAIM)).thenReturn("2");
+            protectedMvc.perform(get("/protected-test")).andExpect(jsonPath("$.data").value("secret"));
+            when(userMapper.selectSecurityState(1L)).thenThrow(new IllegalStateException("database unavailable"));
+            protectedMvc.perform(get("/protected-test")).andExpect(jsonPath("$.code").value(100500));
+        }
+    }
+
     @BeforeEach
     void setUp() {
         new SaTokenContextRegister();
@@ -38,7 +71,7 @@ class RequestSecurityChainIntegrationTests {
         when(handlerMapping.getHandlerMethods()).thenReturn(Map.of());
         BrowserRequestSecurity browserRequestSecurity = mock(BrowserRequestSecurity.class);
         SaTokenConfig config = new SaTokenConfig(
-                handlerMapping, JsonMapper.builder().build(), browserRequestSecurity);
+                handlerMapping, JsonMapper.builder().build(), browserRequestSecurity, mock(sm.system.security.SessionCredentialGuard.class));
         ReflectionTestUtils.setField(config, "noNeedLogin", new String[]{"/public-test"});
         SaServletFilter filter = config.getSaServletFilter();
         mockMvc = MockMvcBuilders.standaloneSetup(new TestController())
@@ -69,7 +102,7 @@ class RequestSecurityChainIntegrationTests {
         when(handlerMapping.getHandlerMethods()).thenReturn(Map.of());
         JsonMapper mapper = mock(JsonMapper.class);
         when(mapper.writeValueAsString(any())).thenThrow(new IllegalStateException("sensitive detail"));
-        SaTokenConfig config = new SaTokenConfig(handlerMapping, mapper, mock(BrowserRequestSecurity.class));
+        SaTokenConfig config = new SaTokenConfig(handlerMapping, mapper, mock(BrowserRequestSecurity.class), mock(sm.system.security.SessionCredentialGuard.class));
         ReflectionTestUtils.setField(config, "noNeedLogin", new String[]{"/public-test"});
         var failingMvc = MockMvcBuilders.standaloneSetup(new TestController())
                 .addFilters(new SaTokenContextFilterForJakartaServlet(), config.getSaServletFilter()).build();

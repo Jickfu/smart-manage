@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import sm.domain.sys.base.common.constant.BaseCacheName;
 import sm.system.security.context.CurrentUserContext;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
+import sm.domain.sys.base.common.helper.UserCacheInvalidator;
 import sm.domain.sys.base.user.model.entity.UserEntity;
 import sm.domain.sys.base.user.converter.UserConverter;
 import sm.domain.sys.base.user.model.form.UserListForm;
@@ -21,14 +21,12 @@ import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.domain.sys.base.attachment.contract.AttachmentReference;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.user.mapper.UserMapper;
-import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.org.contract.OrgReference;
 import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.user.model.entity.UserAssignmentEntity;
 import sm.domain.sys.base.user.model.vo.UserAssignmentVO;
 import sm.domain.sys.base.common.model.vo.ReferenceVO;
-import sm.system.auth.SessionTerminationReason;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
@@ -59,12 +57,11 @@ public class UserService {
 			"username", ListSqlQuery.string("a.username", true),
 			"enabled", ListSqlQuery.bool("a.enabled", true));
 	private final UserMapper mapper;
-	private final UserRoleMapper userRoleMapper;
 	private final UserAssignmentMapper userAssignmentMapper;
 	private final OrgReferenceReader orgReferenceReader;
 	private final AttachmentService attachmentService;
 	private final UserTxService txService;
-	private final AuthorizationStateHelper authorizationStateHelper;
+	private final UserCacheInvalidator userCacheInvalidator;
 	private final UserConverter converter;
 	private final CurrentUserContext currentUserContext;
 
@@ -88,9 +85,6 @@ public class UserService {
 	public Long save(UserSaveForm form) {
 		UserEntity previous = form.getId() == null ? null : mapper.selectById(form.getId());
 		Long userId = previous == null ? IdWorker.getId() : previous.getId();
-		List<Long> previousAuthorizationOrgIds = previous == null
-				? List.of()
-				: userRoleMapper.selectOrgIdsByUserId(userId);
 		Long temporaryAvatarId = findTemporaryAvatarId(form.getAvatarAttachmentId());
 		promoteAvatar(form, userId);
 		Long savedId;
@@ -102,13 +96,8 @@ public class UserService {
 			deleteAvatarForCompensation(temporaryAvatarId);
 			throw exception;
 		}
-		// 任职移除会同步删除角色，必须刷新删除前仍存在的精确组织授权缓存。
-		for (Long orgId : previousAuthorizationOrgIds) {
-			authorizationStateHelper.refreshUserAuthorization(savedId, orgId);
-		}
 		if (form.getAssignments().isEmpty()) {
-			authorizationStateHelper.terminateUsers(
-					List.of(savedId), SessionTerminationReason.ACCOUNT_DISABLED);
+			userCacheInvalidator.tryRefreshUsers(List.of(savedId));
 		}
 		return savedId;
 	}
@@ -119,19 +108,19 @@ public class UserService {
 		UserEntity user = mapper.selectById(id);
 		txService.deleteById(id);
 		if (user != null) deleteAvatarForCompensation(user.getAvatarAttachmentId());
-		authorizationStateHelper.terminateUsers(List.of(id), SessionTerminationReason.ACCOUNT_DELETED);
+		userCacheInvalidator.tryRefreshUsers(List.of(id));
 	}
 
 	@BizLog("启用用户")
 	public void enable(List<Long> ids) {
 		txService.updateEnabled(ids, true);
-		authorizationStateHelper.refreshUsers(ids);
+		userCacheInvalidator.tryRefreshUsers(ids);
 	}
 
 	@BizLog("禁用用户")
 	public void disable(List<Long> ids) {
 		txService.updateEnabled(ids, false);
-		authorizationStateHelper.terminateUsers(ids, SessionTerminationReason.ACCOUNT_DISABLED);
+		userCacheInvalidator.tryRefreshUsers(ids);
 	}
 
 	/** 查询用户基础详情和全部任职；角色关系必须通过带组织上下文的独立查询获取。 */

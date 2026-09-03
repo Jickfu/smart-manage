@@ -4,7 +4,7 @@ import cn.dev33.satoken.stp.StpInterface;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import sm.system.security.context.CurrentUserContext;
-import sm.domain.sys.base.common.helper.UserAuthorizationCacheAccessor;
+import sm.domain.sys.base.common.helper.UserAuthorizationAccessor;
 
 import java.util.List;
 
@@ -17,16 +17,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StpInterfaceImpl implements StpInterface {
 	private final CurrentUserContext currentUserContext;
-	private final UserAuthorizationCacheAccessor authorizationCacheAccessor;
+	private final UserAuthorizationAccessor authorizationAccessor;
 
 	@Override
 	public List<String> getPermissionList(Object loginId, String loginType) {
 		if (currentUserContext.isAdministrator()) {
 			return List.of("*");
 		}
-		long uid = Long.parseLong(String.valueOf(loginId));
+		long userId = Long.parseLong(String.valueOf(loginId));
 		Long orgId = currentUserContext.getOrgId();
-		return authorizationCacheAccessor.get(uid, orgId).getPermissionNumbers();
+		return authorizationAccessor.get(userId, orgId).getPermissionNumbers();
 	}
 
 	@Override
@@ -35,6 +35,6 @@ public class StpInterfaceImpl implements StpInterface {
 			return List.of("administrator");
 		}
 		long userId = Long.parseLong(String.valueOf(loginId));
-		return authorizationCacheAccessor.get(userId, currentUserContext.getOrgId()).getRoleNumbers();
+		return authorizationAccessor.get(userId, currentUserContext.getOrgId()).getRoleNumbers();
 	}
 }

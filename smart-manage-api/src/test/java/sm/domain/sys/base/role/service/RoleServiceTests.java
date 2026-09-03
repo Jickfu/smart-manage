@@ -3,7 +3,6 @@ package sm.domain.sys.base.role.service;
 import sm.domain.sys.base.role.converter.RoleConverterImpl;
 
 import org.junit.jupiter.api.Test;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.role.mapper.RoleMapper;
 import sm.domain.sys.base.role.mapper.RolePermissionMapper;
 import sm.domain.sys.base.datascope.service.DataScopeConfigurationService;
@@ -45,7 +44,6 @@ class RoleServiceTests {
                 mapper,
                 mock(RolePermissionMapper.class),
                 mock(RoleTxService.class),
-                mock(AuthorizationStateHelper.class),
                 new RoleConverterImpl(), mock(DataScopeConfigurationService.class),
                 mock(BusinessResourceRegistry.class));
 
@@ -68,7 +66,6 @@ class RoleServiceTests {
                 mapper,
                 mock(RolePermissionMapper.class),
                 mock(RoleTxService.class),
-                mock(AuthorizationStateHelper.class),
                 new RoleConverterImpl(), mock(DataScopeConfigurationService.class),
                 mock(BusinessResourceRegistry.class));
 
@@ -110,7 +107,6 @@ class RoleServiceTests {
                 mock(RoleMapper.class),
                 mock(RolePermissionMapper.class),
                 txService,
-                mock(AuthorizationStateHelper.class),
                 new RoleConverterImpl(), mock(DataScopeConfigurationService.class),
                 resourceRegistry);
     }

@@ -33,6 +33,23 @@ import static org.mockito.Mockito.never;
 
 class UserTxServiceTests {
 
+    @Test
+    void delegatedResetCannotChangeAdministratorCredentials() {
+        UserMapper mapper = mock(UserMapper.class);
+        UserEntity administrator = new UserEntity();
+        administrator.setId(1L);
+        administrator.setUsername("administrator");
+        when(mapper.selectById(1L)).thenReturn(administrator);
+        when(mapper.updateById(any(UserEntity.class))).thenReturn(1);
+        var context = mock(CurrentUserContext.class);
+        var service = new UserTxService(mapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
+                new OrgReferenceService(mock(OrgMapper.class)), context, mock(UserWriter.class));
+
+        var error = assertThrows(sm.system.exception.BizException.class, () -> service.resetPassword(1L));
+        assertEquals(sm.system.response.ResultEnum.PERMISSION_ERROR.getCode(), error.getCode());
+        verify(mapper, never()).updateById(any(UserEntity.class));
+    }
+
 	@Test
 	void currentPasswordMustMatchBeforePasswordCanBeChanged() {
 		UserMapper userMapper = mock(UserMapper.class);

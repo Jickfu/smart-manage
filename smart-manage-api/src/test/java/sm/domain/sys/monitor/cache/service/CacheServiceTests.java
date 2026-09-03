@@ -27,7 +27,7 @@ class CacheServiceTests {
     void overviewMustNotCreateCacheInstances() {
         service.overview();
 
-        verify(cacheHelper, times(4)).findCache(any());
+        verify(cacheHelper, times(3)).findCache(any());
         verify(cacheHelper, never()).getCache(any(), any(), anyLong());
     }
 
@@ -36,7 +36,7 @@ class CacheServiceTests {
         var tree = service.scopeTree();
 
         assertEquals(List.of("应用缓存", "基础设施缓存"), tree.stream().map(item -> item.getName()).toList());
-        assertEquals(List.of("用户信息", "用户授权", "系统参数", "基础数据选项"),
+        assertEquals(List.of("用户信息", "系统参数", "基础数据选项"),
                 tree.getFirst().getChildren().stream().map(item -> item.getName()).toList());
     }
 
@@ -50,7 +50,7 @@ class CacheServiceTests {
 
         assertEquals(List.of(BaseCacheName.SYS_PARAM + "all"),
                 result.getRecords().stream().map(item -> item.getKey()).toList());
-        verify(redisCacheAccessor).scanEntries(argThat(prefixes -> prefixes.size() == 4 && !prefixes.contains("")));
+        verify(redisCacheAccessor).scanEntries(argThat(prefixes -> prefixes.size() == 3 && !prefixes.contains("")));
     }
 
     @Test

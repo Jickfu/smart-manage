@@ -27,6 +27,20 @@ class ArchitectureContractTests {
 
     private static JavaClasses productionClasses;
 
+    @Test
+    void administratorPasswordTransactionHasOnlyGuardedCommandCaller() {
+        for (JavaClass caller : productionClasses) {
+            for (JavaMethodCall call : caller.getMethodCallsFromSelf()) {
+                if (call.getTargetOwner().getName().equals("sm.domain.sys.base.user.service.UserTxService")
+                        && call.getTarget().getName().equals("resetAdministratorPassword")) {
+                    org.junit.jupiter.api.Assertions.assertEquals(
+                            "sm.domain.sys.base.user.service.AdministratorUserCredentialService", caller.getName());
+                    org.junit.jupiter.api.Assertions.assertTrue(caller.isAnnotatedWith(AdministratorOnly.class));
+                }
+            }
+        }
+    }
+
     @BeforeAll
     static void importProductionClasses() {
         productionClasses = new ClassFileImporter()

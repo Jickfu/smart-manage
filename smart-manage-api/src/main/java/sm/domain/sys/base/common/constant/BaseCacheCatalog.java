@@ -10,15 +10,13 @@ import java.util.Map;
 public final class BaseCacheCatalog {
     public static final BaseCacheDefinition USER_INFO = new BaseCacheDefinition(
             BaseCacheName.USER_INFO, "用户信息", CacheType.REMOTE, "日志与用户查询按 ID 读取的非认证快照", 3600, true);
-    public static final BaseCacheDefinition USER_AUTHORIZATION = new BaseCacheDefinition(
-            BaseCacheName.USER_AUTHORIZATION, "用户授权", CacheType.REMOTE, "用户在指定组织下的角色与权限快照", 1800, true);
     public static final BaseCacheDefinition SYS_PARAM = new BaseCacheDefinition(
             BaseCacheName.SYS_PARAM, "系统参数", CacheType.REMOTE, "系统参数全量快照", 1800, false);
     public static final BaseCacheDefinition BASIC_DATA_OPTIONS = new BaseCacheDefinition(
             BaseCacheName.BASIC_DATA_OPTIONS, "基础数据选项", CacheType.REMOTE, "按分类编码缓存的下拉选项", 1800, false);
 
     public static final List<BaseCacheDefinition> ALL = List.of(
-            USER_INFO, USER_AUTHORIZATION, SYS_PARAM, BASIC_DATA_OPTIONS);
+            USER_INFO, SYS_PARAM, BASIC_DATA_OPTIONS);
     public static final Map<String, BaseCacheDefinition> BY_NAME = byName();
 
     private BaseCacheCatalog() {

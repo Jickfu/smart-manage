@@ -4,7 +4,7 @@ import sm.domain.sys.base.user.converter.UserConverter;
 
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.attachment.service.AttachmentService;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
+import sm.domain.sys.base.common.helper.UserCacheInvalidator;
 import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.org.service.OrgReferenceService;
 import sm.domain.sys.base.org.model.OrgType;
@@ -36,14 +36,14 @@ class UserProfileServiceTests {
         UserMapper mapper = mock(UserMapper.class);
         CurrentUserContext context = mock(CurrentUserContext.class);
         when(context.getUserId()).thenReturn(10L);
-        AuthorizationStateHelper stateHelper = mock(AuthorizationStateHelper.class);
+        UserCacheInvalidator stateHelper = mock(UserCacheInvalidator.class);
         UserProfileService service = service(mapper, mock(UserAssignmentMapper.class),
                 mock(OrgMapper.class), context, stateHelper);
 
         BizException exception = assertThrows(BizException.class, service::current);
 
         assertEquals(ResultEnum.UNAUTHORIZED.getCode(), exception.getCode());
-        verify(stateHelper).terminateUsers(List.of(10L), SessionTerminationReason.ACCOUNT_DELETED);
+        verify(stateHelper).tryRefreshUsers(List.of(10L));
     }
 
     @Test
@@ -54,13 +54,13 @@ class UserProfileServiceTests {
         when(mapper.selectById(10L)).thenReturn(user);
         CurrentUserContext context = mock(CurrentUserContext.class);
         when(context.getUserId()).thenReturn(10L);
-        AuthorizationStateHelper stateHelper = mock(AuthorizationStateHelper.class);
+        UserCacheInvalidator stateHelper = mock(UserCacheInvalidator.class);
         UserProfileService service = service(mapper, mock(UserAssignmentMapper.class),
                 mock(OrgMapper.class), context, stateHelper);
 
         assertThrows(BizException.class, service::current);
 
-        verify(stateHelper).terminateUsers(List.of(10L), SessionTerminationReason.ACCOUNT_DISABLED);
+        verify(stateHelper).tryRefreshUsers(List.of(10L));
     }
 
     @Test
@@ -77,7 +77,7 @@ class UserProfileServiceTests {
         CurrentUserContext context = mock(CurrentUserContext.class);
         when(context.getUserId()).thenReturn(10L);
         UserProfileService service = service(mock(UserMapper.class), assignmentMapper, orgMapper,
-                context, mock(AuthorizationStateHelper.class));
+                context, mock(UserCacheInvalidator.class));
 
         service.switchCurrentOrganization(20L);
 
@@ -91,7 +91,7 @@ class UserProfileServiceTests {
         CurrentUserContext context = mock(CurrentUserContext.class);
         when(context.getUserId()).thenReturn(10L);
         UserProfileService service = service(mock(UserMapper.class), assignmentMapper,
-                mock(OrgMapper.class), context, mock(AuthorizationStateHelper.class));
+                mock(OrgMapper.class), context, mock(UserCacheInvalidator.class));
 
         assertThrows(BizException.class, () -> service.switchCurrentOrganization(20L));
 
@@ -128,7 +128,7 @@ class UserProfileServiceTests {
         when(converter.toInfoVO(user)).thenReturn(new UserInfoVO());
         UserProfileService service = new UserProfileService(userMapper, assignmentMapper,
                 new OrgReferenceService(orgMapper),
-                mock(AttachmentService.class), mock(UserTxService.class), mock(AuthorizationStateHelper.class),
+                mock(AttachmentService.class), mock(UserTxService.class), mock(UserCacheInvalidator.class),
                 mock(UserCacheAccessor.class), converter, context, mock(BrowserPasswordCipher.class));
 
         UserInfoVO result = service.current();
@@ -149,7 +149,7 @@ class UserProfileServiceTests {
     }
 
     private UserProfileService service(UserMapper mapper, UserAssignmentMapper assignmentMapper,
-            OrgMapper orgMapper, CurrentUserContext context, AuthorizationStateHelper stateHelper) {
+            OrgMapper orgMapper, CurrentUserContext context, UserCacheInvalidator stateHelper) {
         return new UserProfileService(mapper, assignmentMapper, new OrgReferenceService(orgMapper),
                 mock(AttachmentService.class),
                 mock(UserTxService.class), stateHelper, mock(UserCacheAccessor.class),

@@ -23,7 +23,6 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.system.query.ListQueryUtil;
 import sm.domain.sys.base.datascope.service.DataScopeConfigurationService;
 import sm.domain.sys.base.role.model.form.RoleDataScopeAssignForm;
@@ -51,7 +50,6 @@ public class RoleService {
 	private final RoleMapper mapper;
 	private final RolePermissionMapper permissionMapper;
 	private final RoleTxService txService;
-	private final AuthorizationStateHelper authorizationStateHelper;
 	private final RoleConverter converter;
 	private final DataScopeConfigurationService dataScopeConfigurationService;
 	private final BusinessResourceRegistry resourceRegistry;
@@ -121,22 +119,17 @@ public class RoleService {
 
 	@BizLog("保存角色")
 	public Long save(RoleSaveForm form) {
-		Long roleId = txService.save(form);
-		if (form.getId() != null) authorizationStateHelper.refreshRoleUsers(roleId);
-		return roleId;
+		return txService.save(form);
 	}
 
 	@BizLog("删除角色")
 	public void deleteById(Long id) {
-		var affectedUsers = authorizationStateHelper.roleUserScopes(id);
 		txService.deleteById(id);
-		authorizationStateHelper.refreshScopes(affectedUsers);
 	}
 
 	@BizLog("分配角色权限")
 	public void assignPermissions(RolePermissionAssignForm form) {
 		txService.assignPermissions(form);
-		authorizationStateHelper.refreshRoleUsers(form.getRoleId());
 	}
 
 	public RoleDataScopeWorkspaceVO dataScopeWorkspace(Long roleId) {
@@ -172,7 +165,6 @@ public class RoleService {
 			}
 		}
 		txService.assignDataScopes(form);
-		authorizationStateHelper.refreshRoleUsers(form.getRoleId());
 	}
 
 	/** 查询用户在当前组织下拥有的稳定角色编码，供 Sa-Token 角色能力使用。 */

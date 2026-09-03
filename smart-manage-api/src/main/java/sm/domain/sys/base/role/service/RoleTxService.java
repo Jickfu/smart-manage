@@ -84,7 +84,8 @@ class RoleTxService {
         if (id == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "角色ID不能为空");
         }
-        RoleEntity entity = mapper.selectById(id);
+        // 删除和权限整体替换使用相同的父行锁顺序，避免先删明细再竞争父行。
+        RoleEntity entity = mapper.selectForUpdate(id);
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "角色不存在");
         }
@@ -97,7 +98,7 @@ class RoleTxService {
 
     /** 权限关系通过独立命令整体替换，不与角色资料保存耦合。 */
     public void assignPermissions(RolePermissionAssignForm form) {
-        if (mapper.selectById(form.getRoleId()) == null) {
+        if (mapper.selectForUpdate(form.getRoleId()) == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "角色不存在");
         }
         permissionMapper.delete(new LambdaQueryWrapper<RolePermissionEntity>()

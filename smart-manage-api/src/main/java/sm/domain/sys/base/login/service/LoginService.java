@@ -100,7 +100,7 @@ public class LoginService {
 			String ticket = UUID.randomUUID().toString();
 			redisTemplate.opsForValue().set(
 					BaseRedisKey.PASSWORD_CHANGE_TICKET + ticket,
-					String.valueOf(authentication.userId()),
+					"v2:" + authentication.userId() + ":" + authentication.credentialGeneration(),
 					PASSWORD_CHANGE_TICKET_MINUTES,
 					TimeUnit.MINUTES);
 			LoginVO passwordReset = new LoginVO();
@@ -147,7 +147,17 @@ public class LoginService {
 		if (userIdValue == null) {
 			throw new BizException(ResultEnum.UNAUTHORIZED, "改密凭证已失效，请重新登录");
 		}
-		userAuthenticationService.changeResetPassword(Long.valueOf(userIdValue), newPassword);
+		// 旧格式票据或畸形状态不允许回退到仅按用户ID改密。
+		String[] ticketParts = userIdValue.split(":", -1);
+		try {
+			if (ticketParts.length != 3 || !"v2".equals(ticketParts[0])) throw new NumberFormatException();
+			long userId = Long.parseLong(ticketParts[1]);
+			long generation = Long.parseLong(ticketParts[2]);
+			if (userId <= 0 || generation < 0) throw new NumberFormatException();
+			userAuthenticationService.changeResetPassword(userId, generation, newPassword);
+		} catch (NumberFormatException exception) {
+			throw new BizException(ResultEnum.UNAUTHORIZED, "改密凭证已失效，请重新登录");
+		}
 	}
 
 	private String decryptLoginPayload(String ciphertext, String username) {

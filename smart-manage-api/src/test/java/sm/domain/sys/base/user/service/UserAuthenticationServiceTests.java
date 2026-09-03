@@ -2,7 +2,7 @@ package sm.domain.sys.base.user.service;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
+import sm.domain.sys.base.common.helper.UserCacheInvalidator;
 import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.org.service.OrgReferenceService;
 import sm.domain.sys.base.org.model.entity.OrgEntity;
@@ -43,7 +43,7 @@ class UserAuthenticationServiceTests {
         when(orgMapper.selectById(20L)).thenReturn(organization);
         UserAuthenticationService service = new UserAuthenticationService(mapper, assignmentMapper,
                 new OrgReferenceService(orgMapper), mock(UserTxService.class),
-                mock(AuthorizationStateHelper.class));
+                mock(UserCacheInvalidator.class), mock(RegularUserCredentialService.class), mock(AdministratorUserCredentialService.class));
 
         try (MockedStatic<Argon2Helper> helper = mockStatic(Argon2Helper.class)) {
             helper.when(() -> Argon2Helper.verify("encoded", "password")).thenReturn(true);
@@ -63,7 +63,7 @@ class UserAuthenticationServiceTests {
         when(mapper.selectById(1L)).thenReturn(user);
         UserAuthenticationService service = new UserAuthenticationService(mapper,
                 mock(UserAssignmentMapper.class), new OrgReferenceService(mock(OrgMapper.class)),
-                mock(UserTxService.class), mock(AuthorizationStateHelper.class));
+                mock(UserTxService.class), mock(UserCacheInvalidator.class), mock(RegularUserCredentialService.class), mock(AdministratorUserCredentialService.class));
 
         assertFalse(service.authenticateTemporaryLogin(1L, "administrator").successful());
     }

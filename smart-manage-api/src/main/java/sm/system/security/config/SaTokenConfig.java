@@ -19,6 +19,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import sm.system.exception.ExceptionResultResolver;
 import sm.system.response.ResultEnum;
 import sm.system.security.web.BrowserRequestSecurity;
+import sm.system.security.SessionCredentialGuard;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.lang.reflect.Method;
@@ -42,6 +43,7 @@ public class SaTokenConfig {
 	private final RequestMappingHandlerMapping requestMappingHandlerMapping;
 	private final JsonMapper jsonMapper;
 	private final BrowserRequestSecurity browserRequestSecurity;
+	private final SessionCredentialGuard sessionCredentialGuard;
 	@Value("${smart-manage.system.security.no-need-login}")
 	private String[] noNeedLogin;
 	@Bean
@@ -56,6 +58,7 @@ public class SaTokenConfig {
 							.notMatch(saIgnoreList())
 							.check(r -> {
 								StpUtil.checkLogin();
+								sessionCredentialGuard.checkCurrent();
 								browserRequestSecurity.validateCsrfToken();
 							});
 				})

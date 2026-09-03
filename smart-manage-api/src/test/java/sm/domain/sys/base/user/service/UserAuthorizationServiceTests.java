@@ -1,7 +1,6 @@
 package sm.domain.sys.base.user.service;
 
 import org.junit.jupiter.api.Test;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
 import sm.domain.sys.base.org.mapper.OrgMapper;
 import sm.domain.sys.base.org.service.OrgReferenceService;
 import sm.domain.sys.base.permission.service.PermissionService;
@@ -20,14 +19,13 @@ import static org.mockito.Mockito.when;
 
 class UserAuthorizationServiceTests {
     @Test
-    void roleAssignmentRefreshesPreviousAndSubmittedOrganizations() {
+    void roleAssignmentCommitsWithoutCacheInvalidationDependency() {
         UserRoleMapper roleMapper = mock(UserRoleMapper.class);
         when(roleMapper.selectOrgIdsByUserId(10L)).thenReturn(List.of(20L));
         UserTxService txService = mock(UserTxService.class);
-        AuthorizationStateHelper stateHelper = mock(AuthorizationStateHelper.class);
         UserAuthorizationService service = new UserAuthorizationService(mock(UserMapper.class), roleMapper,
                 mock(UserAssignmentMapper.class), new OrgReferenceService(mock(OrgMapper.class)), txService,
-                mock(PermissionService.class), stateHelper, mock(CurrentUserContext.class));
+                mock(PermissionService.class), mock(CurrentUserContext.class));
         UserOrganizationRoleForm organization = new UserOrganizationRoleForm();
         organization.setOrgId(21L);
         organization.setRoleIds(List.of(30L));
@@ -38,7 +36,5 @@ class UserAuthorizationServiceTests {
         service.saveRoleAssignment(form);
 
         verify(txService).saveRoleAssignment(form);
-        verify(stateHelper).refreshUserAuthorization(10L, 20L);
-        verify(stateHelper).refreshUserAuthorization(10L, 21L);
     }
 }

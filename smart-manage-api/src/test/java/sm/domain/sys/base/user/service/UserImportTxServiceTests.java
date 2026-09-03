@@ -21,7 +21,7 @@ class UserImportTxServiceTests {
         UserWriter userWriter = mock(UserWriter.class);
         UserRoleMapper userRoleMapper = mock(UserRoleMapper.class);
         FileArtifactRegistrar registrar = mock(FileArtifactRegistrar.class);
-        UserImportTxService service = new UserImportTxService(userWriter, userRoleMapper, registrar);
+        UserImportTxService service = new UserImportTxService(userWriter, registrar);
         UserSaveForm form = new UserSaveForm();
         PreparedFileArtifact prepared = mock(PreparedFileArtifact.class);
         FileArtifactReference reference = new FileArtifactReference(10L, "credential.xlsx",

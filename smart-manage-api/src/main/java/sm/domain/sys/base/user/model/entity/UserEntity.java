@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.Version;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import sm.system.entity.BaseEntity;
@@ -61,6 +63,10 @@ public class UserEntity extends BaseEntity {
 	 * 是否可用
 	 */
 	private Boolean enabled;
+
+	/** 数据库统一维护的凭据代际，不接受普通实体写入或表单赋值。 */
+	@TableField(insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
+	private Long credentialGeneration;
 
 	@Version
 	private Integer version;

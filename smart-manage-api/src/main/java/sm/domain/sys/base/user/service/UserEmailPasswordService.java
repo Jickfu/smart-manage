@@ -8,17 +8,15 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import sm.domain.sys.base.common.constant.UserConstant;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
-import sm.domain.sys.base.common.constant.BaseCacheName;
-import com.alicp.jetcache.anno.CacheInvalidate;
+import sm.domain.sys.base.common.helper.UserCacheInvalidator;
 import sm.domain.sys.base.login.constant.LoginProtectionParam;
 import sm.domain.sys.base.sysparam.service.SysParamService;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.model.entity.UserEntity;
+import sm.domain.sys.base.user.model.UserCredentialSnapshot;
 import sm.domain.sys.message.email.contract.EmailNotificationSender;
 import sm.domain.sys.message.email.contract.SensitiveEmailNotificationCommand;
 import sm.system.aop.log.BizLog;
-import sm.system.auth.SessionTerminationReason;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.security.context.CurrentUserContext;
@@ -63,7 +61,7 @@ public class UserEmailPasswordService {
     private final SysParamService sysParamService;
     private final CurrentUserContext currentUserContext;
     private final BrowserPasswordCipher browserPasswordCipher;
-    private final AuthorizationStateHelper authorizationStateHelper;
+    private final UserCacheInvalidator userCacheInvalidator;
     private final UserAuthenticationService userAuthenticationService;
 
     public void requestPublicCode(String email) {
@@ -74,7 +72,7 @@ public class UserEmailPasswordService {
             return;
         }
         try {
-            issueAndSend(user, normalizedEmail, "recovery", false);
+            issueAndSend(snapshot(user), normalizedEmail, "recovery");
         } catch (RuntimeException exception) {
             log.warn("密码找回验证码邮件创建失败");
         }
@@ -82,32 +80,39 @@ public class UserEmailPasswordService {
 
     public void resetPublicPassword(String email, String code, String encryptedNewPassword) {
         UserEntity user = findEligibleByEmail(normalizeEmail(email));
-        if (user == null || !consumeCode("recovery", user.getId(), code)) {
+        if (user == null) {
+            throw new BizException(ResultEnum.CAPTCHA_ERROR, "邮箱验证码无效或已过期");
+        }
+        UserCredentialSnapshot snapshot = snapshot(user);
+        if (!consumeCode("recovery", snapshot, code)) {
             throw new BizException(ResultEnum.CAPTCHA_ERROR, "邮箱验证码无效或已过期");
         }
         String newPassword = decryptNewPassword(encryptedNewPassword);
-        txService.updatePasswordByVerifiedEmail(user.getId(), newPassword);
-        terminate(user.getId());
+        txService.updatePasswordByVerifiedEmail(snapshot, newPassword);
+        userCacheInvalidator.tryRefreshUsers(List.of(user.getId()));
     }
 
     public void requestCurrentCode() {
         UserEntity user = requireCurrentEligibleUser();
-        issueAndSend(user, user.getEmail(), "current", true);
+        issueAndSend(snapshot(user), user.getEmail(), "current");
     }
 
     @BizLog(value = "通过邮箱验证码修改个人密码", recordResponse = false)
     public void changeCurrentPassword(String code, String encryptedNewPassword) {
         UserEntity user = requireCurrentEligibleUser();
-        if (!consumeCode("current", user.getId(), code)) {
+        UserCredentialSnapshot snapshot = snapshot(user);
+        if (!consumeCode("current", snapshot, code)) {
             throw new BizException(ResultEnum.CAPTCHA_ERROR, "邮箱验证码无效或已过期");
         }
         String newPassword = decryptNewPassword(encryptedNewPassword);
-        txService.updatePasswordByVerifiedEmail(user.getId(), newPassword);
-        terminate(user.getId());
+        txService.updatePasswordByVerifiedEmail(snapshot, newPassword);
+        userCacheInvalidator.tryRefreshUsers(List.of(user.getId()));
     }
 
     public void requestEmailBinding(String encryptedPassword, String email) {
         Long userId = currentUserContext.getUserId();
+        // 先固定凭据快照，再验证密码；不能拿旧密码的验证结果为后来的新代际签发证明。
+        UserCredentialSnapshot snapshot = snapshot(requireEnabledUser(userId));
         String password;
         try {
             password = browserPasswordCipher.decrypt(encryptedPassword);
@@ -122,36 +127,34 @@ public class UserEmailPasswordService {
                 .eq(UserEntity::getEmail, normalizedEmail)
                 .ne(UserEntity::getId, userId));
         if (occupied != null) throw new BizException(ResultEnum.UNIQUE_CONFLICT, "邮箱已被其他账号使用");
-        UserEntity user = userMapper.selectById(userId);
-        if (user == null || !Boolean.TRUE.equals(user.getEnabled())) {
-            throw new BizException(ResultEnum.UNAUTHORIZED, "登录状态已失效，请重新登录");
-        }
-        issueBindingCode(user, normalizedEmail);
+        issueAndSend(snapshot, normalizedEmail, "bind:" + digest(normalizedEmail));
     }
 
     @BizLog(value = "验证并绑定个人邮箱", recordResponse = false)
-    @CacheInvalidate(name = BaseCacheName.USER_INFO, key = "@currentUserContext.getUserId()")
     public void bindCurrentEmail(String email, String code) {
         Long userId = currentUserContext.getUserId();
+        UserCredentialSnapshot snapshot = snapshot(requireEnabledUser(userId));
         String normalizedEmail = normalizeEmail(email);
-        if (!consumeCode("bind:" + digest(normalizedEmail), userId, code)) {
+        if (!consumeCode("bind:" + digest(normalizedEmail), snapshot, code)) {
             throw new BizException(ResultEnum.CAPTCHA_ERROR, "邮箱验证码无效或已过期");
         }
-        txService.bindVerifiedEmail(userId, normalizedEmail);
+        txService.bindVerifiedEmail(snapshot, normalizedEmail);
+        userCacheInvalidator.tryRefreshUsers(List.of(userId));
     }
 
-    private void issueAndSend(UserEntity user, String email, String purpose, boolean exposeFailure) {
+    private void issueAndSend(UserCredentialSnapshot snapshot, String email, String purpose) {
+        String namespace = namespace(purpose, snapshot);
         int resendSeconds = positive(LoginProtectionParam.PASSWORD_EMAIL_CODE_RESEND_SECONDS);
-        String resendKey = resendKey(purpose, user.getId());
+        String resendKey = KEY_PREFIX + namespace + ":resend";
         if (!Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(
                 resendKey, "1", resendSeconds, TimeUnit.SECONDS))) {
             throw new BizException(ResultEnum.REQUEST_LIMIT, "邮箱验证码发送过于频繁");
         }
         String code = String.format(Locale.ROOT, "%06d", SECURE_RANDOM.nextInt(1_000_000));
         int expireMinutes = positive(LoginProtectionParam.PASSWORD_EMAIL_CODE_EXPIRE_MINUTES);
-        String codeKey = codeKey(purpose, user.getId());
+        String codeKey = KEY_PREFIX + namespace + ":code";
         redisTemplate.opsForValue().set(codeKey, digest(code), expireMinutes, TimeUnit.MINUTES);
-        redisTemplate.delete(attemptKey(purpose, user.getId()));
+        redisTemplate.delete(KEY_PREFIX + namespace + ":attempt");
         String subject = "Smart Manage 密码验证码";
         String text = "你的验证码是 " + code + "，" + expireMinutes + " 分钟内有效。请勿向任何人泄露。";
         String html = "<p>你的验证码是：<strong>" + code + "</strong></p><p>验证码 "
@@ -161,22 +164,17 @@ public class UserEmailPasswordService {
                     "security.password-code", "password-code:" + UUID.randomUUID(),
                     List.of(email), subject, html, text));
         } catch (RuntimeException exception) {
-            redisTemplate.delete(List.of(codeKey, resendKey, attemptKey(purpose, user.getId())));
-            if (exposeFailure) throw exception;
+            redisTemplate.delete(List.of(codeKey, resendKey, KEY_PREFIX + namespace + ":attempt"));
             throw exception;
         }
     }
 
-    private void issueBindingCode(UserEntity user, String email) {
-        String purpose = "bind:" + digest(email);
-        issueAndSend(user, email, purpose, true);
-    }
-
-    private boolean consumeCode(String purpose, Long userId, String code) {
+    private boolean consumeCode(String purpose, UserCredentialSnapshot snapshot, String code) {
+        String namespace = namespace(purpose, snapshot);
         int maxAttempts = positive(LoginProtectionParam.PASSWORD_EMAIL_CODE_MAX_ATTEMPTS);
         int expireSeconds = positive(LoginProtectionParam.PASSWORD_EMAIL_CODE_EXPIRE_MINUTES) * 60;
         Long result = redisTemplate.execute(VERIFY_SCRIPT,
-                List.of(codeKey(purpose, userId), attemptKey(purpose, userId)),
+                List.of(KEY_PREFIX + namespace + ":code", KEY_PREFIX + namespace + ":attempt"),
                 digest(code), String.valueOf(maxAttempts), String.valueOf(expireSeconds));
         return Long.valueOf(1L).equals(result);
     }
@@ -214,8 +212,12 @@ public class UserEmailPasswordService {
         }
     }
 
-    private void terminate(Long userId) {
-        authorizationStateHelper.terminateUsers(List.of(userId), SessionTerminationReason.PASSWORD_RESET_TERMINATED);
+    private UserEntity requireEnabledUser(Long userId) {
+        UserEntity user = userMapper.selectById(userId);
+        if (user == null || !Boolean.TRUE.equals(user.getEnabled())) {
+            throw new BizException(ResultEnum.UNAUTHORIZED, "登录状态已失效，请重新登录");
+        }
+        return user;
     }
 
     private void reserveUnknownRequest(String email) {
@@ -245,7 +247,13 @@ public class UserEmailPasswordService {
         }
     }
 
-    private static String codeKey(String purpose, Long userId) { return KEY_PREFIX + purpose + ":code:" + userId; }
-    private static String attemptKey(String purpose, Long userId) { return KEY_PREFIX + purpose + ":attempt:" + userId; }
-    private static String resendKey(String purpose, Long userId) { return KEY_PREFIX + purpose + ":resend:" + userId; }
+    private static UserCredentialSnapshot snapshot(UserEntity user) {
+        return new UserCredentialSnapshot(user.getId(), user.getEmail(), user.getCredentialGeneration());
+    }
+
+    /** 三种验证码状态共享签发快照命名空间；Redis key 不包含邮箱明文。 */
+    private static String namespace(String purpose, UserCredentialSnapshot snapshot) {
+        return "v2:" + purpose + ":" + snapshot.userId() + ":" + snapshot.generation() + ":"
+                + digest(java.util.Objects.toString(snapshot.email(), ""));
+    }
 }

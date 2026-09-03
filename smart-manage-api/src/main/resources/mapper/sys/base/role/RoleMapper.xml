@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="sm.domain.sys.base.role.mapper.RoleMapper">
-    <select id="selectUserRoleNumbers" resultType="java.lang.String">
+    <select id="selectForUpdate" resultType="sm.domain.sys.base.role.model.entity.RoleEntity" flushCache="true" useCache="false">
+        SELECT a.* FROM t_sys_role a WHERE a.id = #{id} FOR UPDATE
+    </select>
+    <select id="selectUserRoleNumbers" resultType="java.lang.String" flushCache="true" useCache="false">
         SELECT DISTINCT a.number
         FROM t_sys_role a
         INNER JOIN t_sys_user_role b ON b.role_id = a.id

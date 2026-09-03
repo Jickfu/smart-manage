@@ -3,7 +3,7 @@ package sm.domain.sys.base.user.service;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
-import sm.domain.sys.base.common.helper.AuthorizationStateHelper;
+import sm.domain.sys.base.common.helper.UserCacheInvalidator;
 import sm.domain.sys.base.fileartifact.contract.FileArtifactReference;
 import sm.domain.sys.base.fileartifact.contract.PreparedFileArtifact;
 import sm.domain.sys.base.fileartifact.service.FileArtifactService;
@@ -74,7 +74,7 @@ class UserImportServiceTests {
         FileArtifactReference reference = new FileArtifactReference(10L, "用户初始密码-第2行.xlsx",
                 LocalDateTime.now().plusHours(1));
         when(fixture.importTxService().commitBatch(any(), any())).thenReturn(
-                new UserImportTxService.BatchCommitResult(List.of(1L), Map.of(), reference));
+                new UserImportTxService.BatchCommitResult(List.of(1L), reference));
 
         UserImportResultVO result = fixture.service().importUsers(file(), UserImportMode.CREATE_ONLY,
                 UserImportTransactionMode.BATCH);
@@ -84,20 +84,20 @@ class UserImportServiceTests {
     }
 
     @Test
-    void authorizationRefreshFailureDoesNotChangeCommittedBatchToFailure() {
+    void displayCacheRefreshFailureDoesNotChangeCommittedBatchToFailure() {
         Fixture fixture = fixture(excelRows(row("user-1", "用户1", "N001")));
         when(fixture.userMapper().selectList(any())).thenReturn(List.of(), List.of());
         when(fixture.importTxService().commitBatch(any(), any())).thenReturn(
-                new UserImportTxService.BatchCommitResult(List.of(1L), Map.of(), null));
+                new UserImportTxService.BatchCommitResult(List.of(1L), null));
         doThrow(new IllegalStateException("redis offline"))
-                .when(fixture.authorizationStateHelper()).refreshUsers(List.of(1L));
+                .when(fixture.userCacheInvalidator()).refreshUsers(List.of(1L));
 
         UserImportResultVO result = fixture.service().importUsers(file(), UserImportMode.CREATE_ONLY,
                 UserImportTransactionMode.BATCH);
 
         assertThat(result.success()).isEqualTo(1);
         assertThat(result.failed()).isZero();
-        assertThat(result.warnings()).anyMatch(warning -> warning.contains("授权状态刷新失败"));
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("用户展示缓存刷新失败"));
     }
 
     private Fixture fixture(List<ExcelDataRow> rows) {
@@ -107,14 +107,14 @@ class UserImportServiceTests {
         UserImportTxService importTxService = mock(UserImportTxService.class);
         FileArtifactService fileArtifactService = mock(FileArtifactService.class);
         Validator validator = mock(Validator.class);
-        AuthorizationStateHelper authorizationStateHelper = mock(AuthorizationStateHelper.class);
+        UserCacheInvalidator userCacheInvalidator = mock(UserCacheInvalidator.class);
         when(excelWorkbookService.read(any(byte[].class), any())).thenReturn(rows);
         when(excelWorkbookService.write(any(), any(), any())).thenReturn(new byte[]{1});
         when(orgReferenceReader.findAll()).thenReturn(List.of());
         when(validator.validate(any())).thenReturn(Set.of());
         UserImportService service = new UserImportService(excelWorkbookService, userMapper, orgReferenceReader,
-                importTxService, fileArtifactService, validator, authorizationStateHelper);
-        return new Fixture(service, userMapper, importTxService, fileArtifactService, authorizationStateHelper);
+                importTxService, fileArtifactService, validator, userCacheInvalidator);
+        return new Fixture(service, userMapper, importTxService, fileArtifactService, userCacheInvalidator);
     }
 
     @SafeVarargs
@@ -150,6 +150,6 @@ class UserImportServiceTests {
 
     private record Fixture(UserImportService service, UserMapper userMapper, UserImportTxService importTxService,
                            FileArtifactService fileArtifactService,
-                           AuthorizationStateHelper authorizationStateHelper) {
+                           UserCacheInvalidator userCacheInvalidator) {
     }
 }

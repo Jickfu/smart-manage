@@ -1,6 +1,26 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="sm.domain.sys.base.user.mapper.UserMapper">
+    <!-- 触发器负责 generation/version 各推进一次，条件不成立时禁止任何密码写入。 -->
+    <update id="updatePasswordByVerifiedEmail">
+        UPDATE t_sys_user SET password = #{password}, password_reset = false
+        WHERE id = #{snapshot.userId} AND email = #{snapshot.email}
+          AND email_verified_at IS NOT NULL AND enabled = true
+          AND username != 'administrator' AND credential_generation = #{snapshot.generation}
+    </update>
+    <update id="bindVerifiedEmail">
+        UPDATE t_sys_user SET email = #{email}, email_verified_at = clock_timestamp()
+        WHERE id = #{snapshot.userId} AND email IS NOT DISTINCT FROM #{snapshot.email}
+          AND enabled = true AND credential_generation = #{snapshot.generation}
+    </update>
+    <update id="changeResetPassword">
+        UPDATE t_sys_user SET password = #{password}, password_reset = false
+        WHERE id = #{id} AND enabled = true AND password_reset = true
+          AND credential_generation = #{generation}
+    </update>
+    <select id="selectSecurityState" resultType="sm.domain.sys.base.user.model.entity.UserEntity" flushCache="true" useCache="false">
+        SELECT a.id, a.enabled, a.credential_generation FROM t_sys_user a WHERE a.id = #{id}
+    </select>
     <select id="selectScopedPage" resultType="sm.domain.sys.base.user.model.entity.UserEntity">
         SELECT a.id,
                a.username,

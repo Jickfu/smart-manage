@@ -10,10 +10,11 @@ public record UserAuthentication(
         boolean passwordReset,
         boolean administrator,
         Long orgId,
+        Long credentialGeneration,
         String message) {
 
     public static UserAuthentication failed(String message) {
-        return new UserAuthentication(null, null, null, false, false, null, message);
+        return new UserAuthentication(null, null, null, false, false, null, null, message);
     }
 
     public boolean successful() {

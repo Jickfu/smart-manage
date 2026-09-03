@@ -123,7 +123,7 @@ class LoginServiceTests {
         LoginVO expected = new LoginVO();
         expected.setAuthenticated(true);
         UserAuthentication authentication =
-                new UserAuthentication(1L, "administrator", "管理员", false, true, 10L, null);
+                new UserAuthentication(1L, "administrator", "管理员", false, true, 10L, 0L, null);
         when(userAuthenticationService.authenticate("administrator", "password")).thenReturn(authentication);
         when(userSessionService.completeLogin(authentication)).thenReturn(expected);
 
@@ -183,14 +183,14 @@ class LoginServiceTests {
     void passwordResetLoginReturnsOneTimeTicketWithoutCompletingLogin() {
         LoginForm form = loginForm();
         UserAuthentication authentication =
-                new UserAuthentication(9L, "reset-user", "待改密用户", true, false, 10L, null);
+                new UserAuthentication(9L, "reset-user", "待改密用户", true, false, 10L, 2L, null);
         when(userAuthenticationService.authenticate("administrator", "password")).thenReturn(authentication);
 
         LoginVO actual = loginService.login(form);
 
         assertEquals(true, actual.getPasswordReset());
         verify(userSessionService, never()).completeLogin(authentication);
-        verify(valueOperations).set(startsWith(BaseRedisKey.PASSWORD_CHANGE_TICKET), eq("9"), eq(5L),
+        verify(valueOperations).set(startsWith(BaseRedisKey.PASSWORD_CHANGE_TICKET), eq("v2:9:2"), eq(5L),
                 eq(TimeUnit.MINUTES));
     }
 
@@ -199,13 +199,13 @@ class LoginServiceTests {
         PasswordChangeForm form = new PasswordChangeForm();
         form.setTicket("ticket");
         form.setNewPassword("encrypted-new-password");
-        when(loginRedisAccessor.getAndDelete(BaseRedisKey.PASSWORD_CHANGE_TICKET + "ticket")).thenReturn("9");
+        when(loginRedisAccessor.getAndDelete(BaseRedisKey.PASSWORD_CHANGE_TICKET + "ticket")).thenReturn("v2:9:2");
 
         when(browserPasswordCipher.decrypt("encrypted-new-password")).thenReturn("new-password");
 
         loginService.changePassword(form);
 
-        verify(userAuthenticationService).changeResetPassword(9L, "new-password");
+        verify(userAuthenticationService).changeResetPassword(9L, 2L, "new-password");
     }
 
     @Test
@@ -227,6 +227,18 @@ class LoginServiceTests {
         form.setPassword("encrypted-password");
         form.setCaptchaTicket("captcha-ticket");
         return form;
+    }
+
+    @Test
+    void oldMalformedAndOverflowingPasswordTicketsCannotChangeCredentials() {
+        PasswordChangeForm form = new PasswordChangeForm();
+        form.setTicket("ticket");
+        form.setNewPassword("encrypted-new-password");
+        for (String ticket : java.util.List.of("9", "v1:9:2", "v2:9:-1", "v2:9:99999999999999999999")) {
+            when(loginRedisAccessor.getAndDelete(BaseRedisKey.PASSWORD_CHANGE_TICKET + "ticket")).thenReturn(ticket);
+            assertThrows(BizException.class, () -> loginService.changePassword(form));
+        }
+        org.mockito.Mockito.verifyNoInteractions(userAuthenticationService);
     }
 
     private CaptchaVerifyForm captchaVerifyForm() {
