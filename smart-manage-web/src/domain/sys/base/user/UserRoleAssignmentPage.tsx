@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useState } from 'react';
 import { Button, Descriptions, Input, Splitter, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -51,6 +52,7 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId, context }: PageComp
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
 
   const workspaceQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: userQueryKeys.roleAssignmentWorkspace(billId),
     queryFn: () => userApi.roleAssignmentWorkspace(billId!),
     enabled: Boolean(billId),
@@ -179,7 +181,7 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId, context }: PageComp
       }}
       loading={workspaceQuery.isLoading}
       saving={mutation.isPending}
-      error={workspaceQuery.error as Error | null}
+      error={getBlockingQueryError(workspaceQuery) as Error | null}
       dirty={dirty}
       saveDisabled={!dirty || mutation.isPending}
       closeGuard={{ appNumber, tabKey }}

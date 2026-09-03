@@ -123,6 +123,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 - 状态、事务和乐观锁：覆盖成功、非法状态、过期版本和回滚。
 - 文件存储：覆盖上传、授权下载、删除失败后的补偿。
 - 前端生命周期：覆盖缓存失效、临时页签替换、只读状态和脏数据关闭。
+- 请求错误：覆盖响应规范化、安全文案与反馈级别、Query 最终重试、共享 observer 所有权、跨查询去重及真实 reset/remove；使用 jsdom 中的真实 React/Ant Design Form 验证后台失败和资源拒绝不丢输入、阻断保存、transform 异常只提示一次。QueryFeedbackProvider 必须在 StrictMode 下带活跃查询验证 effect 重放与最终卸载；保存后刷新失败同时验证结果摘要和独立查询反馈。测试依赖仅用于开发，不进入生产包。
 - 生产部署：验证 CSP、反向代理、敏感配置和被关闭的高风险入口。
 
 不设置机械覆盖率或测试数量目标。

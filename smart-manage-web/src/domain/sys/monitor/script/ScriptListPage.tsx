@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
 import { Button } from 'antd';
@@ -86,7 +87,7 @@ export default function ScriptListPage(props: PageComponentProps) {
       title="脚本"
       access={scriptAccess}
       loading={query.isLoading}
-      error={query.error as Error | null}
+      error={getBlockingQueryError(query) as Error | null}
       onRetry={() => query.refetch()}
       total={total}
       pageNum={pageNum}

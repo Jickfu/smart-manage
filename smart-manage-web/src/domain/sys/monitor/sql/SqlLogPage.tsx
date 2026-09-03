@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { Button, DatePicker, Select, Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -58,6 +59,7 @@ export default function SqlLogPage(props: PageComponentProps) {
     sortOrder: columnSort?.order,
   };
   const query = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: sqlQueryKeys.logList(params),
     queryFn: () => sqlApi.listPage(params),
   });
@@ -100,7 +102,7 @@ export default function SqlLogPage(props: PageComponentProps) {
       {...props}
       title="SQL 执行记录"
       loading={query.isLoading}
-      error={query.error as Error | null}
+      error={getBlockingQueryError(query) as Error | null}
       onRetry={() => query.refetch()}
       total={query.data?.total ?? 0}
       pageNum={pageNum}

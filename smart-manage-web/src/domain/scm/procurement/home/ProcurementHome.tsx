@@ -1,4 +1,6 @@
-import { Card, Empty, Result, Statistic, Table } from 'antd';
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
+import { Card, Empty, Statistic, Table } from 'antd';
+import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
 import { useQuery } from '@tanstack/react-query';
 import { BillStatus } from '@/domain/common/page/types';
 import QuickLaunchCard from '@/domain/common/home/QuickLaunchCard';
@@ -16,15 +18,20 @@ const statusLabels: Record<string, string> = {
 
 const ProcurementHome = () => {
   const summaryQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: ['scm', 'procurement', 'home', 'summary'],
     queryFn: purchaseRequisitionApi.homeSummary,
   });
-  if (summaryQuery.error) {
+  if (getBlockingQueryError(summaryQuery)) {
     return (
       <div className="sm-app-home">
         <QuickLaunchCard scope="APPLICATION" appNumber="procurement" />
         <Card className="sm-app-home-card">
-          <Result status="error" title="采购概览加载失败" subTitle={summaryQuery.error.message} />
+          <RequestErrorState
+            title="采购概览加载失败"
+            error={summaryQuery.error}
+            onRetry={() => void summaryQuery.refetch()}
+          />
         </Card>
       </div>
     );

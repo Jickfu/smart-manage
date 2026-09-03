@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useState } from 'react';
 import { Form, Input, InputNumber, Select, Switch } from 'antd';
@@ -19,6 +20,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
   const [form] = Form.useForm<FileConfigSaveForm>();
   const [dirty, setDirty] = useState(false);
   const query = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: ['sys', 'file-config', 'singleton'],
     queryFn: fileConfigApi.singleton,
   });
@@ -111,7 +113,7 @@ const FileConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     <EditPageShell
       title="存储配置"
       loading={query.isLoading}
-      error={query.error as Error | null}
+      error={getBlockingQueryError(query) as Error | null}
       onRetry={() => query.refetch()}
       actions={
         <PermissionActions

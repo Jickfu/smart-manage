@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Key } from 'react';
 import type { ColumnsType } from 'antd/es/table';
@@ -50,6 +51,7 @@ const OpenApiApplicationEditPage = (props: PageComponentProps) => {
   const [selectedGrantKeys, setSelectedGrantKeys] = useState<Key[]>([]);
   const [grantRevision, setGrantRevision] = useState(0);
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: openApiQueryKeys.applicationDetail(billId),
     queryFn: () => openApiPlatformApi.applicationDetail(billId!),
     enabled: Boolean(billId),
@@ -324,7 +326,7 @@ const OpenApiApplicationEditPage = (props: PageComponentProps) => {
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       onSave={
         can(openApiApplicationAccess.permissions.save) &&

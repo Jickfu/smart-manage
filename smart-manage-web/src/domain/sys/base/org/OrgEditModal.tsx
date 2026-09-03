@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ModalEditPage from '@/domain/common/page/edit/ModalEditPage';
@@ -20,6 +21,7 @@ interface Props {
 
 const OrgEditModal = ({ open, orgId, defaultParent, onClose, onSaved }: Props) => {
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: orgQueryKeys.detail(orgId),
     queryFn: () => orgApi.detail(orgId!),
     enabled: Boolean(open && orgId),
@@ -124,7 +126,7 @@ const OrgEditModal = ({ open, orgId, defaultParent, onClose, onSaved }: Props) =
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       access={orgAccess}
     />

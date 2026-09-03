@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
 import { Button, Tag } from 'antd';
@@ -81,6 +82,7 @@ const NumberRuleListPage = (props: PageComponentProps) => {
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
   const queryClient = useQueryClient();
   const referencesQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: numberRuleQueryKeys.references(),
     queryFn: numberRuleApi.references,
   });
@@ -174,7 +176,9 @@ const NumberRuleListPage = (props: PageComponentProps) => {
       title="编号规则"
       access={numberRuleAccess}
       loading={query.isLoading || referencesQuery.isLoading}
-      error={(query.error ?? referencesQuery.error) as Error | null}
+      error={
+        (getBlockingQueryError(query) ?? getBlockingQueryError(referencesQuery)) as Error | null
+      }
       onRetry={() => Promise.all([query.refetch(), referencesQuery.refetch()])}
       total={total}
       pageNum={pageNum}

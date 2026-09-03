@@ -1,5 +1,7 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo } from 'react';
-import { Card, Result } from 'antd';
+import { Card } from 'antd';
+import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
 import { useQuery } from '@tanstack/react-query';
 import type { EChartsCoreOption } from 'echarts/core';
 import { schedulerHomeApi } from './api';
@@ -10,6 +12,7 @@ import './SchedulerHome.css';
 
 const SchedulerHome = () => {
   const summaryQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: ['sys', 'scheduler', 'home', 'summary'],
     queryFn: schedulerHomeApi.summary,
   });
@@ -48,12 +51,16 @@ const SchedulerHome = () => {
     [summary?.trends],
   );
 
-  if (summaryQuery.error) {
+  if (getBlockingQueryError(summaryQuery)) {
     return (
       <div className="sm-app-home">
         <QuickLaunchCard scope="APPLICATION" appNumber="scheduler" />
         <Card className="sm-app-home-card">
-          <Result status="error" title="调度统计加载失败" subTitle={summaryQuery.error.message} />
+          <RequestErrorState
+            title="调度统计加载失败"
+            error={summaryQuery.error}
+            onRetry={() => void summaryQuery.refetch()}
+          />
         </Card>
       </div>
     );

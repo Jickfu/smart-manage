@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
 import { Form } from 'antd';
@@ -41,6 +42,7 @@ export default function ScriptEditPage(props: PageComponentProps) {
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: isAddNew ? scriptQueryKeys.createNewData() : scriptQueryKeys.detail(props.billId),
     queryFn: () => (isAddNew ? scriptApi.createNewData() : scriptApi.detail(props.billId!)),
   });
@@ -111,7 +113,7 @@ export default function ScriptEditPage(props: PageComponentProps) {
       operationType={props.operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber: props.appNumber, tabKey: props.tabKey }}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}

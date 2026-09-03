@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import type { TableProps } from 'antd';
-import { Button, Result, Spin, Table } from 'antd';
+import { Button, Spin, Table } from 'antd';
+import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
 import { SettingOutlined } from '@ant-design/icons';
 import type { ColumnsType, SorterResult, TableRowSelection } from 'antd/es/table/interface';
 import ListFilterBar from './ListFilterBar';
@@ -294,18 +295,7 @@ function ListPage<T>({
           />
         </div>
         <div className="sm-list-main">
-          <Result
-            status="error"
-            title="加载失败"
-            subTitle={error.message || '请检查网络连接后重试'}
-            extra={
-              onRetry && (
-                <Button type="primary" onClick={onRetry}>
-                  重试
-                </Button>
-              )
-            }
-          />
+          <RequestErrorState error={error} onRetry={onRetry} />
         </div>
       </section>
     );

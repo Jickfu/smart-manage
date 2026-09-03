@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/edit/EditPage';
@@ -32,6 +33,7 @@ const fields: EditField[] = [
 
 const LoginLogDetailPage = (props: PageComponentProps) => {
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: loginLogQueryKeys.detail(props.billId),
     queryFn: () => loginLogApi.detail(props.billId!),
     enabled: Boolean(props.billId),
@@ -52,7 +54,7 @@ const LoginLogDetailPage = (props: PageComponentProps) => {
       initialValues={initialValues}
       operationType={OperationType.VIEW}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       onExit={() => useWorkbenchStore.getState().removeContentTab(props.appNumber, props.tabKey)}
     />

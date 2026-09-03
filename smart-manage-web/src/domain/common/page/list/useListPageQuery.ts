@@ -50,6 +50,7 @@ export function useListPageQuery<T>({
   const serializedFilters = serializeListFilters(columnFilters);
 
   const query = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: [...queryKey, pageNum, pageSize, keyword, serializedFilters, columnSort],
     queryFn: () =>
       queryFn({

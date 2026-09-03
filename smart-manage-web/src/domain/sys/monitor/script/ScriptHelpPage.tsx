@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
 import {
@@ -46,6 +47,7 @@ export default function ScriptHelpPage(_props: PageComponentProps) {
   const [section, setSection] = useState<HelpSection>('guide');
   const [keyword, setKeyword] = useState('');
   const apiQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: scriptQueryKeys.apiMetadata(),
     queryFn: scriptApi.apiMetadata,
   });
@@ -75,7 +77,7 @@ export default function ScriptHelpPage(_props: PageComponentProps) {
     <EditPageShell
       title="脚本使用帮助"
       loading={apiQuery.isLoading}
-      error={apiQuery.error}
+      error={getBlockingQueryError(apiQuery)}
       onRetry={() => apiQuery.refetch()}
       actions={
         <div className="sm-script-help-toolbar">

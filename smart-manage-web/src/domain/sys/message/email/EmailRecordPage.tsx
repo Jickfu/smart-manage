@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
 import { Button, Tag } from 'antd';
@@ -120,7 +121,7 @@ const EmailRecordPage = (props: PageComponentProps) => {
       title="发送记录"
       access={recordAccess}
       loading={list.query.isLoading}
-      error={list.query.error as Error | null}
+      error={getBlockingQueryError(list.query) as Error | null}
       onRetry={() => list.query.refetch()}
       total={list.total}
       pageNum={list.pageNum}

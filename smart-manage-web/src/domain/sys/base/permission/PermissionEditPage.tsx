@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -47,6 +48,7 @@ const PermissionEditPage = ({ open, permissionId, onClose, onSaved }: Props) => 
   );
 
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: permissionQueryKeys.detail(permissionId),
     queryFn: () => permissionApi.detail(permissionId!),
     enabled: Boolean(open && permissionId),
@@ -93,7 +95,7 @@ const PermissionEditPage = ({ open, permissionId, onClose, onSaved }: Props) => 
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
     />
   );

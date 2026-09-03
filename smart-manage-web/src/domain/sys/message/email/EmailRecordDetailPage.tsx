@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { Collapse, Descriptions, Table, Tag } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
@@ -6,6 +7,7 @@ import { emailApi } from './api';
 import './EmailPage.css';
 const EmailRecordDetailPage = ({ billId }: PageComponentProps) => {
   const query = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: ['email', 'record', billId],
     queryFn: () => emailApi.recordDetail(billId!),
     enabled: !!billId,
@@ -33,7 +35,7 @@ const EmailRecordDetailPage = ({ billId }: PageComponentProps) => {
       title="邮件发送详情"
       actions={null}
       loading={query.isLoading}
-      error={query.error as Error | null}
+      error={getBlockingQueryError(query) as Error | null}
       onRetry={() => query.refetch()}
     >
       <Collapse

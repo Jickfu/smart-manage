@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
@@ -39,6 +40,7 @@ const UserEditPage = (props: PageComponentProps) => {
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: userQueryKeys.detail(billId),
     queryFn: () => userApi.detail(billId!),
     enabled: Boolean(billId) && !selfMode,
@@ -274,7 +276,7 @@ const UserEditPage = (props: PageComponentProps) => {
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
       loading={selfMode ? false : detailQuery.isLoading}
-      error={selfMode ? null : (detailQuery.error as Error | null)}
+      error={selfMode ? null : (getBlockingQueryError(detailQuery) as Error | null)}
       onRetry={() => detailQuery.refetch()}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { isErrorFeedbackSuppressed } from '@/api/errorPresentation';
 
 /** RefSelector 查询参数 — 与后端 listPage 接口对齐 */
 export interface RefSelectorQueryParams {
@@ -49,6 +50,7 @@ export function useRefSelectorQuery<T>({
 
   /** 参数变更自动触发 refetch（TanStack Query 基于 queryKey 缓存） */
   const query = useQuery({
+    meta: { errorPresentation: 'local' },
     queryKey: ['ref-selector', selectorKey, pageNum, pageSize, keyword, parentId],
     queryFn: () =>
       fetchFn({
@@ -102,7 +104,7 @@ export function useRefSelectorQuery<T>({
     loading: query.isLoading,
     /** 后台刷新中（有缓存数据） */
     fetching: query.isFetching,
-    error: query.error as Error | null,
+    error: isErrorFeedbackSuppressed(query.error) ? null : query.error,
     onSearch,
     onPageChange,
     onTreeSelect,

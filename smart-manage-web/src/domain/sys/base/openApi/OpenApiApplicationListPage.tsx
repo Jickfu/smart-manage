@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -92,7 +93,7 @@ const OpenApiApplicationListPage = (props: PageComponentProps) => {
       title="第三方应用"
       access={openApiApplicationAccess}
       loading={list.query.isLoading}
-      error={list.query.error as Error | null}
+      error={getBlockingQueryError(list.query) as Error | null}
       onRetry={() => list.query.refetch()}
       total={list.total}
       pageNum={list.pageNum}

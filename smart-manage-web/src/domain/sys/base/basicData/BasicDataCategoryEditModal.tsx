@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import ModalEditPage from '@/domain/common/page/edit/ModalEditPage';
@@ -21,17 +22,20 @@ interface Props {
 
 const BasicDataCategoryEditModal = ({ open, categoryId, domainId, onClose, onSaved }: Props) => {
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: basicDataQueryKeys.category(categoryId),
     queryFn: () => basicDataApi.categoryDetail(categoryId!),
     enabled: Boolean(open && categoryId),
     staleTime: 0,
   });
   const domainsQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: [...domainQueryKeys.lists(), 'basic-data-category'],
     queryFn: () => domainApi.select({ pageNum: 1, pageSize: 1000 }),
     enabled: open,
   });
   const numberRulesQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: numberRuleQueryKeys.options('CATEGORY'),
     queryFn: basicDataApi.numberRuleOptions,
     enabled: open,
@@ -138,7 +142,11 @@ const BasicDataCategoryEditModal = ({ open, categoryId, domainId, onClose, onSav
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
       loading={detailQuery.isLoading || domainsQuery.isLoading || numberRulesQuery.isLoading}
-      error={(detailQuery.error ?? domainsQuery.error ?? numberRulesQuery.error) as Error | null}
+      error={
+        (getBlockingQueryError(detailQuery) ??
+          getBlockingQueryError(domainsQuery) ??
+          getBlockingQueryError(numberRulesQuery)) as Error | null
+      }
       onRetry={() =>
         Promise.all([detailQuery.refetch(), domainsQuery.refetch(), numberRulesQuery.refetch()])
       }

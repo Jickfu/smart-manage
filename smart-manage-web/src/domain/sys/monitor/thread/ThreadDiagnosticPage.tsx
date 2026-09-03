@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
 import {
@@ -44,6 +45,7 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
   const [collectedResult, setCollectedResult] = useState<ThreadDiagnosticResult>();
   const { can } = usePermissionAccess(threadDiagnosticAccess.prefix);
   const instancesQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: threadDiagnosticQueryKeys.instances(),
     queryFn: threadDiagnosticApi.instances,
     enabled: active,
@@ -52,6 +54,7 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
   const effectiveInstanceId =
     selectedInstanceId ?? instancesQuery.data?.find((instance) => instance.current)?.instanceId;
   const listQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: threadDiagnosticQueryKeys.list(effectiveInstanceId),
     queryFn: () => threadDiagnosticApi.list(effectiveInstanceId),
     enabled: active && Boolean(effectiveInstanceId),
@@ -114,7 +117,7 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
     <EditPageShell
       title="线程诊断"
       loading={instancesQuery.isLoading || listQuery.isLoading}
-      error={instancesQuery.error ?? listQuery.error}
+      error={getBlockingQueryError(instancesQuery) ?? getBlockingQueryError(listQuery)}
       onRetry={() => void Promise.all([instancesQuery.refetch(), listQuery.refetch()])}
       actions={
         <div className="sm-thread-diagnostic-toolbar">

@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useCallback, useMemo, useState } from 'react';
 import { Button } from 'antd';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
@@ -40,8 +41,13 @@ const PermissionListPage = (props: PageComponentProps) => {
   const confirmOperation = useOperationConfirm();
   const { can } = usePermissionAccess(permissionAccess.prefix);
   const [scope, setScope] = useState<PermissionScope>({ type: 'all' });
-  const appsQuery = useQuery({ queryKey: appQueryKeys.domainAppsAll(), queryFn: fetchAppsAll });
+  const appsQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
+    queryKey: appQueryKeys.domainAppsAll(),
+    queryFn: fetchAppsAll,
+  });
   const featuresQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: featureQueryKeys.visible(),
     queryFn: featureApi.listAllVisible,
   });
@@ -133,7 +139,11 @@ const PermissionListPage = (props: PageComponentProps) => {
         title="权限定义"
         access={permissionAccess}
         loading={query.isLoading || appsQuery.isLoading || featuresQuery.isLoading}
-        error={(query.error ?? appsQuery.error ?? featuresQuery.error) as Error | null}
+        error={
+          (getBlockingQueryError(query) ??
+            getBlockingQueryError(appsQuery) ??
+            getBlockingQueryError(featuresQuery)) as Error | null
+        }
         onRetry={() => Promise.all([query.refetch(), appsQuery.refetch(), featuresQuery.refetch()])}
         total={total}
         pageNum={pageNum}

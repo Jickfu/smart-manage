@@ -37,6 +37,7 @@ export function useAuditLogListQuery<T, TFilters extends AuditLogFilters>({
   };
 
   const query = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: queryKey(params),
     queryFn: () => queryFn(params),
   });

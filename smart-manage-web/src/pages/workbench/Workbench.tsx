@@ -1,4 +1,5 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { Spin } from 'antd';
 import { useQuery } from '@tanstack/react-query';
@@ -30,6 +31,7 @@ const Workbench = ({ appNumber, initialEntryNumber, onInitialEntryConsumed }: Pr
   const openExternalLinkTab = useWorkbenchStore((s) => s.openExternalLinkTab);
 
   const menuQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: menuQueryKeys.userByApp(appNumber),
     queryFn: () => getUserMenusByAppNumber(appNumber),
     staleTime: 5 * 60 * 1000,
@@ -66,9 +68,7 @@ const Workbench = ({ appNumber, initialEntryNumber, onInitialEntryConsumed }: Pr
   useEffect(() => {
     if (!initialEntryNumber || startupEntryConsumed.current) return;
     if (menuQuery.isError) {
-      startupEntryConsumed.current = true;
-      onInitialEntryConsumed();
-      feedback.warning('入口菜单加载失败，已停留在应用首页');
+      // 本地菜单错误区负责反馈；重试成功后仍可解析原始入口，不额外弹出重复警告。
       return;
     }
     if (!menuQuery.isSuccess) return;
@@ -98,6 +98,8 @@ const Workbench = ({ appNumber, initialEntryNumber, onInitialEntryConsumed }: Pr
       <AppSidebar
         menuTree={menuQuery.data ?? null}
         loading={menuQuery.isLoading}
+        error={getBlockingQueryError(menuQuery)}
+        onRetry={() => void menuQuery.refetch()}
         onItemClick={handleMenuItemClick}
       />
       <div className="sm-workspace-body">

@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { Button, DatePicker, Select, Space, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -86,6 +87,7 @@ export default function ScriptLogPage(props: PageComponentProps) {
     sortOrder: columnSort?.order,
   };
   const query = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: scriptQueryKeys.logList(params),
     queryFn: () => scriptApi.logListPage(params),
   });
@@ -124,7 +126,7 @@ export default function ScriptLogPage(props: PageComponentProps) {
       {...props}
       title="脚本执行记录"
       loading={query.isLoading}
-      error={query.error as Error | null}
+      error={getBlockingQueryError(query) as Error | null}
       onRetry={() => query.refetch()}
       total={query.data?.total ?? 0}
       pageNum={pageNum}

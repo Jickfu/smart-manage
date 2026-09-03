@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useEffect, useState } from 'react';
 import type { Key } from 'react';
 import { Form, Input, InputNumber, Table } from 'antd';
@@ -109,6 +110,7 @@ const AttachmentConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
   const [form] = Form.useForm<AttachmentConfigSaveForm>();
   const [dirty, setDirty] = useState(false);
   const query = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: ['sys', 'attachment-config', 'singleton'],
     queryFn: attachmentConfigApi.singleton,
   });
@@ -128,7 +130,7 @@ const AttachmentConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     <EditPageShell
       title="附件配置"
       loading={query.isLoading}
-      error={query.error as Error | null}
+      error={getBlockingQueryError(query) as Error | null}
       onRetry={() => query.refetch()}
       actions={
         <PermissionActions

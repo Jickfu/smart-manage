@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -73,6 +74,7 @@ const AppEditPage = (props: PageComponentProps) => {
 
   // 详情查询（仅编辑模式）
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: appQueryKeys.detail(billId),
     queryFn: () => appApi.detail(billId!),
     enabled: !!billId,
@@ -139,7 +141,7 @@ const AppEditPage = (props: PageComponentProps) => {
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       onSave={async (values) => {
         await saveMutation.mutateAsync(values);

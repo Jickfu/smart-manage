@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useState } from 'react';
 import type { Key } from 'react';
 import { Alert, Button, Tag, Tree } from 'antd';
@@ -138,7 +139,7 @@ export default function CacheManagementPage(props: PageComponentProps) {
         title="缓存管理"
         access={cacheAccess}
         loading={list.query.isLoading}
-        error={list.query.error as Error | null}
+        error={getBlockingQueryError(list.query) as Error | null}
         onRetry={() => list.query.refetch()}
         total={list.total}
         pageNum={list.pageNum}

@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
 import { Button, Input, Tag } from 'antd';
@@ -70,6 +71,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
 
   const treeQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: basicDataQueryKeys.tree(),
     queryFn: basicDataApi.categoryTree,
   });
@@ -252,7 +254,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
         access={basicDataAccess}
         treePanel={treePanel}
         loading={query.isLoading || treeQuery.isLoading}
-        error={(query.error ?? treeQuery.error) as Error | null}
+        error={(getBlockingQueryError(query) ?? getBlockingQueryError(treeQuery)) as Error | null}
         onRetry={() => Promise.all([query.refetch(), treeQuery.refetch()])}
         total={total}
         pageNum={pageNum}

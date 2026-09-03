@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +25,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
   const { isAddNew, promoteToPersistedTab, exit } = useEditTabLifecycle(props);
   const featureRefSelector = useFeatureRefSelector();
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: sysParamQueryKeys.detail(billId),
     queryFn: () => sysParamApi.detail(billId!),
     enabled: Boolean(billId),
@@ -113,7 +115,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       onSave={async (values) => {
         await saveMutation.mutateAsync(values);

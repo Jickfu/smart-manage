@@ -6,10 +6,12 @@ import {
   type OperationFeedbackType,
 } from './operationFeedbackPolicy';
 import './OperationFeedback.css';
+import { RequestErrorDescription } from './RequestErrorState';
 
 let feedbackSequence = 0;
 
 export interface OperationFeedbackApi {
+  close: (key: string) => void;
   success: (content: ReactNode, options?: OperationFeedbackOptions) => void;
   warning: (content: ReactNode, options?: OperationFeedbackOptions) => void;
   error: (content: ReactNode, options?: OperationFeedbackOptions) => void;
@@ -18,6 +20,8 @@ export interface OperationFeedbackApi {
 }
 
 export interface OperationFeedbackOptions {
+  /** 系统级去重提示可提供稳定 key；业务操作默认仍各自独立。 */
+  key?: string;
   /** 默认自动关闭；设为 false 时常驻并显示右侧关闭按钮。 */
   autoClose?: boolean;
   /** 自动关闭秒数，默认沿用 Ant Design Message 的 3 秒。 */
@@ -32,7 +36,7 @@ export function useOperationFeedback(): OperationFeedbackApi {
 
   const open = useCallback(
     (type: OperationFeedbackType, content: ReactNode, options: OperationFeedbackOptions = {}) => {
-      const key = `sm-operation-feedback-${++feedbackSequence}`;
+      const key = options.key ?? `sm-operation-feedback-${++feedbackSequence}`;
       const autoClose = options.autoClose ?? true;
       const closable = options.closable ?? !autoClose;
       message.open({
@@ -70,6 +74,7 @@ export function useOperationFeedback(): OperationFeedbackApi {
 
   return useMemo(
     () => ({
+      close: (key: string) => message.destroy(key),
       success: (content: ReactNode, options?: OperationFeedbackOptions) =>
         open('success', content, options),
       warning: (content: ReactNode, options?: OperationFeedbackOptions) =>
@@ -84,9 +89,14 @@ export function useOperationFeedback(): OperationFeedbackApi {
         options?: OperationFeedbackOptions,
       ) => {
         const presentation = getErrorPresentation(error, fallbackMessage);
-        if (!presentation.suppressed) open(presentation.type, presentation.message, options);
+        if (!presentation.suppressed)
+          open(
+            presentation.type,
+            <RequestErrorDescription error={error} fallbackMessage={fallbackMessage} />,
+            options,
+          );
       },
     }),
-    [open],
+    [message, open],
   );
 }

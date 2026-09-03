@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useState } from 'react';
 import { Button, Tag } from 'antd';
 import type { DataNode } from 'antd/es/tree';
@@ -41,7 +42,11 @@ type Scope = { type: 'all' } | { type: 'domain'; id: string } | { type: 'app'; i
 const FeatureListPage = (props: PageComponentProps) => {
   const [scope, setScope] = useState<Scope>({ type: 'all' });
   const [editId, setEditId] = useState<string | null>(null);
-  const treeQuery = useQuery({ queryKey: appQueryKeys.domainAppsAll(), queryFn: fetchAppsAll });
+  const treeQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
+    queryKey: appQueryKeys.domainAppsAll(),
+    queryFn: fetchAppsAll,
+  });
   const scopeParams = {
     domainId: scope.type === 'domain' ? scope.id : undefined,
     appId: scope.type === 'app' ? scope.id : undefined,
@@ -110,7 +115,7 @@ const FeatureListPage = (props: PageComponentProps) => {
         title="功能"
         access={featureAccess}
         loading={query.isLoading || treeQuery.isLoading}
-        error={(query.error ?? treeQuery.error) as Error | null}
+        error={(getBlockingQueryError(query) ?? getBlockingQueryError(treeQuery)) as Error | null}
         onRetry={() => Promise.all([query.refetch(), treeQuery.refetch()])}
         total={total}
         pageNum={pageNum}

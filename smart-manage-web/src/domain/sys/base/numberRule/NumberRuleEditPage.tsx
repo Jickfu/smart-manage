@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Key, RefObject } from 'react';
@@ -401,11 +402,13 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: numberRuleQueryKeys.detail(billId),
     queryFn: () => numberRuleApi.detail(billId!),
     enabled: Boolean(billId),
   });
   const referencesQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: numberRuleQueryKeys.references(),
     queryFn: numberRuleApi.references,
   });
@@ -583,7 +586,10 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
       loading={detailQuery.isLoading || referencesQuery.isLoading}
-      error={(detailQuery.error ?? referencesQuery.error) as Error | null}
+      error={
+        (getBlockingQueryError(detailQuery) ??
+          getBlockingQueryError(referencesQuery)) as Error | null
+      }
       onRetry={() => Promise.all([detailQuery.refetch(), referencesQuery.refetch()])}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}

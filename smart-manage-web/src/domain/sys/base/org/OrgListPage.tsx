@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useState } from 'react';
 import { Button, Checkbox, Input, Tag } from 'antd';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
@@ -87,6 +88,7 @@ const OrgListPage = (props: PageComponentProps) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const treeQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: orgQueryKeys.tree(showArchived),
     queryFn: () => orgApi.tree(showArchived),
   });
@@ -246,7 +248,7 @@ const OrgListPage = (props: PageComponentProps) => {
         access={orgAccess}
         treePanel={treePanel}
         loading={query.isLoading || treeQuery.isLoading}
-        error={(query.error ?? treeQuery.error) as Error | null}
+        error={(getBlockingQueryError(query) ?? getBlockingQueryError(treeQuery)) as Error | null}
         onRetry={() => Promise.all([query.refetch(), treeQuery.refetch()])}
         total={total}
         pageNum={pageNum}

@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { Alert, Button, Card, Progress, Space, Statistic, Switch, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -31,11 +32,13 @@ export default function CachePage(_: PageComponentProps) {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const refetchInterval = autoRefresh ? 10_000 : false;
   const cacheQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: cacheQueryKeys.overview(),
     queryFn: cacheApi.overview,
     refetchInterval,
   });
   const runtimeQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: cacheQueryKeys.runtime(),
     queryFn: cacheApi.runtime,
     refetchInterval,
@@ -129,7 +132,7 @@ export default function CachePage(_: PageComponentProps) {
     },
   ];
 
-  const error = cacheQuery.error ?? runtimeQuery.error;
+  const error = getBlockingQueryError(cacheQuery) ?? getBlockingQueryError(runtimeQuery);
   return (
     <EditPageShell
       title="缓存状态"

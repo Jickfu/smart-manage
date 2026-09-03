@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +23,7 @@ const EmailAccountEditPage = (props: PageComponentProps) => {
   const replaceContentTab = useWorkbenchStore((s) => s.replaceContentTab);
   const activateContentTab = useWorkbenchStore((s) => s.activateContentTab);
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: emailAccountQueryKeys.detail(billId),
     queryFn: () => emailApi.accountDetail(billId!),
     enabled: !!billId,
@@ -164,7 +166,7 @@ const EmailAccountEditPage = (props: PageComponentProps) => {
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       onSave={async (values) => {
         await save.mutateAsync(values);

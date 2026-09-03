@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useRef, useState } from 'react';
 import { Form, Input, InputNumber, Select, Switch } from 'antd';
@@ -51,6 +52,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
   const sessionUploadedIds = useRef(new Set<string>());
   const uploadSessions = useRef<Record<string, string>>({});
   const query = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: ['sys', 'ui-config', 'singleton'],
     queryFn: uiConfigApi.singleton,
   });
@@ -167,7 +169,7 @@ const UiConfigPage = ({ appNumber, tabKey }: PageComponentProps) => {
     <EditPageShell
       title="界面配置"
       loading={query.isLoading}
-      error={query.error as Error | null}
+      error={getBlockingQueryError(query) as Error | null}
       onRetry={() => query.refetch()}
       actions={
         <PermissionActions

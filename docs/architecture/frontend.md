@@ -52,6 +52,28 @@ Blob 响应只对 JSON/+json MIME 的非文件响应作至多 64 KiB 的文本�
 
 `api/errorPresentation.ts` 统一解释反馈强度和安全文案，不选择具体 UI。普通可信 API 失败消费后端反馈级别；HTTP 5xx 和认证/权限等安全失败不能被 WARNING 弱化。稳定业务码仍用于认证、CSRF 和并发冲突的明确行为，不根据文案猜测类型。401 由请求层清理会话并跳转登录，CSRF 由专属通知处理，普通反馈必须抑制二次提示。未知、本地、传输和协议异常不透传底层 message、stack、请求参数或响应正文；附加 data 不自动展示，诊断 ID 只接受受控字符。
 
+### 查询错误的显示所有权
+
+`QueryFeedbackProvider` 位于 Ant Design App 下，每个 Provider 自己创建 QueryClient、QueryCache 和故障状态；请求层只规范错误，不弹 UI。QueryCache 仅在最终失败（重试耗尽）后使用现有 `useOperationFeedback` 的 Message + Alert 展示可关闭、常驻、去重的系统反馈。不引入 Notification 或全局 MutationCache 兜底；Mutation 仍由既有领域命令负责。只有需要用户作出选择的场景使用 Modal。
+
+查询通过 `meta.errorPresentation` 明确所有权：
+
+| 声明 | 本地 UI 职责 |
+| --- | --- |
+| 未声明 | 系统兜底，不要求每个调用方重复 catch |
+| `local-initial` | 无有效数据时显示区域错误与重试；有旧数据的普通刷新失败交给系统反馈 |
+| `local` | 每次失败均由该区域完整展示，例如引用选择器、历史曲线、Cron 预览 |
+
+`getBlockingQueryError` 是区域阻断判定的唯一入口。`data !== undefined && !isPlaceholderData` 表示有效旧数据，空数组与 null 均有效。HTTP 403/404 或业务码 100403/100404 无论有无缓存都阻断，不能把 404 解释为新增。权限查询采用更严格规则：任何失败都不使用缓存权限进行 `can()` 授权判断。取消、401、CSRF 不参与普通错误 UI；CSRF 专属提示使用稳定 key。
+
+同一 query key 有多个 enabled observer 时，按每个 observer 自己的 meta 和当前结果判定是否实际拥有错误；任一 observer 拥有则不再系统提示。此时不能用最后一次写入的 query.meta 替代各 observer。没有 enabled observer 时才回退 query.meta。该规则不依赖工作台页签可见性。
+
+每个 queryHash 只保留当前故障成员关系。系统提示按来源、HTTP 状态、业务码、最终反馈级别和安全文案生成指纹，traceId 不参与去重；只有全部成员真实成功、移除或 reset 后才解除该故障并关闭提示。开始 refetch、手动关闭或 Message maxCount 淘汰都不代表恢复，不得造成轮询重复弹出。Provider 真正卸载时清理缓存和提示，StrictMode 的 effect 重放不能清掉仍活跃的查询。
+
+`RequestErrorState` 只呈现错误区域、受控诊断 ID 与重试，不查询、不布局整页、不持有业务状态。ListPage、EditPageShell、AssignmentPage 分别保持原页面结构，不为相同错误区域额外提取 PageShell，也不重命名或重排页面目录。编辑壳、弹框编辑和分配壳遇到阻断时保留原内容挂载，以 hidden/inert 撤销交互能力，保存/提交 handler 也必须检查阻断状态。普通后台失败不得覆盖 Form 的未保存输入；重试恢复后保留脏状态。
+
+EditPage 的校验/transformValues 异常尚未进入领域 Mutation，由编辑层显示一次安全反馈；进入 Mutation 后不能再由 EditPage 重复提示。保存已成功但刷新失败时，保留一条保存结果摘要和一条去重的具体查询故障，这是不同语义的有意双层反馈；不得使用全局 silent counter 抑制同时发生的其他查询失败。
+
 ## 页面三层边界
 
 `domain/common/page` 是跨领域复用的页面框架，不是通用工具目录。目录按页面能力归组，组件、专属 Hook、辅助函数、样式和测试就近放置，不另建全局 `hooks`、`utils` 或聚合导出入口。能力分包使用小写名称，与具体页面组件目录的 PascalCase 约定区分。

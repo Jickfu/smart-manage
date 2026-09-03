@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -40,6 +41,7 @@ const fields: EditField[] = [
 const OperateLogDetailPage = (props: PageComponentProps) => {
   const feedback = useOperationFeedback();
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: operateLogQueryKeys.detail(props.billId),
     queryFn: () => operateLogApi.detail(props.billId!),
     enabled: Boolean(props.billId),
@@ -74,7 +76,7 @@ const OperateLogDetailPage = (props: PageComponentProps) => {
       initialValues={initialValues}
       operationType={OperationType.VIEW}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       headerActions={[
         {

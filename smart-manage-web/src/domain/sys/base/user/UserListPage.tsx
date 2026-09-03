@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useCallback, useMemo, useState } from 'react';
 import { Button, Checkbox, Form, Input, Modal, Space, Tag, Typography } from 'antd';
@@ -102,6 +103,7 @@ const UserListPage = (props: PageComponentProps) => {
   const [temporaryLoginExpiresAt, setTemporaryLoginExpiresAt] = useState('');
   const [temporaryLoginForm] = Form.useForm<TemporaryLoginFormValues>();
   const treeQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: orgQueryKeys.tree(false),
     queryFn: () => orgApi.tree(false),
   });
@@ -326,7 +328,7 @@ const UserListPage = (props: PageComponentProps) => {
         treePanel={treePanel}
         columnSettingsKey={props.componentKey}
         loading={query.isLoading || treeQuery.isLoading}
-        error={(query.error ?? treeQuery.error) as Error | null}
+        error={(getBlockingQueryError(query) ?? getBlockingQueryError(treeQuery)) as Error | null}
         onRetry={() => Promise.all([query.refetch(), treeQuery.refetch()])}
         total={total}
         pageNum={pageNum}

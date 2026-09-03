@@ -125,3 +125,8 @@
   flex-direction: column;
   gap: 6px;
 }
+.sm-edit-header[hidden],
+.sm-edit-body[hidden],
+.sm-modal-edit-content[hidden] {
+  display: none;
+}

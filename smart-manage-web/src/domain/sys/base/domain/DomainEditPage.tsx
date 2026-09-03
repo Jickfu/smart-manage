@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -39,6 +40,7 @@ const DomainEditPage = ({ open, domainId, onClose, onSaved }: Props) => {
   const isAddNew = domainId === null;
 
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: domainQueryKeys.detail(domainId),
     queryFn: () => domainApi.detail(domainId!),
     enabled: Boolean(open && domainId),
@@ -84,7 +86,7 @@ const DomainEditPage = ({ open, domainId, onClose, onSaved }: Props) => {
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
     />
   );

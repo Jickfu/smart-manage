@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
+import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
 import type { Key } from 'react';
 import { AppstoreOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Card, Empty, Input, Spin, Tree } from 'antd';
@@ -72,6 +74,7 @@ const QuickLaunchCard = ({ scope, appNumber }: QuickLaunchCardProps) => {
     queryFn: () => quickLaunchApi.list(scopeForm),
   });
   const configurationQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: quickLaunchQueryKeys.configuration(scopeForm),
     queryFn: () => quickLaunchApi.configuration(scopeForm),
     enabled: managerOpen,
@@ -192,8 +195,13 @@ const QuickLaunchCard = ({ scope, appNumber }: QuickLaunchCardProps) => {
             <Button
               type="primary"
               loading={saveMutation.isPending}
-              disabled={configurationQuery.isLoading || configurationQuery.isError}
-              onClick={() => saveMutation.mutate()}
+              disabled={
+                configurationQuery.isLoading || Boolean(getBlockingQueryError(configurationQuery))
+              }
+              onClick={() => {
+                if (!configurationQuery.isLoading && !getBlockingQueryError(configurationQuery))
+                  saveMutation.mutate();
+              }}
             >
               确定
             </Button>
@@ -202,22 +210,31 @@ const QuickLaunchCard = ({ scope, appNumber }: QuickLaunchCardProps) => {
       >
         <div className="sm-quick-launch-manager-content">
           <Spin spinning={configurationQuery.isLoading}>
-            {configurationQuery.isError ? (
-              <Empty description="候选菜单加载失败，请稍后重试" />
-            ) : treeData.length ? (
-              <Tree
-                className="sm-quick-launch-tree"
-                blockNode
-                checkable
-                defaultExpandAll
-                selectable={false}
-                checkedKeys={checkedKeys as Key[]}
-                treeData={treeData}
-                onCheck={handleCheck}
+            {getBlockingQueryError(configurationQuery) && (
+              <RequestErrorState
+                error={configurationQuery.error}
+                onRetry={() => void configurationQuery.refetch()}
               />
-            ) : (
-              <Empty description={keyword ? '没有匹配的菜单' : '当前范围内暂无可用菜单'} />
             )}
+            <div
+              hidden={Boolean(getBlockingQueryError(configurationQuery))}
+              inert={Boolean(getBlockingQueryError(configurationQuery))}
+            >
+              {treeData.length ? (
+                <Tree
+                  className="sm-quick-launch-tree"
+                  blockNode
+                  checkable
+                  defaultExpandAll
+                  selectable={false}
+                  checkedKeys={checkedKeys as Key[]}
+                  treeData={treeData}
+                  onCheck={handleCheck}
+                />
+              ) : (
+                <Empty description={keyword ? '没有匹配的菜单' : '当前范围内暂无可用菜单'} />
+              )}
+            </div>
           </Spin>
         </div>
       </AppModal>

@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useState } from 'react';
 import { Button, Checkbox, Table } from 'antd';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
@@ -41,11 +42,13 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
   const [keyword, setKeyword] = useState('');
   const [onlySelected, setOnlySelected] = useState(false);
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: roleQueryKeys.detail(billId),
     queryFn: () => roleApi.detail(billId!),
     enabled: Boolean(billId),
   });
   const permissionsQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: permissionQueryKeys.listAll(),
     queryFn: permissionApi.listAll,
   });
@@ -146,7 +149,10 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
       }}
       loading={detailQuery.isLoading || permissionsQuery.isLoading}
       saving={mutation.isPending}
-      error={(detailQuery.error || permissionsQuery.error) as Error | null}
+      error={
+        (getBlockingQueryError(detailQuery) ||
+          getBlockingQueryError(permissionsQuery)) as Error | null
+      }
       subject={
         detailQuery.data ? `角色：${detailQuery.data.number} — ${detailQuery.data.name}` : undefined
       }

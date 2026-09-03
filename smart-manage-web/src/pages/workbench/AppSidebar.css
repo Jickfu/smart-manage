@@ -84,3 +84,7 @@
 .sm-workspace-sidebar--collapsed .ant-menu-submenu-title .anticon {
   margin-inline-end: 0 !important;
 }
+.sm-sidebar-error {
+  padding: 10px;
+  overflow-wrap: anywhere;
+}

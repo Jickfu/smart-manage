@@ -390,7 +390,13 @@ function RefSelector<T extends Record<string, unknown>>({
     if (query.error) {
       return (
         <div className="sm-ref-selector-body sm-ref-selector-error-body">
-          <Empty description={query.error.message || '加载失败'} />
+          <Empty
+            description={<RequestErrorDescription error={query.error} fallbackMessage="加载失败" />}
+          >
+            <Button type="primary" onClick={() => void query.refresh()}>
+              重试
+            </Button>
+          </Empty>
         </div>
       );
     }
@@ -510,3 +516,4 @@ function RefSelector<T extends Record<string, unknown>>({
 
 export default RefSelector;
 export type { RefSelectorProps, RefSelectorColumn, RefSelectorFieldNames, RefSelectorMode };
+import { RequestErrorDescription } from './RequestErrorState';

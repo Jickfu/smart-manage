@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { MenuProps } from 'antd';
-import { Empty, Menu, Skeleton } from 'antd';
+import { Button, Empty, Menu, Skeleton } from 'antd';
+import { RequestErrorDescription } from '@/domain/common/component/RequestErrorState';
 import { FolderOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 import type { MenuVO } from '@/types/api';
 import { resolveIcon } from '@/domain/common/component/iconResolver';
@@ -9,6 +10,8 @@ import './AppSidebar.css';
 interface Props {
   menuTree: MenuVO | null;
   loading: boolean;
+  error?: Error | null;
+  onRetry?: () => void;
   onItemClick: (item: MenuVO) => void;
 }
 
@@ -45,11 +48,11 @@ function renderMenuTree(items: MenuVO[]): Required<MenuProps>['items'] {
   });
 }
 
-const AppSidebar = ({ menuTree, loading, onItemClick }: Props) => {
+const AppSidebar = ({ menuTree, loading, error, onRetry, onItemClick }: Props) => {
   const [collapsed, setCollapsed] = useState(false);
 
   const handleClick: MenuProps['onClick'] = (info) => {
-    if (!menuTree?.routes) return;
+    if (error || !menuTree?.routes) return;
     const item = findMenuItem(menuTree.routes, info.key);
     // 页面节点统一交给导航解析器校验；配置错误需要明确提示，不能静默变成不可点击菜单。
     if (item?.level === 1) onItemClick(item);
@@ -59,7 +62,14 @@ const AppSidebar = ({ menuTree, loading, onItemClick }: Props) => {
     <div className={`sm-workspace-sidebar ${collapsed ? 'sm-workspace-sidebar--collapsed' : ''}`}>
       <div className="sm-workspace-sidebar-content">
         <div className="sm-workspace-sidebar-menu">
-          {loading ? (
+          {error ? (
+            <div className="sm-sidebar-error">
+              <RequestErrorDescription error={error} fallbackMessage="菜单加载失败" />
+              <Button type="primary" onClick={onRetry}>
+                重试
+              </Button>
+            </div>
+          ) : loading ? (
             <Skeleton className="sm-sidebar-skeleton" active paragraph={{ rows: 6 }} />
           ) : !menuTree?.routes?.length ? (
             <Empty description="暂无菜单" />

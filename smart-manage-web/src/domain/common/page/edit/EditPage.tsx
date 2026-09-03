@@ -168,17 +168,24 @@ const EditPage = ({
   const revisionRef = useRef(0);
   const dirtyRef = useRef(false);
   const dirtyRevisionRef = useRef(dirtyRevision);
+  const latestInitialValues = useRef(initialValues);
+  const commandBlocked = useRef(Boolean(error) || loading || saving);
   const [activeCollapseKeys, setActiveCollapseKeys] = useState<string[]>(
     sections.map((section) => section.key),
   );
   const editable = isEditable(operationType, billStatus);
 
+  useEffect(() => {
+    commandBlocked.current = Boolean(error) || loading || saving;
+  }, [error, loading, saving]);
+
   // 后端数据加载完成后同步到 Form
   useEffect(() => {
-    if (!loading && initialValues) {
+    latestInitialValues.current = initialValues;
+    if (!loading && !error && !dirtyRef.current && initialValues) {
       form.setFieldsValue(initialValues);
     }
-  }, [form, initialValues, loading]);
+  }, [form, initialValues, loading, error]);
 
   useBeforeCloseGuard(closeGuard?.appNumber, closeGuard?.tabKey, dirtyRef);
 
@@ -190,50 +197,66 @@ const EditPage = ({
     }
   }, [dirtyRevision]);
 
-  const handleSave = async () => {
-    if (!onSave) return;
+  const prepareValues = async () => {
+    let values: Record<string, unknown>;
     try {
-      const values = await form.validateFields();
-      const savedRevision = revisionRef.current;
-      const completed = await onSave(transformValues(values));
-      if (completed !== false && revisionRef.current === savedRevision) {
-        dirtyRef.current = false;
-      }
+      values = await form.validateFields();
     } catch (err) {
-      // 表单校验错误由 Form 展示，命令错误由领域 Mutation 统一处理。
-      const errorFields = (
-        err as { errorFields?: Array<{ name: (string | number)[]; errors: string[] }> }
-      ).errorFields;
-      if (errorFields?.length) {
-        const firstError = errorFields[0];
-        if (!firstError) return;
+      const firstError = (
+        err as { errorFields?: Array<{ name: (string | number)[]; errors: string[] }> } | null
+      )?.errorFields?.[0];
+      if (firstError) {
         feedback.warning(firstError.errors[0] ?? '请检查表单中的必填项');
         form.scrollToField(firstError.name, { focus: true });
-        return;
+      } else {
+        feedback.fromError(err, '表单校验失败，请检查输入后重试');
       }
+      return undefined;
+    }
+    try {
+      return transformValues(values);
+    } catch (err) {
+      // 此处尚未进入领域 Mutation，本地组装异常必须由本层负责反馈。
+      feedback.fromError(err, '表单数据组装失败，请检查输入后重试');
+      return undefined;
+    }
+  };
+
+  const finishSave = (revision: number, initialAtStart: typeof initialValues) => {
+    if (revisionRef.current !== revision) return;
+    dirtyRef.current = false;
+    // 保存期间已取得的新详情可以回显；后台失败保持原引用，不覆盖用户刚保存的输入。
+    if (latestInitialValues.current && latestInitialValues.current !== initialAtStart) {
+      form.setFieldsValue(latestInitialValues.current);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!onSave || error || loading || saving) return;
+    const values = await prepareValues();
+    // 异步校验期间资源可能被撤权，调用命令前再次检查最新状态。
+    if (!values || commandBlocked.current) return;
+    const savedRevision = revisionRef.current;
+    const initialAtStart = latestInitialValues.current;
+    try {
+      const completed = await onSave(values);
+      if (completed !== false) finishSave(savedRevision, initialAtStart);
+    } catch {
+      // 进入回调后由领域 Mutation 展示失败，保留脏状态，不二次提示。
     }
   };
 
   const handleSubmit = async () => {
-    if (!onSubmit) return;
+    if (!onSubmit || error || loading || saving) return;
+    const values = await prepareValues();
+    if (!values || commandBlocked.current) return;
+    const submittedRevision = revisionRef.current;
+    const initialAtStart = latestInitialValues.current;
     try {
-      const values = await form.validateFields();
-      const submittedRevision = revisionRef.current;
-      await onSubmit(transformValues(values));
-      if (revisionRef.current === submittedRevision) {
-        dirtyRef.current = false;
-      }
-    } catch (err) {
-      const errorFields = (
-        err as { errorFields?: Array<{ name: (string | number)[]; errors: string[] }> }
-      ).errorFields;
-      if (errorFields?.length) {
-        const firstError = errorFields[0];
-        if (!firstError) return;
-        feedback.warning(firstError.errors[0] ?? '请检查表单中的必填项');
-        form.scrollToField(firstError.name, { focus: true });
-        return;
-      }
+      await onSubmit(values);
+      finishSave(submittedRevision, initialAtStart);
+    } catch {
+      // 提交失败同样由领域 Mutation 负责，不能清除用户修改。
     }
   };
 
@@ -255,6 +278,7 @@ const EditPage = ({
                     permission: access?.permissions.save,
                     type: 'primary' as const,
                     loading: saving,
+                    disabled: Boolean(error) || loading,
                     onClick: handleSave,
                   },
                 ]
@@ -267,6 +291,7 @@ const EditPage = ({
                     permission: access?.permissions.submit,
                     type: 'primary' as const,
                     loading: saving,
+                    disabled: Boolean(error) || loading,
                     onClick: handleSubmit,
                   },
                 ]

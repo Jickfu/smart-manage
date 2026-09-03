@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -35,6 +36,7 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
   const [pageNum, setPageNum] = useState(1);
   const { can } = usePermissionAccess(slowSqlAccess.prefix);
   const instancesQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: slowSqlQueryKeys.instances(),
     queryFn: slowSqlApi.instances,
     enabled: active,
@@ -43,6 +45,7 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
   const effectiveInstanceId =
     selectedInstanceId ?? instancesQuery.data?.find((instance) => instance.current)?.instanceId;
   const snapshotQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: slowSqlQueryKeys.snapshot(effectiveInstanceId),
     queryFn: () => slowSqlApi.snapshot(effectiveInstanceId),
     enabled: active && Boolean(effectiveInstanceId),
@@ -83,7 +86,7 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
     <EditPageShell
       title="慢 SQL 分析"
       loading={instancesQuery.isLoading || snapshotQuery.isLoading}
-      error={instancesQuery.error ?? snapshotQuery.error}
+      error={getBlockingQueryError(instancesQuery) ?? getBlockingQueryError(snapshotQuery)}
       onRetry={() => void Promise.all([instancesQuery.refetch(), snapshotQuery.refetch()])}
       actions={
         <Space size={10} wrap>

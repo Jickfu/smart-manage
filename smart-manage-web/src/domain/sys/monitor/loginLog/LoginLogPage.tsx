@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ListPage from '@/domain/common/page/list/ListPage';
@@ -98,7 +99,7 @@ const LoginLogPage = (props: PageComponentProps) => {
       {...props}
       title="登录日志"
       loading={list.query.isLoading}
-      error={list.query.error as Error | null}
+      error={getBlockingQueryError(list.query) as Error | null}
       onRetry={() => list.query.refetch()}
       total={list.total}
       pageNum={list.pageNum}

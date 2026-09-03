@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useCallback } from 'react';
 import { Button } from 'antd';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
@@ -127,7 +128,7 @@ const RoleListPage = (props: PageComponentProps) => {
       title="角色"
       access={roleAccess}
       loading={query.isLoading}
-      error={query.error as Error | null}
+      error={getBlockingQueryError(query) as Error | null}
       onRetry={() => query.refetch()}
       total={total}
       pageNum={pageNum}

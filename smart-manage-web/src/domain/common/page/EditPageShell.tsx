@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Button, Result, Spin } from 'antd';
+import { Spin } from 'antd';
+import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
 import './pageLayout.css';
 import { usePageTabTitle } from './tab/usePageTabTitle';
 
@@ -22,33 +23,15 @@ export function EditPageShell({
   children,
 }: EditPageShellProps) {
   usePageTabTitle(title);
-  if (error) {
-    return (
-      <section className="sm-common-page sm-edit-page">
-        <Result
-          status="error"
-          title="加载失败"
-          subTitle={error.message || '请检查网络连接后重试'}
-          extra={
-            onRetry && (
-              <Button type="primary" onClick={onRetry}>
-                重试
-              </Button>
-            )
-          }
-        />
-      </section>
-    );
-  }
-
   return (
     <section className="sm-common-page sm-edit-page">
+      {error && <RequestErrorState error={error} onRetry={onRetry} />}
       {actions && (
-        <div className="sm-edit-header">
+        <div className="sm-edit-header" hidden={Boolean(error)} inert={Boolean(error)}>
           <div className="sm-edit-header-actions">{actions}</div>
         </div>
       )}
-      <div className="sm-edit-body">
+      <div className="sm-edit-body" hidden={Boolean(error)} inert={Boolean(error)}>
         <Spin spinning={loading}>{children}</Spin>
       </div>
     </section>

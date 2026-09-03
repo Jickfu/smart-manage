@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Button, Result, Spin } from 'antd';
+import { Spin } from 'antd';
+import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
 import type { AccessResource } from '../access/access';
 import { PermissionActions } from '../access/PermissionActions';
 import { useBeforeCloseGuard } from '../tab/useBeforeCloseGuard';
@@ -42,21 +43,10 @@ export function AssignmentPage({
 }: AssignmentPageProps) {
   useBeforeCloseGuard(closeGuard?.appNumber, closeGuard?.tabKey, dirty);
 
-  if (error) {
-    return (
-      <section className="sm-common-page sm-edit-page">
-        <Result
-          status="error"
-          title="加载失败"
-          subTitle={error.message}
-          extra={<Button onClick={onRetry}>重试</Button>}
-        />
-      </section>
-    );
-  }
   return (
     <section className="sm-common-page sm-edit-page">
-      <div className="sm-edit-header">
+      {error && <RequestErrorState error={error} onRetry={onRetry} />}
+      <div className="sm-edit-header" hidden={Boolean(error)} inert={Boolean(error)}>
         <div className="sm-edit-header-actions">
           <PermissionActions
             prefix={access.prefix}
@@ -67,8 +57,10 @@ export function AssignmentPage({
                 permission: access.permissions.save,
                 type: 'primary',
                 loading: saving,
-                disabled: saveDisabled,
-                onClick: onSave,
+                disabled: saveDisabled || Boolean(error),
+                onClick: () => {
+                  if (!error) onSave();
+                },
               },
               { key: 'exit', label: '退出', onClick: onExit },
             ]}
@@ -84,7 +76,11 @@ export function AssignmentPage({
           {dirty && <span className="sm-assignment-dirty">有未保存修改</span>}
         </div>
       </div>
-      <div className="sm-edit-body sm-assignment-body">
+      <div
+        className="sm-edit-body sm-assignment-body"
+        hidden={Boolean(error)}
+        inert={Boolean(error)}
+      >
         <Spin spinning={loading}>{children}</Spin>
       </div>
     </section>

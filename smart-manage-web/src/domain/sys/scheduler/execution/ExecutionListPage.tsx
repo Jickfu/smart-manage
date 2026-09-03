@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { Button, Select, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -91,7 +92,7 @@ const ExecutionListPage = (props: PageComponentProps) => {
       {...props}
       title="执行记录"
       loading={list.query.isLoading}
-      error={list.query.error as Error | null}
+      error={getBlockingQueryError(list.query) as Error | null}
       onRetry={() => list.query.refetch()}
       total={list.total}
       pageNum={list.pageNum}

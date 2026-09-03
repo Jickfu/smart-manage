@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/edit/EditPage';
@@ -21,6 +22,7 @@ const BasicDataEditPage = (props: PageComponentProps) => {
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     // 新增页使用临时页签标识隔离查询状态，避免复用 detail(undefined) 的历史错误缓存。
     queryKey: basicDataQueryKeys.detail(isAddNew ? tabKey : billId),
     queryFn: () => basicDataApi.detail(billId!),
@@ -28,6 +30,7 @@ const BasicDataEditPage = (props: PageComponentProps) => {
   });
   const categoryId = detailQuery.data?.category.id ?? context?.categoryId;
   const categoryQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: basicDataQueryKeys.category(categoryId),
     queryFn: () => basicDataApi.categoryDetail(categoryId!),
     enabled: Boolean(categoryId),
@@ -146,7 +149,10 @@ const BasicDataEditPage = (props: PageComponentProps) => {
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
       loading={detailQuery.isLoading || categoryQuery.isLoading}
-      error={((!isAddNew ? detailQuery.error : null) ?? categoryQuery.error) as Error | null}
+      error={
+        ((!isAddNew ? getBlockingQueryError(detailQuery) : null) ??
+          getBlockingQueryError(categoryQuery)) as Error | null
+      }
       onRetry={() =>
         Promise.all([
           ...(!isAddNew && billId ? [detailQuery.refetch()] : []),

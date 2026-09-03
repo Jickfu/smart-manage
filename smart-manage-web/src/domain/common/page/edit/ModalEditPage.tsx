@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
-import { Spin, Button, Result, Form } from 'antd';
+import { useEffect, useRef } from 'react';
+import { Spin, Form } from 'antd';
+import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
 import AppModal from '@/domain/common/component/AppModal';
 import type { EditField } from './EditPage';
 import { EditFormFields } from './EditFormFields';
@@ -41,13 +42,19 @@ const ModalEditPage = ({
   access,
 }: ModalEditPageProps) => {
   const [form] = Form.useForm();
+  const dirtyRef = useRef(false);
+  const commandBlocked = useRef(Boolean(error) || loading || saving || !open);
+
+  useEffect(() => {
+    commandBlocked.current = Boolean(error) || loading || saving || !open;
+  }, [error, loading, saving, open]);
 
   // Modal 打开且数据加载完成后同步到 Form
   useEffect(() => {
-    if (open && !loading && initialValues) {
+    if (open && !loading && !error && initialValues && !dirtyRef.current) {
       form.setFieldsValue(initialValues);
     }
-  }, [form, initialValues, loading, open]);
+  }, [form, initialValues, loading, open, error]);
 
   // Modal 关闭时重置 Form（处理新增场景，避免旧数据残留）
   const handleClose = () => {
@@ -56,8 +63,10 @@ const ModalEditPage = ({
   };
 
   const handleSave = async () => {
+    if (error || loading || saving) return;
     try {
       const values = await form.validateFields();
+      if (commandBlocked.current) return;
       await onSave(values);
     } catch (err) {
       // 表单校验错误由 Form 展示，命令错误由领域 Mutation 统一处理。
@@ -72,6 +81,7 @@ const ModalEditPage = ({
       onCancel={handleClose}
       afterOpenChange={(visible) => {
         if (!visible) {
+          dirtyRef.current = false;
           form.resetFields();
         }
       }}
@@ -89,32 +99,28 @@ const ModalEditPage = ({
               permission: access?.permissions.save,
               type: 'primary',
               loading: saving,
+              disabled: Boolean(error) || loading,
               onClick: handleSave,
             },
           ]}
         />
       }
     >
-      {error ? (
-        <Result
-          status="error"
-          title="加载失败"
-          subTitle={error.message || '请检查网络连接后重试'}
-          extra={
-            onRetry && (
-              <Button type="primary" onClick={onRetry}>
-                重试
-              </Button>
-            )
-          }
-        />
-      ) : (
+      {error && <RequestErrorState error={error} onRetry={onRetry} />}
+      <div className="sm-modal-edit-content" hidden={Boolean(error)} inert={Boolean(error)}>
         <Spin spinning={loading}>
-          <Form form={form} layout="vertical" className="sm-edit-form">
+          <Form
+            form={form}
+            layout="vertical"
+            className="sm-edit-form"
+            onValuesChange={() => {
+              dirtyRef.current = true;
+            }}
+          >
             <EditFormFields fields={fields} maxColumns={2} />
           </Form>
         </Spin>
-      )}
+      </div>
     </AppModal>
   );
 };

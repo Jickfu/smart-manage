@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -52,6 +53,7 @@ const MenuEditPage = (props: PageComponentProps) => {
   const activateContentTab = useWorkbenchStore((s) => s.activateContentTab);
 
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: menuQueryKeys.detail(billId),
     queryFn: () => menuApi.detail(billId!),
     enabled: !!billId,
@@ -337,7 +339,7 @@ const MenuEditPage = (props: PageComponentProps) => {
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}

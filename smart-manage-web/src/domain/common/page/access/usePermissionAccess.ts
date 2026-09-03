@@ -10,7 +10,11 @@ export function usePermissionAccess(prefix?: string) {
     enabled: Boolean(prefix),
     staleTime: 5 * 60 * 1000,
   });
-  const permissionSet = useMemo(() => new Set(query.data ?? []), [query.data]);
+  // 权限查询失败时拒绝继续使用旧授权；此规则比普通查询保留缓存更严格。
+  const permissionSet = useMemo(
+    () => new Set(query.error ? [] : (query.data ?? [])),
+    [query.data, query.error],
+  );
   return {
     can: (permission?: string) =>
       !permission || permissionSet.has('*') || permissionSet.has(permission),

@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/edit/EditPage';
@@ -22,11 +23,13 @@ const InboxMessageEditPage = (props: PageComponentProps) => {
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: inboxAdminQueryKeys.detail(billId),
     queryFn: () => inboxAdminApi.detail(billId!),
     enabled: Boolean(billId),
   });
   const defaultsQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: [...inboxAdminQueryKeys.all, 'create-new-data'],
     queryFn: inboxAdminApi.createNewData,
     enabled: isAdd,
@@ -129,7 +132,9 @@ const InboxMessageEditPage = (props: PageComponentProps) => {
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
       loading={detailQuery.isLoading || defaultsQuery.isLoading}
-      error={(detailQuery.error ?? defaultsQuery.error) as Error | null}
+      error={
+        (getBlockingQueryError(detailQuery) ?? getBlockingQueryError(defaultsQuery)) as Error | null
+      }
       onRetry={() => Promise.all([detailQuery.refetch(), defaultsQuery.refetch()])}
       onSave={async (values) => {
         await save.mutateAsync(values);

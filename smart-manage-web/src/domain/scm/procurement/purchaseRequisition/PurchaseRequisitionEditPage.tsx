@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useRef, useState } from 'react';
 import type { Key } from 'react';
 import { DatePicker, Form, Input, InputNumber } from 'antd';
@@ -91,6 +92,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
   const replaceContentTab = useWorkbenchStore((state) => state.replaceContentTab);
   const activateContentTab = useWorkbenchStore((state) => state.activateContentTab);
   const sourceQuery = useQuery<PurchaseRequisitionDetailVO | PurchaseRequisitionCreateNewDataVO>({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: isAddNew
       ? purchaseRequisitionQueryKeys.createNewData(tabKey)
       : purchaseRequisitionQueryKeys.detail(billId),
@@ -339,7 +341,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
       dirtyRevision={attachmentRevision}
       transformValues={attachmentController.withValues}
       loading={sourceQuery.isLoading}
-      error={sourceQuery.error as Error | null}
+      error={getBlockingQueryError(sourceQuery) as Error | null}
       onRetry={() => sourceQuery.refetch()}
       onSave={saveMutation.mutateAsync}
       onSubmit={submitMutation.mutateAsync}

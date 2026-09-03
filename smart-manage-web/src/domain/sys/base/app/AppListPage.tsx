@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState, useMemo } from 'react';
 import { Tag, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -145,7 +146,7 @@ const AppListPage = (props: PageComponentProps) => {
       title="应用"
       access={appAccess}
       loading={query.isLoading}
-      error={query.error as Error | null}
+      error={getBlockingQueryError(query) as Error | null}
       onRetry={() => query.refetch()}
       total={total}
       pageNum={pageNum}

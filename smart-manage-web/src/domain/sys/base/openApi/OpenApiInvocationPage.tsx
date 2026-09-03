@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { Select, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -26,6 +27,7 @@ const OpenApiInvocationPage = (props: PageComponentProps) => {
     queryFn: (params) => openApiPlatformApi.invocationList({ ...params, resultType }),
   });
   const stats = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: openApiQueryKeys.stats(),
     queryFn: openApiPlatformApi.invocationStats,
     refetchInterval: 60_000,
@@ -73,7 +75,7 @@ const OpenApiInvocationPage = (props: PageComponentProps) => {
       title="调用监控"
       access={openApiInvocationAccess}
       loading={list.query.isLoading || stats.isLoading}
-      error={(list.query.error ?? stats.error) as Error | null}
+      error={(getBlockingQueryError(list.query) ?? getBlockingQueryError(stats)) as Error | null}
       onRetry={() => Promise.all([list.query.refetch(), stats.refetch()])}
       total={list.total}
       pageNum={list.pageNum}

@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
 import { Button, Tag } from 'antd';
@@ -54,11 +55,13 @@ const SysParamListPage = (props: PageComponentProps) => {
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
   const queryClient = useQueryClient();
   const treeQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: appQueryKeys.domainAppsAll(),
     queryFn: fetchAppsAll,
     staleTime: 5 * 60 * 1000,
   });
   const featuresQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: featureQueryKeys.visible(),
     queryFn: featureApi.listAllVisible,
     staleTime: 5 * 60 * 1000,
@@ -156,7 +159,11 @@ const SysParamListPage = (props: PageComponentProps) => {
       title="系统参数"
       access={sysParamAccess}
       loading={query.isLoading || treeQuery.isLoading || featuresQuery.isLoading}
-      error={(query.error ?? treeQuery.error ?? featuresQuery.error) as Error | null}
+      error={
+        (getBlockingQueryError(query) ??
+          getBlockingQueryError(treeQuery) ??
+          getBlockingQueryError(featuresQuery)) as Error | null
+      }
       onRetry={() => Promise.all([query.refetch(), treeQuery.refetch(), featuresQuery.refetch()])}
       total={total}
       pageNum={pageNum}

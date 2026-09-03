@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryFeedbackProvider } from '@/domain/common/component/QueryFeedbackProvider';
 import { ConfigProvider, App as AntApp, Button, Result, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import routes from '@/router';
@@ -22,22 +22,17 @@ function SecurityErrorNotifier() {
   const feedback = useOperationFeedback();
 
   useEffect(() => {
-    const notify = () => feedback.error('安全校验失败，请刷新页面后重试');
+    const notify = () =>
+      feedback.error('安全校验失败，请刷新页面后重试', {
+        key: 'sm-csrf-invalid',
+        autoClose: false,
+      });
     window.addEventListener('sm:csrf-invalid', notify);
     return () => window.removeEventListener('sm:csrf-invalid', notify);
   }, [feedback]);
 
   return null;
 }
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 export default function App() {
   const router = useMemo(() => createMemoryRouter(routes), []);
@@ -124,9 +119,9 @@ export default function App() {
 
   // 认证通过 — 正常渲染应用
   return (
-    <QueryClientProvider client={queryClient}>
-      <ConfigProvider theme={themeConfig} locale={zhCN}>
-        <AntApp message={{ maxCount: 3, top: 32 }}>
+    <ConfigProvider theme={themeConfig} locale={zhCN}>
+      <AntApp message={{ maxCount: 3, top: 32 }}>
+        <QueryFeedbackProvider>
           <OperationConfirmProvider>
             <SecurityErrorNotifier />
             <AppErrorBoundary>
@@ -135,8 +130,8 @@ export default function App() {
               </AuthenticatedWatermark>
             </AppErrorBoundary>
           </OperationConfirmProvider>
-        </AntApp>
-      </ConfigProvider>
-    </QueryClientProvider>
+        </QueryFeedbackProvider>
+      </AntApp>
+    </ConfigProvider>
   );
 }

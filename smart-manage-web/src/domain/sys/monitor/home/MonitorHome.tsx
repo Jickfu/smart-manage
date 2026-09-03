@@ -1,4 +1,6 @@
-import { Card, Result, Table, Tag } from 'antd';
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
+import { Card, Table, Tag } from 'antd';
+import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
 import { useQuery } from '@tanstack/react-query';
 import { monitorOverviewApi } from './api';
 import QuickLaunchCard from '@/domain/common/home/QuickLaunchCard';
@@ -8,15 +10,20 @@ const healthColor = (status: string) =>
   status === 'UP' ? 'success' : status === 'UNKNOWN' ? 'default' : 'error';
 const MonitorHome = () => {
   const query = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: ['sys-monitor-overview'],
     queryFn: monitorOverviewApi,
     refetchInterval: 10000,
   });
-  if (query.error)
+  if (getBlockingQueryError(query))
     return (
       <div className="sm-app-home sm-monitor-home">
         <QuickLaunchCard scope="APPLICATION" appNumber="monitor" />
-        <Result status="error" title="运维总览加载失败" subTitle={query.error.message} />
+        <RequestErrorState
+          title="运维总览加载失败"
+          error={query.error}
+          onRetry={() => void query.refetch()}
+        />
       </div>
     );
   const data = query.data;

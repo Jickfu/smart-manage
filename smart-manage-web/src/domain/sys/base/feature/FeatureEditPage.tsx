@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,6 +19,7 @@ const FeatureEditPage = ({ open, featureId, onClose }: Props) => {
   const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   const query = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: featureQueryKeys.detail(featureId),
     queryFn: () => featureApi.detail(featureId!),
     enabled: Boolean(open && featureId),
@@ -72,7 +74,7 @@ const FeatureEditPage = ({ open, featureId, onClose }: Props) => {
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
       loading={query.isLoading}
-      error={query.error as Error | null}
+      error={getBlockingQueryError(query) as Error | null}
       onRetry={() => query.refetch()}
       access={featureAccess}
     />

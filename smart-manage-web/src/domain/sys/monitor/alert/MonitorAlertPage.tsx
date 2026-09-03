@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import {
   Button,
@@ -58,6 +59,7 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
   const { can } = usePermissionAccess(monitorAlertAccess.prefix);
   const recipientSelector = useUserRefSelector({ multiple: true, title: '选择告警邮件接收人' });
   const rules = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: keys.rules(),
     queryFn: monitorAlertApi.rules,
     enabled: active,
@@ -115,7 +117,7 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
     <EditPageShell
       title="监控告警"
       loading={rules.isLoading}
-      error={rules.error}
+      error={getBlockingQueryError(rules)}
       onRetry={() => void rules.refetch()}
       actions={
         <Space>

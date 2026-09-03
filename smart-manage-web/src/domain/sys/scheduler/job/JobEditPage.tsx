@@ -1,3 +1,7 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
+import { isErrorFeedbackSuppressed } from '@/api/errorPresentation';
+import { RequestErrorDescription } from '@/domain/common/component/RequestErrorState';
+import { Button } from 'antd';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -31,16 +35,19 @@ const JobEditPage = (props: PageComponentProps) => {
   const isAddNew = props.operationType === OperationType.ADDNEW;
   const [cronExpression, setCronExpression] = useState('');
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: jobQueryKeys.detail(props.billId),
     queryFn: () => jobApi.detail(props.billId!),
     enabled: Boolean(props.billId),
   });
   const defaultQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: jobQueryKeys.createNewData(),
     queryFn: jobApi.createNewData,
     enabled: isAddNew,
   });
   const classesQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: jobQueryKeys.classes(),
     queryFn: jobApi.classes,
     staleTime: 5 * 60 * 1000,
@@ -49,11 +56,13 @@ const JobEditPage = (props: PageComponentProps) => {
   const effectiveCron =
     cronExpression || detail?.cronExpression || defaultQuery.data?.cronExpression || '';
   const cronPreviewQuery = useQuery({
+    meta: { errorPresentation: 'local' },
     queryKey: jobQueryKeys.cronPreview(effectiveCron),
     queryFn: () => jobApi.cronPreview(effectiveCron),
     enabled: Boolean(effectiveCron),
     retry: false,
   });
+  const refreshCronPreview = cronPreviewQuery.refetch;
   const jobClassSelector = useMemo(
     () =>
       defineRefSelector<JobClassOption>({
@@ -150,11 +159,21 @@ const JobEditPage = (props: PageComponentProps) => {
         label: '未来五次执行时间（服务端时区）',
         dataIndex: 'cronPreview',
         type: 'custom',
-        content: cronPreviewQuery.isFetching
-          ? '正在计算…'
-          : cronPreviewQuery.isError
-            ? 'Cron 表达式不合法'
-            : (cronPreviewQuery.data?.join('；') ?? '暂无可执行时间'),
+        content: cronPreviewQuery.isFetching ? (
+          '正在计算…'
+        ) : cronPreviewQuery.error && !isErrorFeedbackSuppressed(cronPreviewQuery.error) ? (
+          <>
+            <RequestErrorDescription
+              error={cronPreviewQuery.error}
+              fallbackMessage="执行时间计算失败"
+            />
+            <Button type="link" onClick={() => void refreshCronPreview()}>
+              重试
+            </Button>
+          </>
+        ) : (
+          (cronPreviewQuery.data?.join('；') ?? '暂无可执行时间')
+        ),
         fullWidth: true,
       },
       { label: '任务参数（JSON）', dataIndex: 'jobData', type: 'textarea', fullWidth: true },
@@ -162,7 +181,8 @@ const JobEditPage = (props: PageComponentProps) => {
     ],
     [
       cronPreviewQuery.data,
-      cronPreviewQuery.isError,
+      cronPreviewQuery.error,
+      refreshCronPreview,
       cronPreviewQuery.isFetching,
       detail?.isSystem,
       jobClassSelector,
@@ -223,7 +243,11 @@ const JobEditPage = (props: PageComponentProps) => {
       operationType={props.operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber: props.appNumber, tabKey: props.tabKey }}
       loading={detailQuery.isLoading || defaultQuery.isLoading || classesQuery.isLoading}
-      error={(detailQuery.error ?? defaultQuery.error ?? classesQuery.error) as Error | null}
+      error={
+        (getBlockingQueryError(detailQuery) ??
+          getBlockingQueryError(defaultQuery) ??
+          getBlockingQueryError(classesQuery)) as Error | null
+      }
       onRetry={() =>
         Promise.all([detailQuery.refetch(), defaultQuery.refetch(), classesQuery.refetch()])
       }

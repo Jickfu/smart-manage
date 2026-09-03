@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -117,7 +118,7 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
       title="采购申请"
       access={purchaseRequisitionAccess}
       loading={listQuery.query.isLoading}
-      error={listQuery.query.error as Error | null}
+      error={getBlockingQueryError(listQuery.query) as Error | null}
       onRetry={() => listQuery.query.refetch()}
       total={listQuery.total}
       pageNum={listQuery.pageNum}

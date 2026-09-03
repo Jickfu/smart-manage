@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -140,7 +141,7 @@ const InboxMessageListPage = (props: PageComponentProps) => {
       title="消息发布"
       access={inboxBroadcastAccess}
       loading={list.query.isLoading}
-      error={list.query.error as Error | null}
+      error={getBlockingQueryError(list.query) as Error | null}
       onRetry={() => list.query.refetch()}
       total={list.total}
       pageNum={list.pageNum}

@@ -1,3 +1,6 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
+import { RequestErrorDescription } from '@/domain/common/component/RequestErrorState';
+import { isErrorFeedbackSuppressed } from '@/api/errorPresentation';
 import { lazy, Suspense, useMemo, useState } from 'react';
 import {
   Button,
@@ -50,12 +53,14 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
   const feedback = useOperationFeedback();
   const { can } = usePermissionAccess(runtimeMonitorAccess.prefix);
   const topology = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: keys.topology(),
     queryFn: runtimeMonitorApi.topology,
     enabled: active,
     refetchInterval: active ? 10000 : false,
   });
   const instances = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: keys.instances(),
     queryFn: runtimeMonitorApi.instances,
     enabled: active,
@@ -81,6 +86,7 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
   });
   const scopeId = scope === 'HOST' ? selectedHostId : selectedId;
   const history = useQuery({
+    meta: { errorPresentation: 'local' },
     queryKey: keys.history(scope, scopeId ?? '', range),
     queryFn: () => runtimeMonitorApi.history(scope, scopeId!, range),
     enabled: active && Boolean(scopeId),
@@ -99,9 +105,10 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
     <EditPageShell
       title="运行监控"
       loading={topology.isLoading || instances.isLoading}
-      error={topology.error ?? instances.error}
+      error={getBlockingQueryError(topology) ?? getBlockingQueryError(instances)}
       onRetry={() => {
         void topology.refetch();
+        void instances.refetch();
         void instanceSnapshot.refetch();
         void hostSnapshot.refetch();
       }}
@@ -197,12 +204,14 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
             instance={instanceSnapshot.data.snapshot}
           />
         )}
-        {history.error && (
+        {history.error && !isErrorFeedbackSuppressed(history.error) && (
           <Alert
             showIcon
             type="error"
             title="历史趋势加载失败"
-            description={history.error.message}
+            description={
+              <RequestErrorDescription error={history.error} fallbackMessage="历史数据加载失败" />
+            }
           />
         )}
         {charts.map((chart) => (

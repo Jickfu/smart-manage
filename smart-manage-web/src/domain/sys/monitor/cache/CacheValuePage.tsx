@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/edit/EditPage';
@@ -22,6 +23,7 @@ const fields: EditField[] = [
 export default function CacheValuePage(props: PageComponentProps) {
   const entry = useMemo(() => parseCacheEntryIdentity(props.billId ?? ''), [props.billId]);
   const detailQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: cacheQueryKeys.value(props.billId),
     queryFn: () => cacheApi.value(entry),
     enabled: Boolean(props.billId),
@@ -44,7 +46,7 @@ export default function CacheValuePage(props: PageComponentProps) {
       initialValues={initialValues}
       operationType={OperationType.VIEW}
       loading={detailQuery.isLoading}
-      error={detailQuery.error as Error | null}
+      error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       onExit={() => useWorkbenchStore.getState().removeContentTab(props.appNumber, props.tabKey)}
     />

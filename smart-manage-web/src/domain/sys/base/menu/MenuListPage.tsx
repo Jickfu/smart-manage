@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useCallback, useMemo, useState } from 'react';
 import { Button, Tag } from 'antd';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
@@ -101,12 +102,14 @@ const MenuListPage = (props: PageComponentProps) => {
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
 
   const catalogQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: menuQueryKeys.catalog(),
     queryFn: menuApi.catalog,
     staleTime: 5 * 60 * 1000,
   });
 
   const treeQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: menuQueryKeys.treeList({
       type: selectedScope.type,
       id: selectedScope.type === 'root' ? '' : selectedScope.id,
@@ -252,7 +255,7 @@ const MenuListPage = (props: PageComponentProps) => {
   ];
 
   const loading = treeQuery.isLoading || catalogQuery.isLoading;
-  const error = treeQuery.error || catalogQuery.error;
+  const error = getBlockingQueryError(treeQuery) || getBlockingQueryError(catalogQuery);
 
   const treePanel = (
     <ListTreePanel>

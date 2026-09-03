@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useState } from 'react';
 import { Button, Card, Form, Select } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -199,16 +200,18 @@ const DataScopeEditor = ({
 
 const RoleDataScopeAssignmentPage = (props: PageComponentProps) => {
   const workspaceQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: [...roleQueryKeys.detail(props.billId), 'data-scopes'],
     queryFn: () => roleApi.dataScopeWorkspace(props.billId!),
     enabled: Boolean(props.billId),
   });
   const orgQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: ['sys', 'base', 'org', 'options'],
     queryFn: orgApi.options,
   });
   const loading = workspaceQuery.isLoading || orgQuery.isLoading;
-  const error = workspaceQuery.error ?? orgQuery.error;
+  const error = getBlockingQueryError(workspaceQuery) ?? getBlockingQueryError(orgQuery);
   const onRetry = () => void Promise.all([workspaceQuery.refetch(), orgQuery.refetch()]);
   if (workspaceQuery.data && orgQuery.data) {
     return (

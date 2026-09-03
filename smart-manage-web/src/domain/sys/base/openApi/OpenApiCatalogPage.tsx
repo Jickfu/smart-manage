@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useState } from 'react';
 import { Button, Descriptions, Space, Tag, Typography } from 'antd';
 import type { DataNode } from 'antd/es/tree';
@@ -114,7 +115,7 @@ const OpenApiCatalogPage = (props: PageComponentProps) => {
         title="API 文档"
         access={openApiCatalogAccess}
         loading={list.query.isLoading}
-        error={list.query.error as Error | null}
+        error={getBlockingQueryError(list.query) as Error | null}
         onRetry={() => list.query.refetch()}
         total={list.total}
         pageNum={list.pageNum}

@@ -1,3 +1,4 @@
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useQuery } from '@tanstack/react-query';
 import EditPage from '@/domain/common/page/edit/EditPage';
@@ -24,6 +25,7 @@ const fields: EditField[] = [
 export default function SqlLogDetailPage(props: PageComponentProps) {
   const feedback = useOperationFeedback();
   const query = useQuery({
+    meta: { errorPresentation: 'local-initial' },
     queryKey: sqlQueryKeys.logDetail(props.billId),
     queryFn: () => sqlApi.detail(props.billId!),
     enabled: Boolean(props.billId),
@@ -45,7 +47,7 @@ export default function SqlLogDetailPage(props: PageComponentProps) {
       initialValues={query.data ? { ...query.data } : {}}
       operationType={OperationType.VIEW}
       loading={query.isLoading}
-      error={query.error as Error | null}
+      error={getBlockingQueryError(query) as Error | null}
       onRetry={() => query.refetch()}
       headerActions={[
         {
