@@ -20,6 +20,7 @@ import tools.jackson.databind.json.JsonMapper;
 import java.util.Map;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -58,7 +59,27 @@ class RequestSecurityChainIntegrationTests {
     void protectedRequestWithoutLoginIsRejectedByFilter() throws Exception {
         mockMvc.perform(get("/protected-test"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100401));
+                .andExpect(jsonPath("$.code").value(100401))
+                .andExpect(jsonPath("$.feedbackLevel").value("ERROR"));
+    }
+
+    @Test
+    void brokenMapperStillReturnsACompleteSafeFailureEnvelope() throws Exception {
+        RequestMappingHandlerMapping handlerMapping = mock(RequestMappingHandlerMapping.class);
+        when(handlerMapping.getHandlerMethods()).thenReturn(Map.of());
+        JsonMapper mapper = mock(JsonMapper.class);
+        when(mapper.writeValueAsString(any())).thenThrow(new IllegalStateException("sensitive detail"));
+        SaTokenConfig config = new SaTokenConfig(handlerMapping, mapper, mock(BrowserRequestSecurity.class));
+        ReflectionTestUtils.setField(config, "noNeedLogin", new String[]{"/public-test"});
+        var failingMvc = MockMvcBuilders.standaloneSetup(new TestController())
+                .addFilters(new SaTokenContextFilterForJakartaServlet(), config.getSaServletFilter()).build();
+        failingMvc.perform(get("/protected-test"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100500))
+                .andExpect(jsonPath("$.msg").value("系统异常，请稍候再试"))
+                .andExpect(jsonPath("$.feedbackLevel").value("ERROR"))
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.traceId").value(org.hamcrest.Matchers.nullValue()));
     }
 
     @RestController

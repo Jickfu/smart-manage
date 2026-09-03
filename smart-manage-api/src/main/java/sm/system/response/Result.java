@@ -14,12 +14,14 @@ public class Result<T> {
     private final String msg;
     private final T data;
     private final String traceId;
+    private final FeedbackLevel feedbackLevel;
 
     private Result(Integer code, String msg, T data) {
         this.code = code;
-        this.msg = msg;
+        this.msg = java.util.Objects.requireNonNull(msg, "响应说明不能为 null");
         this.data = data;
         this.traceId = TraceIdUtil.getTraceId();
+        this.feedbackLevel = ResultEnum.feedbackLevelFor(code);
     }
 
     public static <T> Result<T> success(T data) {
@@ -31,6 +33,9 @@ public class Result<T> {
     }
 
     public static <T> Result<T> error(Integer code, String message) {
+        if (code == null || code == ResultEnum.SUCCESS.getCode()) {
+            throw new IllegalArgumentException("失败响应必须使用非零业务码");
+        }
         return new Result<>(code, message, null);
     }
 

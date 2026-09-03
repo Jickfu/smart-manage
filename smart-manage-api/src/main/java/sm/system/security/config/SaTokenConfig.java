@@ -36,6 +36,9 @@ import java.util.Set;
 @Slf4j
 @RequiredArgsConstructor
 public class SaTokenConfig {
+	// 序列化器失效时必须脱离原转换链；禁止拼入异常正文或未经编码的诊断字段。
+	private static final String SERIALIZATION_FAILURE_JSON =
+			"{\"code\":100500,\"msg\":\"系统异常，请稍候再试\",\"data\":null,\"traceId\":null,\"feedbackLevel\":\"ERROR\"}";
 	private final RequestMappingHandlerMapping requestMappingHandlerMapping;
 	private final JsonMapper jsonMapper;
 	private final BrowserRequestSecurity browserRequestSecurity;
@@ -92,7 +95,7 @@ public class SaTokenConfig {
 						}
 						return jsonMapper.writeValueAsString(result);
 					} catch (Exception ex) {
-						return "{\"code\":500,\"msg\":\"server error\"}";
+						return SERIALIZATION_FAILURE_JSON;
 					}
 				});
 	}

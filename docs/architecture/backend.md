@@ -58,7 +58,11 @@ DataScope 的角色配置、Entity、Mapper 和规则解析实现保留在 `sm.d
 
 ## 接口基础设施
 
-所有接口返回 `Result<T>`，包含 `code`、`msg`、`data` 和 `traceId`。成功使用 `Result.success(data)`，异常由 `GlobalExceptionHandler` 统一转换。
+JSON 接口返回 `Result<T>`，包含 `code`、`msg`、`data`、`traceId` 和 `feedbackLevel`；文件下载仍返回文件流。成功使用 `Result.success(data)`，异常由 `GlobalExceptionHandler` 统一转换。
+
+`code=0` 表示成功，此时 `feedbackLevel=null`；失败使用非零业务码，`feedbackLevel` 为 `WARNING` 或 `ERROR`。客户端默认反馈强度由 `ResultEnum` 单一声明，不代表服务端日志级别，也不指定 Modal、Toast 或页面等 UI 形式。整数错误工厂同样按枚举取级别，未知非零码保守使用 `ERROR`，禁止用空码或成功码构造失败响应；自定义说明不改变级别。安全过滤器、异常转换与 OpenAPI 错误出口复用同一契约；序列化器失效时，安全过滤器使用不依赖序列化链、不含异常正文的静态系统失败 JSON，诊断 ID 可以为 null。已经提交的响应或底层 writer 失败不保证还能输出错误体。
+
+HTTP 状态与业务响应码是独立维度；本轮不改变现有 HTTP 200 + 失败 Result 的接口行为，不引入 category、retryable 或后端 UI 指令。协议与浏览器展示边界见[前端架构](./frontend.md)。
 
 接口访问级别按注解判定：
 

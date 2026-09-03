@@ -1,8 +1,7 @@
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { Alert, App } from 'antd';
-import { ApiError } from '@/api/ApiError';
+import { getErrorPresentation } from '@/api/errorPresentation';
 import {
-  getErrorFeedbackType,
   getOperationFeedbackClassName,
   type OperationFeedbackType,
 } from './operationFeedbackPolicy';
@@ -84,9 +83,8 @@ export function useOperationFeedback(): OperationFeedbackApi {
         fallbackMessage = '操作失败',
         options?: OperationFeedbackOptions,
       ) => {
-        const type = error instanceof ApiError ? getErrorFeedbackType(error.code) : 'error';
-        const content = error instanceof Error && error.message ? error.message : fallbackMessage;
-        open(type, content, options);
+        const presentation = getErrorPresentation(error, fallbackMessage);
+        if (!presentation.suppressed) open(presentation.type, presentation.message, options);
       },
     }),
     [open],

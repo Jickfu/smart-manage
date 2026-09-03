@@ -3,7 +3,9 @@ export interface Result<T = unknown> {
   code: number;
   msg: string;
   data: T;
-  traceId: string;
+  traceId: string | null;
+  /** 成功为 null；失败的默认反馈强度由后端统一定义，不指定 UI 形式。 */
+  feedbackLevel: 'WARNING' | 'ERROR' | null;
 }
 
 /** 分页数据载荷，依托 Result<T> 返回 */

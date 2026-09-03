@@ -1,9 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import type { UseMutationOptions } from '@tanstack/react-query';
-import { ApiError } from '@/api/ApiError';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
-
-const DATA_CONFLICT_CODE = 100409;
 
 interface CommandMutationOptions<TData, TVariables> extends Omit<
   UseMutationOptions<TData, Error, TVariables>,
@@ -35,10 +32,6 @@ export function useCommandMutation<TData = unknown, TVariables = void>({
       }
     },
     onError: (error) => {
-      if (error instanceof ApiError && error.code === DATA_CONFLICT_CODE) {
-        feedback.warning('数据已被其他请求修改，请刷新后重试');
-        return;
-      }
       feedback.fromError(error);
     },
   });

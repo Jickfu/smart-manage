@@ -6,7 +6,7 @@ import zhCN from 'antd/locale/zh_CN';
 import routes from '@/router';
 import { createThemeConfig } from '@/styles/theme';
 import { getCurrentSession } from '@/api/user';
-import { ApiError } from '@/api/ApiError';
+import { isAuthenticationError } from '@/api/errorPresentation';
 import { useUserStore } from '@/stores/user';
 // 自动生成的组件注册表导入 — 由 pnpm gen:registry 生成
 import '@/domain/common/registry/registry.gen';
@@ -14,8 +14,6 @@ import { AppErrorBoundary } from '@/pages/errors/AppErrorBoundary';
 import { OperationConfirmProvider } from '@/domain/common/component/OperationConfirmProvider';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { AuthenticatedWatermark } from '@/layouts/AuthenticatedWatermark';
-
-const UNAUTHORIZED_CODE = 100401;
 
 /** 认证状态 — 启动时由服务端 Cookie 会话恢复。 */
 type AuthState = 'loading' | 'authenticated' | 'error';
@@ -82,7 +80,7 @@ export default function App() {
 
   const handleAuthError = useCallback((err: unknown) => {
     // 401 由 request.ts 拦截器处理跳转，此处保持 loading 避免闪屏
-    if (err instanceof ApiError && err.code === UNAUTHORIZED_CODE) {
+    if (isAuthenticationError(err)) {
       return;
     }
     setAuthState('error');

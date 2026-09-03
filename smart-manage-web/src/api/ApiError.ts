@@ -1,17 +1,40 @@
-/** API 业务错误 — 保留后端完整错误信息，便于页面按 code 区分权限/校验/冲突等场景 */
-export class ApiError extends Error {
-  /** 后端业务状态码（对应 Result.code） */
-  code: number;
-  /** 请求追踪 ID，便于日志排查 */
-  traceId: string;
-  /** 后端返回的附加数据（校验错误详情等） */
-  data?: unknown;
+export type ErrorSource =
+  | 'API'
+  | 'HTTP'
+  | 'NETWORK'
+  | 'TIMEOUT'
+  | 'PROTOCOL'
+  | 'CLIENT'
+  | 'CANCELED';
+export type FeedbackLevel = 'WARNING' | 'ERROR';
 
-  constructor(code: number, msg: string, traceId: string, data?: unknown) {
-    super(msg);
+interface ApiErrorOptions {
+  source: Exclude<ErrorSource, 'CANCELED'>;
+  message: string;
+  httpStatus?: number;
+  apiCode?: number;
+  feedbackLevel?: FeedbackLevel;
+  traceId?: string | null;
+  data?: unknown;
+}
+
+/** 请求失败的规范模型。HTTP 状态与业务码互不替代，取消仍保留原始取消对象。 */
+export class ApiError extends Error {
+  readonly source: ApiErrorOptions['source'];
+  readonly httpStatus?: number;
+  readonly apiCode?: number;
+  readonly feedbackLevel: FeedbackLevel;
+  readonly traceId: string;
+  readonly data?: unknown;
+
+  constructor(options: ApiErrorOptions) {
+    super(options.message);
     this.name = 'ApiError';
-    this.code = code;
-    this.traceId = traceId;
-    this.data = data;
+    this.source = options.source;
+    this.httpStatus = options.httpStatus;
+    this.apiCode = options.apiCode;
+    this.feedbackLevel = options.feedbackLevel ?? 'ERROR';
+    this.traceId = options.traceId ?? '';
+    this.data = options.data;
   }
 }

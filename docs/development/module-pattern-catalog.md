@@ -34,7 +34,7 @@
 | 通用业务弹框 | `smart-manage-web/src/domain/common/component/AppModal.tsx` |
 | 应用首页卡片布局 | `smart-manage-web/src/domain/common/home/HomeCardGrid.tsx`、`HomeCardGrid.css`；系统首页参考 `pages/home/Home.tsx`，真实数据首页参考 `domain/sys/scheduler/home/SchedulerHome.tsx` 和 `domain/sys/monitor/home/MonitorHome.tsx`，示例数据首页参考 `domain/sys/base/home/BaseHome.tsx` 和 `domain/sys/message/home/MessageHome.tsx`。固定使用四列轨道及 1/2/3/4 跨列，不在窄屏自动换行；`QuickLaunchCard` 按应用实际需要选用，不是必选能力 |
 | 操作确认 | `smart-manage-web/src/domain/common/component/useOperationConfirm.ts`、`OperationConfirmProvider.tsx`、`OperationConfirmModal.tsx`；观察风险类型、遮罩行为、危险操作键盘限制和统一按钮区 |
-| 操作结果反馈 | `smart-manage-web/src/domain/common/component/useOperationFeedback.tsx`、`operationFeedbackPolicy.ts`；观察默认自动关闭、可选常驻与关闭按钮、语义颜色、最大宽度和稳定错误码分类 |
+| 操作结果反馈 | `smart-manage-web/src/domain/common/component/useOperationFeedback.tsx`、`operationFeedbackPolicy.ts` 和 `smart-manage-web/src/api/errorPresentation.ts`；观察默认自动关闭、可选常驻与关闭按钮、语义颜色、最大宽度及后端反馈级别/传输安全优先级 |
 | 公开 Service 与 TxService | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/service` |
 | 多事务入口复用写能力 | 用户保存与导入：`sm.domain.sys.base.user.service.UserTxService`、`UserImportTxService`、`UserWriter`；跨模块事务参与见 `FileArtifactRegistrar` |
 | 权限常量 | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/constant/PurchaseRequisitionPermission.java` |

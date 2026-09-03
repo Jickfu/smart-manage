@@ -35,6 +35,23 @@ URL 菜单入口必须复用侧边栏菜单的目标解析和工作台页签打�
 
 查询统一使用 `useQuery`，命令统一使用 `useMutation` 或项目领域命令封装。业务单据维护独立 Query Key Factory；命令成功后由领域 Mutation 统一处理缓存失效、详情回显和页签替换。
 
+## 请求错误协议与反馈
+
+`api/responseError.ts` 在请求边界校验响应，`ApiError` 分别保留 `source`、真实 `httpStatus`、后端 `apiCode`、`feedbackLevel`、用户说明和诊断 ID；不得把 HTTP 状态或 -1 塞进业务码。错误来源区分 API、HTTP、NETWORK、TIMEOUT、PROTOCOL 和 CLIENT；原始 Axios 取消对象不包装，解释策略识别为 CANCELED，且不显示错误。NETWORK 只表示没有获得可用响应，不推测 DNS、CORS 或断网的真实原因。
+
+| 响应 | 结果 |
+| --- | --- |
+| 2xx + 有效 Result，code=0 | 成功 |
+| 任意 HTTP 状态 + 有效失败 Result | API，保留实际 HTTP 状态和非零业务码 |
+| 非 2xx + 非 Result 或 code=0 | HTTP 失败，绝不当作成功 |
+| 2xx + HTML、null 或畸形 Result | PROTOCOL |
+
+Result 核心字段必须是对象自身的安全整数 `code`、字符串 `msg` 和存在的 `data`（允许 null）；`traceId` 缺失不改变业务失败身份，存在时只能为 string 或 null。失败响应的 `feedbackLevel` 缺失、未知或 null 时按 ERROR，不回退旧数字码级别表。
+
+Blob 响应只对 JSON/+json MIME 的非文件响应作至多 64 KiB 的文本解析，禁止嗅探任意文件正文。2xx 且带 attachment，或 inline 同时带 filename/filename* 的明确文件头保留原文件，支持合法 JSON 附件。裸 inline 不享有豁免；非 2xx 永不享有文件豁免。JSON Blob 中有效失败 Result 仍为 API；2xx 非法/超限 JSON 或“期待文件却收到成功 Result”为 PROTOCOL；非 2xx 解析失败/超限仍为 HTTP。
+
+`api/errorPresentation.ts` 统一解释反馈强度和安全文案，不选择具体 UI。普通可信 API 失败消费后端反馈级别；HTTP 5xx 和认证/权限等安全失败不能被 WARNING 弱化。稳定业务码仍用于认证、CSRF 和并发冲突的明确行为，不根据文案猜测类型。401 由请求层清理会话并跳转登录，CSRF 由专属通知处理，普通反馈必须抑制二次提示。未知、本地、传输和协议异常不透传底层 message、stack、请求参数或响应正文；附加 data 不自动展示，诊断 ID 只接受受控字符。
+
 ## 页面三层边界
 
 `domain/common/page` 是跨领域复用的页面框架，不是通用工具目录。目录按页面能力归组，组件、专属 Hook、辅助函数、样式和测试就近放置，不另建全局 `hooks`、`utils` 或聚合导出入口。能力分包使用小写名称，与具体页面组件目录的 PascalCase 约定区分。
