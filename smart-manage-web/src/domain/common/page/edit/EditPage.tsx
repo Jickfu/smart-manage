@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { OperationType, BillStatus } from '../types';
 import type { AccessResource, PermissionAction } from '../access';
 import { PermissionActions } from '../PermissionActions';
-import { EditPageShell } from './EditPageShell';
+import { EditPageShell } from '../EditPageShell';
 import { EditSectionCollapse } from './EditSectionCollapse';
 import { useBeforeCloseGuard } from '../useBeforeCloseGuard';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';

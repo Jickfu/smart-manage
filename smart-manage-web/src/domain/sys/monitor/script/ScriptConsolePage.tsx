@@ -4,7 +4,7 @@ import { Alert, Button, Empty, Select, Space, Splitter, Tag, Typography } from '
 import { ClearOutlined, PlayCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { EditPageShell } from '@/domain/common/page/edit/EditPageShell';
+import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
 import type { PageComponentProps } from '@/domain/common/page/types';

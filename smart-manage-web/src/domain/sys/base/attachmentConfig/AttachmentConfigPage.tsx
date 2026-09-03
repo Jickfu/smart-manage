@@ -4,7 +4,7 @@ import { Form, Input, InputNumber, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormListFieldData } from 'antd/es/form';
 import { useQuery } from '@tanstack/react-query';
-import { EditPageShell } from '@/domain/common/page/edit/EditPageShell';
+import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { EditSectionCollapse } from '@/domain/common/page/edit/EditSectionCollapse';
 import { EditSectionActionButton } from '@/domain/common/page/edit/EditSectionActionButton';
 import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';

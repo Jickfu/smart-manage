@@ -2,7 +2,7 @@ import { useOperationFeedback } from '@/domain/common/component/useOperationFeed
 import { useEffect, useState } from 'react';
 import { Form, Input, InputNumber, Select, Switch } from 'antd';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { EditPageShell } from '@/domain/common/page/edit/EditPageShell';
+import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { EditSectionCollapse } from '@/domain/common/page/edit/EditSectionCollapse';
 import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';

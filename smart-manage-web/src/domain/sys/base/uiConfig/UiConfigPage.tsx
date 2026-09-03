@@ -4,7 +4,7 @@ import { Form, Input, InputNumber, Select, Switch } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { activeUiConfigQueryKey } from '@/api/uiConfig';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { EditPageShell } from '@/domain/common/page/edit/EditPageShell';
+import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import { EditSectionCollapse } from '@/domain/common/page/edit/EditSectionCollapse';
 import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 import { PermissionActions } from '@/domain/common/page/PermissionActions';
