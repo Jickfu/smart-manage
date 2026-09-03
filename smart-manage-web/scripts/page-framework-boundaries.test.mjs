@@ -9,6 +9,7 @@ import {
 const pageRoot = 'domain/common/page';
 function fixture(entries = {}) {
   return {
+    sourceRoot: resolve('/workspace/smart-manage-web/src'),
     files: new Map(
       Object.entries({
         [`${pageRoot}/EditPageShell.tsx`]: 'export function EditPageShell() {}',
@@ -25,6 +26,15 @@ function rules(snapshot) {
 }
 
 describe('Page Framework 当前架构门禁', () => {
+  it('缺少绝对源根时拒绝检查，不悄悄使用错误坐标', () => {
+    expect(() => inspectPageFramework({ ...fixture(), sourceRoot: 'src' })).toThrow(
+      '绝对 sourceRoot',
+    );
+    expect(() => inspectPageFramework({ ...fixture(), sourceRoot: undefined })).toThrow(
+      '绝对 sourceRoot',
+    );
+  });
+
   it('当前真实 src 满足目录和直接依赖边界，并随 pnpm test 进入 CI', () => {
     const violations = inspectPageFramework(
       readPageFrameworkSources(resolve(import.meta.dirname, '../src')),
@@ -238,6 +248,59 @@ describe('Page Framework 当前架构门禁', () => {
         }),
       ),
     ).toEqual(expect.arrayContaining(['CAPABILITY_IMPORT', 'MISSING_TARGET']));
+  });
+
+  it.each([
+    '@//domain/common/page/list/Page',
+    '@/../src/domain/common/page/list/Page',
+    '../../../../../src/domain/common/page/list/Page',
+    '@/../../smart-manage-web/src/domain/common/page/list/Page',
+    '../../../../../../smart-manage-web/src/domain/common/page/list/Page',
+  ])('完整源根坐标阻止离开后重入绕过：%s', (specifier) => {
+    const violations = inspectPageFramework(
+      fixture({
+        [`${pageRoot}/edit/Test.ts`]: `import '${specifier}';`,
+        [`${pageRoot}/list/Page.ts`]: '',
+      }),
+    );
+    expect(violations).toContainEqual(
+      expect.objectContaining({
+        source: `${pageRoot}/edit/Test.ts`,
+        specifier,
+        target: `${pageRoot}/list/Page.ts`,
+        rule: expect.stringMatching(/^CROSS_FAMILY:/),
+      }),
+    );
+  });
+
+  it.each([
+    '@//domain/common/page/list/Page',
+    '@/../../smart-manage-web/src/domain/common/page/list/Page',
+    '../../../src/domain/common/page/list/Page',
+  ])('page 外重入路径也不能重新导出框架：%s', (specifier) => {
+    expect(
+      rules(
+        fixture({
+          'domain/example/replacement.ts': `export { Page } from '${specifier}';`,
+          [`${pageRoot}/list/Page.ts`]: '',
+        }),
+      ),
+    ).toContain('REEXPORT_ENTRY');
+  });
+
+  it.each([
+    '@/../outside/domain/common/page/list/Page',
+    '../../../../../outside/domain/common/page/list/Page',
+    '@/../src-other/domain/common/page/list/Page',
+  ])('真正位于 src 外的路径不误判为页面族依赖：%s', (specifier) => {
+    expect(
+      rules(
+        fixture({
+          [`${pageRoot}/edit/Test.ts`]: `import '${specifier}';`,
+          [`${pageRoot}/list/Page.ts`]: '',
+        }),
+      ),
+    ).toEqual([]);
   });
 
   it('明确不分析非字面量 dynamic import、CSS 内部 @import 或普通字符串', () => {

@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { join, posix } from 'node:path';
+import { isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 import ts from 'typescript';
 
 const pageRoot = 'domain/common/page';
@@ -18,13 +18,27 @@ function familyOf(file) {
 }
 
 // 先做词法规范化：已删除的旧入口也必须报架构错误，不能因解析失败而漏检。
-function canonicalPath(source, specifier) {
+function canonicalPath(sourceRoot, source, specifier) {
   const modulePath = specifier.split(/[?#]/)[0];
-  if (modulePath.startsWith('@/')) return posix.normalize(modulePath.slice(2));
-  if (modulePath.startsWith('.')) {
-    return posix.normalize(posix.join(posix.dirname(source), modulePath));
+  let target;
+  // 保留 src 以上的真实祖先，先离开再进入 src 的合法路径也要得到同一分类。
+  // 必须用 join：resolve 会把 @// 的剩余前导斜杠当成新的绝对根。
+  if (modulePath.startsWith('@/')) {
+    target = join(sourceRoot, modulePath.slice(2));
+  } else if (modulePath.startsWith('.')) {
+    target = join(sourceRoot, posix.dirname(source), modulePath);
+  } else {
+    return null;
   }
-  return null;
+  const relativeTarget = relative(sourceRoot, target);
+  if (
+    relativeTarget === '..' ||
+    relativeTarget.startsWith(`..${sep}`) ||
+    isAbsolute(relativeTarget)
+  ) {
+    return null;
+  }
+  return relativeTarget.split(sep).join('/');
 }
 
 function resolveTarget(canonical, files) {
@@ -64,7 +78,10 @@ function moduleReferences(sourceFile) {
 }
 
 /** 输入路径统一相对 src，使用正斜杠；规则只检查当前结构，不依赖 Git 历史。 */
-export function inspectPageFramework({ files, directories = [] }) {
+export function inspectPageFramework({ sourceRoot, files, directories = [] }) {
+  if (typeof sourceRoot !== 'string' || !isAbsolute(sourceRoot)) {
+    throw new Error('Page Framework 检查需要绝对 sourceRoot，不能丢失项目祖先坐标。');
+  }
   const violations = [];
   function report(source, rule, reference = {}) {
     violations.push({ source, line: 1, specifier: '', target: source, ...reference, rule });
@@ -103,7 +120,7 @@ export function inspectPageFramework({ files, directories = [] }) {
     const sourceFile = ts.createSourceFile(source, content, ts.ScriptTarget.Latest, true);
     const sourceFamily = familyOf(source);
     for (const reference of moduleReferences(sourceFile)) {
-      const canonical = canonicalPath(source, reference.specifier);
+      const canonical = canonicalPath(sourceRoot, source, reference.specifier);
       if (canonical === null || pagePath(canonical) === null) continue;
       const target = resolveTarget(canonical, files);
       const detail = { line: reference.line, specifier: reference.specifier, target };
@@ -141,21 +158,25 @@ export function inspectPageFramework({ files, directories = [] }) {
 
 /** 读取文件清单与 TS/TSX 内容；不解析 CSS 内部依赖，不计算传递依赖闭包。 */
 export function readPageFrameworkSources(sourceRoot) {
+  const absoluteSourceRoot = resolve(sourceRoot);
   const files = new Map();
   const directories = [];
   function visit(relative) {
-    for (const entry of readdirSync(join(sourceRoot, relative), { withFileTypes: true })) {
+    for (const entry of readdirSync(join(absoluteSourceRoot, relative), { withFileTypes: true })) {
       const file = posix.join(relative, entry.name);
       if (entry.isDirectory()) {
         directories.push(file);
         visit(file);
       } else if (entry.isFile()) {
-        files.set(file, /\.tsx?$/.test(file) ? readFileSync(join(sourceRoot, file), 'utf8') : '');
+        files.set(
+          file,
+          /\.tsx?$/.test(file) ? readFileSync(join(absoluteSourceRoot, file), 'utf8') : '',
+        );
       }
     }
   }
   visit('');
-  return { files, directories };
+  return { sourceRoot: absoluteSourceRoot, files, directories };
 }
 
 export function formatPageFrameworkViolations(violations) {
