@@ -1,4 +1,7 @@
 .sm-editable-detail-table {
+  /* 在表格边界捕获全局字号，避免 Select 的组件变量将其覆盖为 14px。 */
+  --sm-detail-font-size: var(--ant-font-size);
+
   width: 100%;
   min-width: 0;
 }
@@ -43,7 +46,7 @@
   width: 100%;
   border-radius: 0;
   /* 明细表属于经过验证的紧凑输入边界，不继承普通表单字段值的 14px。 */
-  font-size: var(--ant-font-size);
+  font-size: var(--sm-detail-font-size);
 }
 
 .sm-editable-detail-table .ant-input-number-input,
@@ -51,13 +54,13 @@
 .sm-editable-detail-table .ant-select-selection-item,
 .sm-editable-detail-table .ant-select-selection-placeholder,
 .sm-editable-detail-table .sm-ref-selector-trigger-input {
-  font-size: var(--ant-font-size);
+  font-size: var(--sm-detail-font-size);
 }
 
 .sm-editable-detail-table .ant-input,
 .sm-editable-detail-table .ant-input-number,
 .sm-editable-detail-table .ant-picker,
-.sm-editable-detail-table .ant-select .ant-select-selector,
+.sm-editable-detail-table .ant-select,
 .sm-editable-detail-table .sm-ref-selector-trigger,
 .sm-editable-detail-table .sm-icon-selector-trigger {
   background: var(--ant-color-bg-container) !important;
@@ -82,16 +85,8 @@
   .ant-input-number:not(.ant-input-number-disabled),
 .sm-editable-detail-table .ant-table-row:hover > td .ant-picker:not(.ant-picker-disabled),
 .sm-editable-detail-table .ant-table-row-selected > td .ant-picker:not(.ant-picker-disabled),
-.sm-editable-detail-table
-  .ant-table-row:hover
-  > td
-  .ant-select:not(.ant-select-disabled)
-  .ant-select-selector,
-.sm-editable-detail-table
-  .ant-table-row-selected
-  > td
-  .ant-select:not(.ant-select-disabled)
-  .ant-select-selector {
+.sm-editable-detail-table .ant-table-row:hover > td .ant-select:not(.ant-select-disabled),
+.sm-editable-detail-table .ant-table-row-selected > td .ant-select:not(.ant-select-disabled) {
   box-shadow: inset 0 0 0 1px var(--ant-color-border) !important;
 }
 
@@ -130,11 +125,7 @@
   > td
   .ant-input-number.ant-input-number.ant-input-number-focused,
 .sm-editable-detail-table .ant-table-row > td .ant-picker.ant-picker.ant-picker-focused,
-.sm-editable-detail-table
-  .ant-table-row
-  > td
-  .ant-select.ant-select.ant-select-focused
-  .ant-select-selector,
+.sm-editable-detail-table .ant-table-row > td .ant-select.ant-select.ant-select-focused,
 .sm-editable-detail-table
   .ant-table-row
   > td
@@ -145,7 +136,7 @@
 .sm-editable-detail-table .ant-form-item-has-error .ant-input:not(.sm-ref-selector-trigger-input),
 .sm-editable-detail-table .ant-form-item-has-error .ant-input-number,
 .sm-editable-detail-table .ant-form-item-has-error .ant-picker,
-.sm-editable-detail-table .ant-form-item-has-error .ant-select-selector {
+.sm-editable-detail-table .ant-form-item-has-error .ant-select {
   box-shadow: inset 0 0 0 1px var(--ant-color-error) !important;
 }
 
