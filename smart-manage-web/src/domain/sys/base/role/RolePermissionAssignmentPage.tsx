@@ -9,7 +9,7 @@ import {
   getAssignmentSelectionDiff,
   replaceAssignmentScope,
 } from '@/domain/common/page/assignmentSelection';
-import ListTree from '@/domain/common/page/ListTree';
+import ListTree from '@/domain/common/page/list/ListTree';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { permissionApi } from '@/domain/sys/base/permission/api';

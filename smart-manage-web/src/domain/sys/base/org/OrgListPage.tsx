@@ -4,12 +4,12 @@ import { useOperationConfirm } from '@/domain/common/component/useOperationConfi
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import ListPage from '@/domain/common/page/ListPage';
-import ListTreePanel from '@/domain/common/page/ListTreePanel';
-import ListTree from '@/domain/common/page/ListTree';
+import ListPage from '@/domain/common/page/list/ListPage';
+import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
+import ListTree from '@/domain/common/page/list/ListTree';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
-import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
+import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { orgApi } from './api';
 import OrgEditModal from './OrgEditModal';
@@ -17,7 +17,7 @@ import { orgAccess } from './permissions';
 import { orgQueryKeys } from './queryKeys';
 import type { OrgListVO, OrgTreeNode, OrgType } from './types';
 import './OrgListPage.css';
-import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import type { ListColumnFeatures } from '@/domain/common/page/list/listQuery';
 
 const columnFeatures: ListColumnFeatures = {
   number: { label: '编码', filter: { type: 'string' } },

@@ -4,9 +4,9 @@ import { useOperationConfirm } from '@/domain/common/component/useOperationConfi
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
 import { useQuery } from '@tanstack/react-query';
-import ListPage from '@/domain/common/page/ListPage';
-import ListTreePanel from '@/domain/common/page/ListTreePanel';
-import ListTree from '@/domain/common/page/ListTree';
+import ListPage from '@/domain/common/page/list/ListPage';
+import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
+import ListTree from '@/domain/common/page/list/ListTree';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { useMenuDeleteMutation } from './useMenuDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
@@ -20,7 +20,7 @@ import {
   serializeListFilters,
   type ListColumnFeatures,
   type ListFilterCondition,
-} from '@/domain/common/page/listQuery';
+} from '@/domain/common/page/list/listQuery';
 
 const columnFeatures: ListColumnFeatures = {
   number: { label: '编码', filter: { type: 'string' } },

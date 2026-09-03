@@ -5,11 +5,11 @@ import { useOperationConfirm } from '@/domain/common/component/useOperationConfi
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import ListPage from '@/domain/common/page/ListPage';
-import ListTree from '@/domain/common/page/ListTree';
-import ListTreePanel from '@/domain/common/page/ListTreePanel';
-import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
-import { useListSelection } from '@/domain/common/page/useListSelection';
+import ListPage from '@/domain/common/page/list/ListPage';
+import ListTree from '@/domain/common/page/list/ListTree';
+import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
+import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
+import { useListSelection } from '@/domain/common/page/list/useListSelection';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
 import { OperationType } from '@/domain/common/page/types';
@@ -22,7 +22,7 @@ import { numberRuleQueryKeys } from './queryKeys';
 import { parseNumberRuleScopeKey } from './scopeTree';
 import type { NumberRuleScope } from './scopeTree';
 import type { NumberReference, NumberRuleVO } from './types';
-import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import type { ListColumnFeatures } from '@/domain/common/page/list/listQuery';
 
 const columnFeatures: ListColumnFeatures = {
   ruleKey: { label: '规则键', filter: { type: 'string' }, sorter: true },

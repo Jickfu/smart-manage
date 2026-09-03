@@ -2,9 +2,9 @@ import { useCallback } from 'react';
 import { Button } from 'antd';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import type { ColumnsType } from 'antd/es/table';
-import ListPage from '@/domain/common/page/ListPage';
-import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
-import { useListSelection } from '@/domain/common/page/useListSelection';
+import ListPage from '@/domain/common/page/list/ListPage';
+import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
+import { useListSelection } from '@/domain/common/page/list/useListSelection';
 import { useRoleDeleteMutation } from './useRoleDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { getRegisteredTabTitle } from '@/domain/common/registry/componentRegistry';
@@ -15,7 +15,7 @@ import type { RoleListVO } from './types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { roleAccess } from './permissions';
-import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import type { ListColumnFeatures } from '@/domain/common/page/list/listQuery';
 
 /** 角色编辑页 componentKey */
 const ROLE_EDIT_KEY = componentKeys.roleEdit;

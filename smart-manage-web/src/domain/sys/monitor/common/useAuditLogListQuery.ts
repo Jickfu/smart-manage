@@ -3,8 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import type { QueryKey } from '@tanstack/react-query';
 import type { PageData } from '@/types/api';
 import type { AuditLogFilters, AuditLogListParams } from './types';
-import type { ListFilterCondition, ListSortCondition } from '@/domain/common/page/listQuery';
-import { serializeListFilters } from '@/domain/common/page/listQuery';
+import type { ListFilterCondition, ListSortCondition } from '@/domain/common/page/list/listQuery';
+import { serializeListFilters } from '@/domain/common/page/list/listQuery';
 
 interface Options<T, TFilters extends AuditLogFilters> {
   queryKey: (params: AuditLogListParams & Omit<TFilters, 'timeRange'>) => QueryKey;

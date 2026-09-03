@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
-import ListPage from '@/domain/common/page/ListPage';
-import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
+import ListPage from '@/domain/common/page/list/ListPage';
+import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -12,7 +12,7 @@ import { useWorkbenchStore } from '@/stores/workbench';
 import { emailApi } from './api';
 import { recordAccess } from './permissions';
 import type { EmailRecord } from './types';
-import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import type { ListColumnFeatures } from '@/domain/common/page/list/listQuery';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 const labels: Record<string, string> = {
   PENDING: '待发送',

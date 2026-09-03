@@ -1,8 +1,8 @@
 import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import ListPage from '@/domain/common/page/ListPage';
-import ListFilterSummary from '@/domain/common/page/ListFilterSummary';
-import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import ListPage from '@/domain/common/page/list/ListPage';
+import ListFilterSummary from '@/domain/common/page/list/ListFilterSummary';
+import type { ListColumnFeatures } from '@/domain/common/page/list/listQuery';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import AuditLogFilter from '@/domain/sys/monitor/common/AuditLogFilter';

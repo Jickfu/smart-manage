@@ -6,11 +6,11 @@ import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import ListPage from '@/domain/common/page/ListPage';
-import ListTreePanel from '@/domain/common/page/ListTreePanel';
-import ListTree from '@/domain/common/page/ListTree';
-import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
-import { useListSelection } from '@/domain/common/page/useListSelection';
+import ListPage from '@/domain/common/page/list/ListPage';
+import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
+import ListTree from '@/domain/common/page/list/ListTree';
+import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
+import { useListSelection } from '@/domain/common/page/list/useListSelection';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
@@ -25,7 +25,7 @@ import { sysParamApi } from './api';
 import { sysParamAccess } from './permissions';
 import { sysParamQueryKeys } from './queryKeys';
 import type { SysParamVO } from './types';
-import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import type { ListColumnFeatures } from '@/domain/common/page/list/listQuery';
 
 const columnFeatures: ListColumnFeatures = {
   number: { label: '编码', filter: { type: 'string' }, sorter: true },

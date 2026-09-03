@@ -3,7 +3,7 @@ import { Button, DatePicker, Select, Space, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
-import ListPage from '@/domain/common/page/ListPage';
+import ListPage from '@/domain/common/page/list/ListPage';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { OperationType } from '@/domain/common/page/types';
@@ -22,7 +22,7 @@ import {
   type ListColumnFeatures,
   type ListFilterCondition,
   type ListSortCondition,
-} from '@/domain/common/page/listQuery';
+} from '@/domain/common/page/list/listQuery';
 
 const DETAIL_KEY = componentKeys.scriptLogDetail;
 const statusColor = { SUCCESS: 'success', ERROR: 'error', TIMEOUT: 'warning' } as const;

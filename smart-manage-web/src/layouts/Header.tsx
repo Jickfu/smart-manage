@@ -22,7 +22,7 @@ import HeaderTabs from './HeaderTabs';
 import HeaderUserPanel from './HeaderUserPanel';
 import PersonalSettingsModal from './PersonalSettingsModal';
 import InboxHeaderButton from '@/domain/sys/message/inbox/InboxHeaderButton';
-import ListTableShell from '@/domain/common/page/ListTableShell';
+import ListTableShell from '@/domain/common/page/list/ListTableShell';
 import './Header.css';
 
 interface OrganizationTreeNode {

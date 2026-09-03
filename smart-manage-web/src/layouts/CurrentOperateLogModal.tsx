@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Button, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import AppModal from '@/domain/common/component/AppModal';
-import ListTableShell from '@/domain/common/page/ListTableShell';
+import ListTableShell from '@/domain/common/page/list/ListTableShell';
 import { operateLogApi } from '@/domain/sys/monitor/operateLog/api';
 import type { OperateLogListVO } from '@/domain/sys/monitor/operateLog/types';
 

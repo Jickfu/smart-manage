@@ -4,10 +4,10 @@ import { useOperationConfirm } from '@/domain/common/component/useOperationConfi
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
 import { useQuery } from '@tanstack/react-query';
-import ListPage from '@/domain/common/page/ListPage';
-import ListTree from '@/domain/common/page/ListTree';
-import ListTreePanel from '@/domain/common/page/ListTreePanel';
-import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
+import ListPage from '@/domain/common/page/list/ListPage';
+import ListTree from '@/domain/common/page/list/ListTree';
+import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
+import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { fetchAppsAll } from '@/domain/sys/base/app/api';
@@ -21,7 +21,7 @@ import { permissionAccess } from './permissions';
 import { permissionQueryKeys } from './queryKeys';
 import type { PermissionListVO } from './types';
 import { usePermissionDeleteMutation } from './usePermissionDeleteMutation';
-import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import type { ListColumnFeatures } from '@/domain/common/page/list/listQuery';
 
 const columnFeatures: ListColumnFeatures = {
   number: { label: '编码', filter: { type: 'string' }, sorter: true },

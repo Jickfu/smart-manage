@@ -1,8 +1,8 @@
 import { Button, Empty } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
-import ListTree from '@/domain/common/page/ListTree';
-import ListTreePanel from '@/domain/common/page/ListTreePanel';
+import ListTree from '@/domain/common/page/list/ListTree';
+import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
 
 interface SelectedPanelProps<T extends Record<string, unknown>> {
   selection: Map<string, T>;

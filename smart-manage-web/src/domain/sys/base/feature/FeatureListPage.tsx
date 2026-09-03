@@ -3,10 +3,10 @@ import { Button, Tag } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
-import ListPage from '@/domain/common/page/ListPage';
-import ListTree from '@/domain/common/page/ListTree';
-import ListTreePanel from '@/domain/common/page/ListTreePanel';
-import { useListPageQuery } from '@/domain/common/page/useListPageQuery';
+import ListPage from '@/domain/common/page/list/ListPage';
+import ListTree from '@/domain/common/page/list/ListTree';
+import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
+import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { fetchAppsAll } from '@/domain/sys/base/app/api';
 import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';
@@ -15,7 +15,7 @@ import FeatureEditPage from './FeatureEditPage';
 import { featureAccess } from './permissions';
 import { featureQueryKeys } from './queryKeys';
 import type { FeatureVO } from './types';
-import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
+import type { ListColumnFeatures } from '@/domain/common/page/list/listQuery';
 
 const columnFeatures: ListColumnFeatures = {
   featureKey: { label: '功能键', filter: { type: 'string' }, sorter: true },
