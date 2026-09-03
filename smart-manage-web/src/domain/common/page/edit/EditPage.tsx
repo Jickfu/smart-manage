@@ -3,15 +3,15 @@ import { Form } from 'antd';
 import type { FormInstance } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { ReactNode } from 'react';
-import { OperationType, BillStatus } from './types';
-import type { AccessResource, PermissionAction } from './access';
-import { PermissionActions } from './PermissionActions';
+import { OperationType, BillStatus } from '../types';
+import type { AccessResource, PermissionAction } from '../access';
+import { PermissionActions } from '../PermissionActions';
 import { EditPageShell } from './EditPageShell';
 import { EditSectionCollapse } from './EditSectionCollapse';
-import { useBeforeCloseGuard } from './useBeforeCloseGuard';
+import { useBeforeCloseGuard } from '../useBeforeCloseGuard';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import type { EditPageSection } from './editPageSection';
-import './EditPage.css';
+import '../pageLayout.css';
 
 /** 编辑字段公共属性 */
 export interface EditFieldBase {

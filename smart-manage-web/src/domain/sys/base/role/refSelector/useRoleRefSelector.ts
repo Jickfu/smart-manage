@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import type { RefSelectorFieldConfig } from '@/domain/common/page/EditPage';
-import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
+import type { RefSelectorFieldConfig } from '@/domain/common/page/edit/EditPage';
+import { defineRefSelector } from '@/domain/common/page/edit/defineRefSelector';
 import { roleApi } from '../api';
 import type { RoleSelectVO } from '../types';
 

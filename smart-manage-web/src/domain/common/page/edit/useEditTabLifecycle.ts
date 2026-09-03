@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useWorkbenchStore } from '@/stores/workbench';
-import { createBillTabKey } from './tabKeys';
-import { OperationType } from './types';
-import type { PageComponentProps } from './types';
+import { createBillTabKey } from '../tabKeys';
+import { OperationType } from '../types';
+import type { PageComponentProps } from '../types';
 
 type EditTabLifecycleProps = Pick<
   PageComponentProps,

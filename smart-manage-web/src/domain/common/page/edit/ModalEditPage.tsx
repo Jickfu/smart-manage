@@ -3,9 +3,9 @@ import { Spin, Button, Result, Form } from 'antd';
 import AppModal from '@/domain/common/component/AppModal';
 import type { EditField } from './EditPage';
 import { EditFormFields } from './EditFormFields';
-import type { AccessResource } from './access';
-import { PermissionActions } from './PermissionActions';
-import './EditPage.css';
+import type { AccessResource } from '../access';
+import { PermissionActions } from '../PermissionActions';
+import '../pageLayout.css';
 import './ModalEditPage.css';
 
 interface ModalEditPageProps {

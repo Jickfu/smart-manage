@@ -1,9 +1,9 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { EditField } from '@/domain/common/page/EditPage';
-import EditPage from '@/domain/common/page/EditPage';
-import { editFormSection } from '@/domain/common/page/editPageSection';
+import type { EditField } from '@/domain/common/page/edit/EditPage';
+import EditPage from '@/domain/common/page/edit/EditPage';
+import { editFormSection } from '@/domain/common/page/edit/editPageSection';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { OperationType } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';

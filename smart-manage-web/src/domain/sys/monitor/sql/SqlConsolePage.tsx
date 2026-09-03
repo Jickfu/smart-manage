@@ -5,7 +5,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { PlayCircleOutlined, ClearOutlined } from '@ant-design/icons';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import type { PageComponentProps } from '@/domain/common/page/types';
-import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { EditPageShell } from '@/domain/common/page/edit/EditPageShell';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
 import { sqlApi } from './api';
 import { sqlAccess } from './permissions';

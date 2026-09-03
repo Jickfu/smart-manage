@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import ModalEditPage from '@/domain/common/page/ModalEditPage';
-import type { EditField } from '@/domain/common/page/EditPage';
+import ModalEditPage from '@/domain/common/page/edit/ModalEditPage';
+import type { EditField } from '@/domain/common/page/edit/EditPage';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { domainApi } from '@/domain/sys/base/domain/api';
 import { domainQueryKeys } from '@/domain/sys/base/domain/queryKeys';

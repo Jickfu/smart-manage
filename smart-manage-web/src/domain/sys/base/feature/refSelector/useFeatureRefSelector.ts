@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
+import { defineRefSelector } from '@/domain/common/page/edit/defineRefSelector';
 import { fetchAppsAll } from '@/domain/sys/base/app/api';
 import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';
 import { featureApi } from '../api';

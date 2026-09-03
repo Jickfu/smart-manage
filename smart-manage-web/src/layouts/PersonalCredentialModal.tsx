@@ -4,7 +4,7 @@ import { Button, Form, Input, Select } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { sm2 } from 'sm-crypto';
 import AppModal from '@/domain/common/component/AppModal';
-import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 import {
   getCurrentPasswordPublicKey,
   updateCurrentUserContact,

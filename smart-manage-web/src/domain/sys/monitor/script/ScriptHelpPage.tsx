@@ -15,7 +15,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { CopyOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { EditPageShell } from '@/domain/common/page/edit/EditPageShell';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { scriptApi } from './api';
 import { scriptQueryKeys } from './queryKeys';

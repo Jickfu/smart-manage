@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PageComponentProps } from '@/domain/common/page/types';
-import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { EditPageShell } from '@/domain/common/page/edit/EditPageShell';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';

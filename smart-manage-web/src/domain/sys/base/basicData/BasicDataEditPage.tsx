@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import EditPage from '@/domain/common/page/EditPage';
-import { editFormSection } from '@/domain/common/page/editPageSection';
-import type { EditField } from '@/domain/common/page/EditPage';
+import EditPage from '@/domain/common/page/edit/EditPage';
+import { editFormSection } from '@/domain/common/page/edit/editPageSection';
+import type { EditField } from '@/domain/common/page/edit/EditPage';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import { OperationType } from '@/domain/common/page/types';

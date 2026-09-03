@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Alert, Button, Card, Progress, Space, Statistic, Switch, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
-import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { EditPageShell } from '@/domain/common/page/edit/EditPageShell';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { cacheApi } from './api';
 import { cacheQueryKeys } from './queryKeys';

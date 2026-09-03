@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OperationType } from '@/domain/common/page/types';
 import { createBillTabKey, createExternalLinkTabKey } from '@/domain/common/page/tabKeys';
-import { createEditTabLifecycle } from '@/domain/common/page/useEditTabLifecycle';
+import { createEditTabLifecycle } from '@/domain/common/page/edit/useEditTabLifecycle';
 import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import type { AppVO } from '@/domain/sys/base/app/types';
 import { useWorkbenchStore } from './workbench';

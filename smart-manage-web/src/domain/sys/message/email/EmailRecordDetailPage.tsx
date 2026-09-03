@@ -1,6 +1,6 @@
 import { Collapse, Descriptions, Table, Tag } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { EditPageShell } from '@/domain/common/page/edit/EditPageShell';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { emailApi } from './api';
 import './EmailPage.css';

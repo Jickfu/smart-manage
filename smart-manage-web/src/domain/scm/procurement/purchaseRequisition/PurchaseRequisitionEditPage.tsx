@@ -4,19 +4,19 @@ import { DatePicker, Form, Input, InputNumber } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormListFieldData, FormListOperation } from 'antd/es/form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import EditPage from '@/domain/common/page/EditPage';
-import type { EditField } from '@/domain/common/page/EditPage';
-import { EditFormFields } from '@/domain/common/page/EditFormFields';
+import EditPage from '@/domain/common/page/edit/EditPage';
+import type { EditField } from '@/domain/common/page/edit/EditPage';
+import { EditFormFields } from '@/domain/common/page/edit/EditFormFields';
 import { BusinessAttachmentPanel } from '@/domain/common/attachment/BusinessAttachmentPanel';
-import { useEditAttachments } from '@/domain/common/page/useEditAttachments';
+import { useEditAttachments } from '@/domain/common/page/edit/useEditAttachments';
 import {
   getDatePickerValueProps,
   normalizeDatePickerValue,
-} from '@/domain/common/page/dateFormValue';
+} from '@/domain/common/page/edit/dateFormValue';
 import { BillStatus, OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { EditSectionActionButton } from '@/domain/common/page/EditSectionActionButton';
+import { EditSectionActionButton } from '@/domain/common/page/edit/EditSectionActionButton';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
 import {

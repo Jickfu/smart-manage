@@ -2,15 +2,15 @@ import { useOperationFeedback } from '@/domain/common/component/useOperationFeed
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { useEditTabLifecycle } from '@/domain/common/page/useEditTabLifecycle';
+import { useEditTabLifecycle } from '@/domain/common/page/edit/useEditTabLifecycle';
 import {
   getEditSavePostCommitFeedback,
   runEditSavePostCommit,
-} from '@/domain/common/page/editSavePostCommit';
-import EditPage from '@/domain/common/page/EditPage';
-import { editFormSection } from '@/domain/common/page/editPageSection';
+} from '@/domain/common/page/edit/editSavePostCommit';
+import EditPage from '@/domain/common/page/edit/EditPage';
+import { editFormSection } from '@/domain/common/page/edit/editPageSection';
 import { OperationType } from '@/domain/common/page/types';
-import type { EditField } from '@/domain/common/page/EditPage';
+import type { EditField } from '@/domain/common/page/edit/EditPage';
 import { roleApi } from './api';
 import { roleAccess } from './permissions';
 import { roleQueryKeys } from './queryKeys';

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import { Button, DatePicker, Form, Input, Select, Table } from 'antd';
 import AppModal from '@/domain/common/component/AppModal';
-import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 import { updateCurrentUserProfile } from '@/api/user';
 import type { UserInfoVO } from '@/types/api';
 

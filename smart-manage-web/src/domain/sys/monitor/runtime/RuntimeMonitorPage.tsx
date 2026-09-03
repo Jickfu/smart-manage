@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { EChartsCoreOption } from 'echarts/core';
-import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { EditPageShell } from '@/domain/common/page/edit/EditPageShell';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { runtimeMonitorApi } from './api';
 import { runtimeMonitorQueryKeys as keys } from './queryKeys';

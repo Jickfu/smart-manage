@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { RefSelectorFieldConfig } from '@/domain/common/page/EditPage';
-import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
+import type { RefSelectorFieldConfig } from '@/domain/common/page/edit/EditPage';
+import { defineRefSelector } from '@/domain/common/page/edit/defineRefSelector';
 import { basicDataApi } from '../api';
 import { basicDataQueryKeys } from '../queryKeys';
 import type { BasicDataCategory, BasicDataOption } from '../types';

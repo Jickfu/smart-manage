@@ -3,7 +3,7 @@ import { Button, Result, Spin } from 'antd';
 import type { AccessResource } from './access';
 import { PermissionActions } from './PermissionActions';
 import { useBeforeCloseGuard } from './useBeforeCloseGuard';
-import './EditPage.css';
+import './pageLayout.css';
 import './AssignmentPage.css';
 
 interface AssignmentPageProps {

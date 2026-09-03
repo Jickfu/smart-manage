@@ -2,17 +2,17 @@ import { useOperationFeedback } from '@/domain/common/component/useOperationFeed
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { useEditTabLifecycle } from '@/domain/common/page/useEditTabLifecycle';
+import { useEditTabLifecycle } from '@/domain/common/page/edit/useEditTabLifecycle';
 import {
   getEditSavePostCommitFeedback,
   runEditSavePostCommit,
-} from '@/domain/common/page/editSavePostCommit';
-import type { EditField } from '@/domain/common/page/EditPage';
-import EditPage from '@/domain/common/page/EditPage';
-import { editFormSection } from '@/domain/common/page/editPageSection';
+} from '@/domain/common/page/edit/editSavePostCommit';
+import type { EditField } from '@/domain/common/page/edit/EditPage';
+import EditPage from '@/domain/common/page/edit/EditPage';
+import { editFormSection } from '@/domain/common/page/edit/editPageSection';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { OperationType } from '@/domain/common/page/types';
-import { defineRefSelector } from '@/domain/common/page/defineRefSelector';
+import { defineRefSelector } from '@/domain/common/page/edit/defineRefSelector';
 import { appApi } from './api';
 import { appAccess } from './permissions';
 import { appQueryKeys } from './queryKeys';

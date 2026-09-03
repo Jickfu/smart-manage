@@ -2,9 +2,9 @@ import { useOperationFeedback } from '@/domain/common/component/useOperationFeed
 import { useMemo } from 'react';
 import { Form } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import EditPage from '@/domain/common/page/EditPage';
-import type { EditField } from '@/domain/common/page/EditPage';
-import { EditFormFields } from '@/domain/common/page/EditFormFields';
+import EditPage from '@/domain/common/page/edit/EditPage';
+import type { EditField } from '@/domain/common/page/edit/EditPage';
+import { EditFormFields } from '@/domain/common/page/edit/EditFormFields';
 import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
 import { createBillTabKey } from '@/domain/common/page/tabKeys';
 import type { PageComponentProps } from '@/domain/common/page/types';

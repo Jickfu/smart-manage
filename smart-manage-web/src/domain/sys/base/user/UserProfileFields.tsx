@@ -3,7 +3,7 @@ import { Button, DatePicker, Form, Input, Select, Upload } from 'antd';
 import type { UploadProps } from 'antd';
 import { businessAttachmentApi } from '@/domain/common/attachment/api';
 import { UserAvatar } from './UserAvatar';
-import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 
 interface UserProfileFieldsProps {
   editable: boolean;

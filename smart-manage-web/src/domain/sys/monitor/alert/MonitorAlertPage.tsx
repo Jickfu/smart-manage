@@ -13,8 +13,8 @@ import {
 } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PageComponentProps } from '@/domain/common/page/types';
-import { EditPageShell } from '@/domain/common/page/EditPageShell';
-import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
+import { EditPageShell } from '@/domain/common/page/edit/EditPageShell';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 import AppModal from '@/domain/common/component/AppModal';
 import RefSelector from '@/domain/common/component/RefSelector';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';

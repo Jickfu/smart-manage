@@ -27,7 +27,7 @@ import type { UserAssignmentVO, UserListVO } from './types';
 import { userAccess } from './permissions';
 import { UserAvatar } from './UserAvatar';
 import AppModal from '@/domain/common/component/AppModal';
-import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/FormFieldLayout';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 import './UserListPage.css';
 import type { ListColumnFeatures } from '@/domain/common/page/listQuery';
 import { serializeListFilters } from '@/domain/common/page/listQuery';

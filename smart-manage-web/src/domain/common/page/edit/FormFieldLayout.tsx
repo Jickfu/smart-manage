@@ -19,7 +19,7 @@ interface FormFieldCellProps {
  * 通用字段容器。
  *
  * 仅封装已经调优的 sm-edit-fields 布局结构；字段换列和宽度计算仍由
- * EditPage.css 中的既有容器查询负责。
+ * FormFieldLayout.css 中的既有容器查询负责。
  */
 export function FormFieldGrid({ children, maxColumns = 4 }: FormFieldGridProps) {
   const className = [
