@@ -8,7 +8,7 @@ import ListPage from '@/domain/common/page/list/ListPage';
 import ListTree from '@/domain/common/page/list/ListTree';
 import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
 import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
-import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { usePermissionAccess } from '@/domain/common/page/access/usePermissionAccess';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { fetchAppsAll } from '@/domain/sys/base/app/api';
 import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';

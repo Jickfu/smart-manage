@@ -1,8 +1,8 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { createBillTabKey } from '@/domain/common/page/tabKeys';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
+import { createBillTabKey } from '@/domain/common/page/tab/tabKeys';
 import EditPage from '@/domain/common/page/edit/EditPage';
 import { editFormSection } from '@/domain/common/page/edit/editPageSection';
 import { OperationType } from '@/domain/common/page/types';

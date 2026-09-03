@@ -1,4 +1,4 @@
-import { defineAccessResource } from '@/domain/common/page/access';
+import { defineAccessResource } from '@/domain/common/page/access/access';
 export const accountAccess = defineAccessResource('sys:message:email-account', {
   listPage: 'listPage',
   detail: 'detail',

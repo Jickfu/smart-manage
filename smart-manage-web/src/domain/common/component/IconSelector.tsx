@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ComponentType, KeyboardEvent } from 'react';
 import { Button, Empty, Input, Pagination, Segmented, Spin } from 'antd';
 import { CloseOutlined, SearchOutlined } from '@ant-design/icons';
-import { loadAllIcons, resolveIcon } from '@/domain/common/page/iconResolver';
+import { loadAllIcons, resolveIcon } from '@/domain/common/component/iconResolver';
 import AppModal from './AppModal';
 import './IconSelector.css';
 

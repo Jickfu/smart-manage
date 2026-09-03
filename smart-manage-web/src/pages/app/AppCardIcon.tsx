@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import type { RefCallback } from 'react';
 import { AppstoreOutlined } from '@ant-design/icons';
-import { resolveIcon } from '@/domain/common/page/iconResolver';
+import { resolveIcon } from '@/domain/common/component/iconResolver';
 
 interface AppCardIconProps {
   icon: string | undefined;

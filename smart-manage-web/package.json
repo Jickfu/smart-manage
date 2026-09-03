@@ -13,6 +13,7 @@
     "gen:registry": "node scripts/gen-registry.mjs",
     "gen:sm2": "node scripts/gen-sm2-browser.mjs",
     "verify:permissions": "node scripts/verify-permissions.mjs",
+    "verify:page-framework": "node scripts/verify-page-framework.mjs",
     "prebuild": "pnpm gen:registry && pnpm gen:sm2",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",

@@ -18,7 +18,7 @@ import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFiel
 import AppModal from '@/domain/common/component/AppModal';
 import RefSelector from '@/domain/common/component/RefSelector';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
-import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { usePermissionAccess } from '@/domain/common/page/access/usePermissionAccess';
 import { useUserRefSelector } from '@/domain/sys/base/user/refSelector/useUserRefSelector';
 import { monitorAlertApi } from './api';
 import { monitorAlertQueryKeys as keys } from './queryKeys';

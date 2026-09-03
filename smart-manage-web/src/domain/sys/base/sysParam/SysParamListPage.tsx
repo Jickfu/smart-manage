@@ -5,7 +5,7 @@ import { useOperationConfirm } from '@/domain/common/component/useOperationConfi
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import ListPage from '@/domain/common/page/list/ListPage';
 import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
 import ListTree from '@/domain/common/page/list/ListTree';

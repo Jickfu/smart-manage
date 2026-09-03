@@ -63,6 +63,18 @@ pnpm test
 pnpm build
 ```
 
+`pnpm test` 包含页面框架的真实仓库扫描与正反例架构测试。门禁与独立命令共用 `scripts/page-framework-boundaries.mjs`，检查 `common/page` 的根文件/能力目录白名单、聚合与旧平铺入口以及页面族直接依赖；规则范围见[前端架构](../architecture/frontend.md)。测试不依赖 Git 历史或固定迁移基线，随现有前端 CI 执行。单独排查时运行：
+
+```bash
+pnpm verify:page-framework
+```
+
+新增门禁脚本和测试的格式检查：
+
+```bash
+pnpm exec prettier --check "scripts/*page-framework*.mjs"
+```
+
 涉及页面注册时执行：
 
 ```bash

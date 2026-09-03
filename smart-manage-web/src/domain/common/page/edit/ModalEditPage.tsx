@@ -3,8 +3,8 @@ import { Spin, Button, Result, Form } from 'antd';
 import AppModal from '@/domain/common/component/AppModal';
 import type { EditField } from './EditPage';
 import { EditFormFields } from './EditFormFields';
-import type { AccessResource } from '../access';
-import { PermissionActions } from '../PermissionActions';
+import type { AccessResource } from '../access/access';
+import { PermissionActions } from '../access/PermissionActions';
 import '../pageLayout.css';
 import './ModalEditPage.css';
 

@@ -5,7 +5,7 @@ import { editFormSection } from '@/domain/common/page/edit/editPageSection';
 import type { EditField } from '@/domain/common/page/edit/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { useUserRefSelector } from '@/domain/sys/base/user/refSelector/useUserRefSelector';
 import { useEmailAccountRefSelector } from './refSelector/useEmailAccountRefSelector';
 import { emailApi } from './api';

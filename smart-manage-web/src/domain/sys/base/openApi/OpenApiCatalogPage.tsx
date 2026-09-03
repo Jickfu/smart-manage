@@ -6,7 +6,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/list/ListPage';
 import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import AppModal from '@/domain/common/component/AppModal';

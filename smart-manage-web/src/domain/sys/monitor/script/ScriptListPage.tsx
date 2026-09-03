@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import ListPage from '@/domain/common/page/list/ListPage';
 import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
 import type { PageComponentProps } from '@/domain/common/page/types';

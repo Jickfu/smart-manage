@@ -1,4 +1,4 @@
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import type { FileArtifactReference } from '@/domain/common/fileArtifactApi';
 import { downloadFileArtifact } from '@/domain/common/fileArtifactApi';
 

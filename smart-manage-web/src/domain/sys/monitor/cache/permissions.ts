@@ -1,4 +1,4 @@
-import { defineAccessResource } from '@/domain/common/page/access';
+import { defineAccessResource } from '@/domain/common/page/access/access';
 
 export const cacheAccess = defineAccessResource('sys:monitor:cache', {
   save: 'listPage',

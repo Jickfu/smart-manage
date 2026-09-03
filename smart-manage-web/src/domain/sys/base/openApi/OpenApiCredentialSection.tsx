@@ -7,7 +7,7 @@ import AppModal from '@/domain/common/component/AppModal';
 import { EditableDetailTable } from '@/domain/common/component/EditableDetailTable';
 import { EditFormFields } from '@/domain/common/page/edit/EditFormFields';
 import type { EditField } from '@/domain/common/page/edit/EditPage';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { openApiPlatformApi } from './api';
 import { formatCredentialExpiresAt } from './credentialForm';

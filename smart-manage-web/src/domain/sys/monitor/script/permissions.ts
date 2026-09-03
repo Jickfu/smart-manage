@@ -1,4 +1,4 @@
-import { defineAccessResource } from '@/domain/common/page/access';
+import { defineAccessResource } from '@/domain/common/page/access/access';
 
 export const scriptAccess = defineAccessResource('sys:monitor:script', {
   execute: 'execute',

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Button, Result, Spin } from 'antd';
 import './pageLayout.css';
-import { usePageTabTitle } from './usePageTabTitle';
+import { usePageTabTitle } from './tab/usePageTabTitle';
 
 interface EditPageShellProps {
   title: string;

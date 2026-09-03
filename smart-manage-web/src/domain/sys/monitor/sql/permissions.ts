@@ -1,4 +1,4 @@
-import { defineAccessResource } from '@/domain/common/page/access';
+import { defineAccessResource } from '@/domain/common/page/access/access';
 
 export const sqlAccess = defineAccessResource('sys:monitor:sql', {
   execute: 'execute',

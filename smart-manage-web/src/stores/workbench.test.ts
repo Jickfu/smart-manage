@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OperationType } from '@/domain/common/page/types';
-import { createBillTabKey, createExternalLinkTabKey } from '@/domain/common/page/tabKeys';
+import { createBillTabKey, createExternalLinkTabKey } from '@/domain/common/page/tab/tabKeys';
 import { createEditTabLifecycle } from '@/domain/common/page/edit/useEditTabLifecycle';
 import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import type { AppVO } from '@/domain/sys/base/app/types';

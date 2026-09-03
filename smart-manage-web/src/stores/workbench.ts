@@ -4,7 +4,7 @@ import {
   createBillTabKey,
   createExternalLinkTabKey,
   createListTabKey,
-} from '@/domain/common/page/tabKeys';
+} from '@/domain/common/page/tab/tabKeys';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageType } from '@/domain/common/page/types';
 import type { AppVO } from '@/domain/sys/base/app/types';

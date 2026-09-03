@@ -3,7 +3,7 @@ import { Button, Empty, List, Segmented, Spin, Tag, Typography } from 'antd';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import AppModal from '@/domain/common/component/AppModal';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { inboxApi } from './api';
 import { inboxQueryKeys } from './queryKeys';

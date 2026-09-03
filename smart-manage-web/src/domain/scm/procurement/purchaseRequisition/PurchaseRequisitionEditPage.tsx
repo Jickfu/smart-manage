@@ -15,9 +15,9 @@ import {
 } from '@/domain/common/page/edit/dateFormValue';
 import { BillStatus, OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { EditSectionActionButton } from '@/domain/common/page/edit/EditSectionActionButton';
-import { createBillTabKey } from '@/domain/common/page/tabKeys';
+import { createBillTabKey } from '@/domain/common/page/tab/tabKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
 import {
   EditableDetailTable,

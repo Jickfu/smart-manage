@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/list/ListPage';
 import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
 import ListTree from '@/domain/common/page/list/ListTree';
-import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
+import { useEnabledMutation } from '@/domain/common/page/command/useEnabledMutation';
 import { useMenuDeleteMutation } from './useMenuDeleteMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
 import type { PageComponentProps } from '@/domain/common/page/types';

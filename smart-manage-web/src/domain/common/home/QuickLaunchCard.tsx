@@ -6,7 +6,7 @@ import type { TreeDataNode, TreeProps } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import AppModal from '@/domain/common/component/AppModal';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
-import { resolveIcon } from '@/domain/common/page/iconResolver';
+import { resolveIcon } from '@/domain/common/component/iconResolver';
 import { quickLaunchApi, quickLaunchQueryKeys } from '@/domain/sys/base/user/quickLaunchApi';
 import type {
   HomeQuickLaunchScope,

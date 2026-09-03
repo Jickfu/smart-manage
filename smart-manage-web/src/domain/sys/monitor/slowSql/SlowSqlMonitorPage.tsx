@@ -15,8 +15,8 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
+import { usePermissionAccess } from '@/domain/common/page/access/usePermissionAccess';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import { slowSqlApi } from './api';
 import { slowSqlAccess } from './permissions';

@@ -5,7 +5,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useQueryClient } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/list/ListPage';
 import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';

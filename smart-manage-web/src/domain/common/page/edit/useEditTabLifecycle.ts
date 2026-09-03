@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useWorkbenchStore } from '@/stores/workbench';
-import { createBillTabKey } from '../tabKeys';
+import { createBillTabKey } from '../tab/tabKeys';
 import { OperationType } from '../types';
 import type { PageComponentProps } from '../types';
 

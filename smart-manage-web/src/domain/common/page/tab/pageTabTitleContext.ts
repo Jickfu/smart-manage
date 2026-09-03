@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { PageType } from './types';
+import type { PageType } from '../types';
 
 export interface PageTabTitleContextValue {
   pageType: PageType;

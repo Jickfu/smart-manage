@@ -2,7 +2,7 @@ import { Suspense, useCallback } from 'react';
 import { Empty, Result, Spin, Typography } from 'antd';
 import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import type { OperationType, PageType } from '@/domain/common/page/types';
-import { PageTabTitleProvider } from '@/domain/common/page/PageTabTitleProvider';
+import { PageTabTitleProvider } from '@/domain/common/page/tab/PageTabTitleProvider';
 import { useWorkbenchStore } from '@/stores/workbench';
 import './PageRenderer.css';
 

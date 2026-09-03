@@ -16,8 +16,8 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
-import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
+import { usePermissionAccess } from '@/domain/common/page/access/usePermissionAccess';
 import { threadDiagnosticApi } from './api';
 import { formatCpuUsage } from './formatters';
 import { threadDiagnosticAccess } from './permissions';

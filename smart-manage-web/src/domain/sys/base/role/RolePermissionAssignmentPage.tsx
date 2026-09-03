@@ -3,14 +3,14 @@ import { Button, Checkbox, Table } from 'antd';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AssignmentPage } from '@/domain/common/page/AssignmentPage';
-import { AssignmentSelectionPanel } from '@/domain/common/page/AssignmentSelectionPanel';
+import { AssignmentPage } from '@/domain/common/page/assignment/AssignmentPage';
+import { AssignmentSelectionPanel } from '@/domain/common/page/assignment/AssignmentSelectionPanel';
 import {
   getAssignmentSelectionDiff,
   replaceAssignmentScope,
-} from '@/domain/common/page/assignmentSelection';
+} from '@/domain/common/page/assignment/assignmentSelection';
 import ListTree from '@/domain/common/page/list/ListTree';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { permissionApi } from '@/domain/sys/base/permission/api';
 import { permissionQueryKeys } from '@/domain/sys/base/permission/queryKeys';

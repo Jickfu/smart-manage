@@ -1,6 +1,6 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { menuApi } from './api';
 import { menuQueryKeys } from './queryKeys';
 

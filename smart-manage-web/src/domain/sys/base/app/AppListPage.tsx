@@ -7,7 +7,7 @@ import ListPage from '@/domain/common/page/list/ListPage';
 import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
 import ListTree from '@/domain/common/page/list/ListTree';
 import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
-import { useEnabledMutation } from '@/domain/common/page/useEnabledMutation';
+import { useEnabledMutation } from '@/domain/common/page/command/useEnabledMutation';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { OperationType } from '@/domain/common/page/types';
 import { fetchAppsAll, appApi } from './api';

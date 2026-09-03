@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { Button, Result, Spin } from 'antd';
-import type { AccessResource } from './access';
-import { PermissionActions } from './PermissionActions';
-import { useBeforeCloseGuard } from './useBeforeCloseGuard';
-import './pageLayout.css';
+import type { AccessResource } from '../access/access';
+import { PermissionActions } from '../access/PermissionActions';
+import { useBeforeCloseGuard } from '../tab/useBeforeCloseGuard';
+import '../pageLayout.css';
 import './AssignmentPage.css';
 
 interface AssignmentPageProps {

@@ -1,7 +1,7 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCommandMutation } from '@/domain/common/page/useCommandMutation';
+import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { useEditTabLifecycle } from '@/domain/common/page/edit/useEditTabLifecycle';
 import {
   getEditSavePostCommitFeedback,

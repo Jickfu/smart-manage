@@ -1,6 +1,6 @@
 import { Button, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
-import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { usePermissionAccess } from '@/domain/common/page/access/usePermissionAccess';
 
 export type DataExportLayout = 'EXPORT_TEMPLATE' | 'IMPORT_TEMPLATE';
 

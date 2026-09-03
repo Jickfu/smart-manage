@@ -47,6 +47,28 @@ URL 菜单入口必须复用侧边栏菜单的目标解析和工作台页签打�
 
 `page/pageLayout.css` 是编辑页、分配页及相关页面共同使用的布局样式，包含既有 `sm-edit-*` 布局与折叠区规则，不属于某一个 Shell 组件。其余专属 CSS 与组件同目录。公共能力移动时直接更新引用，不保留旧路径兼容导出。
 
+`page` 根级只保留 `types.ts`、`pageLayout.css`、`EditPageShell.tsx` 三个共享文件及以下六个能力目录：
+
+| 目录 | 所有权 |
+| --- | --- |
+| `edit/` | 编辑页、弹框编辑、字段与编辑生命周期 |
+| `list/` | 列表、过滤查询、列设置、树与选择状态 |
+| `assignment/` | 关系分配页面、候选与已选区域及选择辅助函数 |
+| `access/` | 页面权限协议、权限查询与权限操作按钮 |
+| `command/` | 通用命令 Mutation 与启停命令封装，不承载业务命令参数 |
+| `tab/` | 页签键、标题上下文及关闭保护；编辑保存后的页签适配仍归 `edit/` |
+
+`iconResolver` 与 `IconSelector` 同属既有 `common/component/`，不再放入页面框架。具体领域的页面、Hook 和 Mutation 仍归业务模块，不因本次归组继续上提。
+
+页面框架的直接依赖规则如下：
+
+- `edit`、`list`、`assignment` 三个具体页面族之间不得直接互相依赖，可使用 `access`、`command`、`tab` 及根级共享文件。
+- `access`、`command`、`tab`、根级共享 Shell 和 `types.ts` 不得反向依赖三个具体页面族。
+- 同一能力内允许就近复用。业务页面和已有 `common/component` 可使用页面能力，例如 `RefSelectorPanels` 复用列表树；不计算 `edit → component → list` 这样的传递依赖，不借目录治理拆改现有组件。
+- `page/**` 下禁止 `index.ts/tsx`；整个 `src` 不得通过 `export ... from` 或 `export * from` 重新导出页面框架目标建立替代入口。本文件声明的普通导出不受影响。
+
+门禁使用 TypeScript AST 检查当前 TS/TSX 的静态导入（含类型与 CSS 副作用导入）、直接重新导出、`import('...').Type` 及字面量动态导入，统一规范化别名与相对路径，旧平铺路径即使文件不存在也会拒绝。不分析非字面量动态导入、CSS 内部 `@import` 或传递依赖；不保存迁移前的历史代码快照。验证方式统一见[质量验证](../development/verification.md)。
+
 - 页面壳层只负责布局、加载、错误、权限和按钮区。
 - 表单或列表基础组件负责字段、过滤器、表格和引用选择器。
 - 领域页面负责状态流转、Mutation、明细聚合和业务命令。

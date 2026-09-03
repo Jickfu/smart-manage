@@ -28,7 +28,7 @@ import {
 } from './formatters';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
-import { usePermissionAccess } from '@/domain/common/page/usePermissionAccess';
+import { usePermissionAccess } from '@/domain/common/page/access/usePermissionAccess';
 import { runtimeMonitorAccess } from './permissions';
 import './runtimeMonitor.css';
 

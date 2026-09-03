@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
-import type { PageType } from './types';
+import type { PageType } from '../types';
 import { PageTabTitleContext } from './pageTabTitleContext';
 
 interface PageTabTitleProviderProps {
