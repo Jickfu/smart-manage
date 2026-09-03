@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { act, type ComponentProps } from 'react';
+import { act, useMemo, type ComponentProps } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Form, Input } from 'antd';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EditPage from './EditPage';
 import ModalEditPage from './ModalEditPage';
@@ -27,6 +27,7 @@ let container: HTMLDivElement;
 let root: Root;
 let queryClient: QueryClient;
 const denied = new ApiError({ source: 'API', message: '无权访问', apiCode: 100403 });
+const defaultInitialValues = { name: '原值' };
 const sections = [
   {
     key: 'basic',
@@ -74,7 +75,7 @@ async function renderEdit(props: Partial<ComponentProps<typeof EditPage>> = {}) 
           title="编辑"
           operationType={OperationType.EDIT}
           sections={sections}
-          initialValues={{ name: '原值' }}
+          initialValues={defaultInitialValues}
           {...props}
         />
       </QueryClientProvider>,
@@ -98,6 +99,121 @@ async function clickButton(label: string) {
 }
 
 describe('edit error ownership and state preservation', () => {
+  it('keeps failed rerenders unchanged but synchronizes a successful new server version', async () => {
+    const queryKey = ['edit-snapshot'];
+    let server = { name: '版本一', version: 1 };
+    let failure: Error | undefined;
+    const onSave = vi.fn();
+    function QueryEditor({ renderCount }: { renderCount: number }) {
+      const query = useQuery({
+        queryKey,
+        retry: false,
+        queryFn: async () => {
+          if (failure) throw failure;
+          return server;
+        },
+      });
+      const initialValues = useMemo(
+        () => (query.data ? { name: query.data.name } : undefined),
+        [query.data],
+      );
+      return (
+        <EditPage
+          title={`编辑${renderCount}`}
+          operationType={OperationType.EDIT}
+          sections={sections}
+          initialValues={initialValues}
+          loading={query.isLoading}
+          error={getBlockingQueryError(query)}
+          onSave={async (values) => {
+            onSave({ ...values, version: query.data?.version });
+          }}
+        />
+      );
+    }
+    const render = async (renderCount: number) =>
+      act(async () =>
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <QueryEditor renderCount={renderCount} />
+          </QueryClientProvider>,
+        ),
+      );
+    const settleQuery = async () =>
+      act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    await render(1);
+    await settleQuery();
+    const input = await enterName('未保存');
+    await render(2);
+    expect(input.value).toBe('未保存');
+    failure = new ApiError({ source: 'NETWORK', message: '' });
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey });
+    });
+    await settleQuery();
+    expect(input.value).toBe('未保存');
+    failure = denied;
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey });
+    });
+    await settleQuery();
+    expect(input.closest('[hidden][inert]')).not.toBeNull();
+    failure = undefined;
+    // 服务端返回新对象但内容相同，TanStack structural sharing 保留快照引用。
+    server = { ...server };
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey });
+    });
+    await settleQuery();
+    expect(input.value).toBe('未保存');
+    server = { name: '版本二', version: 2 };
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey });
+    });
+    await settleQuery();
+    expect(input.value).toBe('版本二');
+    await clickButton('保存');
+    expect(onSave).toHaveBeenCalledExactlyOnceWith({ name: '版本二', version: 2 });
+  });
+
+  it('does not consume a new snapshot while blocked', async () => {
+    await renderEdit();
+    const input = await enterName('未保存');
+    const nextValues = { name: '新快照' };
+    await renderEdit({ initialValues: nextValues, error: denied });
+    expect(input.value).toBe('未保存');
+    await renderEdit({ initialValues: nextValues });
+    expect(input.value).toBe('新快照');
+  });
+
+  it('rehydrates the same cached record after closing and reopening the modal', async () => {
+    const renderModal = async (open: boolean) =>
+      act(async () =>
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <ModalEditPage
+              title="编辑"
+              open={open}
+              onClose={() => undefined}
+              fields={[{ type: 'text', label: '名称', dataIndex: 'name' }]}
+              initialValues={defaultInitialValues}
+              onSave={async () => undefined}
+            />
+          </QueryClientProvider>,
+        ),
+      );
+    await renderModal(true);
+    expect(document.querySelector<HTMLInputElement>('input')?.value).toBe('原值');
+    await renderModal(false);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    });
+    await renderModal(true);
+    expect(document.querySelector<HTMLInputElement>('input')?.value).toBe('原值');
+  });
+
   it('keeps dirty input mounted through background failure, denial and retry', async () => {
     const onSave = vi.fn();
     await renderEdit({ onSave });
@@ -105,7 +221,7 @@ describe('edit error ownership and state preservation', () => {
     expect(mocks.dirty?.current).toBe(true);
     await renderEdit({
       onSave,
-      initialValues: { name: '原值' },
+      initialValues: defaultInitialValues,
       error: getBlockingQueryError({
         data: { name: '原值' },
         error: new ApiError({ source: 'NETWORK', message: '' }),
@@ -118,7 +234,7 @@ describe('edit error ownership and state preservation', () => {
     await clickButton('保存');
     expect(onSave).not.toHaveBeenCalled();
     expect(mocks.dirty?.current).toBe(true);
-    await renderEdit({ onSave, initialValues: { name: '重试后的服务器值' } });
+    await renderEdit({ onSave, initialValues: defaultInitialValues });
     expect(input.closest('[hidden]')).toBeNull();
     expect(input.value).toBe('未保存');
     expect(mocks.dirty?.current).toBe(true);
@@ -211,7 +327,7 @@ describe('edit error ownership and state preservation', () => {
               open
               onClose={() => undefined}
               fields={[{ type: 'text', label: '名称', dataIndex: 'name' }]}
-              initialValues={{ name: '原值' }}
+              initialValues={defaultInitialValues}
               onSave={onSave}
               error={error}
             />

@@ -24,6 +24,7 @@ const FeatureEditPage = ({ open, featureId, onClose }: Props) => {
     queryFn: () => featureApi.detail(featureId!),
     enabled: Boolean(open && featureId),
   });
+  const initialValues = useMemo(() => (query.data ? { ...query.data } : undefined), [query.data]);
   const fields = useMemo<EditField[]>(
     () => [
       { label: '功能键', dataIndex: 'featureKey', type: 'text', disabled: true },
@@ -70,7 +71,7 @@ const FeatureEditPage = ({ open, featureId, onClose }: Props) => {
       open={open}
       onClose={onClose}
       fields={fields}
-      initialValues={query.data ? { ...query.data } : undefined}
+      initialValues={initialValues}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
       loading={query.isLoading}

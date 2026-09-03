@@ -249,7 +249,11 @@ const JobEditPage = (props: PageComponentProps) => {
           getBlockingQueryError(classesQuery)) as Error | null
       }
       onRetry={() =>
-        Promise.all([detailQuery.refetch(), defaultQuery.refetch(), classesQuery.refetch()])
+        Promise.all([
+          detailQuery.isEnabled && detailQuery.refetch(),
+          defaultQuery.isEnabled && defaultQuery.refetch(),
+          classesQuery.isEnabled && classesQuery.refetch(),
+        ])
       }
       onValuesChange={(changedValues, _allValues, form) => {
         if ('jobClass' in changedValues) {

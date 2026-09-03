@@ -95,7 +95,7 @@ describe('query fault ownership and lifetime', () => {
       global.subscribe(() => undefined),
     );
     await global.refetch();
-    expect(sink.show).not.toHaveBeenCalled();
+    expect(sink.show).toHaveBeenCalledTimes(1);
     queryClient.setQueryData(queryKey, []);
     await global.refetch();
     expect(sink.show).toHaveBeenCalledTimes(1);

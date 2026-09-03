@@ -161,7 +161,12 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
       dirty={dirty}
       saveDisabled={!dirty || mutation.isPending}
       closeGuard={{ appNumber, tabKey }}
-      onRetry={() => void Promise.all([detailQuery.refetch(), permissionsQuery.refetch()])}
+      onRetry={() =>
+        void Promise.all([
+          detailQuery.isEnabled && detailQuery.refetch(),
+          permissionsQuery.refetch(),
+        ])
+      }
       onSave={confirmSave}
       onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}
     >

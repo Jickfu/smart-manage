@@ -100,7 +100,7 @@ interface EditPageProps {
   title: string;
   /** 页面正文卡片完全由调用方声明，EditPage 只负责统一壳层、Form 与折叠布局。 */
   sections: EditPageSection[];
-  /** 初始值（详情数据回显），Form 内部通过 setFieldsValue 同步 */
+  /** 从服务端数据稳定派生的初始值；引用变化代表新快照，不得内联构造等价对象。 */
   initialValues?: Record<string, unknown>;
   /** 单据状态（无状态的基础数据不传） */
   billStatus?: BillStatus;
@@ -168,7 +168,7 @@ const EditPage = ({
   const revisionRef = useRef(0);
   const dirtyRef = useRef(false);
   const dirtyRevisionRef = useRef(dirtyRevision);
-  const latestInitialValues = useRef(initialValues);
+  const lastAppliedInitialValues = useRef<typeof initialValues>(undefined);
   const commandBlocked = useRef(Boolean(error) || loading || saving);
   const [activeCollapseKeys, setActiveCollapseKeys] = useState<string[]>(
     sections.map((section) => section.key),
@@ -179,11 +179,11 @@ const EditPage = ({
     commandBlocked.current = Boolean(error) || loading || saving;
   }, [error, loading, saving]);
 
-  // 后端数据加载完成后同步到 Form
+  // 仅应用新的成功快照；失败/重试的状态切换不重复灌入旧值，成功新版本仍保持既有同步语义。
   useEffect(() => {
-    latestInitialValues.current = initialValues;
-    if (!loading && !error && !dirtyRef.current && initialValues) {
+    if (!loading && !error && initialValues && initialValues !== lastAppliedInitialValues.current) {
       form.setFieldsValue(initialValues);
+      lastAppliedInitialValues.current = initialValues;
     }
   }, [form, initialValues, loading, error]);
 
@@ -222,13 +222,9 @@ const EditPage = ({
     }
   };
 
-  const finishSave = (revision: number, initialAtStart: typeof initialValues) => {
+  const finishSave = (revision: number) => {
     if (revisionRef.current !== revision) return;
     dirtyRef.current = false;
-    // 保存期间已取得的新详情可以回显；后台失败保持原引用，不覆盖用户刚保存的输入。
-    if (latestInitialValues.current && latestInitialValues.current !== initialAtStart) {
-      form.setFieldsValue(latestInitialValues.current);
-    }
   };
 
   const handleSave = async () => {
@@ -237,10 +233,9 @@ const EditPage = ({
     // 异步校验期间资源可能被撤权，调用命令前再次检查最新状态。
     if (!values || commandBlocked.current) return;
     const savedRevision = revisionRef.current;
-    const initialAtStart = latestInitialValues.current;
     try {
       const completed = await onSave(values);
-      if (completed !== false) finishSave(savedRevision, initialAtStart);
+      if (completed !== false) finishSave(savedRevision);
     } catch {
       // 进入回调后由领域 Mutation 展示失败，保留脏状态，不二次提示。
     }
@@ -251,10 +246,9 @@ const EditPage = ({
     const values = await prepareValues();
     if (!values || commandBlocked.current) return;
     const submittedRevision = revisionRef.current;
-    const initialAtStart = latestInitialValues.current;
     try {
       await onSubmit(values);
-      finishSave(submittedRevision, initialAtStart);
+      finishSave(submittedRevision);
     } catch {
       // 提交失败同样由领域 Mutation 负责，不能清除用户修改。
     }

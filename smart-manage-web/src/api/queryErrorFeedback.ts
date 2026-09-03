@@ -54,7 +54,7 @@ function isLocallyOwned(query: Query<unknown, unknown>): boolean {
     (observer) => observer.getCurrentResult().isEnabled,
   );
   if (enabledObservers.length) {
-    return enabledObservers.some((observer) =>
+    return enabledObservers.every((observer) =>
       ownsError(observer.options.meta, observer.getCurrentResult()),
     );
   }

@@ -148,7 +148,11 @@ const BasicDataCategoryEditModal = ({ open, categoryId, domainId, onClose, onSav
           getBlockingQueryError(numberRulesQuery)) as Error | null
       }
       onRetry={() =>
-        Promise.all([detailQuery.refetch(), domainsQuery.refetch(), numberRulesQuery.refetch()])
+        Promise.all([
+          detailQuery.isEnabled && detailQuery.refetch(),
+          domainsQuery.isEnabled && domainsQuery.refetch(),
+          numberRulesQuery.isEnabled && numberRulesQuery.refetch(),
+        ])
       }
       access={basicDataAccess}
     />

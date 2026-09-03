@@ -14,6 +14,7 @@ import { useOperationConfirm } from '@/domain/common/component/useOperationConfi
 
 const EmailComposePage = (props: PageComponentProps) => {
   const feedback = useOperationFeedback();
+  const initialValues = useMemo(() => ({ toUsers: [], ccUsers: [], bccUsers: [] }), []);
   const confirmOperation = useOperationConfirm();
   const accountSelector = useEmailAccountRefSelector();
   const recipientSelector = useUserRefSelector({ multiple: true, title: '选择收件人' });
@@ -104,7 +105,7 @@ const EmailComposePage = (props: PageComponentProps) => {
       access={composeAccess}
       title="发送邮件"
       sections={[editFormSection('basic', '基本信息', fields)]}
-      initialValues={{ toUsers: [], ccUsers: [], bccUsers: [] }}
+      initialValues={initialValues}
       operationType={OperationType.EDIT}
       onSave={handleSend}
       saveLabel="发送"

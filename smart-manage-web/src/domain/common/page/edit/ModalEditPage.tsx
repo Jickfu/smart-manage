@@ -14,7 +14,7 @@ interface ModalEditPageProps {
   open: boolean;
   onClose: () => void;
   fields: EditField[];
-  /** 初始值（详情数据回显），Form 内部通过 setFieldsValue 同步 */
+  /** 从服务端数据稳定派生的初始值；引用变化代表新快照。 */
   initialValues?: Record<string, unknown>;
   /** 保存回调，接收 Form 校验通过后的字段值 */
   onSave: (values: Record<string, unknown>) => Promise<void>;
@@ -42,7 +42,7 @@ const ModalEditPage = ({
   access,
 }: ModalEditPageProps) => {
   const [form] = Form.useForm();
-  const dirtyRef = useRef(false);
+  const lastAppliedInitialValues = useRef<typeof initialValues>(undefined);
   const commandBlocked = useRef(Boolean(error) || loading || saving || !open);
 
   useEffect(() => {
@@ -51,8 +51,15 @@ const ModalEditPage = ({
 
   // Modal 打开且数据加载完成后同步到 Form
   useEffect(() => {
-    if (open && !loading && !error && initialValues && !dirtyRef.current) {
+    if (
+      open &&
+      !loading &&
+      !error &&
+      initialValues &&
+      initialValues !== lastAppliedInitialValues.current
+    ) {
       form.setFieldsValue(initialValues);
+      lastAppliedInitialValues.current = initialValues;
     }
   }, [form, initialValues, loading, open, error]);
 
@@ -81,8 +88,9 @@ const ModalEditPage = ({
       onCancel={handleClose}
       afterOpenChange={(visible) => {
         if (!visible) {
-          dirtyRef.current = false;
           form.resetFields();
+          // reset 后必须允许同一缓存引用再次回显。
+          lastAppliedInitialValues.current = undefined;
         }
       }}
       className="sm-modal-edit"
@@ -109,14 +117,7 @@ const ModalEditPage = ({
       {error && <RequestErrorState error={error} onRetry={onRetry} />}
       <div className="sm-modal-edit-content" hidden={Boolean(error)} inert={Boolean(error)}>
         <Spin spinning={loading}>
-          <Form
-            form={form}
-            layout="vertical"
-            className="sm-edit-form"
-            onValuesChange={() => {
-              dirtyRef.current = true;
-            }}
-          >
+          <Form form={form} layout="vertical" className="sm-edit-form">
             <EditFormFields fields={fields} maxColumns={2} />
           </Form>
         </Spin>

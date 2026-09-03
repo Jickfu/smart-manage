@@ -135,7 +135,12 @@ const InboxMessageEditPage = (props: PageComponentProps) => {
       error={
         (getBlockingQueryError(detailQuery) ?? getBlockingQueryError(defaultsQuery)) as Error | null
       }
-      onRetry={() => Promise.all([detailQuery.refetch(), defaultsQuery.refetch()])}
+      onRetry={() =>
+        Promise.all([
+          detailQuery.isEnabled && detailQuery.refetch(),
+          defaultsQuery.isEnabled && defaultsQuery.refetch(),
+        ])
+      }
       onSave={async (values) => {
         await save.mutateAsync(values);
       }}

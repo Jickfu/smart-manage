@@ -1,6 +1,7 @@
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import EditPage from '@/domain/common/page/edit/EditPage';
 import { editFormSection } from '@/domain/common/page/edit/editPageSection';
 import type { EditField } from '@/domain/common/page/edit/EditPage';
@@ -33,6 +34,7 @@ export default function ScriptLogDetailPage(props: PageComponentProps) {
     queryFn: () => scriptApi.logDetail(props.billId!),
     enabled: Boolean(props.billId),
   });
+  const initialValues = useMemo(() => (query.data ? { ...query.data } : {}), [query.data]);
   const copy = async (text: string | undefined, successMessage: string) => {
     if (!text) return;
     try {
@@ -46,7 +48,7 @@ export default function ScriptLogDetailPage(props: PageComponentProps) {
     <EditPage
       title="脚本执行记录"
       sections={[editFormSection('basic', '基本信息', fields)]}
-      initialValues={query.data ? { ...query.data } : {}}
+      initialValues={initialValues}
       operationType={OperationType.VIEW}
       loading={query.isLoading}
       error={getBlockingQueryError(query) as Error | null}

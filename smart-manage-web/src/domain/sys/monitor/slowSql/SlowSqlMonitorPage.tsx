@@ -87,7 +87,12 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
       title="慢 SQL 分析"
       loading={instancesQuery.isLoading || snapshotQuery.isLoading}
       error={getBlockingQueryError(instancesQuery) ?? getBlockingQueryError(snapshotQuery)}
-      onRetry={() => void Promise.all([instancesQuery.refetch(), snapshotQuery.refetch()])}
+      onRetry={() =>
+        void Promise.all([
+          instancesQuery.isEnabled && instancesQuery.refetch(),
+          snapshotQuery.isEnabled && snapshotQuery.refetch(),
+        ])
+      }
       actions={
         <Space size={10} wrap>
           <Select

@@ -6,6 +6,8 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { QueryFeedbackProvider } from './QueryFeedbackProvider';
 import { usePermissionAccess } from '../page/access/usePermissionAccess';
 import { ApiError } from '@/api/ApiError';
+import { appQueryKeys } from '@/domain/sys/base/app/queryKeys';
+import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 
 const mocks = vi.hoisted(() => ({
   feedback: { fromError: vi.fn(), close: vi.fn() },
@@ -16,6 +18,49 @@ vi.mock('@/api/user', () => ({ getCurrentPermissions: mocks.getCurrentPermission
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+});
+
+it('does not let a hidden mounted local observer swallow a visible default query failure', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  let client!: QueryClient;
+  const queryKey = appQueryKeys.domainAppsAll();
+  const queryFn = async () => {
+    throw new ApiError({ source: 'NETWORK', message: '' });
+  };
+  function ApplicationTree() {
+    client = useQueryClient();
+    const query = useQuery({ queryKey, queryFn, retry: false });
+    return <div>{query.data ? '应用树' : '空树'}</div>;
+  }
+  function HiddenFeaturePage() {
+    const query = useQuery({
+      queryKey,
+      queryFn,
+      retry: false,
+      meta: { errorPresentation: 'local-initial' },
+    });
+    return <div hidden>{getBlockingQueryError(query) ? '局部错误' : '功能列表'}</div>;
+  }
+  try {
+    await act(async () =>
+      root.render(
+        <QueryFeedbackProvider>
+          <ApplicationTree />
+          <HiddenFeaturePage />
+        </QueryFeedbackProvider>,
+      ),
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(client.getQueryCache().find({ queryKey })?.observers).toHaveLength(2);
+    expect(container.querySelector('[hidden]')?.textContent).toBe('局部错误');
+    expect(mocks.feedback.fromError).toHaveBeenCalledTimes(1);
+  } finally {
+    await act(async () => root.unmount());
+  }
 });
 
 it('keeps an actual active query alive across StrictMode effect replay and clears on unmount', async () => {

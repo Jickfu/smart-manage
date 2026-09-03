@@ -10,6 +10,7 @@ import type { RefSelectorFetchFn } from './useRefSelectorQuery';
 import { formatRefSelectorDisplayText, isRefSelectorTextOverflowing } from './refSelectorDisplay';
 import { useRefSelection } from './useRefSelection';
 import { RefSelectorSelectedPanel, RefSelectorTreePanel } from './RefSelectorPanels';
+import { RequestErrorDescription } from './RequestErrorState';
 import './RefSelector.css';
 
 // ============================================================
@@ -516,4 +517,3 @@ function RefSelector<T extends Record<string, unknown>>({
 
 export default RefSelector;
 export type { RefSelectorProps, RefSelectorColumn, RefSelectorFieldNames, RefSelectorMode };
-import { RequestErrorDescription } from './RequestErrorState';

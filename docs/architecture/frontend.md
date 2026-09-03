@@ -66,11 +66,15 @@ Blob 响应只对 JSON/+json MIME 的非文件响应作至多 64 KiB 的文本�
 
 `getBlockingQueryError` 是区域阻断判定的唯一入口。`data !== undefined && !isPlaceholderData` 表示有效旧数据，空数组与 null 均有效。HTTP 403/404 或业务码 100403/100404 无论有无缓存都阻断，不能把 404 解释为新增。权限查询采用更严格规则：任何失败都不使用缓存权限进行 `can()` 授权判断。取消、401、CSRF 不参与普通错误 UI；CSRF 专属提示使用稳定 key。
 
-同一 query key 有多个 enabled observer 时，按每个 observer 自己的 meta 和当前结果判定是否实际拥有错误；任一 observer 拥有则不再系统提示。此时不能用最后一次写入的 query.meta 替代各 observer。没有 enabled observer 时才回退 query.meta。该规则不依赖工作台页签可见性。
+同一 query key 有多个 enabled observer 时，按每个 observer 自己的 meta 和当前结果判定是否实际拥有错误；只有全部 enabled observer 都本地拥有时才不再系统提示，只要有一个未接管就保留系统兜底。否则隐藏但仍挂载的局部 owner 可能吞掉可见 default 页面的错误。此时不能用最后一次写入的 query.meta 替代各 observer。没有 enabled observer 时才回退 query.meta。该规则不依赖工作台页签可见性。
 
 每个 queryHash 只保留当前故障成员关系。系统提示按来源、HTTP 状态、业务码、最终反馈级别和安全文案生成指纹，traceId 不参与去重；只有全部成员真实成功、移除或 reset 后才解除该故障并关闭提示。开始 refetch、手动关闭或 Message maxCount 淘汰都不代表恢复，不得造成轮询重复弹出。Provider 真正卸载时清理缓存和提示，StrictMode 的 effect 重放不能清掉仍活跃的查询。
 
-`RequestErrorState` 只呈现错误区域、受控诊断 ID 与重试，不查询、不布局整页、不持有业务状态。ListPage、EditPageShell、AssignmentPage 分别保持原页面结构，不为相同错误区域额外提取 PageShell，也不重命名或重排页面目录。编辑壳、弹框编辑和分配壳遇到阻断时保留原内容挂载，以 hidden/inert 撤销交互能力，保存/提交 handler 也必须检查阻断状态。普通后台失败不得覆盖 Form 的未保存输入；重试恢复后保留脏状态。
+`RequestErrorState` 只呈现错误区域、受控诊断 ID 与重试，不查询、不布局整页、不持有业务状态。ListPage、EditPageShell、AssignmentPage 分别保持原页面结构，不为相同错误区域额外提取 PageShell，也不重命名或重排页面目录。编辑壳、弹框编辑和分配壳遇到阻断时保留原内容挂载，以 hidden/inert 撤销交互能力，保存/提交 handler 也必须检查阻断状态。普通后台失败不得覆盖 Form 的未保存输入；相同数据重试恢复后保留输入和脏状态。区域 Retry 只手动执行当前 isEnabled/业务上下文允许的查询，不能把 refetch 当作自动遵守 enabled 的 API；依赖 ID 尚未取得时先恢复父查询，再让子查询自然启动。
+
+EditPage/ModalEditPage 的 initialValues 必须从 query.data 以 useMemo 稳定派生，或使用稳定常量，禁止内联构造对象。模板记录最后实际应用的引用：仅在不 loading、不 blocking 且引用变化时同步；不能在阻断期间提前记录已应用。真正成功取得新服务端数据/版本仍按既有语义同步 Form，不以 dirty 阻止，从而避免“旧表单内容 + 最新 version”绕过乐观锁。Modal 关闭 resetFields 后同步清除已应用引用，保证同一缓存记录重新打开仍正确回显。保存完成只维护 revision/dirty，不重复灌值。
+
+页面阻断不等于撤销此前已经打开的应用级确认弹框；后端权限和版本检查仍是最终边界。确认回调的作用域撤销不属于当前查询反馈能力，不通过新增全局确认框架隐式改变既有流程。
 
 EditPage 的校验/transformValues 异常尚未进入领域 Mutation，由编辑层显示一次安全反馈；进入 Mutation 后不能再由 EditPage 重复提示。保存已成功但刷新失败时，保留一条保存结果摘要和一条去重的具体查询故障，这是不同语义的有意双层反馈；不得使用全局 silent counter 抑制同时发生的其他查询失败。
 

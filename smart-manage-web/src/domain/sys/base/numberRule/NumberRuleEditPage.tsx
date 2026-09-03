@@ -590,7 +590,12 @@ const NumberRuleEditPage = (props: PageComponentProps) => {
         (getBlockingQueryError(detailQuery) ??
           getBlockingQueryError(referencesQuery)) as Error | null
       }
-      onRetry={() => Promise.all([detailQuery.refetch(), referencesQuery.refetch()])}
+      onRetry={() =>
+        Promise.all([
+          detailQuery.isEnabled && detailQuery.refetch(),
+          referencesQuery.isEnabled && referencesQuery.refetch(),
+        ])
+      }
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
       onExit={() => useWorkbenchStore.getState().removeContentTab(appNumber, tabKey)}

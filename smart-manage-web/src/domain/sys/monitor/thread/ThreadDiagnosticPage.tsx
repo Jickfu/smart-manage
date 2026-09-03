@@ -118,7 +118,12 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
       title="线程诊断"
       loading={instancesQuery.isLoading || listQuery.isLoading}
       error={getBlockingQueryError(instancesQuery) ?? getBlockingQueryError(listQuery)}
-      onRetry={() => void Promise.all([instancesQuery.refetch(), listQuery.refetch()])}
+      onRetry={() =>
+        void Promise.all([
+          instancesQuery.isEnabled && instancesQuery.refetch(),
+          listQuery.isEnabled && listQuery.refetch(),
+        ])
+      }
       actions={
         <div className="sm-thread-diagnostic-toolbar">
           <Select

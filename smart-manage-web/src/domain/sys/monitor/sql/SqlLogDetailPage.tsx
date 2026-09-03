@@ -1,6 +1,7 @@
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import EditPage from '@/domain/common/page/edit/EditPage';
 import { editFormSection } from '@/domain/common/page/edit/editPageSection';
 import type { EditField } from '@/domain/common/page/edit/EditPage';
@@ -30,6 +31,7 @@ export default function SqlLogDetailPage(props: PageComponentProps) {
     queryFn: () => sqlApi.detail(props.billId!),
     enabled: Boolean(props.billId),
   });
+  const initialValues = useMemo(() => (query.data ? { ...query.data } : {}), [query.data]);
   const handleCopySql = async () => {
     const sqlText = query.data?.sqlText;
     if (!sqlText) return;
@@ -44,7 +46,7 @@ export default function SqlLogDetailPage(props: PageComponentProps) {
     <EditPage
       title="SQL 执行记录"
       sections={[editFormSection('basic', '基本信息', fields)]}
-      initialValues={query.data ? { ...query.data } : {}}
+      initialValues={initialValues}
       operationType={OperationType.VIEW}
       loading={query.isLoading}
       error={getBlockingQueryError(query) as Error | null}

@@ -107,10 +107,10 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
       loading={topology.isLoading || instances.isLoading}
       error={getBlockingQueryError(topology) ?? getBlockingQueryError(instances)}
       onRetry={() => {
-        void topology.refetch();
-        void instances.refetch();
-        void instanceSnapshot.refetch();
-        void hostSnapshot.refetch();
+        void (topology.isEnabled && topology.refetch());
+        void (instances.isEnabled && instances.refetch());
+        void (instanceSnapshot.isEnabled && instanceSnapshot.refetch());
+        void (hostSnapshot.isEnabled && hostSnapshot.refetch());
       }}
       actions={
         <Space size={10}>

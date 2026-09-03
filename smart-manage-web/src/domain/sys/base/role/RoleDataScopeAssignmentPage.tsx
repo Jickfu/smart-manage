@@ -212,7 +212,8 @@ const RoleDataScopeAssignmentPage = (props: PageComponentProps) => {
   });
   const loading = workspaceQuery.isLoading || orgQuery.isLoading;
   const error = getBlockingQueryError(workspaceQuery) ?? getBlockingQueryError(orgQuery);
-  const onRetry = () => void Promise.all([workspaceQuery.refetch(), orgQuery.refetch()]);
+  const onRetry = () =>
+    void Promise.all([workspaceQuery.isEnabled && workspaceQuery.refetch(), orgQuery.refetch()]);
   if (workspaceQuery.data && orgQuery.data) {
     return (
       <DataScopeEditor
