@@ -6,8 +6,6 @@ import sm.domain.sys.base.common.enums.MenuLevelEnum;
 import sm.domain.sys.base.menu.model.enums.ExternalOpenModeEnum;
 import sm.domain.sys.base.menu.model.enums.MenuTargetTypeEnum;
 
-import java.time.LocalDateTime;
-
 /**
  * 菜单详情 VO
  *
@@ -67,12 +65,6 @@ public class MenuDetailVO {
 
 	@Schema(description = "是否启用")
 	private Boolean enabled;
-
-	@Schema(description = "创建时间")
-	private LocalDateTime createTime;
-
-	@Schema(description = "更新时间")
-	private LocalDateTime updateTime;
 
 	@Schema(description = "创建人")
 	private Long createUser;

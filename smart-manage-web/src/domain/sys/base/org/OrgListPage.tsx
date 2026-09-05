@@ -177,6 +177,7 @@ const OrgListPage = (props: PageComponentProps) => {
       width: 100,
       render: (value: OrgType) => ORG_TYPE_LABELS[value],
     },
+    { title: '排序', dataIndex: 'sort', width: 80 },
     {
       title: '使用状态',
       dataIndex: 'enabled',

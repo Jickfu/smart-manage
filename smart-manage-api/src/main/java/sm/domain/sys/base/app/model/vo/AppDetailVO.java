@@ -3,8 +3,6 @@ package sm.domain.sys.base.app.model.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-import java.time.LocalDateTime;
-
 @Data
 @Schema(description = "应用管理-详情")
 public class AppDetailVO {
@@ -48,7 +46,4 @@ public class AppDetailVO {
 	@Schema(description = "启用")
 	private Boolean enabled;
 
-	private LocalDateTime createTime;
-	private LocalDateTime updateTime;
 }
-

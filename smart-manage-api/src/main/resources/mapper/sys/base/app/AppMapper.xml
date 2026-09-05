@@ -11,8 +11,6 @@
         <result property="seq" column="app_seq"/>
         <result property="description" column="app_description"/>
         <result property="enabled" column="app_enabled"/>
-        <result property="createTime" column="app_create_time"/>
-        <result property="updateTime" column="app_update_time"/>
         <association property="domain" javaType="sm.domain.sys.base.app.model.vo.AppDetailVO$DomainRef"
                      notNullColumn="domain_id">
             <id property="id" column="domain_id"/>
@@ -44,7 +42,6 @@
         SELECT a.id AS app_id, a.version AS app_version, a.number AS app_number, a.name AS app_name,
                a.icon AS app_icon, a.icon_color AS app_icon_color, a.seq AS app_seq,
                a.description AS app_description, a.enabled AS app_enabled,
-               a.create_time AS app_create_time, a.update_time AS app_update_time,
                b.id AS domain_id, b.number AS domain_number, b.name AS domain_name
         FROM t_sys_app a
         LEFT JOIN t_sys_domain b ON b.id = a.domain_id

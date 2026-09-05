@@ -61,8 +61,6 @@ const fields: EditField[] = [
   { label: '图标颜色', dataIndex: 'iconColor', type: 'color' },
   { label: '排序', dataIndex: 'seq', type: 'number' },
   { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
-  { label: '创建时间', dataIndex: 'createTime', type: 'readonly' },
-  { label: '更新时间', dataIndex: 'updateTime', type: 'readonly' },
 ];
 
 /** 应用编辑页 — 独立页形态，无单据状态 */
@@ -94,8 +92,6 @@ const AppEditPage = (props: PageComponentProps) => {
       iconColor: detail.iconColor ?? '',
       seq: detail.seq ?? undefined,
       description: detail.description ?? '',
-      createTime: detail.createTime ?? '',
-      updateTime: detail.updateTime ?? '',
     };
   }, [detail]);
 

@@ -59,8 +59,6 @@ export interface AppDetailVO {
     name: string;
   };
   enabled: boolean;
-  createTime?: string;
-  updateTime?: string;
 }
 
 /** 应用保存 */

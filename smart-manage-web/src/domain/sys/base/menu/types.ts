@@ -83,8 +83,6 @@ export interface MenuDetailVO {
   description: string;
   sort: number;
   enabled: boolean;
-  createTime?: string;
-  updateTime?: string;
   parent?: MenuReferenceVO;
 }
 

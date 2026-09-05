@@ -109,8 +109,6 @@ const MenuEditPage = (props: PageComponentProps) => {
       icon: detail.icon ?? '',
       description: detail.description ?? '',
       sort: detail.sort ?? undefined,
-      createTime: detail.createTime ?? '',
-      updateTime: detail.updateTime ?? '',
     };
   }, [detail]);
 
@@ -278,8 +276,6 @@ const MenuEditPage = (props: PageComponentProps) => {
       : []),
     { label: '图标', dataIndex: 'icon', type: 'icon-selector' },
     { label: '排序', dataIndex: 'sort', type: 'number' },
-    { label: '创建时间', dataIndex: 'createTime', type: 'datetime', disabled: true },
-    { label: '更新时间', dataIndex: 'updateTime', type: 'datetime', disabled: true },
     { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
   ];
 
