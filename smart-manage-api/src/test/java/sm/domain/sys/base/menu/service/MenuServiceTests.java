@@ -149,7 +149,7 @@ class MenuServiceTests {
     }
 
     @Test
-    void catalogReturnsDomainApplicationAndFeatureHierarchy() {
+    void catalogReturnsDomainAndApplicationHierarchy() {
         DomainEntity domain = new DomainEntity();
         domain.setId(4L);
         domain.setNumber("sys");
@@ -159,22 +159,15 @@ class MenuServiceTests {
         app.setDomainId(4L);
         app.setNumber("base");
         app.setName("系统建模");
-        FeatureEntity feature = new FeatureEntity();
-        feature.setId(501L);
-        feature.setAppId(31L);
-        feature.setFeatureKey("sys/base/menu");
-        feature.setDefaultName("菜单管理");
-        feature.setDefaultSeq(10);
         when(domainMapper.selectList(null)).thenReturn(List.of(domain));
         when(appMapper.selectList(null)).thenReturn(List.of(app));
-        when(featureMapper.selectList(null)).thenReturn(List.of(feature));
 
         List<MenuCatalogNodeVO> result = service.catalog();
 
         assertEquals("DOMAIN", result.getFirst().getType());
         assertEquals("APPLICATION", result.getFirst().getChildren().getFirst().getType());
-        assertEquals("FEATURE", result.getFirst().getChildren().getFirst().getChildren().getFirst().getType());
-        assertEquals("菜单管理", result.getFirst().getChildren().getFirst().getChildren().getFirst().getName());
+        assertEquals("系统建模", result.getFirst().getChildren().getFirst().getName());
+        assertEquals(0, result.getFirst().getChildren().getFirst().getChildren().size());
     }
 
     @Test

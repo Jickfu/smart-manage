@@ -54,7 +54,7 @@ public class MenuController {
 		return Result.success(service.listTree(form));
 	}
 
-	@Operation(summary = "菜单管理范围树", description = "获取领域、应用和功能三级目录")
+	@Operation(summary = "菜单管理范围树", description = "获取领域和应用两级目录")
 	@GetMapping("/sys/base/menu/catalog")
 	@SaCheckPermission(MenuPermission.LIST)
 	public Result<List<MenuCatalogNodeVO>> catalog() {

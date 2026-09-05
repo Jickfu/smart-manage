@@ -185,12 +185,7 @@ public class MenuService {
 		List<AppEntity> applications = appReferenceService.findAll().stream()
 				.sorted(Comparator.comparing(AppEntity::getDomainId).thenComparing(AppEntity::getSeq)
 						.thenComparing(AppEntity::getId)).toList();
-		List<FeatureEntity> features = new ArrayList<>(featureReferenceService.findAll().stream()
-				.sorted(Comparator.comparing(FeatureEntity::getAppId).thenComparing(FeatureEntity::getDefaultSeq)
-						.thenComparing(FeatureEntity::getId)).toList());
-
 		Map<Long, MenuCatalogNodeVO> domainNodes = new HashMap<>();
-		Map<Long, MenuCatalogNodeVO> applicationNodes = new HashMap<>();
 		List<MenuCatalogNodeVO> roots = new ArrayList<>();
 		for (DomainEntity domain : domains) {
 			MenuCatalogNodeVO node = new MenuCatalogNodeVO(
@@ -207,22 +202,6 @@ public class MenuService {
 					"APPLICATION", application.getId(), application.getNumber(),
 					application.getName(), new ArrayList<>());
 			parent.getChildren().add(node);
-			applicationNodes.put(application.getId(), node);
-		}
-		features.sort(Comparator
-				.comparing(FeatureEntity::getAppId)
-				.thenComparing(feature -> feature.getCustomSeq() == null
-						? feature.getDefaultSeq() : feature.getCustomSeq(), Comparator.nullsLast(Integer::compareTo))
-				.thenComparing(FeatureEntity::getId));
-		for (FeatureEntity feature : features) {
-			MenuCatalogNodeVO parent = applicationNodes.get(feature.getAppId());
-			if (parent == null) {
-				throw new BizException(ResultEnum.CONFIG_ERROR, "功能缺少所属应用：" + feature.getId());
-			}
-			String name = feature.getCustomName() == null || feature.getCustomName().isBlank()
-					? feature.getDefaultName() : feature.getCustomName();
-			parent.getChildren().add(new MenuCatalogNodeVO(
-					"FEATURE", feature.getId(), feature.getFeatureKey(), name, new ArrayList<>()));
 		}
 		return roots;
 	}

@@ -57,7 +57,7 @@ export interface MenuTreeListForm {
 }
 
 export interface MenuCatalogNodeVO {
-  type: 'DOMAIN' | 'APPLICATION' | 'FEATURE';
+  type: 'DOMAIN' | 'APPLICATION';
   id: string;
   number: string;
   name: string;

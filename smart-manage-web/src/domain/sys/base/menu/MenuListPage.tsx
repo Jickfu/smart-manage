@@ -76,28 +76,24 @@ const columnFeatures: ListColumnFeatures = {
 const MENU_EDIT_KEY = 'sys/base/menu/edit';
 const ROOT_NODE_KEY = '__all__';
 
-type MenuScope =
-  | { type: 'root' }
-  | { type: 'domain'; id: string }
-  | { type: 'app'; id: string }
-  | { type: 'feature'; id: string };
+type MenuScope = { type: 'root' } | { type: 'domain'; id: string } | { type: 'app'; id: string };
 
-/** 树节点 key 格式：domain:{domainId} | app:{appId} | feature:{featureId}。 */
-function nodeKey(prefix: 'domain' | 'app' | 'feature', id: string) {
+/** 树节点 key 格式：domain:{domainId} | app:{appId}。 */
+function nodeKey(prefix: 'domain' | 'app', id: string) {
   return `${prefix}:${id}`;
 }
 
 function toTreeNode(node: MenuCatalogNodeVO): DataNode {
   const prefix = node.type === 'APPLICATION' ? 'app' : node.type.toLowerCase();
   return {
-    key: nodeKey(prefix as 'domain' | 'app' | 'feature', node.id),
+    key: nodeKey(prefix as 'domain' | 'app', node.id),
     title: node.name,
-    isLeaf: node.type === 'FEATURE',
+    isLeaf: node.type === 'APPLICATION',
     children: node.children.map(toTreeNode),
   };
 }
 
-/** 菜单列表页 — 左侧按领域/应用/功能筛选，右侧按分组/页面展示完整层级。 */
+/** 菜单列表页 — 左侧按领域/应用筛选，右侧按分组/页面展示完整层级。 */
 const MenuListPage = (props: PageComponentProps) => {
   const confirmOperation = useOperationConfirm();
   const [selectedNodeKey, setSelectedNodeKey] = useState(ROOT_NODE_KEY);
@@ -129,7 +125,6 @@ const MenuListPage = (props: PageComponentProps) => {
       menuApi.listTree({
         domainId: selectedScope.type === 'domain' ? selectedScope.id : undefined,
         appId: selectedScope.type === 'app' ? selectedScope.id : undefined,
-        featureId: selectedScope.type === 'feature' ? selectedScope.id : undefined,
         keyword: keyword || undefined,
         filters: serializeListFilters(columnFilters),
       }),
@@ -183,8 +178,6 @@ const MenuListPage = (props: PageComponentProps) => {
       setSelectedScope({ type: 'domain', id });
     } else if (type === 'app') {
       setSelectedScope({ type: 'app', id });
-    } else if (type === 'feature') {
-      setSelectedScope({ type: 'feature', id });
     }
   }, []);
 
@@ -331,6 +324,8 @@ const MenuListPage = (props: PageComponentProps) => {
       tableStateKey={`${treeQuery.dataUpdatedAt}:${pageNum}:${pageSize}`}
       expandable={{
         childrenColumnName: 'children',
+        // 勾选列与序号列位于编码列之前，展开按钮固定放入编码列，避免挤压序号。
+        expandIconColumnIndex: 3,
         defaultExpandedRowKeys: pagedRecords.map((record) => record.id),
         rowExpandable: (record) => record.level === 0,
       }}
