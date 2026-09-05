@@ -32,7 +32,7 @@ data-exchange/import/credential
 data-exchange/export/result
 ```
 
-一次性凭据制品下载前先原子声明为 `DOWNLOADING`；服务端完整传输后进入待删除状态，只有打开或传输失败才释放回 `ACTIVE`。完整传输后的状态完成操作失败时保留 `DOWNLOADING`，不得在结果不确定时重新开放一次性秘密；超过 1 小时仍未完成的一次性凭据下载声明按 fail-closed 原则进入 `PENDING_DELETE`，普通制品才恢复 `ACTIVE`。物理删除失败由集群清理任务幂等重试。其他结果按过期时间清理。下载前必须重新校验所有者或管理员授权。
+一次性凭据制品的下载资格占用、所有者校验及结果不确定时的默认拒绝边界统一见[后端架构：缓存、文件和任务](../architecture/backend.md#缓存文件和任务)，此处不重复维护安全规则。
 
 ### 模板与安全
 

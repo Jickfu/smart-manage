@@ -4,8 +4,8 @@
 
 .DESCRIPTION
 当前检查内容：
-1. 模块开发指南、模式目录及模块开发 skill 等治理文件必须存在。
-2. 根目录及前后端 AGENTS.md 必须正确路由到模块开发指南。
+1. 模块开发指南、前端页面指南、模式目录及模块开发 skill 等治理文件必须存在。
+2. 根目录及前后端 AGENTS.md 必须正确路由到模块开发指南，前端 AGENTS.md 还必须路由到前端页面指南。
 3. 模块开发 skill 必须调用本脚本。
 4. 领域 TSX 文件禁止使用内联 style。
 5. 前端操作反馈必须统一使用 useOperationFeedback。
@@ -112,6 +112,7 @@ function Assert-NoFileMatch {
 # 治理文件和代理路由必须完整，确保模块开发流程具有稳定入口。
 $requiredFiles = @(
     'docs/development/module-development-guide.md',
+    'docs/development/frontend-page-guide.md',
     'docs/development/module-pattern-catalog.md',
     '.agents/skills/smart-manage-module/SKILL.md',
     '.agents/skills/smart-manage-module/agents/openai.yaml'
@@ -123,6 +124,7 @@ foreach ($requiredFile in $requiredFiles) {
 Assert-FileContains 'AGENTS.md' 'docs/development/module-development-guide\.md' 'Root AGENTS.md does not route to the module development guide'
 Assert-FileContains 'smart-manage-api/AGENTS.md' 'module-development-guide\.md' 'Backend AGENTS.md does not route to the module development guide'
 Assert-FileContains 'smart-manage-web/AGENTS.md' 'module-development-guide\.md' 'Frontend AGENTS.md does not route to the module development guide'
+Assert-FileContains 'smart-manage-web/AGENTS.md' '\.\./docs/development/frontend-page-guide\.md' 'Frontend AGENTS.md does not route to the frontend page guide (../docs/development/frontend-page-guide.md)'
 Assert-FileContains '.agents/skills/smart-manage-module/SKILL.md' 'scripts\\verify-module-conventions\.ps1|scripts/verify-module-conventions\.ps1' 'Module skill does not invoke the convention verifier'
 
 # 领域页面样式必须通过样式文件和既有设计体系维护，禁止散落内联样式。
@@ -206,4 +208,4 @@ if ($violations.Count -gt 0) {
     exit 1
 }
 
-Write-Host "Module convention verification passed for governance routing, $($registrationFiles.Count) page registration file(s), frontend operation interactions, typography, inline styles, and backend permission constants." -ForegroundColor Green
+Write-Host "Module convention verification passed for governance routing (including the frontend page guide), $($registrationFiles.Count) page registration file(s), frontend operation interactions, typography, inline styles, and backend permission constants." -ForegroundColor Green
