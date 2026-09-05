@@ -4,6 +4,26 @@
 
 验证应与改动风险匹配。以下命令是代码修改的最低门槛，不能通过降低规则、忽略错误或手工修补生成文件来绕过。
 
+## 按改动类型选择验证
+
+多种改动取对应要求的并集；已完成且覆盖最终改动的检查无需无故重跑。环境缺失或检查跳过必须标记未验证，不能计为通过。
+
+| 改动类型 | 必须执行的验证 |
+| --- | --- |
+| 纯文档、AGENTS、项目 skill | 检查相对链接、章节锚点、真实源码路径、格式和事实一致性；执行 `git diff --check` 及下述模块约定脚本；skill 修改还需核对元数据和入口引用。无需 Maven 编译、前后端构建或浏览器验收 |
+| 后端代码 | [后端](#后端)最低门槛及相关风险测试；只有该节明确的简单改动例外可仅编译 |
+| 前端代码 | [前端](#前端)全部静态检查、格式、测试与构建；页面交互或视觉改动增加[浏览器验收](#浏览器验收) |
+| 页面注册源 | 前端门槛，加[首次生成审查与再次生成稳定性](#页面注册生成) |
+| 数据库结构、初始化数据、迁移顺序或验证脚本 | [Flyway 空库验证](#flyway-空库验证)，包含真实 PostgreSQL 测试 |
+| PostgreSQL 测试保护的权限、凭据、事务或并发行为 | 即使未修改迁移，也必须执行[真实 PostgreSQL 验证](#真实-postgresql-验证) |
+| 新增或显著扩展模块、治理入口或门禁引用 | 模块约定脚本，并叠加实际代码和风险所需检查；调整门禁还须验证其相关行为 |
+
+文档检查覆盖 README、CONTRIBUTING、AGENTS、docs、项目 skill 及脚本的反向引用。移动章节时检查锚点；区分真实路径与 `{领域}` 等示例占位符，不为消除死链创建空文件。格式检查可从仓库根目录执行：
+
+```bash
+git diff --check
+```
+
 ## 模块约定
 
 新增或显著扩展业务模块时，先执行仓库级确定性约束检查：
@@ -49,7 +69,7 @@ cd smart-manage-api
 mvn test
 ```
 
-只有纯文档修改或确认不影响测试代码的简单改动才可以仅执行 `mvn compile`。实体、Mapper、配置和迁移变更还必须确认相关代码能够正常编译。
+纯文档修改不要求执行 Maven。确认不影响测试代码的简单后端改动才可以仅执行 `mvn compile`；影响安全、权限、事务或并发语义的改动不属于该例外。实体、Mapper、配置和迁移变更还必须确认相关代码能够正常编译。
 
 ## 前端
 
@@ -75,14 +95,34 @@ pnpm verify:page-framework
 pnpm exec prettier --check "scripts/*page-framework*.mjs"
 ```
 
-涉及页面注册时执行：
+### 页面注册生成
+
+在 `smart-manage-web` 目录执行。实际入口为 `package.json` 的 `gen:registry`，脚本为 `scripts/gen-registry.mjs`，输出为 `src/domain/common/registry/registry.gen.ts`；`predev`、`prebuild` 也调用该生成器。
+
+本地修改注册源后首次生成允许产生预期差异，必须审查并保留生成结果：
 
 ```bash
 pnpm gen:registry
-git diff --exit-code -- src/domain/common/registry/registry.gen.ts
+git diff -- src/domain/common/registry/registry.gen.ts
 ```
 
-生成文件只能通过生成命令维护。
+再次生成应相对首次结果没有新增差异。Windows 可比较两次生成后的文件哈希；这不会要求本地文件与 HEAD 相同：
+
+```powershell
+$registryFirstHash = (Get-FileHash -LiteralPath src/domain/common/registry/registry.gen.ts -Algorithm SHA256).Hash
+pnpm gen:registry
+if ($LASTEXITCODE -ne 0) { throw 'Registry generation failed' }
+$registrySecondHash = (Get-FileHash -LiteralPath src/domain/common/registry/registry.gen.ts -Algorithm SHA256).Hash
+if ($registryFirstHash -ne $registrySecondHash) { throw 'Registry generation is not stable' }
+```
+
+CI 在干净检出上通过 `pnpm build` 的 `prebuild` 生成后，从仓库根目录检查已提交的生成文件是否同步：
+
+```bash
+git diff --exit-code -- smart-manage-web/src/domain/common/registry/registry.gen.ts
+```
+
+生成文件只能通过生成命令维护，不得恢复文件、覆盖用户修改或手工编辑生成结果来满足检查。
 
 ESLint 报错不得用注释跳过，也不得修改 `eslint.config.js` 降低规则。只有需要自动修复格式或用户明确要求时，才执行 `pnpm lint:fix` 或 `pnpm format`。
 
@@ -96,9 +136,21 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 
 脚本默认从 PATH 查找 PostgreSQL Client 16，并在迁移前输出和校验 `psql` 版本；特殊本地安装可通过 `-PsqlPath` 显式指定可执行文件。脚本创建临时数据库，通过项目锁定版本的 Flyway 执行全部迁移，校验版本、命名、checksum 和 `flyway_schema_history`，并在验证后清理。数据库结构、初始化数据、迁移顺序或脚本发生变化时必须执行此项验证。
 
-## CI 门禁
+## 真实 PostgreSQL 验证
+
+修改真实数据库测试保护的权限、凭据代际、事务、锁或并发行为时，即使没有迁移变更，也必须执行上节的 `db/verify-baseline.ps1`。脚本迁移临时数据库后，以实际测试数据库参数运行全部 `*PostgresTests`；配置入口以脚本为准，凭据不得写入文档或提交。
 
 空库验证脚本在迁移后自动运行全部 `*PostgresTests`。凭据代际测试必须使用真实触发器、Mapper 和 Spring 事务，覆盖安全变化、普通资料变化、回滚、旧证明 CAS 及验证码消费后的并发变更；角色整体授权测试通过 `pg_blocking_pids` 观察真实锁等待，覆盖替换、清空、删除和失败回滚。普通 `mvn test` 跳过依赖 PostgreSQL 的测试，不能替代该门禁。
+
+PostgreSQL 客户端、数据库服务或必要配置缺失时，此项记为未验证并说明原因；普通 `mvn test` 通过或测试被跳过不能算作此项通过。
+
+## 浏览器验收
+
+页面交互、布局或样式发生变化时，按受影响场景核对真实页面；纯文档修改不触发浏览器验收。记录操作与可见结果，涉及字号、滚动或布局时检查最终计算样式及同类页面，生命周期改动覆盖回显、只读和脏数据保护等相关路径。
+
+网页内容在常规方式无法获取时，使用 `/playwright-cli`；启动使用 `--headed` 和 `--persistent`。浏览器登录需要验证码时，停下来由用户完成验证码登录，再继续测试。工具或运行环境不可用时如实标记未验证，不绕过登录保护。
+
+## CI 门禁
 
 `.github/workflows/quality-gate.yml` 当前执行：
 

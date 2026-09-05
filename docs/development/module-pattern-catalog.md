@@ -5,64 +5,56 @@
 ## 样板选择原则
 
 1. 先按模块类型选择主样板，再按树、引用选择、敏感配置、状态命令等横切能力选择辅助样板。
-2. 至少检查主样板的后端 Service/TxService、前端页面、页面注册、迁移和风险测试，不能只复制一个组件。
+2. 按实际变更维度检查样板与相关测试：后端看 Service/TxService 和涉及的迁移，前端看页面、注册和生命周期；跨层契约再补读关联部分。
 3. 样板与当前 `AGENTS.md` 或架构文档冲突时，以当前规则为准，并记录样板需要演进的地方。
 4. 不把当前模块的偶然字段、权限码、CSS 类名或业务状态复制为通用设计。
 
 ## 主样板
 
-| 场景 | 推荐样板 | 重点观察 |
-| --- | --- | --- |
-| 标准主从业务聚合 | 后端 `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition`、前端 `smart-manage-web/src/domain/scm/procurement/purchaseRequisition`、`docs/domains/scm/procurement/purchase-requisition.md` | 主从保存/提交、乐观锁、编号、附件、LIST/EDIT 页签生命周期 |
-| 独立配置 LIST/EDIT | 后端 `smart-manage-api/src/main/java/sm/domain/sys/base/sysparam`、前端 `smart-manage-web/src/domain/sys/base/sysParam`、`docs/domains/sys/base/system-parameter.md` | Feature 归属、标准 `EditPage`、列表树和详情回显 |
-| 带独立状态命令与敏感配置 | 后端 `smart-manage-api/src/main/java/sm/domain/sys/message/email`、前端 `smart-manage-web/src/domain/sys/message/email`、`docs/domains/sys/message/email.md` | 启停不进保存 Form、凭据安全状态、RefSelector、记录详情和外部副作用 |
-| 树形主数据 | 后端 `smart-manage-api/src/main/java/sm/domain/sys/base/org`、前端 `smart-manage-web/src/domain/sys/base/org`、`docs/domains/sys/base/organization.md` | 树语义、父级引用、组织约束；页面形态不能脱离目标模块需求照搬 |
-| 用户列表与组织树 | `smart-manage-web/src/domain/sys/base/user/UserListPage.tsx`、`smart-manage-web/src/domain/sys/base/user/refSelector/useUserRefSelector.ts` | 组织根节点、默认范围、用户引用选择和批量选择 |
-| 调度配置与执行记录 | `smart-manage-web/src/domain/sys/scheduler/job`、`smart-manage-web/src/domain/sys/scheduler/execution`、`docs/domains/sys/scheduler/job.md` | 配置 LIST/EDIT、状态命令、只读执行详情和运行态组装 |
+| 场景 | 推荐样板 | 重点观察 | 不可照搬的边界 |
+| --- | --- | --- | --- |
+| 标准主从业务聚合 | 后端 `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition`、前端 `smart-manage-web/src/domain/scm/procurement/purchaseRequisition`、`docs/domains/scm/procurement/purchase-requisition.md` | 主从保存/提交、乐观锁、编号、附件、LIST/EDIT 页签生命周期 | 采购字段、状态与组织角色规则 |
+| 独立配置 LIST/EDIT | 后端 `smart-manage-api/src/main/java/sm/domain/sys/base/sysparam`、前端 `smart-manage-web/src/domain/sys/base/sysParam`、`docs/domains/sys/base/system-parameter.md` | Feature 归属、标准 `EditPage`、列表树和详情回显 | 系统参数树和配置语义 |
+| 带独立状态命令与敏感配置 | 后端 `smart-manage-api/src/main/java/sm/domain/sys/message/email`、前端 `smart-manage-web/src/domain/sys/message/email`、`docs/domains/sys/message/email.md` | 启停不进保存 Form、凭据安全状态、RefSelector、记录详情和外部副作用 | 凭据与投递状态、外部副作用 |
+| 树形主数据 | 后端 `smart-manage-api/src/main/java/sm/domain/sys/base/org`、前端 `smart-manage-web/src/domain/sys/base/org`、`docs/domains/sys/base/organization.md` | 树语义、父级引用、组织约束；页面形态不能脱离目标模块需求照搬 | 组织树与父子约束 |
+| 用户列表与组织树 | `smart-manage-web/src/domain/sys/base/user/UserListPage.tsx`、`smart-manage-web/src/domain/sys/base/user/refSelector/useUserRefSelector.ts` | 组织根节点、默认范围、用户引用选择和批量选择 | 组织默认范围和任职关系 |
+| 调度配置与执行记录 | `smart-manage-web/src/domain/sys/scheduler/job`、`smart-manage-web/src/domain/sys/scheduler/execution`、`docs/domains/sys/scheduler/job.md` | 配置 LIST/EDIT、状态命令、只读执行详情和运行态组装 | 调度执行状态与集群机制 |
 
 ## 横切能力样板
 
-| 能力 | 参考位置 |
-| --- | --- |
-| 页面注册 | `smart-manage-web/src/domain/scm/procurement/purchaseRequisition/pageRegistration.ts` |
-| 标准列表 | `smart-manage-web/src/domain/scm/procurement/purchaseRequisition/PurchaseRequisitionListPage.tsx` |
-| 列表选择状态 | `smart-manage-web/src/domain/common/page/list/useListSelection.ts`；接入示例为 `SysParamListPage`、`NumberRuleListPage`、`RoleListPage`，清空时机保留在领域页面 |
-| 标准编辑 | `smart-manage-web/src/domain/sys/base/sysParam/SysParamEditPage.tsx`；`useEditTabLifecycle` 只处理页签动作，`editSavePostCommit` 区分保存后的页签同步与缓存刷新结果，保存参数与 Query Key 保留在领域页面 |
-| 通用表单字段布局 | 公共组件见 `smart-manage-web/src/domain/common/page/edit/FormFieldLayout.tsx` 和 `FormFieldLayout.css`；数据驱动表单见 `EditFormFields.tsx`；四列标准编辑参考 `EditPage.tsx`，两列弹框参考 `ModalEditPage.tsx` 和 `sys/monitor/alert/MonitorAlertPage.tsx`，头像复合布局参考 `sys/base/user/UserProfileFields.tsx`，单列参数弹框参考 `layouts/PersonalCredentialModal.tsx`。保持 `FormFieldGrid > FormFieldCell > Form.Item.sm-edit-field-content` 结构，不在领域页面复制或覆盖公共宽度与断点 |
-| 编辑页可编辑明细表格与操作区 | 公共骨架见 `smart-manage-web/src/domain/common/component/EditableDetailTable.tsx`；动态明细见 `smart-manage-web/src/domain/sys/base/numberRule/NumberRuleEditPage.tsx`；标准主从明细见 `smart-manage-web/src/domain/scm/procurement/purchaseRequisition/PurchaseRequisitionEditPage.tsx`；实体引用明细见 `smart-manage-web/src/domain/sys/base/user/UserAssignmentTable.tsx`。复用统一密度、选择、焦点和校验反馈，通过 `detailExtra` 将新增、删除、排序等操作归集到明细折叠面板标题栏右侧 |
-| 实体引用选择器 | 公共交互见 `smart-manage-web/src/domain/common/component/RefSelector.tsx`；树表选择见 `smart-manage-web/src/domain/sys/base/org/refSelector/useOrgRefSelector.ts`；领域多选与组织范围见 `smart-manage-web/src/domain/sys/base/user/refSelector/useUserRefSelector.ts`；账号选择见 `smart-manage-web/src/domain/sys/message/email/refSelector/useEmailAccountRefSelector.ts` |
-| 通用业务弹框 | `smart-manage-web/src/domain/common/component/AppModal.tsx` |
-| 应用首页卡片布局 | `smart-manage-web/src/domain/common/home/HomeCardGrid.tsx`、`HomeCardGrid.css`；系统首页参考 `pages/home/Home.tsx`，真实数据首页参考 `domain/sys/scheduler/home/SchedulerHome.tsx` 和 `domain/sys/monitor/home/MonitorHome.tsx`，示例数据首页参考 `domain/sys/base/home/BaseHome.tsx` 和 `domain/sys/message/home/MessageHome.tsx`。固定使用四列轨道及 1/2/3/4 跨列，不在窄屏自动换行；`QuickLaunchCard` 按应用实际需要选用，不是必选能力 |
-| 操作确认 | `smart-manage-web/src/domain/common/component/useOperationConfirm.ts`、`OperationConfirmProvider.tsx`、`OperationConfirmModal.tsx`；观察风险类型、遮罩行为、危险操作键盘限制和统一按钮区 |
-| 操作结果反馈 | `smart-manage-web/src/domain/common/component/useOperationFeedback.tsx`、`operationFeedbackPolicy.ts` 和 `smart-manage-web/src/api/errorPresentation.ts`；观察默认自动关闭、可选常驻与关闭按钮、语义颜色、最大宽度及后端反馈级别/传输安全优先级 |
-| 公开 Service 与 TxService | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/service` |
-| 多事务入口复用写能力 | 用户保存与导入：`sm.domain.sys.base.user.service.UserTxService`、`UserImportTxService`、`UserWriter`；跨模块事务参与见 `FileArtifactRegistrar` |
-| 权限常量 | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/constant/PurchaseRequisitionPermission.java` |
-| 架构边界测试 | `smart-manage-api/src/test/java/sm/architecture/SystemDependencyBoundaryTests.java` |
-| 状态、事务与并发测试 | `smart-manage-api/src/test/java/sm/domain/scm/procurement/purchaserequisition/service/PurchaseRequisitionTxServiceTests.java` |
-| 页面注册生成与校验 | `smart-manage-web/scripts/gen-registry.mjs`、`smart-manage-web/scripts/verify-permissions.mjs` |
+前端源码路径以下均相对 `smart-manage-web/src/`；后端路径相对仓库根目录。页面使用约束见[前端页面指南](./frontend-page-guide.md)，本表只索引实现。
 
-## 常见反模式和安全路径
+| 场景 | 样板路径 | 观察重点 | 不可照搬的边界 |
+| --- | --- | --- | --- |
+| 页面注册 | `domain/scm/procurement/purchaseRequisition/pageRegistration.ts` | 显式稳定身份；协议见[页面注册约定](../architecture/page-registration-convention.md) | 不复制 Feature 和页面键 |
+| 标准列表与选择 | `domain/scm/procurement/purchaseRequisition/PurchaseRequisitionListPage.tsx`、`domain/common/page/list/useListSelection.ts` | 查询与选择派生 | 清空选择时机由领域决定 |
+| 标准编辑 | `domain/sys/base/sysParam/SysParamEditPage.tsx` | 页签生命周期与保存后同步 | 保存参数和 Query Key 留在领域 |
+| 字段布局 | `domain/common/page/edit/FormFieldLayout.tsx`、`domain/common/page/edit/EditFormFields.tsx`、`domain/sys/base/user/UserProfileFields.tsx`、`layouts/PersonalCredentialModal.tsx` | 标准、复合与窄弹框布局；见[字段布局](./frontend-page-guide.md#表单字段布局) | 不复制宽度和断点 CSS |
+| 可编辑明细 | `domain/common/component/EditableDetailTable.tsx`、`domain/sys/base/numberRule/NumberRuleEditPage.tsx`、`domain/scm/procurement/purchaseRequisition/PurchaseRequisitionEditPage.tsx`、`domain/sys/base/user/UserAssignmentTable.tsx` | 动态字段、聚合明细与引用关系；分区示例见下文 | 领域只维护业务列、控件与校验 |
+| 实体引用 | `domain/common/component/RefSelector.tsx`、`domain/sys/base/org/refSelector/useOrgRefSelector.ts`、`domain/sys/base/user/refSelector/useUserRefSelector.ts`、`domain/sys/message/email/refSelector/useEmailAccountRefSelector.ts` | 树表、多选与候选范围；见[实体引用选择](./frontend-page-guide.md#实体引用选择) | 组织和用途必须按目标业务定义 |
+| 业务弹框 | `domain/common/component/AppModal.tsx` | 标准弹框行为 | 独立详情页不能照搬成弹框 |
+| 应用首页 | `domain/common/home/HomeCardGrid.tsx`、`domain/sys/monitor/home/MonitorHome.tsx`、`domain/sys/base/home/BaseHome.tsx` | 真实与示例数据；见[应用首页](./frontend-page-guide.md#应用首页) | 示例卡不能冒充真实数据，快捷入口按需选用 |
+| 确认与反馈 | `domain/common/component/useOperationConfirm.ts`、`domain/common/component/OperationConfirmModal.tsx`、`domain/common/component/useOperationFeedback.tsx`、`api/errorPresentation.ts` | 风险与反馈策略；见[交互规范](./frontend-page-guide.md#弹框表格和视觉) | 不复制公共弹框或错误码映射 |
+| 事务入口 | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/service` | 公开 Service 与 TxService | 不照搬状态机 |
+| 复用事务内写能力 | `smart-manage-api/src/main/java/sm/domain/sys/base/user/service/UserWriter.java`、`smart-manage-api/src/main/java/sm/domain/sys/base/user/service/UserImportTxService.java` | 多入口共享 Writer | 不创建第二个事务 owner；跨领域须使用提供方 Contract |
+| 权限常量 | `smart-manage-api/src/main/java/sm/domain/scm/procurement/purchaserequisition/constant/PurchaseRequisitionPermission.java` | Controller 引用常量 | 不复制权限码 |
+| 架构与并发测试 | `smart-manage-api/src/test/java/sm/architecture/ArchitectureContractTests.java`、`smart-manage-api/src/test/java/sm/domain/scm/procurement/purchaserequisition/service/PurchaseRequisitionTxServiceTests.java` | 类型依赖、状态和乐观锁 | Mock 测试不能替代真实 PostgreSQL 验证 |
+| 生成与权限校验 | `smart-manage-web/scripts/gen-registry.mjs`、`smart-manage-web/scripts/verify-permissions.mjs` | 生成输出与目录一致性 | 本地生成和 CI 判定见[质量验证](./verification.md#页面注册生成) |
 
-| 反模式 | 为什么不符合项目 | 安全路径 |
-| --- | --- | --- |
-| 未分析样板就直接生成完整模块 | 容易只满足技术栈而偏离项目交互和生命周期 | 先声明模块类型、主样板和差异点 |
-| 独立主数据或配置使用一个 CUSTOM 页面拼接列表和表单 | 绕过标准页签、脏数据保护和详情生命周期 | 默认建立共享 Feature 的 LIST + EDIT 页面 |
-| 列表为了执行单记录命令而使用单选框 | 把命令约束错误建模成选择约束 | 使用复选框，仅在恰好选择一条时启用命令 |
-| 在编辑页保存启停、封存等状态 | 容易误改状态并扩大保存 Form 权限 | 使用列表专用命令和最小参数接口 |
-| 详情只返回外键 ID，前端再查列表回显 | 形成额外请求并破坏引用选择器边界 | 详情返回引用对象，保存只提交 ID |
-| 使用普通 Select 重做已有实体选择 | 搜索、分页、树筛选和回显行为不一致 | 复用或新增 `use*RefSelector` |
-| 使用 `remark`、`note` 或“说明”表达通用描述 | 同义字段重复建模 | 使用 `description` 和“描述” |
-| 给组织树人工增加没有业务语义的“全部组织”根节点 | 改变默认查询范围并偏离已有页面 | 复用真实顶级组织和现有默认选择语义 |
-| 为标准表单复制 `EditPageShell + Form` | 重复布局、校验、操作区和只读逻辑 | 优先使用 `EditPage`，只扩展无法表达的部分 |
-| 将编辑页明细操作放进折叠面板内容区或为明细表格增加“操作”列 | 操作位置不统一，并绕过标题操作区和批量选择约定 | 使用 `detailExtra` 或 `EditSectionCollapse` 分区的 `extra` 将操作归集到标题栏右侧，表格使用选择列确定目标；只有明确的特殊交互要求才允许偏离并说明原因 |
-| 在领域页面直接组合 `Form.List + Table` 并复制明细表格基础 CSS | 表格密度、必填标记、焦点、错误提示和查看态会随页面漂移 | 复用 `EditableDetailTable`，领域组件只定义业务列、动态控件、整表规则和操作语义 |
-| 顶部普通命令使用默认按钮，或将危险命令混排在常规命令中 | 页面主操作视觉不一致，危险操作难以识别且容易误触 | 普通命令统一使用 `primary`；上下文控件在前、主要命令和辅助命令居中、`danger` 危险命令最后 |
-| CUSTOM 页面自行实现 Modal、分页或固定表格高度 | 容易出现间距、滚动和操作位置不一致 | 复用 `AppModal`、通用分页和 flex 高度链 |
-| 页面直接使用 `Modal.confirm`、`Popconfirm` 或 `message.*` | 操作风险、遮罩行为、反馈级别和关闭方式不一致 | 确认操作使用 `useOperationConfirm`，结果反馈使用 `useOperationFeedback` |
-| 在 TSX 中使用内联样式快速修补布局 | 难以维护且绕过项目 CSS 约定 | 使用以 `sm-` 开头的 CSS 类 |
-| 通过权限前缀或组件路径推断 Feature | 稳定身份被命名偶然性绑架 | 在迁移和页面注册中显式关联 `featureKey` |
-| 外部调用放在数据库事务中并默认重试 | 可能造成长事务、重复副作用和不可判定结果 | 事务提交后调用或使用持久任务，并明确超时、幂等和补偿 |
+### 明细分区示例
+
+当前 `EditPage` 接收 `sections: EditPageSection[]`，类型及字段卡片构造器见 [editPageSection.tsx](../../smart-manage-web/src/domain/common/page/edit/editPageSection.tsx)。采购申请真实调用方将明细内容与操作区组合为同一个分区，简化示意如下（回调由领域页面实现）：
+
+```tsx
+const entrySection: EditPageSection = {
+  key: 'entries',
+  label: '明细信息',
+  content: renderEntries,
+  extra: renderEntryActions,
+};
+```
+
+`content` 和 `extra` 均接收 `editable`；领域回调据此隐藏写操作，`EditPage` 在折叠时隐藏分区操作区。不要把该回调参数误认为 `EditSectionCollapse` 的展开状态。完整组合参考 [PurchaseRequisitionEditPage.tsx](../../smart-manage-web/src/domain/scm/procurement/purchaseRequisition/PurchaseRequisitionEditPage.tsx)，布局与选择约束见[编辑页](./frontend-page-guide.md#编辑页)。
 
 ## 样板维护
 

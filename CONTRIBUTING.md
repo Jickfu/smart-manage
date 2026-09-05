@@ -11,37 +11,11 @@ Smart Manage 仍处于架构搭建阶段。贡献应优先提高架构内核和�
 
 使用 AI 编码代理时，还必须遵循根目录和对应子项目中的 `AGENTS.md`。
 
-## 修改原则
+## 开发与验证
 
-- 每次修改只处理一个清晰主题。
-- 保持最小充分范围，不夹带无关重构。
-- 不为尚未出现的需求提前增加抽象、兼容层或功能开关。
-- 数据库结构调整必须新增 Flyway 迁移。
-- 关键架构、安全、事务、状态和并发逻辑必须补充自动化测试。
-- 自动生成文件通过生成命令维护，不得手工修补生成结果。
+保持单一主题和最小充分范围，不夹带无关重构。按[文档导航](./docs/README.md#按任务阅读)读取涉及的架构和领域规则；新增或显著扩展模块执行[模块开发指南](./docs/development/module-development-guide.md)，普通页面调整按[前端页面指南](./docs/development/frontend-page-guide.md)。
 
-## 提交前验证
-
-后端代码至少执行：
-
-```bash
-cd smart-manage-api
-mvn test
-```
-
-前端代码至少执行：
-
-```bash
-cd smart-manage-web
-pnpm lint
-pnpm format:check
-pnpm test
-pnpm build
-```
-
-数据库迁移、组件注册表及按改动类型选择验证的方法见[质量验证](./docs/development/verification.md)。
-
-仅修改文档时，不要求运行代码构建，但必须检查文档链接、标题结构和事实一致性。
+提交前按[质量验证](./docs/development/verification.md#按改动类型选择验证)执行对应检查，并在提交说明中如实列出结果和未验证项。纯文档修改无需代码构建；快速启动命令见 [README](./README.md#快速启动)。
 
 ## 提交规范
 

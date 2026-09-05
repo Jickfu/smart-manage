@@ -1,6 +1,6 @@
 # 前端架构
 
-本文档是前端技术基线、路由、状态职责、页面类型和页签生命周期的权威来源。具体页面实现与交互约束归[模块开发指南](../development/module-development-guide.md)，注册协议细节归[页面注册约定](./page-registration-convention.md)。
+本文档是前端技术基线、路由、状态职责、页面类型和页签生命周期的权威来源。具体页面实现与交互约束归[前端页面指南](../development/frontend-page-guide.md)，注册协议细节归[页面注册约定](./page-registration-convention.md)。
 
 运维中心首页是固定业务总览；运行监控按 Host/Instance 分离快照，历史图按百分比、B/s、req/s、ms 和数量分图展示，见[内建监控架构](./monitoring.md)。
 
@@ -150,4 +150,4 @@ EditPage 的校验/transformValues 异常尚未进入领域 Mutation，由编辑
 
 工作台内容页签标题同样属于页面注册边界：菜单只决定打开哪个 `componentKey`，不提供页签标题。LIST、EDIT、CUSTOM 的默认标题规则、通用页面壳同步方式以及业务页面动态覆盖能力统一遵守前端页面注册约定。
 
-页面实现、样式和交互约束统一见[模块开发指南](../development/module-development-guide.md)，编译、测试和构建要求统一见[质量验证](../development/verification.md)。
+页面实现、样式和交互约束统一见[前端页面指南](../development/frontend-page-guide.md)，编译、测试和构建要求统一见[质量验证](../development/verification.md)。

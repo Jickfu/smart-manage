@@ -16,7 +16,7 @@ Smart Manage 是一个面向企业管理系统的前后端分离项目，重点�
 ```text
 smart-manage/
 ├── db/migration/       # Flyway 数据库结构和必要初始化数据
-├── docs/               # 架构、开发规范、模块、提案和历史文档
+├── docs/               # 架构、开发规范、模块和提案
 ├── smart-manage-api/   # Spring Boot 后端
 └── smart-manage-web/   # React 前端
 ```
@@ -83,7 +83,7 @@ pnpm test
 pnpm build
 ```
 
-CI、组件注册表和 Flyway 空库验证见[质量验证](./docs/development/verification.md)。
+以上为代码修改的快速验证入口；按改动类型执行的完整门槛、组件注册表及真实 PostgreSQL 验证见[质量验证](./docs/development/verification.md#按改动类型选择验证)。纯文档修改不要求执行上述构建和测试。
 
 ## 文档
 

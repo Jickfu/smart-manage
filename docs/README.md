@@ -1,17 +1,19 @@
 # Smart Manage 文档
 
-本文档集按“当前事实、开发操作、未来提案、历史归档”分区。相同内容只保留一个权威来源，其他位置使用链接引用。
+本文档集按架构、开发操作、领域语义和提案分区。相同内容只保留一个权威来源，其他位置使用链接引用。
 架构总览可以保留稳定结论的简短摘要，检查清单可以将权威规则转换为验收项；摘要和清单必须链接权威文档，不得独立扩展或改写规则。
 
 ## 按任务阅读
 
-无需在每次改动前通读全部文档。先按任务阅读最小必要集合，再跟随文内链接进入安全、部署或领域细节。
+生效文档规定应遵守的约束，代码和测试用于核实实现现状。两者不一致时，应区分文档过时与实现缺陷；不得通过修改文档把实现缺陷合法化。
+
+已加载且未变化的规则无需重复读取。无需在每次改动前通读全部文档。先按任务阅读最小必要集合，再跟随文内链接进入安全、部署或领域细节。
 
 | 任务 | 首先阅读 | 按需补充 |
 | --- | --- | --- |
 | 理解项目整体设计 | [架构总览](./architecture/overview.md) | 对应的前端、后端、安全或部署架构 |
 | 修改普通后端代码 | [后端架构](./architecture/backend.md)、[质量验证](./development/verification.md) | 对应领域模块文档 |
-| 修改前端页面或交互 | [前端架构](./architecture/frontend.md)、[模块开发指南](./development/module-development-guide.md)、[质量验证](./development/verification.md) | [页面注册约定](./architecture/page-registration-convention.md)、[模块样板目录](./development/module-pattern-catalog.md) |
+| 修改前端页面或交互 | [前端架构](./architecture/frontend.md)、[前端页面指南](./development/frontend-page-guide.md)、[质量验证](./development/verification.md) | [页面注册约定](./architecture/page-registration-convention.md)、[模块样板目录](./development/module-pattern-catalog.md) |
 | 新增或显著扩展业务模块 | [模块开发指南](./development/module-development-guide.md)、[模块样板目录](./development/module-pattern-catalog.md)、对应领域文档 | 新聚合再使用[业务聚合检查清单](./development/business-aggregate-checklist.md) |
 | 认证、权限或高风险能力 | [安全架构](./architecture/security.md) | [登录保护](./architecture/login-protection.md)、[功能与权限](./architecture/feature-and-permission.md)、[数据权限](./architecture/data-permission.md)、[数据脱敏](./architecture/data-masking.md) |
 | 数据库或迁移 | [数据库开发](./development/database.md)、[质量验证](./development/verification.md) | 日志分区再阅读[日志数据生命周期](./architecture/log-lifecycle.md) |
@@ -53,6 +55,7 @@
 ### 模块开发
 
 - [模块开发指南](./development/module-development-guide.md)
+- [前端页面指南](./development/frontend-page-guide.md)
 - [模块样板目录](./development/module-pattern-catalog.md)
 - [新增业务聚合检查清单](./development/business-aggregate-checklist.md)
 
@@ -65,7 +68,7 @@
 - Flyway 版本、迁移文件名、建表过程和当前基线组成；数据库规则统一引用[数据库开发](./development/database.md)，实际结构以 `db/migration` 为准；
 - 权限码、权限前缀及权限与接口的逐项清单；权限事实以代码中的权限常量、Controller 注解和数据库内置目录为准，并由质量门禁校验；
 - 可以直接从 Controller、路由注册、实体或配置读取的完整接口、表字段和配置项清单；只有构成稳定跨模块契约的标识才保留；
-- 实施进度、临时兼容过程和移除脚本；未来工作进入路线图或提案，历史过程进入归档。
+- 实施进度、临时兼容过程和移除脚本；未来工作进入路线图或提案，历史过程通过 Git 历史和 Issue 追溯。
 
 领域文档仍应说明“哪些主体在什么业务条件下可以执行什么动作”等稳定授权语义，但不复制具体权限码。模块涉及高风险能力时，还应保留管理员身份复核、对象级授权和默认拒绝等安全边界。
 
@@ -77,6 +80,12 @@
 - [基础资料](./domains/sys/base/basic-data.md)
 - [编号规则](./domains/sys/base/numbering.md)
 - [组织管理](./domains/sys/base/organization.md)
+- [首页快速发起](./domains/sys/base/home-quick-launch.md)
+- [OpenAPI 开放平台](./domains/sys/base/openapi-platform.md)
+- [角色管理](./domains/sys/base/role.md)
+- [系统参数](./domains/sys/base/system-parameter.md)
+- [界面配置](./domains/sys/base/ui-config.md)
+- [用户管理](./domains/sys/base/user.md)
 
 监控应用（monitor）：
 
@@ -87,10 +96,16 @@
 - [慢 SQL 监控](./domains/sys/monitor/slow-sql-monitoring.md)
 - [SQL 控制台](./domains/sys/monitor/sql-console.md)
 - [线程诊断](./domains/sys/monitor/thread-diagnostics.md)
+- [监控告警](./domains/sys/monitor/alerting.md)
 
 调度应用（scheduler）：
 
 - [任务调度](./domains/sys/scheduler/job.md)
+
+消息应用（message）：
+
+- [邮件](./domains/sys/message/email.md)
+- [站内消息](./domains/sys/message/inbox.md)
 
 ### 供应链领域（scm）
 
@@ -104,14 +119,6 @@
 
 - [项目路线图](./roadmap.md)
 
-`roadmap.md` 只记录已批准但尚未完成的项目级事项。`proposals/` 中的内容尚未生效，不能作为实现依据。
+`roadmap.md` 只记录已批准但尚未完成的项目级事项。`proposals/` 保留方案背景与后续设想，不作为生效规则；已采纳约束以对应架构和领域文档为准。
 
-## 历史归档
-
-- [企业级架构优化计划（2026-07）](./archive/enterprise-architecture-optimization-plan-2026-07.md)
-- [架构收口报告（2026-07）](./archive/architecture-closure-report-2026-07.md)
-- [领域服务审查记录（2026-08）](./archive/reviews-2026-08/sys-domain-service-review-2026-08.md)
-- [领域服务审查与整改记录（2026-08）](./archive/reviews-2026-08/sys-domain-service-remediation-2026-08.md)
-- [前端审查记录（2026-08）](./archive/reviews-2026-08/web-frontend-review-2026-08.md)
-
-归档只用于追溯，不代表当前架构、规则或项目状态。
+- [Excel 导入导出方案背景与后续边界](./proposals/excel-import-export.md)
