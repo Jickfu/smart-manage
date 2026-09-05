@@ -36,6 +36,10 @@ public class OpenApiOperationRegistry {
         return operationByRoute.get(routeKey(method, path));
     }
 
+    public OpenApiOperation findByKey(String operationKey) {
+        return operationByKey.get(operationKey);
+    }
+
     public Collection<OpenApiOperation> all() {
         return operationByKey.values();
     }

@@ -10,6 +10,7 @@ public final class OpenApiPermission {
     public static final String APPLICATION_GRANT = "sys:base:openapi-application:grant";
     public static final String CATALOG_LIST = "sys:base:openapi-catalog:listPage";
     public static final String CATALOG_PUBLISH = "sys:base:openapi-catalog:publish";
+    public static final String CATALOG_TEST = "sys:base:openapi-catalog:test";
     public static final String INVOCATION_LIST = "sys:base:openapi-invocation:listPage";
 
     private OpenApiPermission() {

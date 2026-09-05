@@ -109,7 +109,7 @@ function renderFormControl(field: EditField, disabled: boolean) {
           variant="underlined"
           placeholder={field.placeholder}
           disabled={disabled}
-          rows={3}
+          rows={field.rows ?? 3}
         />
       );
     case 'select':

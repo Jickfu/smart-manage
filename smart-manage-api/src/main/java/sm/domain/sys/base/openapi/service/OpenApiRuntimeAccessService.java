@@ -96,6 +96,18 @@ public class OpenApiRuntimeAccessService {
         }
     }
 
+    /** 管理端业务试调不读取凭据，但必须复用发布、授权及代理身份校验。 */
+    AccessMaterial authorizeManagementTest(Long applicationId, OpenApiOperation operation) {
+        OpenApiApplicationEntity application = applicationMapper.selectById(applicationId);
+        if (application == null || !Boolean.TRUE.equals(application.getEnabled())) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "第三方应用未启用");
+        }
+        AccessMaterial material = new AccessMaterial(application.getId(), application.getNumber(),
+                application.getProxyUserId(), null, application.getProxyOrgId(), "MANAGEMENT_TEST",
+                null, null, null, null);
+        return authorizeOperation(material, operation);
+    }
+
     private void validateIp(OpenApiApplicationEntity application, String clientIp) {
         if ("DISABLED".equals(application.getIpPolicyMode())) {
             return;

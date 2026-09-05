@@ -13,6 +13,11 @@ export const openApiCatalogAccess = defineAccessResource('sys:base:openapi-catal
   listPage: 'listPage',
   save: 'publish',
   publish: 'publish',
+  test: 'test',
+});
+
+export const openApiCatalogTestAccess = defineAccessResource('sys:base:openapi-catalog', {
+  save: 'test',
 });
 
 export const openApiInvocationAccess = defineAccessResource('sys:base:openapi-invocation', {

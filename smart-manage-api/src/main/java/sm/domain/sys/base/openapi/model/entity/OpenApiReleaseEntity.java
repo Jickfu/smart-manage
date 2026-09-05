@@ -31,6 +31,8 @@ public class OpenApiReleaseEntity extends BaseEntity {
     private String requestSchema;
     private String responseSchema;
     private String documentation;
+    private String requestExample;
+    private String responseExample;
     private Boolean systemPreset;
     @Version
     private Integer version;

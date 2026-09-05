@@ -10,12 +10,19 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import sm.domain.sys.base.openapi.constant.OpenApiPermission;
 import sm.domain.sys.base.openapi.model.form.OpenApiApplicationSaveForm;
 import sm.domain.sys.base.openapi.model.form.OpenApiCredentialCreateForm;
 import sm.domain.sys.base.openapi.model.form.OpenApiEnableForm;
 import sm.domain.sys.base.openapi.model.form.OpenApiListForm;
 import sm.domain.sys.base.openapi.model.form.OpenApiReleaseStatusForm;
+import sm.domain.sys.base.openapi.model.form.OpenApiCatalogExportForm;
+import sm.domain.sys.base.openapi.model.form.OpenApiCatalogTestForm;
+import sm.domain.sys.base.openapi.service.OpenApiCatalogTestService;
 import sm.domain.sys.base.openapi.service.OpenApiManagementService;
 import sm.system.form.IdForm;
 import sm.system.response.PageData;
@@ -30,6 +37,7 @@ import java.util.Map;
 @Tag(name = "系统管理-OpenAPI 平台", description = "第三方应用、API 目录与调用监控")
 public class OpenApiManagementController {
     private final OpenApiManagementService service;
+    private final OpenApiCatalogTestService testService;
 
     @PostMapping("/application/listPage")
     @SaCheckPermission(OpenApiPermission.APPLICATION_LIST)
@@ -95,6 +103,29 @@ public class OpenApiManagementController {
     @SaCheckPermission(OpenApiPermission.CATALOG_LIST)
     public Result<Map<String, Object>> catalogDetail(@Valid @RequestBody IdForm form) {
         return Result.success(service.catalogDetail(form.getId()));
+    }
+
+    @PostMapping("/catalog/export")
+    @SaCheckPermission(OpenApiPermission.CATALOG_LIST)
+    public ResponseEntity<byte[]> catalogExport(@Valid @RequestBody OpenApiCatalogExportForm form) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/markdown;charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename("api-documentation.md", java.nio.charset.StandardCharsets.UTF_8)
+                        .build().toString())
+                .body(service.exportCatalog(form.ids()));
+    }
+
+    @PostMapping("/catalog/test/applications")
+    @SaCheckPermission(OpenApiPermission.CATALOG_TEST)
+    public Result<List<Map<String, Object>>> catalogTestApplications(@Valid @RequestBody IdForm form) {
+        return Result.success(testService.availableApplications(form.getId()));
+    }
+
+    @PostMapping("/catalog/test/execute")
+    @SaCheckPermission(OpenApiPermission.CATALOG_TEST)
+    public Result<Map<String, Object>> catalogTestExecute(@Valid @RequestBody OpenApiCatalogTestForm form) {
+        return Result.success(testService.execute(form));
     }
 
     @PostMapping("/catalog/status")

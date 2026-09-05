@@ -85,7 +85,7 @@ export type EditField = EditFieldBase &
     | { type: 'icon-selector' }
     | { type: 'number' }
     | { type: 'switch' }
-    | { type: 'textarea' }
+    | { type: 'textarea'; rows?: number }
     | { type: 'select'; options?: { label: string; value: string | number }[] }
     | {
         type: 'tree-select';

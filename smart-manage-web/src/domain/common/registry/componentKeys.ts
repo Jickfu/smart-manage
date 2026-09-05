@@ -11,6 +11,8 @@ export const componentKeys = {
   sysParamEdit: 'sys/base/sys-param/edit',
   numberRule: 'sys/base/number-rule',
   numberRuleEdit: 'sys/base/number-rule/edit',
+  openApiCatalogDetail: 'sys/base/openapi-catalog/detail',
+  openApiCatalogTest: 'sys/base/openapi-catalog/test',
   sqlConsole: 'sys/monitor/sql-console',
   sqlLog: 'sys/monitor/sql-log',
   sqlLogDetail: 'sys/monitor/sql-log/detail',

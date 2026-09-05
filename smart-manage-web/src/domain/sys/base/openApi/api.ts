@@ -11,6 +11,8 @@ import type {
   OpenApiListForm,
   OpenApiPageData,
   OpenApiRelease,
+  OpenApiTestApplication,
+  OpenApiTestResult,
 } from './types';
 
 const post = <T>(url: string, data: unknown) =>
@@ -40,6 +42,14 @@ export const openApiPlatformApi = {
   catalogDetail: (id: string) => post<OpenApiRelease>('/sys/base/openapi/catalog/detail', { id }),
   catalogStatus: (form: { id: string; version: number; status: 'PUBLISHED' | 'OFFLINE' }) =>
     post<void>('/sys/base/openapi/catalog/status', form),
+  catalogExport: (ids: string[]) =>
+    request
+      .post<Blob>('/sys/base/openapi/catalog/export', { ids }, { responseType: 'blob' })
+      .then((response) => response.data),
+  catalogTestApplications: (id: string) =>
+    post<OpenApiTestApplication[]>('/sys/base/openapi/catalog/test/applications', { id }),
+  catalogTestExecute: (form: { releaseId: string; applicationId: string; requestJson: string }) =>
+    post<OpenApiTestResult>('/sys/base/openapi/catalog/test/execute', form),
   invocationList: (form: OpenApiListForm) =>
     post<OpenApiPageData<OpenApiInvocation>>('/sys/base/openapi/invocation/listPage', form),
   invocationStats: () =>

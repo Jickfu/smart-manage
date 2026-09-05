@@ -86,9 +86,24 @@ export interface OpenApiRelease {
   requestSchema: string;
   responseSchema: string;
   documentation?: string;
+  requestExample?: string;
+  responseExample?: string;
   systemPreset: boolean;
   registered: boolean;
+  testable: boolean;
   version: number;
+}
+
+export interface OpenApiTestApplication {
+  id: string;
+  number: string;
+  name: string;
+}
+
+export interface OpenApiTestResult {
+  requestId: string;
+  durationMs: number;
+  response: unknown;
 }
 
 export interface OpenApiInvocation {

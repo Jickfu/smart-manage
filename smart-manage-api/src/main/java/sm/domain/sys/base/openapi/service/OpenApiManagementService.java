@@ -50,6 +50,7 @@ public class OpenApiManagementService {
     private final OrgReferenceReader orgReferenceReader;
     private final OpenApiOperationRegistry operationRegistry;
     private final OpenApiTxService txService;
+    private final OpenApiMarkdownDocumentGenerator markdownDocumentGenerator;
 
     public PageData<Map<String, Object>> applicationList(OpenApiListForm form) {
         LambdaQueryWrapper<OpenApiApplicationEntity> wrapper = new LambdaQueryWrapper<>();
@@ -187,6 +188,21 @@ public class OpenApiManagementService {
         return releaseMap(release);
     }
 
+    public byte[] exportCatalog(List<Long> ids) {
+        List<OpenApiReleaseEntity> releases = releaseMapper.selectBatchIds(ids).stream()
+                .sorted(java.util.Comparator.comparing(OpenApiReleaseEntity::getApiNumber)
+                        .thenComparing(OpenApiReleaseEntity::getApiVersion))
+                .toList();
+        if (releases.size() != ids.stream().distinct().count()) {
+            throw new BizException(ResultEnum.NOT_FOUND, "部分 API 版本不存在");
+        }
+        byte[] document = markdownDocumentGenerator.generate(releases);
+        if (document.length > 5 * 1024 * 1024) {
+            throw new BizException(ResultEnum.BAD_REQUEST, "导出的 API 文档超过 5 MB，请减少选择数量");
+        }
+        return document;
+    }
+
     @BizLog("变更 API 版本状态")
     public void updateReleaseStatus(Long id, Integer version, String status) {
         txService.updateReleaseStatus(id, version, status);
@@ -256,8 +272,10 @@ public class OpenApiManagementService {
                 "featureKey", entity.getFeatureKey(), "featureName", entity.getFeatureName(),
                 "status", entity.getStatus(), "description", entity.getDescription(),
                 "requestSchema", entity.getRequestSchema(), "responseSchema", entity.getResponseSchema(),
-                "documentation", entity.getDocumentation(), "systemPreset", entity.getSystemPreset(),
-                "registered", registered != null, "version", entity.getVersion(),
+                "documentation", entity.getDocumentation(), "requestExample", entity.getRequestExample(),
+                "responseExample", entity.getResponseExample(),
+                "systemPreset", entity.getSystemPreset(), "registered", registered != null,
+                "testable", registered != null && registered.testable(), "version", entity.getVersion(),
                 "updateTime", entity.getUpdateTime());
     }
 
