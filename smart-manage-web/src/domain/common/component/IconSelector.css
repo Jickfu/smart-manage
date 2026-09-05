@@ -64,15 +64,19 @@
 }
 
 .sm-icon-selector-header-search {
+  --sm-icon-selector-control-text-size: var(--ant-font-size-sm);
+
   width: 240px;
+}
+
+.sm-icon-selector-header-search input.ant-input {
+  font-size: var(--sm-icon-selector-control-text-size);
 }
 
 .sm-icon-selector-body {
   display: flex;
   flex-direction: column;
   height: 430px;
-  border-top: 1px solid var(--ant-color-border-secondary);
-  border-bottom: 1px solid var(--ant-color-border-secondary);
 }
 
 .sm-icon-selector-meta-left {

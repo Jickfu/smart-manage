@@ -7,6 +7,10 @@
   border-bottom: 0;
 }
 
+.sm-home-card .ant-card-head-title {
+  font-weight: 400;
+}
+
 .sm-quick-launch-card .ant-card-body {
   padding: 8px 12px 12px;
 }
