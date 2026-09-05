@@ -54,4 +54,12 @@ describe('resolveIcon', () => {
 
     expect(persistedIconNames.every((name) => icons[name])).toBe(true);
   });
+
+  it('候选白名单覆盖三种图标风格', async () => {
+    const iconNames = Object.keys(await loadAllIcons());
+
+    expect(iconNames.some((name) => name.endsWith('Outlined'))).toBe(true);
+    expect(iconNames.some((name) => name.endsWith('Filled'))).toBe(true);
+    expect(iconNames.some((name) => name.endsWith('TwoTone'))).toBe(true);
+  });
 });
