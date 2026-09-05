@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Form } from 'antd';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
+import JsonCodeEditor from '@/domain/common/component/JsonCodeEditor';
+import RefSelector from '@/domain/common/component/RefSelector';
 import EditPage from '@/domain/common/page/edit/EditPage';
-import type { EditField } from '@/domain/common/page/edit/EditPage';
-import { EditFormFields } from '@/domain/common/page/edit/EditFormFields';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
@@ -12,7 +14,8 @@ import { useWorkbenchStore } from '@/stores/workbench';
 import { openApiPlatformApi } from './api';
 import { openApiCatalogTestAccess } from './permissions';
 import { openApiQueryKeys } from './queryKeys';
-import type { OpenApiTestResult } from './types';
+import { useOpenApiTestApplicationRefSelector } from './refSelector/useOpenApiTestApplicationRefSelector';
+import type { OpenApiTestApplication, OpenApiTestResult } from './types';
 import './OpenApiPage.css';
 
 function formatRequestExample(value?: string) {
@@ -40,12 +43,14 @@ export default function OpenApiCatalogTestPage(props: PageComponentProps) {
     enabled: Boolean(props.billId),
   });
   const executeMutation = useCommandMutation({
-    mutationFn: (values: Record<string, unknown>) =>
-      openApiPlatformApi.catalogTestExecute({
+    mutationFn: (values: Record<string, unknown>) => {
+      const application = values.application as OpenApiTestApplication;
+      return openApiPlatformApi.catalogTestExecute({
         releaseId: props.billId!,
-        applicationId: String(values.applicationId),
+        applicationId: application.id,
         requestJson: String(values.requestJson),
-      }),
+      });
+    },
     onSuccess: (response) => {
       setResult(response);
       feedback.success(`调用成功，耗时 ${response.durationMs} ms`);
@@ -53,43 +58,10 @@ export default function OpenApiCatalogTestPage(props: PageComponentProps) {
   });
   const applications = useMemo(() => applicationsQuery.data ?? [], [applicationsQuery.data]);
   const detail = detailQuery.data;
-  const fields = useMemo<EditField[]>(
-    () => [
-      {
-        label: '第三方应用',
-        dataIndex: 'applicationId',
-        type: 'select',
-        options: applications.map((app) => ({
-          label: `${app.number} - ${app.name}`,
-          value: app.id,
-        })),
-        rules: [{ required: true, message: '请选择执行身份对应的第三方应用' }],
-      },
-      {
-        label: '请求 JSON',
-        dataIndex: 'requestJson',
-        type: 'textarea',
-        rows: 12,
-        fullWidth: true,
-        rules: [{ required: true, message: '请求 JSON 不能为空' }],
-      },
-      {
-        label: result ? `响应数据（${result.durationMs} ms）` : '响应数据',
-        dataIndex: 'response',
-        type: 'custom',
-        fullWidth: true,
-        content: (
-          <pre className="sm-openapi-schema sm-openapi-test-response">
-            {result ? JSON.stringify(result.response, null, 2) : '执行后将在这里显示响应数据'}
-          </pre>
-        ),
-      },
-    ],
-    [applications, result],
-  );
+  const applicationRefSelector = useOpenApiTestApplicationRefSelector(props.billId, applications);
   const initialValues = useMemo(
     () => ({
-      applicationId: applications[0]?.id,
+      application: applications[0],
       requestJson: formatRequestExample(detail?.requestExample),
     }),
     [applications, detail],
@@ -103,7 +75,42 @@ export default function OpenApiCatalogTestPage(props: PageComponentProps) {
         {
           key: 'test',
           label: '业务试调',
-          content: (editable) => <EditFormFields fields={fields} editable={editable} />,
+          content: (editable) => (
+            <FormFieldGrid>
+              <FormFieldCell>
+                <Form.Item
+                  name="application"
+                  label="第三方应用"
+                  rules={[{ required: true, message: '请选择执行身份对应的第三方应用' }]}
+                  className="sm-edit-field-content"
+                >
+                  <RefSelector disabled={!editable} {...applicationRefSelector} />
+                </Form.Item>
+              </FormFieldCell>
+              <FormFieldCell fullWidth>
+                <Form.Item
+                  name="requestJson"
+                  label="请求 JSON"
+                  rules={[{ required: true, message: '请求 JSON 不能为空' }]}
+                  className="sm-edit-field-content"
+                >
+                  <JsonCodeEditor ariaLabel="请求 JSON" readOnly={!editable} />
+                </Form.Item>
+              </FormFieldCell>
+              <FormFieldCell fullWidth>
+                <Form.Item
+                  label={result ? `响应数据（${result.durationMs} ms）` : '响应数据'}
+                  className="sm-edit-field-content"
+                >
+                  <JsonCodeEditor
+                    value={result ? JSON.stringify(result.response, null, 2) : '{}'}
+                    ariaLabel="响应数据"
+                    readOnly
+                  />
+                </Form.Item>
+              </FormFieldCell>
+            </FormFieldGrid>
+          ),
         },
       ]}
       initialValues={initialValues}

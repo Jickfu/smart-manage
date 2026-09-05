@@ -66,18 +66,6 @@
   border-top: 0 !important;
 }
 
-.sm-openapi-json-viewer .cm-editor {
-  min-height: 96px;
-  max-height: 260px;
-  border: 1px solid var(--ant-color-border);
-  border-radius: var(--ant-border-radius);
-  background: var(--ant-color-fill-tertiary);
-}
-
-.sm-openapi-json-viewer .cm-scroller {
-  overflow: auto;
-}
-
 .sm-openapi-document__response-title {
   margin-top: 28px !important;
 }
@@ -97,8 +85,4 @@
   .sm-openapi-document__anchor {
     display: none;
   }
-}
-
-.sm-openapi-test-response {
-  min-height: 160px;
 }

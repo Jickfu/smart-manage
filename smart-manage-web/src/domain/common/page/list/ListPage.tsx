@@ -377,7 +377,7 @@ function ListPage<T>({
             table={
               <Table<T>
                 key={tableStateKey}
-                className="sm-list-table"
+                className="sm-list-table sm-table-fill"
                 rowKey={rowKey}
                 rowSelection={rowSelection}
                 onRow={onRow}

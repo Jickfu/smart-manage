@@ -356,11 +356,6 @@
   overflow: auto !important;
 }
 
-/* 空状态不是数据行，不展示普通数据单元格的行分隔线。 */
-.sm-list-table .ant-table-tbody > tr.ant-table-placeholder > td {
-  border-bottom: 0;
-}
-
 /* 选择列和序号列属于列表基础结构，宽度固定，不参与剩余空间分配。 */
 .sm-list-table .ant-table-selection-column {
   width: 36px !important;

@@ -333,7 +333,7 @@ function RefSelector<T extends Record<string, unknown>>({
         {/* 表格体 */}
         <div className="sm-ref-selector-table-body">
           <Table<T>
-            className="sm-ref-selector-table"
+            className="sm-ref-selector-table sm-table-fill"
             rowKey={rowKey}
             rowSelection={rowSelection}
             columns={fullColumns}

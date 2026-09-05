@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Anchor, Descriptions, Table, Tag, Typography } from 'antd';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import EditPage from '@/domain/common/page/edit/EditPage';
+import JsonCodeEditor from '@/domain/common/component/JsonCodeEditor';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
@@ -12,7 +13,6 @@ import { openApiPlatformApi } from './api';
 import { openApiCatalogAccess } from './permissions';
 import { openApiQueryKeys } from './queryKeys';
 import type { OpenApiRelease } from './types';
-import JsonCodeViewer from './JsonCodeViewer';
 import './OpenApiPage.css';
 
 const statusNames: Record<OpenApiRelease['status'], string> = {
@@ -242,11 +242,19 @@ function ApiDocument({ detail }: { detail: OpenApiRelease }) {
 
         <section id={sections.examples} className="sm-openapi-document__section">
           <Typography.Title level={4}>请求结构示例</Typography.Title>
-          <JsonCodeViewer value={formatJson(detail.requestExample)} />
+          <JsonCodeEditor
+            value={formatJson(detail.requestExample)}
+            ariaLabel="请求结构示例"
+            readOnly
+          />
           <Typography.Title level={4} className="sm-openapi-document__response-title">
             返回结构示例
           </Typography.Title>
-          <JsonCodeViewer value={formatJson(detail.responseExample)} />
+          <JsonCodeEditor
+            value={formatJson(detail.responseExample)}
+            ariaLabel="返回结构示例"
+            readOnly
+          />
         </section>
       </main>
       <aside className="sm-openapi-document__anchor">

@@ -1,0 +1,15 @@
+.sm-json-code-editor .cm-editor {
+  min-height: 96px;
+  max-height: 260px;
+  border: 1px solid var(--ant-color-border);
+  border-radius: var(--ant-border-radius);
+  background: var(--ant-color-fill-tertiary);
+}
+
+.sm-json-code-editor .cm-scroller {
+  overflow: auto;
+}
+
+.sm-json-code-editor .cm-content {
+  min-height: 96px;
+}

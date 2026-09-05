@@ -249,7 +249,7 @@ export default function InboxMessageList({
         ) : (
           <div className="sm-list-table-body">
             <Table<InboxItem>
-              className="sm-list-table"
+              className="sm-list-table sm-table-fill"
               size="small"
               rowKey={inboxReceiptId}
               columns={configuredColumns}

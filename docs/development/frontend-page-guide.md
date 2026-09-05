@@ -36,6 +36,10 @@
 - 标准新增/编辑页面使用 `useEditTabLifecycle` 处理新增识别、临时页签晋升和退出；领域页面继续拥有保存参数映射与 Query Key。
 - 保存 Mutation 的 `mutationFn` 只执行远端命令。远端成功后通过 `runEditSavePostCommit` 独立执行页签同步与缓存刷新，并按结果反馈；本地同步失败不得误报为保存失败，也不得阻止另一同步阶段尝试执行。
 
+### 表格空状态
+
+占满容器剩余高度的 Table 必须增加 `sm-table-fill` 语义类，由公共样式统一移除空状态占位行的悬空下边框；普通内容高度 Table 不使用该类。
+
 ### 可编辑明细表格
 
 表单内可编辑明细表格统一复用 `EditableDetailTable`，完整接口见 [EditableDetailTable.tsx](../../smart-manage-web/src/domain/common/component/EditableDetailTable.tsx)。

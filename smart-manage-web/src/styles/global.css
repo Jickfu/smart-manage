@@ -43,6 +43,11 @@ body {
   border-top: var(--ant-line-width) var(--ant-line-type) var(--ant-table-border-color);
 }
 
+/* 撑满剩余高度的表格中，空状态行不是数据行，不能在内容下方留下悬空分隔线。 */
+.sm-table-fill .ant-table-tbody > tr.ant-table-placeholder > td {
+  border-bottom: 0;
+}
+
 /* 认证检查 — 全屏居中加载 */
 .sm-auth-container {
   height: 100%;
