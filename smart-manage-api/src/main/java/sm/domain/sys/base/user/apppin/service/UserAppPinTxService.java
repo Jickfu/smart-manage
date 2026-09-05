@@ -34,4 +34,24 @@ class UserAppPinTxService {
 	public void unpin(Long userId, String appNumber) {
 		mapper.deleteByUserAndAppNumber(userId, appNumber);
 	}
+
+	/** 全局入口与业务应用共用用户锁及排列顺序，键只允许显式白名单。 */
+	public void pinInbox(Long userId) {
+		mapper.lockUser(userId);
+		if (mapper.selectCount(new LambdaQueryWrapper<UserAppPinEntity>()
+				.eq(UserAppPinEntity::getUserId, userId)
+				.eq(UserAppPinEntity::getBuiltinKey, "builtin:inbox")) > 0) return;
+		UserAppPinEntity entity = new UserAppPinEntity();
+		entity.setUserId(userId);
+		entity.setBuiltinKey("builtin:inbox");
+		entity.setSeq(mapper.selectNextSeq(userId));
+		if (mapper.insert(entity) != 1) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "固定消息中心失败");
+	}
+
+	public void unpinInbox(Long userId) {
+		mapper.lockUser(userId);
+		mapper.delete(new LambdaQueryWrapper<UserAppPinEntity>()
+				.eq(UserAppPinEntity::getUserId, userId)
+				.eq(UserAppPinEntity::getBuiltinKey, "builtin:inbox"));
+	}
 }

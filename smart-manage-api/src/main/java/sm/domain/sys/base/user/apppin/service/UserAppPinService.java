@@ -25,11 +25,19 @@ public class UserAppPinService {
 
 	public void pin(String appNumber) {
 		Long userId = currentUserContext.getUserId();
+		if ("builtin:inbox".equals(appNumber.trim())) {
+			txService.pinInbox(userId);
+			return;
+		}
 		AppVO app = appService.getUserAppByNumber(userId, appNumber.trim());
 		txService.pin(userId, app.getId());
 	}
 
 	public void unpin(String appNumber) {
+		if ("builtin:inbox".equals(appNumber.trim())) {
+			txService.unpinInbox(currentUserContext.getUserId());
+			return;
+		}
 		txService.unpin(currentUserContext.getUserId(), appNumber.trim());
 	}
 }

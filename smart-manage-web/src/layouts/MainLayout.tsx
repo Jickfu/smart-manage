@@ -13,6 +13,7 @@ const { Content } = Layout;
 const Home = lazy(() => import('@/pages/home/Home'));
 const AppsView = lazy(() => import('@/pages/app/AppsView'));
 const Workbench = lazy(() => import('@/pages/workbench/Workbench'));
+const InboxCenter = lazy(() => import('@/domain/sys/message/inbox/InboxCenter'));
 
 /** Suspense fallback — 页面懒加载时显示 */
 const renderLazyPage = (node: ReactNode) => (
@@ -38,6 +39,7 @@ const MainLayout = () => {
   const [pendingEntryNumber, setPendingEntryNumber] = useState(startupTarget.entryNumber);
   const tabs = useHeaderTabsStore((s) => s.tabs);
   const loadedAppTabs = tabs.filter((tab) => tab.type === 'app' && tab.loaded);
+  const inboxTarget = useHeaderTabsStore((state) => state.inboxTarget);
 
   useEffect(() => {
     if (initialAppOpened.current) return;
@@ -66,6 +68,18 @@ const MainLayout = () => {
 
           {/* 应用选择页 */}
           <PersistentView appKey="apps">{renderLazyPage(<AppsView />)}</PersistentView>
+
+          {tabs.some((tab) => tab.type === 'inbox' && tab.loaded) && (
+            <PersistentView appKey="builtin:inbox">
+              {renderLazyPage(
+                <InboxCenter
+                  navigationRevision={inboxTarget.revision}
+                  initialSection={inboxTarget.section}
+                  initialReceipt={inboxTarget.receipt}
+                />,
+              )}
+            </PersistentView>
+          )}
 
           {/* 动态应用工作台 — 每个已打开的应用一个 li */}
           {loadedAppTabs.map((tab) => (

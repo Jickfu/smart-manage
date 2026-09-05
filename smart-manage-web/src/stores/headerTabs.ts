@@ -4,7 +4,7 @@ import { pushTabHistory, resolveNextActiveTabKey } from './tabHistory';
 export interface HeaderTabItem {
   key: string;
   label: string;
-  type: 'system' | 'app';
+  type: 'system' | 'app' | 'inbox';
   pinned: boolean;
   loaded: boolean;
 }
@@ -15,6 +15,15 @@ export interface PinnedHeaderApp {
 }
 
 interface HeaderTabsState {
+  inboxTarget: {
+    revision: number;
+    section: 'messages' | 'tasks';
+    receipt?: { messageId: string; receivedTime: string };
+  };
+  openInbox: (
+    section: 'messages' | 'tasks',
+    receipt?: { messageId: string; receivedTime: string },
+  ) => void;
   tabs: HeaderTabItem[];
   activeKey: string;
   /** 切换历史 — 关闭 tab 时智能回到上一个激活的 tab */
@@ -31,6 +40,19 @@ interface HeaderTabsState {
 }
 
 export const useHeaderTabsStore = create<HeaderTabsState>((set, get) => ({
+  inboxTarget: { revision: 0, section: 'messages' },
+  openInbox: (section, receipt) =>
+    set((state) => ({
+      tabs: state.tabs.some((tab) => tab.type === 'inbox')
+        ? state.tabs.map((tab) => (tab.type === 'inbox' ? { ...tab, loaded: true } : tab))
+        : [
+            ...state.tabs,
+            { key: 'builtin:inbox', label: '消息中心', type: 'inbox', pinned: false, loaded: true },
+          ],
+      activeKey: 'builtin:inbox',
+      activeHistory: pushTabHistory(state.activeHistory, 'builtin:inbox'),
+      inboxTarget: { revision: state.inboxTarget.revision + 1, section, receipt },
+    })),
   tabs: [
     { key: 'home', label: '首页', type: 'system', pinned: false, loaded: true },
     { key: 'apps', label: '应用', type: 'system', pinned: false, loaded: true },
@@ -48,7 +70,7 @@ export const useHeaderTabsStore = create<HeaderTabsState>((set, get) => ({
     set((state) => {
       const systemTabs = state.tabs.filter((tab) => tab.type === 'system');
       const existingApps = new Map(
-        state.tabs.filter((tab) => tab.type === 'app').map((tab) => [tab.key, tab]),
+        state.tabs.filter((tab) => tab.type !== 'system').map((tab) => [tab.key, tab]),
       );
       const pinnedTabs = apps.map((app) => {
         const existing = existingApps.get(app.number);
@@ -56,12 +78,14 @@ export const useHeaderTabsStore = create<HeaderTabsState>((set, get) => ({
         return {
           key: app.number,
           label: app.name,
-          type: 'app' as const,
+          type: app.number === 'builtin:inbox' ? ('inbox' as const) : ('app' as const),
           pinned: true,
           loaded: existing?.loaded ?? false,
         };
       });
-      return { tabs: [...systemTabs, ...pinnedTabs, ...existingApps.values()] };
+      return {
+        tabs: [...systemTabs, ...pinnedTabs, ...existingApps.values()],
+      };
     }),
 
   addAppTab: (key, label) => {
@@ -85,7 +109,7 @@ export const useHeaderTabsStore = create<HeaderTabsState>((set, get) => ({
   removeAppTab: (key) => {
     const { tabs, activeKey, activeHistory } = get();
     const target = tabs.find((tab) => tab.key === key);
-    if (target?.type !== 'app' || target.pinned) return;
+    if (!target || target.type === 'system' || target.pinned) return;
     const nextTabs = tabs.filter((tab) => tab.key !== key);
     const nextHistory = activeHistory.filter((item) => item !== key);
     const nextActiveKey =
@@ -107,7 +131,7 @@ export const useHeaderTabsStore = create<HeaderTabsState>((set, get) => ({
   setAppPinned: (key, pinned) =>
     set((state) => {
       const target = state.tabs.find((tab) => tab.key === key);
-      if (target?.type !== 'app' || target.pinned === pinned) return state;
+      if (!target || target.type === 'system' || target.pinned === pinned) return state;
       return {
         // 固定状态只影响按钮和关闭能力，不能打断用户当前的应用标签排列。
         tabs: state.tabs.map((tab) => (tab.key === key ? { ...tab, pinned } : tab)),

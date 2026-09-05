@@ -10,6 +10,8 @@ import type {
   InboxMessageSaveForm,
   InboxReceiptKey,
   InboxUnreadSummary,
+  InboxListFilter,
+  InboxCursor,
 } from './types';
 
 export const inboxAdminApi = {
@@ -40,12 +42,7 @@ export const inboxApi = {
     request
       .get<Result<InboxUnreadSummary>>('/sys/message/inbox/unread-summary')
       .then((response) => response.data.data),
-  list: (form: {
-    pageSize: number;
-    unreadOnly: boolean;
-    cursorTime?: string;
-    cursorMessageId?: string;
-  }) =>
+  list: (form: InboxListFilter & Partial<InboxCursor> & { pageSize: number }) =>
     request
       .post<Result<InboxCursorPage>>('/sys/message/inbox/list', form)
       .then((response) => response.data.data),

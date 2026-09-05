@@ -16,6 +16,31 @@ import static org.mockito.Mockito.when;
 class SysParamTxServiceTests {
 
     @Test
+    void pollingIntervalValidationUsesPersistedSystemNumber() {
+        SysParamMapper mapper = mock(SysParamMapper.class);
+        var entity = new sm.domain.sys.base.sysparam.model.entity.SysParamEntity();
+        entity.setId(1L);
+        entity.setNumber("INBOX_POLL_INTERVAL_SECONDS");
+        entity.setVersion(0);
+        entity.setIsSystem(true);
+        when(mapper.selectById(1L)).thenReturn(entity);
+        when(mapper.updateById(entity)).thenReturn(1);
+        var service = new SysParamTxService(mapper, new sm.domain.sys.base.feature.service.FeatureReferenceService(mock(FeatureMapper.class)));
+        var form = new SysParamSaveForm();
+        form.setId(1L);
+        form.setVersion(0);
+        form.setNumber("OTHER");
+        for (String value : new String[]{"", "-1", "1", "9", "10.5", "2147484", "invalid"}) {
+            form.setValue(value);
+            assertThrows(BizException.class, () -> service.save(form));
+        }
+        for (String value : new String[]{"0", "10", "60", "2147483"}) {
+            form.setValue(value);
+            assertEquals(1L, service.save(form));
+        }
+    }
+
+    @Test
     void rejectsDuplicateNumberBeforePersistence() {
         SysParamMapper mapper = mock(SysParamMapper.class);
         when(mapper.selectCount(any())).thenReturn(1L);

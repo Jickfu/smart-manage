@@ -4,14 +4,15 @@ import { MessageOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { inboxApi } from './api';
 import { inboxQueryKeys } from './queryKeys';
-import InboxCenterModal from './InboxCenterModal';
+import InboxPreviewDrawer from './InboxPreviewDrawer';
+import { inboxPollingInterval } from './inboxPresentation';
 
 export default function InboxHeaderButton() {
   const [open, setOpen] = useState(false);
   const unreadQuery = useQuery({
     queryKey: inboxQueryKeys.unread(),
     queryFn: inboxApi.unreadSummary,
-    refetchInterval: 30_000,
+    refetchInterval: (query) => inboxPollingInterval(query.state.data?.pollingIntervalSeconds),
     refetchIntervalInBackground: false,
   });
   const summary = unreadQuery.data;
@@ -22,11 +23,15 @@ export default function InboxHeaderButton() {
           className="sm-header-action-button"
           type="text"
           icon={<MessageOutlined />}
-          aria-label="打开消息中心"
-          onClick={() => setOpen(true)}
+          aria-label="消息通知"
+          aria-expanded={open}
+          onClick={() => {
+            if (!open) void unreadQuery.refetch();
+            setOpen(!open);
+          }}
         />
       </Badge>
-      <InboxCenterModal open={open} onClose={() => setOpen(false)} />
+      <InboxPreviewDrawer open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

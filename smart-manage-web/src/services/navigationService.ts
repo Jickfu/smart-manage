@@ -27,6 +27,13 @@ let requestSeq = 0;
 export async function openApp(appNumber: string): Promise<void> {
   const seq = ++requestSeq;
 
+  if (appNumber === 'builtin:inbox') {
+    const store = useHeaderTabsStore.getState();
+    if (store.tabs.some((tab) => tab.type === 'inbox' && tab.loaded)) store.activate(appNumber);
+    else store.openInbox('messages');
+    return;
+  }
+
   // 内置应用：直接激活
   if (appNumber === 'home' || appNumber === 'apps') {
     useHeaderTabsStore.getState().activate(appNumber);
@@ -87,10 +94,23 @@ export async function openMenuItem(appNumber: string, item: MenuVO): Promise<voi
 export async function closeAppAndRemove(appNumber: string): Promise<boolean> {
   const target = useHeaderTabsStore.getState().tabs.find((tab) => tab.key === appNumber);
   if (target?.pinned) return false;
+  if (target?.type === 'inbox') {
+    useHeaderTabsStore.getState().removeAppTab(appNumber);
+    return true;
+  }
   const allowed = await useWorkbenchStore.getState().closeWorkspace(appNumber);
   if (!allowed) return false;
 
   useWorkbenchStore.getState().destroyWorkspace(appNumber);
   useHeaderTabsStore.getState().removeAppTab(appNumber);
   return true;
+}
+
+/** 全局消息入口不要求消息服务应用权限，也不创建业务应用工作台。 */
+export function openInboxCenter(
+  section: 'messages' | 'tasks' = 'messages',
+  receipt?: { messageId: string; receivedTime: string },
+): void {
+  ++requestSeq;
+  useHeaderTabsStore.getState().openInbox(section, receipt);
 }

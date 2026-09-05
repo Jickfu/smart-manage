@@ -2,6 +2,25 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { useHeaderTabsStore } from './headerTabs';
 
 describe('header tabs store', () => {
+  it('消息中心固定恢复、打开、解锁关闭沿用应用页签生命周期', () => {
+    const store = useHeaderTabsStore.getState();
+    store.initializePinnedApps([{ number: 'builtin:inbox', name: '消息中心' }]);
+    expect(
+      useHeaderTabsStore.getState().tabs.find((tab) => tab.key === 'builtin:inbox'),
+    ).toMatchObject({ type: 'inbox', pinned: true, loaded: false });
+    const receipt = { messageId: '30', receivedTime: '2026-09-01 12:00:00.123456' };
+    store.openInbox('messages', receipt);
+    expect(useHeaderTabsStore.getState().inboxTarget.receipt).toEqual(receipt);
+    expect(useHeaderTabsStore.getState().tabs.filter((tab) => tab.type === 'inbox')).toHaveLength(
+      1,
+    );
+    store.removeAppTab('builtin:inbox');
+    expect(useHeaderTabsStore.getState().activeKey).toBe('builtin:inbox');
+    store.setAppPinned('builtin:inbox', false);
+    store.removeAppTab('builtin:inbox');
+    expect(useHeaderTabsStore.getState().activeKey).toBe('home');
+    expect(useHeaderTabsStore.getState().tabs.some((tab) => tab.type === 'inbox')).toBe(false);
+  });
   beforeEach(() => {
     useHeaderTabsStore.setState({
       tabs: [

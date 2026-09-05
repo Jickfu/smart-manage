@@ -11,6 +11,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class UserAppPinServiceTests {
+
+	@Test
+	void inboxPinUsesCurrentUserWithoutRequiringBusinessApplicationAccess() {
+		CurrentUserContext context = mock(CurrentUserContext.class);
+		when(context.getUserId()).thenReturn(10L);
+		AppService appService = mock(AppService.class);
+		UserAppPinTxService txService = mock(UserAppPinTxService.class);
+		UserAppPinService service = new UserAppPinService(context, appService, mock(UserAppPinMapper.class), txService);
+		service.pin("builtin:inbox");
+		service.unpin("builtin:inbox");
+		verify(txService).pinInbox(10L);
+		verify(txService).unpinInbox(10L);
+		org.mockito.Mockito.verifyNoInteractions(appService);
+	}
 	@Test
 	void pinResolvesAccessibleApplicationBeforeWritingUserPreference() {
 		CurrentUserContext currentUserContext = mock(CurrentUserContext.class);

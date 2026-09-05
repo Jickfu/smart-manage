@@ -1,6 +1,6 @@
 package sm.domain.sys.message.inbox.model.vo;
 
-/** Header 未读角标，计数最多到100。 */
-public record InboxUnreadSummaryVO(int unreadCount, boolean overflow) {
+/** 未读摘要：总角标通过 overflow 表达封顶，分类计数达到100时展示99+。 */
+public record InboxUnreadSummaryVO(int unreadCount, boolean overflow, int pollingIntervalSeconds,
+        int announcementUnreadCount, int businessUnreadCount) {
 }
-

@@ -13,28 +13,55 @@ import sm.domain.sys.message.inbox.model.vo.InboxUnreadSummaryVO;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.security.context.CurrentUserContext;
+import sm.domain.sys.base.sysparam.service.SysParamService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import sm.system.query.ListSqlQuery;
+import sm.system.form.PageForm;
 
 @Service
 @RequiredArgsConstructor
 public class InboxService {
     private static final int UNREAD_CAP = 100;
+    private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
+            "readStatus", ListSqlQuery.bool("a.read_status", false),
+            "title", ListSqlQuery.string("b.title", false),
+            // 列表显示摘要，内容筛选始终检索完整正文，不能只匹配前160字。
+            "summary", ListSqlQuery.string("b.content", false),
+            "senderName", ListSqlQuery.string("b.sender_name", false),
+            "receivedTime", ListSqlQuery.dateTime("a.received_time", false));
     private final InboxRecipientMapper recipientMapper;
     private final InboxMessageTxService txService;
     private final CurrentUserContext currentUserContext;
+    private final SysParamService sysParamService;
 
     public InboxUnreadSummaryVO unreadSummary() {
-        int count = recipientMapper.countUnreadCapped(currentUserContext.getUserId(), beginTime(), UNREAD_CAP);
-        return new InboxUnreadSummaryVO(Math.min(count, 99), count >= UNREAD_CAP);
+        Long userId = currentUserContext.getUserId();
+        LocalDateTime lowerBound = beginTime();
+        int count = recipientMapper.countUnreadCapped(userId, lowerBound, UNREAD_CAP);
+        Integer interval = sysParamService.getInt("INBOX_POLL_INTERVAL_SECONDS");
+        if (interval == null || interval < 0 || (interval > 0 && interval < 10) || interval > 2147483) {
+            throw new BizException(ResultEnum.CONFIG_ERROR, "消息轮询间隔必须为0或不小于10秒的有效整数");
+        }
+        // 各类别独立封顶，不能从已封顶的总数相减推算另一类别。
+        int announcementCount = recipientMapper.countUnreadByAudienceCapped(userId, lowerBound, UNREAD_CAP, "ALL_ENABLED_USERS");
+        int businessCount = recipientMapper.countUnreadByAudienceCapped(userId, lowerBound, UNREAD_CAP, "USERS");
+        return new InboxUnreadSummaryVO(Math.min(count, 99), count >= UNREAD_CAP, interval,
+                announcementCount, businessCount);
     }
 
     public InboxCursorPageVO list(InboxCursorListForm form) {
         validateCursor(form);
         int pageSize = form.safePageSize();
+        PageForm filterForm = new PageForm();
+        filterForm.setFilters(form.getFilters());
+        ListSqlQuery listQuery = ListSqlQuery.of(filterForm, LIST_FIELDS);
+        LocalDateTime lowerBound = Boolean.TRUE.equals(form.getMonthOnly())
+                ? LocalDateTime.now().withDayOfMonth(1).toLocalDate().atStartOfDay() : beginTime();
         List<InboxItemVO> records = recipientMapper.selectCursorPage(currentUserContext.getUserId(),
-                beginTime(), form, pageSize + 1);
+                lowerBound, form, pageSize + 1, listQuery);
         boolean hasMore = records.size() > pageSize;
         List<InboxItemVO> pageRecords = hasMore ? records.subList(0, pageSize) : records;
         InboxItemVO last = pageRecords.isEmpty() ? null : pageRecords.get(pageRecords.size() - 1);

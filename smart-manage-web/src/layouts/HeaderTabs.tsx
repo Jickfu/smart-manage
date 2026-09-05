@@ -20,14 +20,14 @@ const HeaderTabs = ({
   pinSavingKeys,
 }: Props) => {
   const fixedTabs = tabs.filter((tab) => tab.type === 'system');
-  const appTabs = tabs.filter((tab) => tab.type === 'app');
+  const appTabs = tabs.filter((tab) => tab.type !== 'system');
   const { viewportRef, activeTabRef, overflowing, canScrollLeft, canScrollRight, scroll } =
     useHorizontalTabScroll(activeKey, appTabs.length);
 
   const renderTab = (tab: HeaderTabItem, activeTab: boolean) => (
     <div
       key={tab.key}
-      ref={activeTab && tab.type === 'app' ? activeTabRef : undefined}
+      ref={activeTab && tab.type !== 'system' ? activeTabRef : undefined}
       role="tab"
       tabIndex={0}
       aria-selected={activeTab}
@@ -41,7 +41,7 @@ const HeaderTabs = ({
       }}
     >
       <span>{tab.label}</span>
-      {tab.type === 'app' && (
+      {tab.type !== 'system' && (
         <div className="sm-header-tab-operate">
           {!tab.pinned && (
             <button

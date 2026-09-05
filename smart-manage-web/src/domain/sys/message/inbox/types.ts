@@ -74,4 +74,20 @@ export interface InboxCursorPage {
 export interface InboxUnreadSummary {
   unreadCount: number;
   overflow: boolean;
+  pollingIntervalSeconds: number;
+  /** 分类分别封顶到100，达到上限时展示99+。 */
+  announcementUnreadCount: number;
+  businessUnreadCount: number;
+}
+
+export interface InboxListFilter {
+  filters?: string;
+  unreadOnly?: boolean;
+  monthOnly?: boolean;
+  audienceType?: 'ALL_ENABLED_USERS' | 'USERS';
+}
+
+export interface InboxCursor {
+  cursorTime: string;
+  cursorMessageId: string;
 }

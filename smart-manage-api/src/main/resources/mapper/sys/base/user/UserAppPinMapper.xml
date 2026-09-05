@@ -2,12 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="sm.domain.sys.base.user.apppin.mapper.UserAppPinMapper">
     <select id="selectUserPins" resultType="sm.domain.sys.base.user.apppin.model.vo.PinnedAppVO">
-        SELECT a.number, a.name, b.seq
+        SELECT CASE WHEN b.builtin_key = 'builtin:inbox' THEN b.builtin_key ELSE a.number END AS number,
+               CASE WHEN b.builtin_key = 'builtin:inbox' THEN '消息中心' ELSE a.name END AS name, b.seq
         FROM t_sys_app a
-        INNER JOIN t_sys_user_app_pin b ON b.app_id = a.id
-        INNER JOIN t_sys_domain c ON c.id = a.domain_id
+        RIGHT JOIN t_sys_user_app_pin b ON b.app_id = a.id
+        LEFT JOIN t_sys_domain c ON c.id = a.domain_id
         WHERE b.user_id = #{userId}
-          AND a.enabled = true
+          AND (b.builtin_key = 'builtin:inbox' OR (a.enabled = true
           AND c.enabled = true
         <if test="!administrator">
           AND EXISTS (
@@ -21,6 +22,7 @@
                 AND f.org_id = #{orgId}
           )
         </if>
+          ))
         ORDER BY b.seq, b.id
     </select>
 

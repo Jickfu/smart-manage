@@ -16,5 +16,6 @@ public class UserAppPinEntity extends BaseEntity {
 	private Long id;
 	private Long userId;
 	private Long appId;
+	private String builtinKey;
 	private Integer seq;
 }

@@ -41,6 +41,7 @@ class SysParamTxService {
             }
             // 系统内置参数只允许修改 value
             if (Boolean.TRUE.equals(entity.getIsSystem())) {
+                validateInboxPollingInterval(entity.getNumber(), form.getValue());
                 entity.setValue(form.getValue());
                 if (mapper.updateById(entity) == 0) {
                     throw new BizException(ResultEnum.DATA_CONFLICT, "系统参数已被其他用户修改，请刷新后重试");
@@ -57,6 +58,7 @@ class SysParamTxService {
             throw new BizException(ResultEnum.DATA_CONFLICT, "系统参数编码已存在");
         }
         if (form.getFeatureId() != null) featureReferenceService.require(form.getFeatureId());
+        validateInboxPollingInterval(form.getNumber(), form.getValue());
         entity.setNumber(form.getNumber());
         entity.setName(form.getName());
         entity.setValue(form.getValue());
@@ -75,6 +77,18 @@ class SysParamTxService {
             }
         }
         return entity.getId();
+    }
+
+    /** 浏览器定时器以有符号32位毫秒计时，避免大值溢出后形成高频请求。 */
+    private static void validateInboxPollingInterval(String number, String value) {
+        if (!"INBOX_POLL_INTERVAL_SECONDS".equals(number)) return;
+        try {
+            int interval = Integer.parseInt(value == null ? "" : value.trim());
+            if (interval == 0 || (interval >= 10 && interval <= 2147483)) return;
+        } catch (NumberFormatException ignored) {
+            // 格式与范围失败统一返回可修正的参数错误，不回显配置原文。
+        }
+        throw new BizException(ResultEnum.PARAM_ERROR, "消息轮询间隔须为0（关闭）或10～2147483秒的整数");
     }
 
     /** 删除，清除缓存 */

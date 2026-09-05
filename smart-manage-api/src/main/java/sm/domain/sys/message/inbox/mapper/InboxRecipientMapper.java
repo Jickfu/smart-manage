@@ -8,6 +8,7 @@ import sm.domain.sys.message.inbox.model.vo.InboxDetailVO;
 import sm.domain.sys.message.inbox.model.vo.InboxItemVO;
 
 import java.time.LocalDateTime;
+import sm.system.query.ListSqlQuery;
 import java.util.List;
 
 @Mapper
@@ -20,7 +21,7 @@ public interface InboxRecipientMapper {
 
     List<InboxItemVO> selectCursorPage(@Param("userId") Long userId,
             @Param("beginTime") LocalDateTime beginTime, @Param("form") InboxCursorListForm form,
-            @Param("limit") int limit);
+            @Param("limit") int limit, @Param("listQuery") ListSqlQuery listQuery);
 
     InboxDetailVO selectDetail(@Param("userId") Long userId, @Param("messageId") Long messageId,
             @Param("receivedTime") String receivedTime);
@@ -34,4 +35,6 @@ public interface InboxRecipientMapper {
 
     int countUnreadCapped(@Param("userId") Long userId, @Param("beginTime") LocalDateTime beginTime,
             @Param("limit") int limit);
+    int countUnreadByAudienceCapped(@Param("userId") Long userId, @Param("beginTime") LocalDateTime beginTime,
+            @Param("limit") int limit, @Param("audienceType") String audienceType);
 }

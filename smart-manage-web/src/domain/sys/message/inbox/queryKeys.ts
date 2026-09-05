@@ -9,7 +9,9 @@ export const inboxAdminQueryKeys = {
 export const inboxQueryKeys = {
   all: ['sys', 'message', 'inbox'] as const,
   unread: () => [...inboxQueryKeys.all, 'unread'] as const,
-  list: (unreadOnly: boolean) => [...inboxQueryKeys.all, 'list', unreadOnly] as const,
+  lists: () => [...inboxQueryKeys.all, 'list'] as const,
+  list: (filter: object) => [...inboxQueryKeys.lists(), filter] as const,
+  preview: () => [...inboxQueryKeys.all, 'preview'] as const,
   detail: (messageId?: string, receivedTime?: string) =>
     [...inboxQueryKeys.all, 'detail', messageId, receivedTime] as const,
 };

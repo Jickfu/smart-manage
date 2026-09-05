@@ -31,6 +31,8 @@
           AND b.status = 'PUBLISHED'
           AND b.expire_time &gt; CURRENT_TIMESTAMP
           <if test="form.unreadOnly == true">AND a.read_status = FALSE</if>
+          <if test="form.audienceType != null">AND b.audience_type = #{form.audienceType}</if>
+          <include refid="sm.system.query.ListSqlQueryMapper.conditions"/>
           <if test="form.cursorTime != null">
               AND (a.received_time, a.message_id) &lt;
                   (CAST(#{form.cursorTime} AS timestamp), #{form.cursorMessageId})
@@ -73,6 +75,17 @@
             INNER JOIN t_sys_inbox_message b ON b.id = a.message_id
             WHERE a.user_id = #{userId} AND a.received_time &gt;= #{beginTime} AND a.read_status = FALSE
               AND b.status = 'PUBLISHED' AND b.expire_time &gt; CURRENT_TIMESTAMP
+            LIMIT #{limit}
+        ) capped
+    </select>
+    <select id="countUnreadByAudienceCapped" resultType="int">
+        SELECT COUNT(*) FROM (
+            SELECT 1
+            FROM t_sys_inbox_recipient a
+            INNER JOIN t_sys_inbox_message b ON b.id = a.message_id
+            WHERE a.user_id = #{userId} AND a.received_time &gt;= #{beginTime} AND a.read_status = FALSE
+              AND b.status = 'PUBLISHED' AND b.expire_time &gt; CURRENT_TIMESTAMP
+              AND b.audience_type = #{audienceType}
             LIMIT #{limit}
         ) capped
     </select>

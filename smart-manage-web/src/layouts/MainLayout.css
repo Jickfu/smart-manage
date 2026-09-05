@@ -1,5 +1,6 @@
 /* 主布局 — 全屏不可溢出 */
 .sm-layout {
+  --sm-header-height: 48px;
   height: 100vh;
   overflow: hidden;
 }

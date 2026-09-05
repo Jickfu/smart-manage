@@ -21,22 +21,27 @@ class InboxRecipientMapperXmlTests {
     @Test
     void timelineQueryAlwaysUsesPartitionBoundaryAndStableCursor() {
         MybatisConfiguration configuration = new MybatisConfiguration();
+        String sharedResource = "mapper/common/ListSqlQueryMapper.xml";
+        new XMLMapperBuilder(getClass().getClassLoader().getResourceAsStream(sharedResource), configuration,
+                sharedResource, configuration.getSqlFragments()).parse();
         InputStream mapperInput = getClass().getClassLoader().getResourceAsStream(RESOURCE);
         assertNotNull(mapperInput, "站内消息 Mapper XML 不存在");
         new XMLMapperBuilder(mapperInput, configuration, RESOURCE, configuration.getSqlFragments()).parse();
         InboxCursorListForm form = new InboxCursorListForm();
         form.setUnreadOnly(true);
+        form.setAudienceType("USERS");
         form.setCursorTime("2026-08-01 12:00:00.123456");
         form.setCursorMessageId(30L);
         BoundSql boundSql = configuration
                 .getMappedStatement(InboxRecipientMapper.class.getName() + ".selectCursorPage")
                 .getBoundSql(Map.of("userId", 20L, "beginTime", java.time.LocalDateTime.of(2025, 8, 1, 0, 0),
-                        "form", form, "limit", 21));
+                        "form", form, "limit", 21, "listQuery", new sm.system.query.ListSqlQuery(List.of(), null, null)));
         String sql = boundSql.getSql().replaceAll("\\s+", " ");
 
         assertTrue(sql.contains("a.received_time >= ?"));
         assertTrue(sql.contains("TO_CHAR(a.received_time, 'YYYY-MM-DD HH24:MI:SS.US')"));
         assertTrue(sql.contains("a.read_status = FALSE"));
+        assertTrue(sql.contains("b.audience_type = ?"));
         assertTrue(sql.contains("(a.received_time, a.message_id) < (CAST(? AS timestamp), ?)"));
         assertTrue(sql.contains("ORDER BY a.received_time DESC, a.message_id DESC"));
 
