@@ -67,7 +67,7 @@ const Home = () => {
     <div className="sm-system-home">
       <QuickLaunchCard scope="SYSTEM" />
       <HomeCardGrid className="sm-system-home-charts">
-        <Card className="sm-home-card" title="费用执行" extra={exampleTag} variant="borderless">
+        <Card className="sm-home-card" title="审批信息" extra={exampleTag} variant="borderless">
           <div className="sm-system-home-number-example">
             <strong>26</strong>
             <span>待审批</span>
