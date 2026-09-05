@@ -116,9 +116,8 @@ const SysParamListPage = (props: PageComponentProps) => {
       {
         key: 'all',
         title: '全部参数',
-        children: [
-          { key: 'global', title: '全局参数', isLeaf: true },
-          ...(treeQuery.data?.map((domain) => ({
+        children:
+          treeQuery.data?.map((domain) => ({
             key: `domain:${domain.id}`,
             title: domain.name,
             children: domain.appList.map((application) => ({
@@ -130,9 +129,9 @@ const SysParamListPage = (props: PageComponentProps) => {
                 isLeaf: true,
               })),
             })),
-          })) ?? []),
-        ],
+          })) ?? [],
       },
+      { key: 'global', title: '全局参数', isLeaf: true },
     ];
   }, [featuresQuery.data, treeQuery.data]);
   const columns: ColumnsType<SysParamVO> = [
