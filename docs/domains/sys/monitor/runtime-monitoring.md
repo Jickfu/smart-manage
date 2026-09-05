@@ -29,7 +29,7 @@
 
 Host 规则和 Host Current Telemetry 不读取本地 Snapshot Store，而共同读取 `sm:monitor:snapshot:host-source:{hostId}:{instanceId}` 候选观测。系统按 metric 过滤 Collector 未知和过期 source，再选择 `sampleTime` 最新的有效值；不取最大值或平均值。读取时校验 source key 对应的 `hostId / instanceId`、值内身份和统一 TTL，只有所有新鲜 source 对该 metric 均不可用时才按未知处理。Instance 规则仍读取当前 JVM 的本地新鲜 Instance Snapshot。Host 历史保持各 JVM 本地采样写入 PostgreSQL，并由 `(host_id, sample_bucket)` UPSERT 保留该分钟最新采样。
 
-Host Catalog 是历史目录；Current Topology 只展示仍有 `ACTIVE` 实例的 Host。实例选择来自持久化目录，明确区分在线、离线和已退役；离线或退役实例的实时遥测显示不可用，但历史趋势仍可查询。较长范围的历史 P95/P99 取查询桶内最差一分钟值。
+Host Catalog 是历史目录；Current Topology 只展示仍有 `ACTIVE` 实例的 Host。实例选择来自持久化目录，明确区分在线、离线和已退役；正常在线状态由实例选择器和拓扑表表达，不额外占用整行提示，离线或退役状态则明确提示实时遥测不可用但历史趋势仍可查询。较长范围的历史 P95/P99 取查询桶内最差一分钟值。历史图图例固定在绘图区上方，不能覆盖趋势数据。
 
 当关联实例全部离线时，只能表达“主机遥测不可用”，不能断言物理主机宕机。整个 Smart Manage 集群全部不可达时无法自我告警，该场景属于外部 HTTP 可用性监控职责。
 

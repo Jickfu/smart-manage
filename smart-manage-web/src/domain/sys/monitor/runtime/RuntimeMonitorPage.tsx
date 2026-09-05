@@ -171,25 +171,18 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
           selectedInstanceId={selectedLifecycleInstanceId}
           onSelectInstance={setSelectedLifecycleInstanceId}
         />
-        {selectedInstance && (
-          <Alert
-            showIcon
-            type={
-              selectedInstance.lifecycle === 'RETIRED'
-                ? 'info'
-                : selectedInstance.online
-                  ? 'success'
-                  : 'warning'
-            }
-            title={
-              selectedInstance.lifecycle === 'RETIRED'
-                ? '当前实例已退役，仍可查看历史趋势'
-                : selectedInstance.online
-                  ? '当前实例在线'
+        {selectedInstance &&
+          (selectedInstance.lifecycle === 'RETIRED' || !selectedInstance.online) && (
+            <Alert
+              showIcon
+              type={selectedInstance.lifecycle === 'RETIRED' ? 'info' : 'warning'}
+              title={
+                selectedInstance.lifecycle === 'RETIRED'
+                  ? '当前实例已退役，仍可查看历史趋势'
                   : '当前实例离线，实时遥测不可用，历史趋势仍可查询'
-            }
-          />
-        )}
+              }
+            />
+          )}
         {selectedHostId && hostSnapshot.data?.status === 'UNAVAILABLE' && (
           <Alert
             showIcon
@@ -504,7 +497,7 @@ function historyOptions(
     title,
     option: {
       tooltip: { trigger: 'axis' },
-      legend: { data: definitions.map((item) => item[0]) },
+      legend: { data: definitions.map((item) => item[0]), top: 0 },
       grid: { left: 56, right: 24, top: 48, bottom: 32 },
       xAxis: {
         type: 'category',
