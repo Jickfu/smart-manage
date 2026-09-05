@@ -7,16 +7,14 @@ import org.commonmark.ext.gfm.tables.TableCell;
 import org.commonmark.ext.gfm.tables.TableHead;
 import org.commonmark.ext.gfm.tables.TableRow;
 import org.commonmark.ext.gfm.tables.TablesExtension;
-import org.commonmark.node.BulletList;
 import org.commonmark.node.Document;
 import org.commonmark.node.FencedCodeBlock;
 import org.commonmark.node.Heading;
-import org.commonmark.node.ListItem;
-import org.commonmark.node.Paragraph;
 import org.commonmark.node.Text;
 import org.commonmark.renderer.markdown.MarkdownRenderer;
 import org.springframework.stereotype.Component;
 import sm.domain.sys.base.openapi.model.entity.OpenApiReleaseEntity;
+import sm.system.openapi.OpenApiOperationRegistry;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -34,9 +32,11 @@ public class OpenApiMarkdownDocumentGenerator {
     private static final List<Extension> EXTENSIONS = List.of(TablesExtension.create());
     private final MarkdownRenderer renderer = MarkdownRenderer.builder().extensions(EXTENSIONS).build();
     private final JsonMapper jsonMapper;
+    private final OpenApiOperationRegistry operationRegistry;
 
-    public OpenApiMarkdownDocumentGenerator(JsonMapper jsonMapper) {
+    public OpenApiMarkdownDocumentGenerator(JsonMapper jsonMapper, OpenApiOperationRegistry operationRegistry) {
         this.jsonMapper = jsonMapper;
+        this.operationRegistry = operationRegistry;
     }
 
     public byte[] generate(List<OpenApiReleaseEntity> releases) {
@@ -45,21 +45,7 @@ public class OpenApiMarkdownDocumentGenerator {
         for (OpenApiReleaseEntity release : releases) {
             appendHeading(document, 2, release.getName());
             appendHeading(document, 3, "接口基本信息");
-            BulletList metadata = new BulletList();
-            appendListItem(metadata, "用途说明：" + valueOrDash(release.getDescription()));
-            appendListItem(metadata, "请求方式：" + release.getHttpMethod());
-            appendListItem(metadata, "请求 URL：" + release.getPath());
-            appendListItem(metadata, "API 编码：" + release.getApiNumber());
-            appendListItem(metadata, "操作标识：" + release.getOperationKey());
-            appendListItem(metadata, "所属模块：" + release.getDomainName() + " / "
-                    + release.getApplicationName() + " / " + release.getFeatureName());
-            appendListItem(metadata, "适用版本：" + release.getApiVersion() + "（"
-                    + statusName(release.getStatus()) + "）");
-            document.appendChild(metadata);
-            if (release.getDocumentation() != null && !release.getDocumentation().isBlank()) {
-                appendParagraph(document, release.getDocumentation());
-            }
-
+            appendBasicInfoTable(document, release);
             appendHeading(document, 3, "请求体参数");
             appendSchemaTable(document, schemaRows(release.getRequestSchema(), release.getRequestExample()), true);
             appendHeading(document, 3, "返回参数");
@@ -81,8 +67,8 @@ public class OpenApiMarkdownDocumentGenerator {
                     1, example);
             return rows;
         } catch (Exception exception) {
-            // 历史元数据异常时仍允许导出其他接口，参数表明确标记无法解析。
-            return List.of(new SchemaRow("—", "—", false, "JSON Schema 无法解析", 1, "—"));
+            // 版本 Schema 是导出文档的权威结构，异常时必须阻断，不能生成误导性的占位参数。
+            throw new IllegalArgumentException("OpenAPI JSON Schema 无法解析", exception);
         }
     }
 
@@ -98,7 +84,7 @@ public class OpenApiMarkdownDocumentGenerator {
             rows.add(new SchemaRow(name, typeName(property), required.contains(name),
                     textOrDash(property.get("description")), level,
                     exampleText(propertyExample, property)));
-            JsonNode nestedSchema = "array".equals(text(property.get("type"))) ? property.get("items") : property;
+            JsonNode nestedSchema = hasType(property, "array") ? property.get("items") : property;
             JsonNode nestedExample = propertyExample != null && propertyExample.isArray() && !propertyExample.isEmpty()
                     ? propertyExample.get(0) : propertyExample;
             if (nestedSchema != null) {
@@ -130,6 +116,18 @@ public class OpenApiMarkdownDocumentGenerator {
             return "array<" + typeName(schema.get("items")) + ">";
         }
         return name;
+    }
+
+    private boolean hasType(JsonNode schema, String expectedType) {
+        JsonNode type = schema == null ? null : schema.get("type");
+        if (type == null || type.isNull()) return false;
+        if (type.isArray()) {
+            for (JsonNode candidate : type) {
+                if (expectedType.equals(text(candidate))) return true;
+            }
+            return false;
+        }
+        return expectedType.equals(text(type));
     }
 
     private String exampleText(JsonNode example, JsonNode schema) {
@@ -167,9 +165,45 @@ public class OpenApiMarkdownDocumentGenerator {
         document.appendChild(table);
     }
 
+    private void appendBasicInfoTable(Document document, OpenApiReleaseEntity release) {
+        TableBlock table = new TableBlock();
+        TableHead head = new TableHead();
+        TableRow header = new TableRow();
+        appendCell(header, "字段");
+        appendCell(header, "内容");
+        appendCell(header, "字段");
+        appendCell(header, "内容");
+        head.appendChild(header);
+        table.appendChild(head);
+        TableBody body = new TableBody();
+        appendBasicInfoRow(body, "API 编码", release.getApiNumber(),
+                "适用版本", release.getApiVersion());
+        appendBasicInfoRow(body, "请求方式", release.getHttpMethod(),
+                "发布状态", statusName(release.getStatus()));
+        appendBasicInfoRow(body, "代码注册",
+                operationRegistry.findByKey(release.getOperationKey()) == null ? "代码缺失" : "已注册",
+                "所属模块", release.getDomainName() + " / " + release.getApplicationName()
+                        + " / " + release.getFeatureName());
+        appendBasicInfoRow(body, "请求 URL", release.getPath(), "", "");
+        appendBasicInfoRow(body, "操作标识", release.getOperationKey(), "", "");
+        appendBasicInfoRow(body, "用途说明", release.getDescription(), "", "");
+        table.appendChild(body);
+        document.appendChild(table);
+    }
+
+    private void appendBasicInfoRow(TableBody body, String firstLabel, String firstValue,
+                                    String secondLabel, String secondValue) {
+        TableRow row = new TableRow();
+        appendCell(row, firstLabel);
+        appendCell(row, valueOrDash(firstValue));
+        appendCell(row, secondLabel);
+        appendCell(row, secondLabel.isBlank() ? "" : valueOrDash(secondValue));
+        body.appendChild(row);
+    }
+
     private void appendCell(TableRow row, String value) {
         TableCell cell = new TableCell();
-        cell.appendChild(new Text(valueOrDash(value)));
+        cell.appendChild(new Text(value == null ? "" : value));
         row.appendChild(cell);
     }
 
@@ -178,20 +212,6 @@ public class OpenApiMarkdownDocumentGenerator {
         heading.setLevel(level);
         heading.appendChild(new Text(text));
         document.appendChild(heading);
-    }
-
-    private void appendParagraph(Document document, String text) {
-        Paragraph paragraph = new Paragraph();
-        paragraph.appendChild(new Text(valueOrDash(text)));
-        document.appendChild(paragraph);
-    }
-
-    private void appendListItem(BulletList list, String text) {
-        ListItem item = new ListItem();
-        Paragraph paragraph = new Paragraph();
-        paragraph.appendChild(new Text(text));
-        item.appendChild(paragraph);
-        list.appendChild(item);
     }
 
     private void appendJson(Document document, String json) {
@@ -206,7 +226,8 @@ public class OpenApiMarkdownDocumentGenerator {
     }
 
     private String text(JsonNode node) {
-        return node == null || node.isNull() ? null : node.asText();
+        if (node == null || node.isNull()) return null;
+        return node.isTextual() ? node.asText() : node.toString();
     }
 
     private String valueOrDash(String value) {

@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Anchor, Space, Table, Tag, Typography } from 'antd';
+import { Anchor, Descriptions, Table, Tag, Typography } from 'antd';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import EditPage from '@/domain/common/page/edit/EditPage';
 import { OperationType } from '@/domain/common/page/types';
@@ -12,6 +12,7 @@ import { openApiPlatformApi } from './api';
 import { openApiCatalogAccess } from './permissions';
 import { openApiQueryKeys } from './queryKeys';
 import type { OpenApiRelease } from './types';
+import JsonCodeViewer from './JsonCodeViewer';
 import './OpenApiPage.css';
 
 const statusNames: Record<OpenApiRelease['status'], string> = {
@@ -125,6 +126,7 @@ const schemaColumns = [
 ];
 
 function ApiDocument({ detail }: { detail: OpenApiRelease }) {
+  const documentRef = useRef<HTMLElement>(null);
   const sectionPrefix = `openapi-${detail.id}`;
   const requestRows = useMemo(
     () => buildSchemaRows(detail.requestSchema, detail.requestExample),
@@ -141,58 +143,73 @@ function ApiDocument({ detail }: { detail: OpenApiRelease }) {
     examples: `${sectionPrefix}-examples`,
   };
   return (
-    <article className="sm-openapi-document">
+    <article ref={documentRef} className="sm-openapi-document">
       <main className="sm-openapi-document__content">
         <Typography.Title level={2}>{detail.name}</Typography.Title>
         <section id={sections.basic} className="sm-openapi-document__section">
           <Typography.Title level={4}>接口基本信息</Typography.Title>
-          <dl className="sm-openapi-document__basic">
-            <div>
-              <dt>用途说明</dt>
-              <dd>{detail.description || '—'}</dd>
-            </div>
-            <div>
-              <dt>请求方式</dt>
-              <dd>
-                <Tag color="geekblue">{detail.httpMethod}</Tag>
-              </dd>
-            </div>
-            <div>
-              <dt>请求 URL</dt>
-              <dd>
-                <Typography.Text copyable={{ text: detail.path }}>{detail.path}</Typography.Text>
-              </dd>
-            </div>
-            <div>
-              <dt>API 编码</dt>
-              <dd>{detail.apiNumber}</dd>
-            </div>
-            <div>
-              <dt>操作标识</dt>
-              <dd>{detail.operationKey}</dd>
-            </div>
-            <div>
-              <dt>所属模块</dt>
-              <dd>{`${detail.domainName} / ${detail.applicationName} / ${detail.featureName}`}</dd>
-            </div>
-            <div>
-              <dt>适用版本</dt>
-              <dd>
-                <Space wrap>
-                  <Tag color="blue">{detail.apiVersion}</Tag>
+          <Descriptions
+            className="sm-openapi-document__basic"
+            bordered
+            size="small"
+            column={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2, xxl: 2 }}
+            items={[
+              { key: 'apiNumber', label: 'API 编码', children: detail.apiNumber },
+              {
+                key: 'apiVersion',
+                label: '适用版本',
+                children: <Tag color="blue">{detail.apiVersion}</Tag>,
+              },
+              {
+                key: 'httpMethod',
+                label: '请求方式',
+                children: <Tag color="geekblue">{detail.httpMethod}</Tag>,
+              },
+              {
+                key: 'status',
+                label: '发布状态',
+                children: (
                   <Tag color={detail.status === 'PUBLISHED' ? 'success' : 'default'}>
                     {statusNames[detail.status]}
                   </Tag>
+                ),
+              },
+              {
+                key: 'registered',
+                label: '代码注册',
+                children: (
                   <Tag color={detail.registered ? 'processing' : 'error'}>
-                    {detail.registered ? '代码已注册' : '代码缺失'}
+                    {detail.registered ? '已注册' : '代码缺失'}
                   </Tag>
-                </Space>
-              </dd>
-            </div>
-          </dl>
-          {detail.documentation ? (
-            <Typography.Paragraph>{detail.documentation}</Typography.Paragraph>
-          ) : null}
+                ),
+              },
+              {
+                key: 'module',
+                label: '所属模块',
+                children: `${detail.domainName} / ${detail.applicationName} / ${detail.featureName}`,
+              },
+              {
+                key: 'path',
+                label: '请求 URL',
+                span: 'filled',
+                children: (
+                  <Typography.Text copyable={{ text: detail.path }}>{detail.path}</Typography.Text>
+                ),
+              },
+              {
+                key: 'operationKey',
+                label: '操作标识',
+                span: 'filled',
+                children: detail.operationKey,
+              },
+              {
+                key: 'description',
+                label: '用途说明',
+                span: 'filled',
+                children: detail.description || '—',
+              },
+            ]}
+          />
         </section>
 
         <section id={sections.request} className="sm-openapi-document__section">
@@ -225,16 +242,20 @@ function ApiDocument({ detail }: { detail: OpenApiRelease }) {
 
         <section id={sections.examples} className="sm-openapi-document__section">
           <Typography.Title level={4}>请求结构示例</Typography.Title>
-          <pre className="sm-openapi-schema">{formatJson(detail.requestExample)}</pre>
+          <JsonCodeViewer value={formatJson(detail.requestExample)} />
           <Typography.Title level={4} className="sm-openapi-document__response-title">
             返回结构示例
           </Typography.Title>
-          <pre className="sm-openapi-schema">{formatJson(detail.responseExample)}</pre>
+          <JsonCodeViewer value={formatJson(detail.responseExample)} />
         </section>
       </main>
       <aside className="sm-openapi-document__anchor">
         <Anchor
           affix={false}
+          getContainer={() =>
+            documentRef.current?.closest<HTMLElement>('.sm-edit-body') ?? document.documentElement
+          }
+          targetOffset={12}
           items={[
             { key: 'basic', href: `#${sections.basic}`, title: '基本信息' },
             { key: 'request', href: `#${sections.request}`, title: '请求体参数' },
