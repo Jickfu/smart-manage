@@ -17,6 +17,37 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: advance_user_credential_generation(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.advance_user_credential_generation() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.password IS DISTINCT FROM OLD.password
+        OR NEW.password_reset IS DISTINCT FROM OLD.password_reset
+        OR NEW.email IS DISTINCT FROM OLD.email
+        OR NEW.email_verified_at IS DISTINCT FROM OLD.email_verified_at
+        OR NEW.enabled IS DISTINCT FROM OLD.enabled THEN
+        NEW.credential_generation := OLD.credential_generation + 1;
+        -- MyBatis-Plus 可能已经递增 NEW.version；固定 OLD+1，不能重复递增。
+        NEW.version := OLD.version + 1;
+    ELSE
+        NEW.credential_generation := OLD.credential_generation;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION advance_user_credential_generation(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.advance_user_credential_generation() IS '安全字段真实变化时原子推进凭据代际与编辑版本';
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -454,7 +485,8 @@ CREATE TABLE public.t_sys_app (
     icon_color character varying(32),
     create_user bigint,
     update_user bigint,
-    version integer DEFAULT 0 NOT NULL
+    version integer DEFAULT 0 NOT NULL,
+    CONSTRAINT ck_app_number_builtin_inbox CHECK (((number)::text <> 'builtin:inbox'::text))
 );
 
 
@@ -1403,6 +1435,9 @@ CREATE TABLE public.t_sys_email_task (
     create_user bigint,
     update_user bigint,
     version integer DEFAULT 0 NOT NULL,
+    sensitive_content boolean DEFAULT false NOT NULL,
+    html_body_cipher text,
+    text_body_cipher text,
     CONSTRAINT ck_sys_email_task_attempt CHECK (((attempt_count >= 0) AND ((max_attempts >= 1) AND (max_attempts <= 10)))),
     CONSTRAINT ck_sys_email_task_status CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'SENDING'::character varying, 'SUCCESS'::character varying, 'RETRY_WAIT'::character varying, 'FAILED'::character varying, 'UNKNOWN'::character varying, 'CANCELLED'::character varying])::text[])))
 );
@@ -1434,6 +1469,27 @@ COMMENT ON COLUMN public.t_sys_email_task.to_addresses IS 'JSON 格式收件人�
 --
 
 COMMENT ON COLUMN public.t_sys_email_task.status IS 'PENDING/SENDING/SUCCESS/RETRY_WAIT/FAILED/UNKNOWN/CANCELLED';
+
+
+--
+-- Name: COLUMN t_sys_email_task.sensitive_content; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_email_task.sensitive_content IS '是否为敏感正文';
+
+
+--
+-- Name: COLUMN t_sys_email_task.html_body_cipher; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_email_task.html_body_cipher IS '敏感HTML正文密文';
+
+
+--
+-- Name: COLUMN t_sys_email_task.text_body_cipher; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_email_task.text_body_cipher IS '敏感纯文本正文密文';
 
 
 --
@@ -1570,6 +1626,177 @@ COMMENT ON COLUMN public.t_sys_feature.update_user IS '修改人';
 --
 
 COMMENT ON COLUMN public.t_sys_feature.version IS '乐观锁版本号';
+
+
+--
+-- Name: t_sys_file_artifact; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_file_artifact (
+    id bigint NOT NULL,
+    purpose character varying(50) NOT NULL,
+    owner_user_id bigint NOT NULL,
+    original_name character varying(255) NOT NULL,
+    storage_type character varying(20) NOT NULL,
+    object_key character varying(1000) NOT NULL,
+    mime_type character varying(200) NOT NULL,
+    file_size bigint NOT NULL,
+    status character varying(30) NOT NULL,
+    expires_at timestamp without time zone NOT NULL,
+    download_count integer DEFAULT 0 NOT NULL,
+    max_downloads integer,
+    create_time timestamp without time zone,
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    version integer DEFAULT 0 NOT NULL,
+    download_claim_token character varying(64),
+    download_claimed_at timestamp without time zone,
+    CONSTRAINT ck_sys_file_artifact_download_claim CHECK (((((status)::text = 'DOWNLOADING'::text) AND (download_claim_token IS NOT NULL) AND (download_claimed_at IS NOT NULL)) OR (((status)::text <> 'DOWNLOADING'::text) AND (download_claim_token IS NULL) AND (download_claimed_at IS NULL)))),
+    CONSTRAINT ck_sys_file_artifact_download_count CHECK ((download_count >= 0)),
+    CONSTRAINT ck_sys_file_artifact_size CHECK ((file_size >= 0)),
+    CONSTRAINT ck_sys_file_artifact_status CHECK (((status)::text = ANY ((ARRAY['ACTIVE'::character varying, 'DOWNLOADING'::character varying, 'PENDING_DELETE'::character varying, 'DELETED'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_file_artifact; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_file_artifact IS '受管理文件制品';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.purpose; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.purpose IS '受控文件用途';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.owner_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.owner_user_id IS '所有者用户ID';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.original_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.original_name IS '原始文件名';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.storage_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.storage_type IS '存储类型';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.object_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.object_key IS '对象键';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.mime_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.mime_type IS '媒体类型';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.file_size; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.file_size IS '文件大小';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.status IS '生命周期状态';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.expires_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.expires_at IS '过期时间';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.download_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.download_count IS '已下载次数';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.max_downloads; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.max_downloads IS '最大下载次数';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.create_time IS '创建时间';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.update_time IS '更新时间';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.create_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.create_user IS '创建人';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.update_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.update_user IS '修改人';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.version IS '乐观锁版本号';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.download_claim_token; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.download_claim_token IS '下载资格声明令牌';
+
+
+--
+-- Name: COLUMN t_sys_file_artifact.download_claimed_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_file_artifact.download_claimed_at IS '下载资格声明时间';
 
 
 --
@@ -1745,6 +1972,969 @@ COMMENT ON COLUMN public.t_sys_file_config.s3_secret_key_cipher IS 'S3 Secret Ke
 --
 
 COMMENT ON COLUMN public.t_sys_file_config.s3_path_style IS '是否使用Path Style';
+
+
+--
+-- Name: t_sys_inbox_message; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_message (
+    id bigint NOT NULL,
+    scene_key character varying(100) NOT NULL,
+    idempotency_key character varying(200) NOT NULL,
+    title character varying(200) NOT NULL,
+    content text NOT NULL,
+    level character varying(20) DEFAULT 'NORMAL'::character varying NOT NULL,
+    status character varying(20) DEFAULT 'DRAFT'::character varying NOT NULL,
+    sender_user_id bigint,
+    sender_name character varying(100),
+    audience_type character varying(30) DEFAULT 'ALL_ENABLED_USERS'::character varying NOT NULL,
+    recipient_count bigint DEFAULT 0 NOT NULL,
+    publish_time timestamp without time zone,
+    expire_time timestamp without time zone NOT NULL,
+    resource_type character varying(100),
+    resource_id character varying(100),
+    action_code character varying(50),
+    action_payload text,
+    attempt_count integer DEFAULT 0 NOT NULL,
+    claimed_time timestamp without time zone,
+    error_message character varying(1000),
+    create_time timestamp without time zone NOT NULL,
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    version integer DEFAULT 0 NOT NULL,
+    CONSTRAINT ck_sys_inbox_message_audience CHECK (((audience_type)::text = ANY ((ARRAY['ALL_ENABLED_USERS'::character varying, 'USERS'::character varying])::text[]))),
+    CONSTRAINT ck_sys_inbox_message_expire CHECK ((expire_time > create_time)),
+    CONSTRAINT ck_sys_inbox_message_level CHECK (((level)::text = ANY ((ARRAY['NORMAL'::character varying, 'IMPORTANT'::character varying, 'URGENT'::character varying])::text[]))),
+    CONSTRAINT ck_sys_inbox_message_publish_time CHECK (((((status)::text = 'PUBLISHED'::text) AND (publish_time IS NOT NULL)) OR (((status)::text <> 'PUBLISHED'::text) AND (publish_time IS NULL)))),
+    CONSTRAINT ck_sys_inbox_message_status CHECK (((status)::text = ANY ((ARRAY['DRAFT'::character varying, 'PENDING'::character varying, 'PUBLISHING'::character varying, 'PUBLISHED'::character varying, 'FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_inbox_message; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_inbox_message IS '站内消息主体';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.scene_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.scene_key IS '消息场景键';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.idempotency_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.idempotency_key IS '场景幂等键';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.title IS '标题';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.content; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.content IS '纯文本正文';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.level; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.level IS '消息级别';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.status IS '发布状态';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.sender_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.sender_user_id IS '发布人ID';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.sender_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.sender_name IS '发布人名称快照';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.audience_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.audience_type IS '收件范围类型';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.recipient_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.recipient_count IS '收件人数';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.publish_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.publish_time IS '发布时间';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.expire_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.expire_time IS '失效时间';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.resource_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.resource_type IS '关联业务资源类型';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.resource_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.resource_id IS '关联业务资源ID';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.action_code; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.action_code IS '关联业务动作编码';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.action_payload; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.action_payload IS '关联业务动作参数';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.attempt_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.attempt_count IS '发布尝试次数';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.claimed_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.claimed_time IS '任务领取时间';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.error_message; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.error_message IS '失败原因';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.create_time IS '创建时间';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.update_time IS '更新时间';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.create_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.create_user IS '创建人';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.update_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.update_user IS '修改人';
+
+
+--
+-- Name: COLUMN t_sys_inbox_message.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_message.version IS '乐观锁版本号';
+
+
+--
+-- Name: t_sys_inbox_recipient; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+)
+PARTITION BY RANGE (received_time);
+
+
+--
+-- Name: TABLE t_sys_inbox_recipient; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_inbox_recipient IS '站内消息用户收件状态（月度分区父表）';
+
+
+--
+-- Name: COLUMN t_sys_inbox_recipient.message_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_recipient.message_id IS '消息ID';
+
+
+--
+-- Name: COLUMN t_sys_inbox_recipient.user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_recipient.user_id IS '收件用户ID';
+
+
+--
+-- Name: COLUMN t_sys_inbox_recipient.received_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_recipient.received_time IS '收件时间';
+
+
+--
+-- Name: COLUMN t_sys_inbox_recipient.read_status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_recipient.read_status IS '是否已读';
+
+
+--
+-- Name: COLUMN t_sys_inbox_recipient.read_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_inbox_recipient.read_time IS '阅读时间';
+
+
+--
+-- Name: t_sys_inbox_recipient_default; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_default (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202601; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202601 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202602; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202602 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202603; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202603 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202604; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202604 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202605; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202605 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202606; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202606 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202607; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202607 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202608; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202608 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202609; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202609 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202610; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202610 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202611; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202611 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202612; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202612 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202701; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202701 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202702; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202702 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202703; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202703 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202704; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202704 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202705; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202705 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202706; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202706 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202707; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202707 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202708; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202708 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202709; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202709 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202710; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202710 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202711; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202711 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202712; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202712 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202801; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202801 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202802; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202802 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202803; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202803 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202804; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202804 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202805; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202805 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202806; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202806 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202807; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202807 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202808; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202808 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202809; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202809 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202810; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202810 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202811; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202811 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202812; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202812 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202901; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202901 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202902; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202902 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202903; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202903 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202904; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202904 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202905; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202905 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202906; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202906 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202907; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202907 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202908; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202908 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202909; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202909 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202910; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202910 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202911; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202911 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202912; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_inbox_recipient_p202912 (
+    message_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    received_time timestamp without time zone NOT NULL,
+    read_status boolean DEFAULT false NOT NULL,
+    read_time timestamp without time zone,
+    CONSTRAINT ck_sys_inbox_recipient_read CHECK ((((read_status = false) AND (read_time IS NULL)) OR ((read_status = true) AND (read_time IS NOT NULL))))
+);
 
 
 --
@@ -6395,6 +7585,1448 @@ COMMENT ON COLUMN public.t_sys_number_rule_segment.length IS '流水位数';
 --
 
 COMMENT ON COLUMN public.t_sys_number_rule_segment.separator IS '段后分隔符';
+
+
+--
+-- Name: t_sys_openapi_application; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_application (
+    id bigint NOT NULL,
+    number character varying(100) NOT NULL,
+    name character varying(200) NOT NULL,
+    enabled boolean DEFAULT false NOT NULL,
+    proxy_user_id bigint NOT NULL,
+    proxy_org_id bigint NOT NULL,
+    authentication_type character varying(30) DEFAULT 'HMAC_SHA256'::character varying NOT NULL,
+    encryption_algorithm character varying(30) NOT NULL,
+    ip_policy_mode character varying(20) DEFAULT 'DISABLED'::character varying NOT NULL,
+    ip_ranges text,
+    description character varying(500),
+    create_time timestamp without time zone DEFAULT now(),
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    version integer DEFAULT 0 NOT NULL,
+    CONSTRAINT ck_sys_openapi_application_auth CHECK (((authentication_type)::text = 'HMAC_SHA256'::text)),
+    CONSTRAINT ck_sys_openapi_application_encryption CHECK (((encryption_algorithm)::text = ANY ((ARRAY['NONE'::character varying, 'AES_256_GCM'::character varying, 'SM4_GCM'::character varying])::text[]))),
+    CONSTRAINT ck_sys_openapi_application_ip_mode CHECK (((ip_policy_mode)::text = ANY ((ARRAY['DISABLED'::character varying, 'WHITELIST'::character varying, 'BLACKLIST'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_openapi_application; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_openapi_application IS 'OpenAPI 第三方应用';
+
+
+--
+-- Name: COLUMN t_sys_openapi_application.proxy_user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_openapi_application.proxy_user_id IS '外部调用建立业务上下文时使用的普通用户';
+
+
+--
+-- Name: COLUMN t_sys_openapi_application.proxy_org_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_openapi_application.proxy_org_id IS '外部调用固定组织，不跟随代理用户浏览器会话';
+
+
+--
+-- Name: COLUMN t_sys_openapi_application.ip_ranges; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_openapi_application.ip_ranges IS '每行一个 IPv4/IPv6 地址或 CIDR 网段';
+
+
+--
+-- Name: t_sys_openapi_credential; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_credential (
+    id bigint NOT NULL,
+    application_id bigint NOT NULL,
+    key_id character varying(100) NOT NULL,
+    name character varying(200) NOT NULL,
+    enabled boolean DEFAULT true NOT NULL,
+    encryption_algorithm character varying(30) NOT NULL,
+    signing_secret_cipher text NOT NULL,
+    request_encryption_key_cipher text,
+    response_encryption_key_cipher text,
+    expires_at timestamp without time zone,
+    last_used_at timestamp without time zone,
+    create_time timestamp without time zone DEFAULT now(),
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    version integer DEFAULT 0 NOT NULL,
+    CONSTRAINT ck_sys_openapi_credential_encryption CHECK (((encryption_algorithm)::text = ANY ((ARRAY['NONE'::character varying, 'AES_256_GCM'::character varying, 'SM4_GCM'::character varying])::text[]))),
+    CONSTRAINT ck_sys_openapi_credential_encryption_keys CHECK (((((encryption_algorithm)::text = 'NONE'::text) AND (request_encryption_key_cipher IS NULL) AND (response_encryption_key_cipher IS NULL)) OR (((encryption_algorithm)::text = ANY ((ARRAY['AES_256_GCM'::character varying, 'SM4_GCM'::character varying])::text[])) AND (request_encryption_key_cipher IS NOT NULL) AND (response_encryption_key_cipher IS NOT NULL))))
+);
+
+
+--
+-- Name: TABLE t_sys_openapi_credential; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_openapi_credential IS 'OpenAPI 独立凭据包；三个密钥均使用部署密钥加密存储';
+
+
+--
+-- Name: t_sys_openapi_grant; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_grant (
+    id bigint NOT NULL,
+    application_id bigint NOT NULL,
+    operation_key character varying(200) NOT NULL,
+    create_time timestamp without time zone DEFAULT now(),
+    create_user bigint,
+    update_time timestamp without time zone,
+    update_user bigint
+);
+
+
+--
+-- Name: TABLE t_sys_openapi_grant; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_openapi_grant IS '第三方应用的 API 操作授权';
+
+
+--
+-- Name: COLUMN t_sys_openapi_grant.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_openapi_grant.update_time IS '更新时间';
+
+
+--
+-- Name: COLUMN t_sys_openapi_grant.update_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_openapi_grant.update_user IS '更新用户';
+
+
+--
+-- Name: t_sys_openapi_invocation_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+)
+PARTITION BY RANGE (request_time);
+
+
+--
+-- Name: TABLE t_sys_openapi_invocation_log; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_openapi_invocation_log IS 'OpenAPI 调用审计，不保存请求、响应正文及密钥';
+
+
+--
+-- Name: t_sys_openapi_invocation_log_default; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_default (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_history; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_history (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+)
+PARTITION BY RANGE (request_time);
+
+
+--
+-- Name: TABLE t_sys_openapi_invocation_log_history; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_openapi_invocation_log_history IS 'OpenAPI 历史调用审计（月度分区父表）';
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202601; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202601 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202602; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202602 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202603; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202603 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202604; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202604 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202605; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202605 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202606; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202606 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202607; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202607 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202608; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202608 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202609; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202609 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202610; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202610 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202611; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202611 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202612; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202612 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202701; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202701 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202702; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202702 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202703; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202703 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202704; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202704 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202705; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202705 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202706; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202706 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202707; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202707 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202708; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202708 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202709; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202709 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202710; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202710 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202711; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202711 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202712; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202712 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202801; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202801 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202802; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202802 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202803; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202803 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202804; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202804 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202805; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202805 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202806; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202806 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202807; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202807 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202808; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202808 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202809; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202809 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202810; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202810 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202811; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202811 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202812; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202812 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202901; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202901 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202902; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202902 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202903; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202903 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202904; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202904 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202905; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202905 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202906; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202906 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202907; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202907 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202908; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202908 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202909; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202909 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202910; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202910 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202911; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202911 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202912; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_invocation_log_p202912 (
+    id bigint NOT NULL,
+    request_time timestamp without time zone NOT NULL,
+    application_id bigint,
+    application_number character varying(100),
+    credential_key_id character varying(100),
+    operation_key character varying(200),
+    request_id character varying(100),
+    trace_id character varying(100),
+    client_ip character varying(128),
+    result_type character varying(30) NOT NULL,
+    result_code integer,
+    duration_ms bigint NOT NULL,
+    request_bytes integer NOT NULL,
+    response_bytes integer NOT NULL,
+    error_message character varying(500),
+    CONSTRAINT ck_sys_openapi_invocation_result CHECK (((result_type)::text = ANY ((ARRAY['SUCCESS'::character varying, 'AUTHENTICATION_FAILED'::character varying, 'ACCESS_DENIED'::character varying, 'BUSINESS_FAILED'::character varying, 'SYSTEM_FAILED'::character varying])::text[])))
+);
+
+
+--
+-- Name: t_sys_openapi_release; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_openapi_release (
+    id bigint NOT NULL,
+    api_number character varying(120) NOT NULL,
+    api_version character varying(30) NOT NULL,
+    operation_key character varying(200) NOT NULL,
+    name character varying(200) NOT NULL,
+    http_method character varying(10) NOT NULL,
+    path character varying(500) NOT NULL,
+    status character varying(20) DEFAULT 'DRAFT'::character varying NOT NULL,
+    description character varying(1000),
+    request_schema jsonb NOT NULL,
+    response_schema jsonb NOT NULL,
+    documentation text,
+    system_preset boolean DEFAULT true NOT NULL,
+    create_time timestamp without time zone DEFAULT now(),
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    version integer DEFAULT 0 NOT NULL,
+    domain_key character varying(100) NOT NULL,
+    domain_name character varying(200) NOT NULL,
+    application_key character varying(100) NOT NULL,
+    application_name character varying(200) NOT NULL,
+    feature_key character varying(100) NOT NULL,
+    feature_name character varying(200) NOT NULL,
+    request_example jsonb,
+    response_example jsonb,
+    CONSTRAINT ck_sys_openapi_release_method CHECK (((http_method)::text = ANY ((ARRAY['GET'::character varying, 'POST'::character varying, 'PUT'::character varying, 'DELETE'::character varying, 'PATCH'::character varying])::text[]))),
+    CONSTRAINT ck_sys_openapi_release_status CHECK (((status)::text = ANY ((ARRAY['DRAFT'::character varying, 'PUBLISHED'::character varying, 'OFFLINE'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE t_sys_openapi_release; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_openapi_release IS '由代码显式注册并通过迁移发布的 OpenAPI 版本目录';
+
+
+--
+-- Name: COLUMN t_sys_openapi_release.domain_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_openapi_release.domain_key IS 'API 归属领域稳定编码';
+
+
+--
+-- Name: COLUMN t_sys_openapi_release.application_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_openapi_release.application_key IS 'API 归属应用稳定编码';
+
+
+--
+-- Name: COLUMN t_sys_openapi_release.feature_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_openapi_release.feature_key IS 'API 归属功能稳定编码';
+
+
+--
+-- Name: COLUMN t_sys_openapi_release.request_example; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_openapi_release.request_example IS 'API 文档和管理端业务试调使用的显式请求示例';
+
+
+--
+-- Name: COLUMN t_sys_openapi_release.response_example; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_openapi_release.response_example IS 'API 文档使用的显式响应 JSON 示例';
 
 
 --
@@ -11327,7 +13959,20 @@ CREATE TABLE public.t_sys_ui_config (
     version integer DEFAULT 0 NOT NULL,
     login_banner_attachment_id bigint,
     login_logo_attachment_id bigint,
-    header_logo_attachment_id bigint
+    header_logo_attachment_id bigint,
+    watermark_enabled boolean DEFAULT false NOT NULL,
+    watermark_content character varying(200),
+    watermark_show_name boolean DEFAULT false NOT NULL,
+    watermark_show_phone boolean DEFAULT false NOT NULL,
+    watermark_show_email boolean DEFAULT false NOT NULL,
+    watermark_show_number boolean DEFAULT false NOT NULL,
+    watermark_show_root_org boolean DEFAULT false NOT NULL,
+    watermark_gap_x smallint DEFAULT 100 NOT NULL,
+    watermark_gap_y smallint DEFAULT 100 NOT NULL,
+    watermark_font_size smallint DEFAULT 16 NOT NULL,
+    CONSTRAINT ck_sys_ui_config_watermark_font_size CHECK (((watermark_font_size >= 12) AND (watermark_font_size <= 32))),
+    CONSTRAINT ck_sys_ui_config_watermark_gap_x CHECK (((watermark_gap_x >= 20) AND (watermark_gap_x <= 500))),
+    CONSTRAINT ck_sys_ui_config_watermark_gap_y CHECK (((watermark_gap_y >= 20) AND (watermark_gap_y <= 500)))
 );
 
 
@@ -11437,6 +14082,76 @@ COMMENT ON COLUMN public.t_sys_ui_config.header_logo_attachment_id IS '顶部Log
 
 
 --
+-- Name: COLUMN t_sys_ui_config.watermark_enabled; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_ui_config.watermark_enabled IS '是否启用水印';
+
+
+--
+-- Name: COLUMN t_sys_ui_config.watermark_content; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_ui_config.watermark_content IS '水印固定内容';
+
+
+--
+-- Name: COLUMN t_sys_ui_config.watermark_show_name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_ui_config.watermark_show_name IS '水印是否显示当前用户姓名';
+
+
+--
+-- Name: COLUMN t_sys_ui_config.watermark_show_phone; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_ui_config.watermark_show_phone IS '水印是否显示脱敏手机号';
+
+
+--
+-- Name: COLUMN t_sys_ui_config.watermark_show_email; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_ui_config.watermark_show_email IS '水印是否显示脱敏邮箱';
+
+
+--
+-- Name: COLUMN t_sys_ui_config.watermark_show_number; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_ui_config.watermark_show_number IS '水印是否显示当前用户工号';
+
+
+--
+-- Name: COLUMN t_sys_ui_config.watermark_show_root_org; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_ui_config.watermark_show_root_org IS '水印是否显示当前用户绝对顶层组织名称';
+
+
+--
+-- Name: COLUMN t_sys_ui_config.watermark_gap_x; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_ui_config.watermark_gap_x IS '水印水平间距（像素）';
+
+
+--
+-- Name: COLUMN t_sys_ui_config.watermark_gap_y; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_ui_config.watermark_gap_y IS '水印垂直间距（像素）';
+
+
+--
+-- Name: COLUMN t_sys_ui_config.watermark_font_size; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_ui_config.watermark_font_size IS '水印字体大小（像素）';
+
+
+--
 -- Name: t_sys_user; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -11459,7 +14174,10 @@ CREATE TABLE public.t_sys_user (
     gender character varying(10),
     birthday date,
     avatar_attachment_id bigint,
-    CONSTRAINT ck_sys_user_gender CHECK (((gender IS NULL) OR ((gender)::text = ANY ((ARRAY['MALE'::character varying, 'FEMALE'::character varying])::text[]))))
+    email_verified_at timestamp without time zone,
+    credential_generation bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT ck_sys_user_gender CHECK (((gender IS NULL) OR ((gender)::text = ANY ((ARRAY['MALE'::character varying, 'FEMALE'::character varying])::text[])))),
+    CONSTRAINT t_sys_user_credential_generation_check CHECK ((credential_generation >= 0))
 );
 
 
@@ -11597,18 +14315,34 @@ COMMENT ON COLUMN public.t_sys_user.avatar_attachment_id IS '头像附件ID';
 
 
 --
+-- Name: COLUMN t_sys_user.email_verified_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user.email_verified_at IS '邮箱验证时间';
+
+
+--
+-- Name: COLUMN t_sys_user.credential_generation; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user.credential_generation IS '凭据安全代际，安全字段变化后旧验证码和会话失效';
+
+
+--
 -- Name: t_sys_user_app_pin; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.t_sys_user_app_pin (
     id bigint NOT NULL,
     user_id bigint NOT NULL,
-    app_id bigint NOT NULL,
+    app_id bigint,
     seq integer NOT NULL,
     create_time timestamp without time zone NOT NULL,
     create_user bigint,
     update_time timestamp without time zone,
-    update_user bigint
+    update_user bigint,
+    builtin_key character varying(30),
+    CONSTRAINT ck_user_app_pin_target CHECK ((((app_id IS NOT NULL) AND (builtin_key IS NULL)) OR ((app_id IS NULL) AND (builtin_key IS NOT NULL) AND ((builtin_key)::text = 'builtin:inbox'::text))))
 );
 
 
@@ -11673,6 +14407,13 @@ COMMENT ON COLUMN public.t_sys_user_app_pin.update_time IS '更新时间';
 --
 
 COMMENT ON COLUMN public.t_sys_user_app_pin.update_user IS '修改人';
+
+
+--
+-- Name: COLUMN t_sys_user_app_pin.builtin_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_app_pin.builtin_key IS '内置全局页签键，仅支持消息中心';
 
 
 --
@@ -11771,6 +14512,102 @@ COMMENT ON COLUMN public.t_sys_user_assignment.update_user IS '修改人';
 
 
 --
+-- Name: t_sys_user_home_quick_launch; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_user_home_quick_launch (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    scope_type character varying(16) NOT NULL,
+    app_id bigint,
+    menu_id bigint NOT NULL,
+    seq integer NOT NULL,
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    update_time timestamp without time zone,
+    create_user bigint,
+    update_user bigint,
+    CONSTRAINT ck_sys_user_home_quick_launch_scope CHECK (((((scope_type)::text = 'SYSTEM'::text) AND (app_id IS NULL)) OR (((scope_type)::text = 'APPLICATION'::text) AND (app_id IS NOT NULL))))
+);
+
+
+--
+-- Name: TABLE t_sys_user_home_quick_launch; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.t_sys_user_home_quick_launch IS '用户首页快速发起配置';
+
+
+--
+-- Name: COLUMN t_sys_user_home_quick_launch.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_home_quick_launch.id IS 'ID';
+
+
+--
+-- Name: COLUMN t_sys_user_home_quick_launch.user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_home_quick_launch.user_id IS '用户ID';
+
+
+--
+-- Name: COLUMN t_sys_user_home_quick_launch.scope_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_home_quick_launch.scope_type IS '首页范围：SYSTEM、APPLICATION';
+
+
+--
+-- Name: COLUMN t_sys_user_home_quick_launch.app_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_home_quick_launch.app_id IS '应用ID，系统首页为空';
+
+
+--
+-- Name: COLUMN t_sys_user_home_quick_launch.menu_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_home_quick_launch.menu_id IS '菜单ID';
+
+
+--
+-- Name: COLUMN t_sys_user_home_quick_launch.seq; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_home_quick_launch.seq IS '排序号';
+
+
+--
+-- Name: COLUMN t_sys_user_home_quick_launch.create_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_home_quick_launch.create_time IS '创建时间';
+
+
+--
+-- Name: COLUMN t_sys_user_home_quick_launch.update_time; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_home_quick_launch.update_time IS '更新时间';
+
+
+--
+-- Name: COLUMN t_sys_user_home_quick_launch.create_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_home_quick_launch.create_user IS '创建人';
+
+
+--
+-- Name: COLUMN t_sys_user_home_quick_launch.update_user; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.t_sys_user_home_quick_launch.update_user IS '修改人';
+
+
+--
 -- Name: t_sys_user_role; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -11847,6 +14684,349 @@ COMMENT ON COLUMN public.t_sys_user_role.create_user IS '创建人';
 --
 
 COMMENT ON COLUMN public.t_sys_user_role.update_user IS '修改人';
+
+
+--
+-- Name: t_sys_inbox_recipient_default; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_default DEFAULT;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202601; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202601 FOR VALUES FROM ('2026-01-01 00:00:00') TO ('2026-02-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202602; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202602 FOR VALUES FROM ('2026-02-01 00:00:00') TO ('2026-03-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202603; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202603 FOR VALUES FROM ('2026-03-01 00:00:00') TO ('2026-04-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202604; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202604 FOR VALUES FROM ('2026-04-01 00:00:00') TO ('2026-05-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202605; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202605 FOR VALUES FROM ('2026-05-01 00:00:00') TO ('2026-06-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202606; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202606 FOR VALUES FROM ('2026-06-01 00:00:00') TO ('2026-07-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202607; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202607 FOR VALUES FROM ('2026-07-01 00:00:00') TO ('2026-08-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202608; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202608 FOR VALUES FROM ('2026-08-01 00:00:00') TO ('2026-09-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202609; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202609 FOR VALUES FROM ('2026-09-01 00:00:00') TO ('2026-10-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202610; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202610 FOR VALUES FROM ('2026-10-01 00:00:00') TO ('2026-11-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202611; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202611 FOR VALUES FROM ('2026-11-01 00:00:00') TO ('2026-12-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202612; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202612 FOR VALUES FROM ('2026-12-01 00:00:00') TO ('2027-01-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202701; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202701 FOR VALUES FROM ('2027-01-01 00:00:00') TO ('2027-02-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202702; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202702 FOR VALUES FROM ('2027-02-01 00:00:00') TO ('2027-03-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202703; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202703 FOR VALUES FROM ('2027-03-01 00:00:00') TO ('2027-04-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202704; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202704 FOR VALUES FROM ('2027-04-01 00:00:00') TO ('2027-05-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202705; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202705 FOR VALUES FROM ('2027-05-01 00:00:00') TO ('2027-06-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202706; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202706 FOR VALUES FROM ('2027-06-01 00:00:00') TO ('2027-07-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202707; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202707 FOR VALUES FROM ('2027-07-01 00:00:00') TO ('2027-08-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202708; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202708 FOR VALUES FROM ('2027-08-01 00:00:00') TO ('2027-09-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202709; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202709 FOR VALUES FROM ('2027-09-01 00:00:00') TO ('2027-10-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202710; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202710 FOR VALUES FROM ('2027-10-01 00:00:00') TO ('2027-11-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202711; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202711 FOR VALUES FROM ('2027-11-01 00:00:00') TO ('2027-12-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202712; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202712 FOR VALUES FROM ('2027-12-01 00:00:00') TO ('2028-01-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202801; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202801 FOR VALUES FROM ('2028-01-01 00:00:00') TO ('2028-02-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202802; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202802 FOR VALUES FROM ('2028-02-01 00:00:00') TO ('2028-03-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202803; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202803 FOR VALUES FROM ('2028-03-01 00:00:00') TO ('2028-04-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202804; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202804 FOR VALUES FROM ('2028-04-01 00:00:00') TO ('2028-05-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202805; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202805 FOR VALUES FROM ('2028-05-01 00:00:00') TO ('2028-06-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202806; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202806 FOR VALUES FROM ('2028-06-01 00:00:00') TO ('2028-07-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202807; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202807 FOR VALUES FROM ('2028-07-01 00:00:00') TO ('2028-08-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202808; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202808 FOR VALUES FROM ('2028-08-01 00:00:00') TO ('2028-09-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202809; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202809 FOR VALUES FROM ('2028-09-01 00:00:00') TO ('2028-10-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202810; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202810 FOR VALUES FROM ('2028-10-01 00:00:00') TO ('2028-11-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202811; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202811 FOR VALUES FROM ('2028-11-01 00:00:00') TO ('2028-12-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202812; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202812 FOR VALUES FROM ('2028-12-01 00:00:00') TO ('2029-01-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202901; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202901 FOR VALUES FROM ('2029-01-01 00:00:00') TO ('2029-02-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202902; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202902 FOR VALUES FROM ('2029-02-01 00:00:00') TO ('2029-03-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202903; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202903 FOR VALUES FROM ('2029-03-01 00:00:00') TO ('2029-04-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202904; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202904 FOR VALUES FROM ('2029-04-01 00:00:00') TO ('2029-05-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202905; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202905 FOR VALUES FROM ('2029-05-01 00:00:00') TO ('2029-06-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202906; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202906 FOR VALUES FROM ('2029-06-01 00:00:00') TO ('2029-07-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202907; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202907 FOR VALUES FROM ('2029-07-01 00:00:00') TO ('2029-08-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202908; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202908 FOR VALUES FROM ('2029-08-01 00:00:00') TO ('2029-09-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202909; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202909 FOR VALUES FROM ('2029-09-01 00:00:00') TO ('2029-10-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202910; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202910 FOR VALUES FROM ('2029-10-01 00:00:00') TO ('2029-11-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202911; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202911 FOR VALUES FROM ('2029-11-01 00:00:00') TO ('2029-12-01 00:00:00');
+
+
+--
+-- Name: t_sys_inbox_recipient_p202912; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient ATTACH PARTITION public.t_sys_inbox_recipient_p202912 FOR VALUES FROM ('2029-12-01 00:00:00') TO ('2030-01-01 00:00:00');
 
 
 --
@@ -12533,6 +15713,349 @@ ALTER TABLE ONLY public.t_sys_login_log ATTACH PARTITION public.t_sys_login_log_
 --
 
 ALTER TABLE ONLY public.t_sys_login_log ATTACH PARTITION public.t_sys_login_log_p202912 FOR VALUES FROM ('2029-12-01 00:00:00') TO ('2030-01-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_default; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_default DEFAULT;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202601; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202601 FOR VALUES FROM ('2026-01-01 00:00:00') TO ('2026-02-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202602; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202602 FOR VALUES FROM ('2026-02-01 00:00:00') TO ('2026-03-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202603; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202603 FOR VALUES FROM ('2026-03-01 00:00:00') TO ('2026-04-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202604; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202604 FOR VALUES FROM ('2026-04-01 00:00:00') TO ('2026-05-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202605; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202605 FOR VALUES FROM ('2026-05-01 00:00:00') TO ('2026-06-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202606; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202606 FOR VALUES FROM ('2026-06-01 00:00:00') TO ('2026-07-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202607; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202607 FOR VALUES FROM ('2026-07-01 00:00:00') TO ('2026-08-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202608; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202608 FOR VALUES FROM ('2026-08-01 00:00:00') TO ('2026-09-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202609; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202609 FOR VALUES FROM ('2026-09-01 00:00:00') TO ('2026-10-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202610; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202610 FOR VALUES FROM ('2026-10-01 00:00:00') TO ('2026-11-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202611; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202611 FOR VALUES FROM ('2026-11-01 00:00:00') TO ('2026-12-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202612; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202612 FOR VALUES FROM ('2026-12-01 00:00:00') TO ('2027-01-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202701; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202701 FOR VALUES FROM ('2027-01-01 00:00:00') TO ('2027-02-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202702; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202702 FOR VALUES FROM ('2027-02-01 00:00:00') TO ('2027-03-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202703; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202703 FOR VALUES FROM ('2027-03-01 00:00:00') TO ('2027-04-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202704; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202704 FOR VALUES FROM ('2027-04-01 00:00:00') TO ('2027-05-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202705; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202705 FOR VALUES FROM ('2027-05-01 00:00:00') TO ('2027-06-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202706; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202706 FOR VALUES FROM ('2027-06-01 00:00:00') TO ('2027-07-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202707; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202707 FOR VALUES FROM ('2027-07-01 00:00:00') TO ('2027-08-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202708; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202708 FOR VALUES FROM ('2027-08-01 00:00:00') TO ('2027-09-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202709; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202709 FOR VALUES FROM ('2027-09-01 00:00:00') TO ('2027-10-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202710; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202710 FOR VALUES FROM ('2027-10-01 00:00:00') TO ('2027-11-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202711; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202711 FOR VALUES FROM ('2027-11-01 00:00:00') TO ('2027-12-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202712; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202712 FOR VALUES FROM ('2027-12-01 00:00:00') TO ('2028-01-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202801; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202801 FOR VALUES FROM ('2028-01-01 00:00:00') TO ('2028-02-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202802; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202802 FOR VALUES FROM ('2028-02-01 00:00:00') TO ('2028-03-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202803; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202803 FOR VALUES FROM ('2028-03-01 00:00:00') TO ('2028-04-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202804; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202804 FOR VALUES FROM ('2028-04-01 00:00:00') TO ('2028-05-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202805; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202805 FOR VALUES FROM ('2028-05-01 00:00:00') TO ('2028-06-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202806; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202806 FOR VALUES FROM ('2028-06-01 00:00:00') TO ('2028-07-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202807; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202807 FOR VALUES FROM ('2028-07-01 00:00:00') TO ('2028-08-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202808; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202808 FOR VALUES FROM ('2028-08-01 00:00:00') TO ('2028-09-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202809; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202809 FOR VALUES FROM ('2028-09-01 00:00:00') TO ('2028-10-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202810; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202810 FOR VALUES FROM ('2028-10-01 00:00:00') TO ('2028-11-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202811; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202811 FOR VALUES FROM ('2028-11-01 00:00:00') TO ('2028-12-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202812; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202812 FOR VALUES FROM ('2028-12-01 00:00:00') TO ('2029-01-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202901; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202901 FOR VALUES FROM ('2029-01-01 00:00:00') TO ('2029-02-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202902; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202902 FOR VALUES FROM ('2029-02-01 00:00:00') TO ('2029-03-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202903; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202903 FOR VALUES FROM ('2029-03-01 00:00:00') TO ('2029-04-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202904; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202904 FOR VALUES FROM ('2029-04-01 00:00:00') TO ('2029-05-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202905; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202905 FOR VALUES FROM ('2029-05-01 00:00:00') TO ('2029-06-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202906; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202906 FOR VALUES FROM ('2029-06-01 00:00:00') TO ('2029-07-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202907; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202907 FOR VALUES FROM ('2029-07-01 00:00:00') TO ('2029-08-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202908; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202908 FOR VALUES FROM ('2029-08-01 00:00:00') TO ('2029-09-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202909; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202909 FOR VALUES FROM ('2029-09-01 00:00:00') TO ('2029-10-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202910; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202910 FOR VALUES FROM ('2029-10-01 00:00:00') TO ('2029-11-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202911; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202911 FOR VALUES FROM ('2029-11-01 00:00:00') TO ('2029-12-01 00:00:00');
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202912; Type: TABLE ATTACH; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202912 FOR VALUES FROM ('2029-12-01 00:00:00') TO ('2030-01-01 00:00:00');
 
 
 --
@@ -13677,6 +17200,14 @@ ALTER TABLE ONLY public.t_sys_number_rule_segment
 
 
 --
+-- Name: t_sys_openapi_invocation_log pk_sys_openapi_invocation_log; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log
+    ADD CONSTRAINT pk_sys_openapi_invocation_log PRIMARY KEY (request_time, id);
+
+
+--
 -- Name: t_sys_operate_log pk_sys_operate_log; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13738,6 +17269,14 @@ ALTER TABLE ONLY public.t_sys_user_app_pin
 
 ALTER TABLE ONLY public.t_sys_user_assignment
     ADD CONSTRAINT pk_sys_user_assignment PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_user_home_quick_launch pk_sys_user_home_quick_launch; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_home_quick_launch
+    ADD CONSTRAINT pk_sys_user_home_quick_launch PRIMARY KEY (id);
 
 
 --
@@ -13885,11 +17424,427 @@ ALTER TABLE ONLY public.t_sys_feature
 
 
 --
+-- Name: t_sys_file_artifact t_sys_file_artifact_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_file_artifact
+    ADD CONSTRAINT t_sys_file_artifact_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: t_sys_file_config t_sys_file_config_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.t_sys_file_config
     ADD CONSTRAINT t_sys_file_config_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_inbox_message t_sys_inbox_message_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_message
+    ADD CONSTRAINT t_sys_inbox_message_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_inbox_recipient t_sys_inbox_recipient_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient
+    ADD CONSTRAINT t_sys_inbox_recipient_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_default t_sys_inbox_recipient_default_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_default
+    ADD CONSTRAINT t_sys_inbox_recipient_default_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202601 t_sys_inbox_recipient_p202601_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202601
+    ADD CONSTRAINT t_sys_inbox_recipient_p202601_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202602 t_sys_inbox_recipient_p202602_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202602
+    ADD CONSTRAINT t_sys_inbox_recipient_p202602_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202603 t_sys_inbox_recipient_p202603_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202603
+    ADD CONSTRAINT t_sys_inbox_recipient_p202603_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202604 t_sys_inbox_recipient_p202604_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202604
+    ADD CONSTRAINT t_sys_inbox_recipient_p202604_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202605 t_sys_inbox_recipient_p202605_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202605
+    ADD CONSTRAINT t_sys_inbox_recipient_p202605_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202606 t_sys_inbox_recipient_p202606_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202606
+    ADD CONSTRAINT t_sys_inbox_recipient_p202606_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202607 t_sys_inbox_recipient_p202607_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202607
+    ADD CONSTRAINT t_sys_inbox_recipient_p202607_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202608 t_sys_inbox_recipient_p202608_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202608
+    ADD CONSTRAINT t_sys_inbox_recipient_p202608_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202609 t_sys_inbox_recipient_p202609_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202609
+    ADD CONSTRAINT t_sys_inbox_recipient_p202609_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202610 t_sys_inbox_recipient_p202610_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202610
+    ADD CONSTRAINT t_sys_inbox_recipient_p202610_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202611 t_sys_inbox_recipient_p202611_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202611
+    ADD CONSTRAINT t_sys_inbox_recipient_p202611_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202612 t_sys_inbox_recipient_p202612_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202612
+    ADD CONSTRAINT t_sys_inbox_recipient_p202612_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202701 t_sys_inbox_recipient_p202701_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202701
+    ADD CONSTRAINT t_sys_inbox_recipient_p202701_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202702 t_sys_inbox_recipient_p202702_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202702
+    ADD CONSTRAINT t_sys_inbox_recipient_p202702_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202703 t_sys_inbox_recipient_p202703_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202703
+    ADD CONSTRAINT t_sys_inbox_recipient_p202703_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202704 t_sys_inbox_recipient_p202704_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202704
+    ADD CONSTRAINT t_sys_inbox_recipient_p202704_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202705 t_sys_inbox_recipient_p202705_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202705
+    ADD CONSTRAINT t_sys_inbox_recipient_p202705_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202706 t_sys_inbox_recipient_p202706_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202706
+    ADD CONSTRAINT t_sys_inbox_recipient_p202706_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202707 t_sys_inbox_recipient_p202707_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202707
+    ADD CONSTRAINT t_sys_inbox_recipient_p202707_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202708 t_sys_inbox_recipient_p202708_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202708
+    ADD CONSTRAINT t_sys_inbox_recipient_p202708_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202709 t_sys_inbox_recipient_p202709_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202709
+    ADD CONSTRAINT t_sys_inbox_recipient_p202709_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202710 t_sys_inbox_recipient_p202710_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202710
+    ADD CONSTRAINT t_sys_inbox_recipient_p202710_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202711 t_sys_inbox_recipient_p202711_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202711
+    ADD CONSTRAINT t_sys_inbox_recipient_p202711_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202712 t_sys_inbox_recipient_p202712_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202712
+    ADD CONSTRAINT t_sys_inbox_recipient_p202712_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202801 t_sys_inbox_recipient_p202801_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202801
+    ADD CONSTRAINT t_sys_inbox_recipient_p202801_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202802 t_sys_inbox_recipient_p202802_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202802
+    ADD CONSTRAINT t_sys_inbox_recipient_p202802_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202803 t_sys_inbox_recipient_p202803_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202803
+    ADD CONSTRAINT t_sys_inbox_recipient_p202803_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202804 t_sys_inbox_recipient_p202804_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202804
+    ADD CONSTRAINT t_sys_inbox_recipient_p202804_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202805 t_sys_inbox_recipient_p202805_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202805
+    ADD CONSTRAINT t_sys_inbox_recipient_p202805_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202806 t_sys_inbox_recipient_p202806_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202806
+    ADD CONSTRAINT t_sys_inbox_recipient_p202806_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202807 t_sys_inbox_recipient_p202807_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202807
+    ADD CONSTRAINT t_sys_inbox_recipient_p202807_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202808 t_sys_inbox_recipient_p202808_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202808
+    ADD CONSTRAINT t_sys_inbox_recipient_p202808_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202809 t_sys_inbox_recipient_p202809_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202809
+    ADD CONSTRAINT t_sys_inbox_recipient_p202809_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202810 t_sys_inbox_recipient_p202810_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202810
+    ADD CONSTRAINT t_sys_inbox_recipient_p202810_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202811 t_sys_inbox_recipient_p202811_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202811
+    ADD CONSTRAINT t_sys_inbox_recipient_p202811_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202812 t_sys_inbox_recipient_p202812_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202812
+    ADD CONSTRAINT t_sys_inbox_recipient_p202812_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202901 t_sys_inbox_recipient_p202901_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202901
+    ADD CONSTRAINT t_sys_inbox_recipient_p202901_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202902 t_sys_inbox_recipient_p202902_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202902
+    ADD CONSTRAINT t_sys_inbox_recipient_p202902_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202903 t_sys_inbox_recipient_p202903_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202903
+    ADD CONSTRAINT t_sys_inbox_recipient_p202903_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202904 t_sys_inbox_recipient_p202904_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202904
+    ADD CONSTRAINT t_sys_inbox_recipient_p202904_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202905 t_sys_inbox_recipient_p202905_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202905
+    ADD CONSTRAINT t_sys_inbox_recipient_p202905_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202906 t_sys_inbox_recipient_p202906_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202906
+    ADD CONSTRAINT t_sys_inbox_recipient_p202906_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202907 t_sys_inbox_recipient_p202907_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202907
+    ADD CONSTRAINT t_sys_inbox_recipient_p202907_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202908 t_sys_inbox_recipient_p202908_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202908
+    ADD CONSTRAINT t_sys_inbox_recipient_p202908_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202909 t_sys_inbox_recipient_p202909_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202909
+    ADD CONSTRAINT t_sys_inbox_recipient_p202909_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202910 t_sys_inbox_recipient_p202910_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202910
+    ADD CONSTRAINT t_sys_inbox_recipient_p202910_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202911 t_sys_inbox_recipient_p202911_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202911
+    ADD CONSTRAINT t_sys_inbox_recipient_p202911_pkey PRIMARY KEY (received_time, message_id, user_id);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202912 t_sys_inbox_recipient_p202912_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_inbox_recipient_p202912
+    ADD CONSTRAINT t_sys_inbox_recipient_p202912_pkey PRIMARY KEY (received_time, message_id, user_id);
 
 
 --
@@ -14754,6 +18709,430 @@ ALTER TABLE ONLY public.t_sys_monitor_instance_history
 
 ALTER TABLE ONLY public.t_sys_monitor_instance
     ADD CONSTRAINT t_sys_monitor_instance_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_openapi_application t_sys_openapi_application_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_application
+    ADD CONSTRAINT t_sys_openapi_application_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_openapi_credential t_sys_openapi_credential_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_credential
+    ADD CONSTRAINT t_sys_openapi_credential_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_openapi_grant t_sys_openapi_grant_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_grant
+    ADD CONSTRAINT t_sys_openapi_grant_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_default t_sys_openapi_invocation_log_default_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_default
+    ADD CONSTRAINT t_sys_openapi_invocation_log_default_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202601 t_sys_openapi_invocation_log_p202601_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202601
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202601_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202602 t_sys_openapi_invocation_log_p202602_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202602
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202602_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202603 t_sys_openapi_invocation_log_p202603_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202603
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202603_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202604 t_sys_openapi_invocation_log_p202604_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202604
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202604_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202605 t_sys_openapi_invocation_log_p202605_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202605
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202605_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202606 t_sys_openapi_invocation_log_p202606_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202606
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202606_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202607 t_sys_openapi_invocation_log_p202607_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202607
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202607_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202608 t_sys_openapi_invocation_log_p202608_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202608
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202608_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202609 t_sys_openapi_invocation_log_p202609_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202609
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202609_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202610 t_sys_openapi_invocation_log_p202610_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202610
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202610_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202611 t_sys_openapi_invocation_log_p202611_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202611
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202611_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202612 t_sys_openapi_invocation_log_p202612_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202612
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202612_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202701 t_sys_openapi_invocation_log_p202701_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202701
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202701_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202702 t_sys_openapi_invocation_log_p202702_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202702
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202702_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202703 t_sys_openapi_invocation_log_p202703_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202703
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202703_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202704 t_sys_openapi_invocation_log_p202704_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202704
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202704_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202705 t_sys_openapi_invocation_log_p202705_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202705
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202705_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202706 t_sys_openapi_invocation_log_p202706_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202706
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202706_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202707 t_sys_openapi_invocation_log_p202707_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202707
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202707_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202708 t_sys_openapi_invocation_log_p202708_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202708
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202708_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202709 t_sys_openapi_invocation_log_p202709_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202709
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202709_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202710 t_sys_openapi_invocation_log_p202710_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202710
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202710_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202711 t_sys_openapi_invocation_log_p202711_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202711
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202711_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202712 t_sys_openapi_invocation_log_p202712_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202712
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202712_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202801 t_sys_openapi_invocation_log_p202801_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202801
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202801_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202802 t_sys_openapi_invocation_log_p202802_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202802
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202802_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202803 t_sys_openapi_invocation_log_p202803_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202803
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202803_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202804 t_sys_openapi_invocation_log_p202804_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202804
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202804_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202805 t_sys_openapi_invocation_log_p202805_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202805
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202805_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202806 t_sys_openapi_invocation_log_p202806_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202806
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202806_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202807 t_sys_openapi_invocation_log_p202807_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202807
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202807_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202808 t_sys_openapi_invocation_log_p202808_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202808
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202808_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202809 t_sys_openapi_invocation_log_p202809_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202809
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202809_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202810 t_sys_openapi_invocation_log_p202810_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202810
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202810_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202811 t_sys_openapi_invocation_log_p202811_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202811
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202811_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202812 t_sys_openapi_invocation_log_p202812_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202812
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202812_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202901 t_sys_openapi_invocation_log_p202901_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202901
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202901_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202902 t_sys_openapi_invocation_log_p202902_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202902
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202902_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202903 t_sys_openapi_invocation_log_p202903_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202903
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202903_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202904 t_sys_openapi_invocation_log_p202904_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202904
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202904_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202905 t_sys_openapi_invocation_log_p202905_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202905
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202905_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202906 t_sys_openapi_invocation_log_p202906_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202906
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202906_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202907 t_sys_openapi_invocation_log_p202907_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202907
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202907_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202908 t_sys_openapi_invocation_log_p202908_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202908
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202908_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202909 t_sys_openapi_invocation_log_p202909_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202909
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202909_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202910 t_sys_openapi_invocation_log_p202910_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202910
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202910_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202911 t_sys_openapi_invocation_log_p202911_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202911
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202911_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202912 t_sys_openapi_invocation_log_p202912_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_invocation_log_p202912
+    ADD CONSTRAINT t_sys_openapi_invocation_log_p202912_pkey PRIMARY KEY (request_time, id);
+
+
+--
+-- Name: t_sys_openapi_release t_sys_openapi_release_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_release
+    ADD CONSTRAINT t_sys_openapi_release_pkey PRIMARY KEY (id);
 
 
 --
@@ -16101,6 +20480,22 @@ ALTER TABLE ONLY public.t_sys_feature
 
 
 --
+-- Name: t_sys_file_artifact uk_sys_file_artifact_object_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_file_artifact
+    ADD CONSTRAINT uk_sys_file_artifact_object_key UNIQUE (object_key);
+
+
+--
+-- Name: t_sys_menu uk_sys_menu_app_number; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_menu
+    ADD CONSTRAINT uk_sys_menu_app_number UNIQUE (app_id, number);
+
+
+--
 -- Name: t_sys_number_reference uk_sys_number_reference_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16122,6 +20517,54 @@ ALTER TABLE ONLY public.t_sys_number_rule
 
 ALTER TABLE ONLY public.t_sys_number_rule_segment
     ADD CONSTRAINT uk_sys_number_rule_segment_sort UNIQUE (rule_key, sort);
+
+
+--
+-- Name: t_sys_openapi_application uk_sys_openapi_application_number; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_application
+    ADD CONSTRAINT uk_sys_openapi_application_number UNIQUE (number);
+
+
+--
+-- Name: t_sys_openapi_credential uk_sys_openapi_credential_key_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_credential
+    ADD CONSTRAINT uk_sys_openapi_credential_key_id UNIQUE (key_id);
+
+
+--
+-- Name: t_sys_openapi_grant uk_sys_openapi_grant; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_grant
+    ADD CONSTRAINT uk_sys_openapi_grant UNIQUE (application_id, operation_key);
+
+
+--
+-- Name: t_sys_openapi_release uk_sys_openapi_release_number_version; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_release
+    ADD CONSTRAINT uk_sys_openapi_release_number_version UNIQUE (api_number, api_version);
+
+
+--
+-- Name: t_sys_openapi_release uk_sys_openapi_release_operation; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_release
+    ADD CONSTRAINT uk_sys_openapi_release_operation UNIQUE (operation_key);
+
+
+--
+-- Name: t_sys_openapi_release uk_sys_openapi_release_route; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_release
+    ADD CONSTRAINT uk_sys_openapi_release_route UNIQUE (http_method, path);
 
 
 --
@@ -16162,6 +20605,14 @@ ALTER TABLE ONLY public.t_sys_user_app_pin
 
 ALTER TABLE ONLY public.t_sys_user_assignment
     ADD CONSTRAINT uk_sys_user_assignment_user_org UNIQUE (user_id, org_id);
+
+
+--
+-- Name: t_sys_user_home_quick_launch uk_sys_user_home_quick_launch; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_home_quick_launch
+    ADD CONSTRAINT uk_sys_user_home_quick_launch UNIQUE NULLS NOT DISTINCT (user_id, scope_type, app_id, menu_id);
 
 
 --
@@ -16439,6 +20890,48 @@ CREATE INDEX idx_sys_feature_app ON public.t_sys_feature USING btree (app_id);
 
 
 --
+-- Name: idx_sys_file_artifact_cleanup; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_file_artifact_cleanup ON public.t_sys_file_artifact USING btree (status, expires_at);
+
+
+--
+-- Name: idx_sys_file_artifact_owner; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_file_artifact_owner ON public.t_sys_file_artifact USING btree (owner_user_id, create_time DESC);
+
+
+--
+-- Name: idx_sys_inbox_message_admin_list; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_inbox_message_admin_list ON public.t_sys_inbox_message USING btree (create_time DESC, id DESC);
+
+
+--
+-- Name: idx_sys_inbox_message_dispatch; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_inbox_message_dispatch ON public.t_sys_inbox_message USING btree (status, claimed_time, create_time) WHERE ((status)::text = ANY ((ARRAY['PENDING'::character varying, 'PUBLISHING'::character varying])::text[]));
+
+
+--
+-- Name: idx_sys_inbox_recipient_timeline; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_inbox_recipient_timeline ON ONLY public.t_sys_inbox_recipient USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: idx_sys_inbox_recipient_unread; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_inbox_recipient_unread ON ONLY public.t_sys_inbox_recipient USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
 -- Name: idx_sys_job_log_fire_instance_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -16635,6 +21128,27 @@ CREATE INDEX idx_sys_number_rule_reference ON public.t_sys_number_rule USING btr
 
 
 --
+-- Name: idx_sys_openapi_credential_app; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_openapi_credential_app ON public.t_sys_openapi_credential USING btree (application_id);
+
+
+--
+-- Name: idx_sys_openapi_log_app_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_openapi_log_app_time ON ONLY public.t_sys_openapi_invocation_log USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: idx_sys_openapi_log_operation_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_openapi_log_operation_time ON ONLY public.t_sys_openapi_invocation_log USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
 -- Name: idx_sys_operate_log_history_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -16817,10 +21331,703 @@ CREATE INDEX idx_sys_user_assignment_org_user ON public.t_sys_user_assignment US
 
 
 --
+-- Name: idx_sys_user_home_quick_launch_scope_seq; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_user_home_quick_launch_scope_seq ON public.t_sys_user_home_quick_launch USING btree (user_id, scope_type, app_id, seq, id);
+
+
+--
 -- Name: idx_sys_user_username; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_sys_user_username ON public.t_sys_user USING btree (username);
+
+
+--
+-- Name: t_sys_inbox_recipient_default_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_default_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_default USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_default_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_default_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_default USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202601_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202601_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202601 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202601_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202601_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202601 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202602_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202602_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202602 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202602_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202602_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202602 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202603_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202603_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202603 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202603_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202603_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202603 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202604_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202604_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202604 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202604_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202604_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202604 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202605_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202605_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202605 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202605_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202605_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202605 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202606_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202606_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202606 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202606_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202606_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202606 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202607_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202607_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202607 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202607_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202607_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202607 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202608_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202608_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202608 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202608_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202608_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202608 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202609_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202609_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202609 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202609_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202609_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202609 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202610_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202610_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202610 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202610_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202610_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202610 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202611_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202611_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202611 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202611_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202611_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202611 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202612_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202612_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202612 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202612_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202612_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202612 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202701_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202701_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202701 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202701_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202701_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202701 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202702_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202702_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202702 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202702_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202702_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202702 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202703_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202703_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202703 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202703_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202703_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202703 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202704_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202704_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202704 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202704_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202704_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202704 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202705_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202705_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202705 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202705_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202705_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202705 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202706_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202706_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202706 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202706_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202706_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202706 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202707_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202707_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202707 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202707_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202707_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202707 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202708_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202708_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202708 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202708_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202708_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202708 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202709_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202709_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202709 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202709_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202709_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202709 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202710_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202710_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202710 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202710_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202710_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202710 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202711_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202711_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202711 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202711_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202711_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202711 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202712_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202712_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202712 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202712_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202712_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202712 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202801_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202801_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202801 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202801_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202801_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202801 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202802_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202802_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202802 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202802_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202802_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202802 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202803_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202803_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202803 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202803_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202803_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202803 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202804_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202804_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202804 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202804_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202804_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202804 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202805_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202805_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202805 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202805_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202805_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202805 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202806_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202806_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202806 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202806_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202806_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202806 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202807_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202807_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202807 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202807_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202807_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202807 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202808_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202808_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202808 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202808_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202808_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202808 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202809_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202809_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202809 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202809_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202809_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202809 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202810_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202810_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202810 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202810_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202810_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202810 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202811_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202811_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202811 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202811_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202811_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202811 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202812_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202812_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202812 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202812_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202812_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202812 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202901_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202901_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202901 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202901_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202901_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202901 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202902_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202902_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202902 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202902_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202902_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202902 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202903_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202903_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202903 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202903_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202903_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202903 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202904_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202904_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202904 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202904_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202904_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202904 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202905_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202905_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202905 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202905_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202905_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202905 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202906_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202906_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202906 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202906_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202906_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202906 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202907_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202907_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202907 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202907_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202907_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202907 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202908_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202908_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202908 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202908_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202908_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202908 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202909_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202909_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202909 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202909_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202909_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202909 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202910_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202910_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202910 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202910_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202910_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202910 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202911_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202911_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202911 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202911_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202911_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202911 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202912_user_id_received_time_messag_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202912_user_id_received_time_messag_idx1 ON public.t_sys_inbox_recipient_p202912 USING btree (user_id, received_time DESC, message_id DESC) WHERE (read_status = false);
+
+
+--
+-- Name: t_sys_inbox_recipient_p202912_user_id_received_time_message_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_inbox_recipient_p202912_user_id_received_time_message_idx ON public.t_sys_inbox_recipient_p202912 USING btree (user_id, received_time DESC, message_id DESC) INCLUDE (read_status, read_time);
 
 
 --
@@ -20254,6 +25461,692 @@ CREATE INDEX t_sys_login_log_p202912_username_create_time_idx ON public.t_sys_lo
 
 
 --
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__application_id_request_time__idx1 ON public.t_sys_openapi_invocation_log_p202602 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx2; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__application_id_request_time__idx2 ON public.t_sys_openapi_invocation_log_p202603 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx3; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__application_id_request_time__idx3 ON public.t_sys_openapi_invocation_log_p202604 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx4; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__application_id_request_time__idx4 ON public.t_sys_openapi_invocation_log_p202605 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx5; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__application_id_request_time__idx5 ON public.t_sys_openapi_invocation_log_p202606 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx6; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__application_id_request_time__idx6 ON public.t_sys_openapi_invocation_log_p202607 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx7; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__application_id_request_time__idx7 ON public.t_sys_openapi_invocation_log_p202608 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx8; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__application_id_request_time__idx8 ON public.t_sys_openapi_invocation_log_p202609 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx9; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__application_id_request_time__idx9 ON public.t_sys_openapi_invocation_log_p202610 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time_i_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__application_id_request_time_i_idx ON public.t_sys_openapi_invocation_log_p202601 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__operation_key_request_time_i_idx1 ON public.t_sys_openapi_invocation_log_p202602 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx2; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__operation_key_request_time_i_idx2 ON public.t_sys_openapi_invocation_log_p202603 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx3; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__operation_key_request_time_i_idx3 ON public.t_sys_openapi_invocation_log_p202604 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx4; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__operation_key_request_time_i_idx4 ON public.t_sys_openapi_invocation_log_p202605 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx5; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__operation_key_request_time_i_idx5 ON public.t_sys_openapi_invocation_log_p202606 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx6; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__operation_key_request_time_i_idx6 ON public.t_sys_openapi_invocation_log_p202607 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx7; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__operation_key_request_time_i_idx7 ON public.t_sys_openapi_invocation_log_p202608 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx8; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__operation_key_request_time_i_idx8 ON public.t_sys_openapi_invocation_log_p202609 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx9; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__operation_key_request_time_i_idx9 ON public.t_sys_openapi_invocation_log_p202610 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log__operation_key_request_time_id_idx ON public.t_sys_openapi_invocation_log_p202601 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx10; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx10 ON public.t_sys_openapi_invocation_log_p202611 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx11; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx11 ON public.t_sys_openapi_invocation_log_p202612 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx12; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx12 ON public.t_sys_openapi_invocation_log_p202701 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx13; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx13 ON public.t_sys_openapi_invocation_log_p202702 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx14; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx14 ON public.t_sys_openapi_invocation_log_p202703 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx15; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx15 ON public.t_sys_openapi_invocation_log_p202704 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx16; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx16 ON public.t_sys_openapi_invocation_log_p202705 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx17; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx17 ON public.t_sys_openapi_invocation_log_p202706 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx18; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx18 ON public.t_sys_openapi_invocation_log_p202707 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx19; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx19 ON public.t_sys_openapi_invocation_log_p202708 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx20; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx20 ON public.t_sys_openapi_invocation_log_p202709 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx21; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx21 ON public.t_sys_openapi_invocation_log_p202710 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx22; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx22 ON public.t_sys_openapi_invocation_log_p202711 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx23; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx23 ON public.t_sys_openapi_invocation_log_p202712 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx24; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx24 ON public.t_sys_openapi_invocation_log_p202801 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx25; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx25 ON public.t_sys_openapi_invocation_log_p202802 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx26; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx26 ON public.t_sys_openapi_invocation_log_p202803 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx27; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx27 ON public.t_sys_openapi_invocation_log_p202804 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx28; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx28 ON public.t_sys_openapi_invocation_log_p202805 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx29; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx29 ON public.t_sys_openapi_invocation_log_p202806 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx30; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx30 ON public.t_sys_openapi_invocation_log_p202807 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx31; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx31 ON public.t_sys_openapi_invocation_log_p202808 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx32; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx32 ON public.t_sys_openapi_invocation_log_p202809 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx33; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx33 ON public.t_sys_openapi_invocation_log_p202810 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx34; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx34 ON public.t_sys_openapi_invocation_log_p202811 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx35; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx35 ON public.t_sys_openapi_invocation_log_p202812 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx36; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx36 ON public.t_sys_openapi_invocation_log_p202901 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx37; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx37 ON public.t_sys_openapi_invocation_log_p202902 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx38; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx38 ON public.t_sys_openapi_invocation_log_p202903 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx39; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx39 ON public.t_sys_openapi_invocation_log_p202904 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx40; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx40 ON public.t_sys_openapi_invocation_log_p202905 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx41; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx41 ON public.t_sys_openapi_invocation_log_p202906 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx42; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx42 ON public.t_sys_openapi_invocation_log_p202907 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx43; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx43 ON public.t_sys_openapi_invocation_log_p202908 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx44; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx44 ON public.t_sys_openapi_invocation_log_p202909 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx45; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx45 ON public.t_sys_openapi_invocation_log_p202910 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx46; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx46 ON public.t_sys_openapi_invocation_log_p202911 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx47; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx47 ON public.t_sys_openapi_invocation_log_p202912 USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx48; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_application_id_request_time__idx48 ON public.t_sys_openapi_invocation_log_default USING btree (application_id, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx10; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx10 ON public.t_sys_openapi_invocation_log_p202611 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx11; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx11 ON public.t_sys_openapi_invocation_log_p202612 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx12; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx12 ON public.t_sys_openapi_invocation_log_p202701 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx13; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx13 ON public.t_sys_openapi_invocation_log_p202702 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx14; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx14 ON public.t_sys_openapi_invocation_log_p202703 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx15; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx15 ON public.t_sys_openapi_invocation_log_p202704 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx16; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx16 ON public.t_sys_openapi_invocation_log_p202705 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx17; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx17 ON public.t_sys_openapi_invocation_log_p202706 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx18; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx18 ON public.t_sys_openapi_invocation_log_p202707 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx19; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx19 ON public.t_sys_openapi_invocation_log_p202708 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx20; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx20 ON public.t_sys_openapi_invocation_log_p202709 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx21; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx21 ON public.t_sys_openapi_invocation_log_p202710 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx22; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx22 ON public.t_sys_openapi_invocation_log_p202711 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx23; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx23 ON public.t_sys_openapi_invocation_log_p202712 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx24; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx24 ON public.t_sys_openapi_invocation_log_p202801 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx25; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx25 ON public.t_sys_openapi_invocation_log_p202802 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx26; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx26 ON public.t_sys_openapi_invocation_log_p202803 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx27; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx27 ON public.t_sys_openapi_invocation_log_p202804 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx28; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx28 ON public.t_sys_openapi_invocation_log_p202805 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx29; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx29 ON public.t_sys_openapi_invocation_log_p202806 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx30; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx30 ON public.t_sys_openapi_invocation_log_p202807 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx31; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx31 ON public.t_sys_openapi_invocation_log_p202808 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx32; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx32 ON public.t_sys_openapi_invocation_log_p202809 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx33; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx33 ON public.t_sys_openapi_invocation_log_p202810 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx34; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx34 ON public.t_sys_openapi_invocation_log_p202811 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx35; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx35 ON public.t_sys_openapi_invocation_log_p202812 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx36; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx36 ON public.t_sys_openapi_invocation_log_p202901 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx37; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx37 ON public.t_sys_openapi_invocation_log_p202902 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx38; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx38 ON public.t_sys_openapi_invocation_log_p202903 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx39; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx39 ON public.t_sys_openapi_invocation_log_p202904 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx40; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx40 ON public.t_sys_openapi_invocation_log_p202905 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx41; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx41 ON public.t_sys_openapi_invocation_log_p202906 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx42; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx42 ON public.t_sys_openapi_invocation_log_p202907 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx43; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx43 ON public.t_sys_openapi_invocation_log_p202908 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx44; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx44 ON public.t_sys_openapi_invocation_log_p202909 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx45; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx45 ON public.t_sys_openapi_invocation_log_p202910 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx46; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx46 ON public.t_sys_openapi_invocation_log_p202911 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx47; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx47 ON public.t_sys_openapi_invocation_log_p202912 USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx48; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX t_sys_openapi_invocation_log_operation_key_request_time_i_idx48 ON public.t_sys_openapi_invocation_log_default USING btree (operation_key, request_time DESC, id DESC);
+
+
+--
 -- Name: t_sys_operate_log_default_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -23026,6 +28919,13 @@ CREATE UNIQUE INDEX uk_sys_file_config_singleton ON public.t_sys_file_config USI
 
 
 --
+-- Name: uk_sys_inbox_message_scene_idempotency; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_inbox_message_scene_idempotency ON public.t_sys_inbox_message USING btree (scene_key, idempotency_key);
+
+
+--
 -- Name: uk_sys_monitor_alert_incident_active; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -23117,10 +29017,1060 @@ CREATE UNIQUE INDEX uk_sys_user_assignment_primary ON public.t_sys_user_assignme
 
 
 --
+-- Name: uk_sys_user_email_normalized; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_user_email_normalized ON public.t_sys_user USING btree (lower(btrim((email)::text))) WHERE (NULLIF(btrim((email)::text), ''::text) IS NOT NULL);
+
+
+--
 -- Name: uk_sys_user_number; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX uk_sys_user_number ON public.t_sys_user USING btree (number);
+
+
+--
+-- Name: uk_sys_user_phone_normalized; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_sys_user_phone_normalized ON public.t_sys_user USING btree (btrim((phone)::text)) WHERE (NULLIF(btrim((phone)::text), ''::text) IS NOT NULL);
+
+
+--
+-- Name: uk_user_app_pin_builtin; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uk_user_app_pin_builtin ON public.t_sys_user_app_pin USING btree (user_id, builtin_key) WHERE (builtin_key IS NOT NULL);
+
+
+--
+-- Name: t_sys_inbox_recipient_default_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_default_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_default_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_default_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_default_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_default_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202601_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202601_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202601_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202601_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202601_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202601_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202602_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202602_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202602_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202602_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202602_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202602_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202603_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202603_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202603_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202603_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202603_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202603_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202604_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202604_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202604_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202604_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202604_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202604_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202605_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202605_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202605_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202605_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202605_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202605_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202606_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202606_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202606_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202606_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202606_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202606_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202607_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202607_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202607_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202607_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202607_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202607_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202608_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202608_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202608_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202608_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202608_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202608_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202609_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202609_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202609_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202609_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202609_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202609_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202610_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202610_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202610_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202610_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202610_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202610_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202611_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202611_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202611_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202611_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202611_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202611_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202612_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202612_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202612_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202612_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202612_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202612_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202701_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202701_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202701_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202701_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202701_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202701_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202702_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202702_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202702_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202702_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202702_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202702_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202703_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202703_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202703_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202703_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202703_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202703_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202704_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202704_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202704_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202704_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202704_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202704_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202705_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202705_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202705_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202705_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202705_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202705_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202706_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202706_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202706_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202706_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202706_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202706_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202707_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202707_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202707_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202707_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202707_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202707_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202708_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202708_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202708_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202708_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202708_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202708_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202709_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202709_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202709_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202709_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202709_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202709_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202710_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202710_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202710_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202710_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202710_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202710_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202711_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202711_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202711_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202711_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202711_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202711_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202712_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202712_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202712_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202712_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202712_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202712_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202801_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202801_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202801_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202801_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202801_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202801_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202802_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202802_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202802_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202802_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202802_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202802_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202803_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202803_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202803_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202803_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202803_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202803_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202804_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202804_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202804_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202804_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202804_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202804_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202805_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202805_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202805_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202805_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202805_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202805_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202806_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202806_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202806_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202806_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202806_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202806_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202807_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202807_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202807_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202807_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202807_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202807_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202808_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202808_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202808_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202808_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202808_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202808_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202809_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202809_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202809_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202809_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202809_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202809_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202810_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202810_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202810_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202810_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202810_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202810_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202811_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202811_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202811_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202811_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202811_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202811_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202812_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202812_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202812_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202812_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202812_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202812_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202901_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202901_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202901_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202901_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202901_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202901_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202902_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202902_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202902_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202902_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202902_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202902_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202903_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202903_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202903_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202903_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202903_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202903_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202904_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202904_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202904_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202904_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202904_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202904_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202905_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202905_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202905_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202905_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202905_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202905_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202906_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202906_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202906_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202906_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202906_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202906_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202907_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202907_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202907_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202907_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202907_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202907_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202908_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202908_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202908_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202908_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202908_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202908_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202909_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202909_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202909_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202909_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202909_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202909_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202910_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202910_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202910_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202910_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202910_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202910_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202911_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202911_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202911_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202911_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202911_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202911_user_id_received_time_message_idx;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202912_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.t_sys_inbox_recipient_pkey ATTACH PARTITION public.t_sys_inbox_recipient_p202912_pkey;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202912_user_id_received_time_messag_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_unread ATTACH PARTITION public.t_sys_inbox_recipient_p202912_user_id_received_time_messag_idx1;
+
+
+--
+-- Name: t_sys_inbox_recipient_p202912_user_id_received_time_message_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_inbox_recipient_timeline ATTACH PARTITION public.t_sys_inbox_recipient_p202912_user_id_received_time_message_idx;
 
 
 --
@@ -27240,6 +34190,1035 @@ ALTER INDEX public.idx_sys_login_log_name_time ATTACH PARTITION public.t_sys_log
 
 
 --
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log__application_id_request_time__idx1;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx2; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log__application_id_request_time__idx2;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx3; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log__application_id_request_time__idx3;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx4; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log__application_id_request_time__idx4;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx5; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log__application_id_request_time__idx5;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx6; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log__application_id_request_time__idx6;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx7; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log__application_id_request_time__idx7;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx8; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log__application_id_request_time__idx8;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time__idx9; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log__application_id_request_time__idx9;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__application_id_request_time_i_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log__application_id_request_time_i_idx;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx1; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log__operation_key_request_time_i_idx1;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx2; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log__operation_key_request_time_i_idx2;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx3; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log__operation_key_request_time_i_idx3;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx4; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log__operation_key_request_time_i_idx4;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx5; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log__operation_key_request_time_i_idx5;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx6; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log__operation_key_request_time_i_idx6;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx7; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log__operation_key_request_time_i_idx7;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx8; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log__operation_key_request_time_i_idx8;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_i_idx9; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log__operation_key_request_time_i_idx9;
+
+
+--
+-- Name: t_sys_openapi_invocation_log__operation_key_request_time_id_idx; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log__operation_key_request_time_id_idx;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx10; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx10;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx11; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx11;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx12; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx12;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx13; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx13;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx14; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx14;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx15; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx15;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx16; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx16;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx17; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx17;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx18; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx18;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx19; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx19;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx20; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx20;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx21; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx21;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx22; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx22;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx23; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx23;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx24; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx24;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx25; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx25;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx26; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx26;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx27; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx27;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx28; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx28;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx29; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx29;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx30; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx30;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx31; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx31;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx32; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx32;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx33; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx33;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx34; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx34;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx35; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx35;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx36; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx36;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx37; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx37;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx38; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx38;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx39; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx39;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx40; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx40;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx41; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx41;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx42; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx42;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx43; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx43;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx44; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx44;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx45; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx45;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx46; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx46;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx47; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx47;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_application_id_request_time__idx48; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_app_time ATTACH PARTITION public.t_sys_openapi_invocation_log_application_id_request_time__idx48;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_default_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_default_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx10; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx10;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx11; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx11;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx12; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx12;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx13; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx13;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx14; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx14;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx15; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx15;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx16; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx16;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx17; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx17;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx18; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx18;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx19; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx19;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx20; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx20;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx21; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx21;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx22; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx22;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx23; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx23;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx24; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx24;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx25; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx25;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx26; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx26;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx27; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx27;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx28; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx28;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx29; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx29;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx30; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx30;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx31; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx31;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx32; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx32;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx33; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx33;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx34; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx34;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx35; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx35;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx36; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx36;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx37; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx37;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx38; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx38;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx39; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx39;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx40; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx40;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx41; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx41;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx42; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx42;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx43; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx43;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx44; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx44;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx45; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx45;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx46; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx46;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx47; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx47;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_operation_key_request_time_i_idx48; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.idx_sys_openapi_log_operation_time ATTACH PARTITION public.t_sys_openapi_invocation_log_operation_key_request_time_i_idx48;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202601_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202601_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202602_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202602_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202603_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202603_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202604_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202604_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202605_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202605_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202606_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202606_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202607_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202607_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202608_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202608_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202609_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202609_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202610_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202610_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202611_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202611_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202612_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202612_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202701_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202701_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202702_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202702_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202703_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202703_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202704_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202704_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202705_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202705_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202706_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202706_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202707_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202707_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202708_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202708_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202709_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202709_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202710_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202710_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202711_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202711_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202712_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202712_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202801_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202801_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202802_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202802_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202803_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202803_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202804_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202804_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202805_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202805_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202806_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202806_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202807_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202807_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202808_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202808_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202809_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202809_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202810_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202810_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202811_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202811_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202812_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202812_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202901_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202901_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202902_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202902_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202903_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202903_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202904_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202904_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202905_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202905_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202906_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202906_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202907_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202907_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202908_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202908_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202909_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202909_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202910_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202910_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202911_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202911_pkey;
+
+
+--
+-- Name: t_sys_openapi_invocation_log_p202912_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+--
+
+ALTER INDEX public.pk_sys_openapi_invocation_log ATTACH PARTITION public.t_sys_openapi_invocation_log_p202912_pkey;
+
+
+--
 -- Name: t_sys_operate_log_default_id_idx; Type: INDEX ATTACH; Schema: public; Owner: -
 --
 
@@ -31013,6 +38992,13 @@ ALTER INDEX public.idx_sys_sql_log_result_time ATTACH PARTITION public.t_sys_sql
 
 
 --
+-- Name: t_sys_user trg_user_credential_generation; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_user_credential_generation BEFORE UPDATE ON public.t_sys_user FOR EACH ROW EXECUTE FUNCTION public.advance_user_credential_generation();
+
+
+--
 -- Name: t_sys_basic_data_category fk_basic_data_category_domain; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -31034,6 +39020,12 @@ ALTER TABLE ONLY public.t_sys_basic_data_category
 
 ALTER TABLE ONLY public.t_sys_basic_data_item
     ADD CONSTRAINT fk_basic_data_item_category FOREIGN KEY (category_id) REFERENCES public.t_sys_basic_data_category(id);
+
+
+--
+-- Name: t_sys_basic_data_item fk_basic_data_item_parent; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
 
 
 --
@@ -31133,6 +39125,14 @@ ALTER TABLE ONLY public.t_sys_feature
 
 
 --
+-- Name: t_sys_inbox_recipient fk_sys_inbox_recipient_message; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.t_sys_inbox_recipient
+    ADD CONSTRAINT fk_sys_inbox_recipient_message FOREIGN KEY (message_id) REFERENCES public.t_sys_inbox_message(id);
+
+
+--
 -- Name: t_sys_menu fk_sys_menu_app; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -31165,6 +39165,12 @@ ALTER TABLE ONLY public.t_sys_number_counter
 
 
 --
+-- Name: t_sys_number_reference fk_sys_number_reference_default_rule; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+
+
+--
 -- Name: t_sys_number_reference fk_sys_number_reference_feature; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -31173,11 +39179,63 @@ ALTER TABLE ONLY public.t_sys_number_reference
 
 
 --
+-- Name: t_sys_number_rule fk_sys_number_rule_reference; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+
+
+--
 -- Name: t_sys_number_rule_segment fk_sys_number_rule_segment_rule; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.t_sys_number_rule_segment
     ADD CONSTRAINT fk_sys_number_rule_segment_rule FOREIGN KEY (rule_key) REFERENCES public.t_sys_number_rule(rule_key);
+
+
+--
+-- Name: t_sys_openapi_application fk_sys_openapi_application_org; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_application
+    ADD CONSTRAINT fk_sys_openapi_application_org FOREIGN KEY (proxy_org_id) REFERENCES public.t_sys_org(id);
+
+
+--
+-- Name: t_sys_openapi_application fk_sys_openapi_application_user; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_application
+    ADD CONSTRAINT fk_sys_openapi_application_user FOREIGN KEY (proxy_user_id) REFERENCES public.t_sys_user(id);
+
+
+--
+-- Name: t_sys_openapi_credential fk_sys_openapi_credential_app; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_credential
+    ADD CONSTRAINT fk_sys_openapi_credential_app FOREIGN KEY (application_id) REFERENCES public.t_sys_openapi_application(id);
+
+
+--
+-- Name: t_sys_openapi_grant fk_sys_openapi_grant_app; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_grant
+    ADD CONSTRAINT fk_sys_openapi_grant_app FOREIGN KEY (application_id) REFERENCES public.t_sys_openapi_application(id);
+
+
+--
+-- Name: t_sys_openapi_grant fk_sys_openapi_grant_operation; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_openapi_grant
+    ADD CONSTRAINT fk_sys_openapi_grant_operation FOREIGN KEY (operation_key) REFERENCES public.t_sys_openapi_release(operation_key);
+
+
+--
+-- Name: t_sys_org fk_sys_org_parent; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
 
 
 --
@@ -31282,6 +39340,30 @@ ALTER TABLE ONLY public.t_sys_user_assignment
 
 ALTER TABLE ONLY public.t_sys_user
     ADD CONSTRAINT fk_sys_user_avatar_attachment FOREIGN KEY (avatar_attachment_id) REFERENCES public.t_sys_attachment(id);
+
+
+--
+-- Name: t_sys_user_home_quick_launch fk_sys_user_home_quick_launch_app; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_home_quick_launch
+    ADD CONSTRAINT fk_sys_user_home_quick_launch_app FOREIGN KEY (app_id) REFERENCES public.t_sys_app(id) ON DELETE CASCADE;
+
+
+--
+-- Name: t_sys_user_home_quick_launch fk_sys_user_home_quick_launch_menu; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_home_quick_launch
+    ADD CONSTRAINT fk_sys_user_home_quick_launch_menu FOREIGN KEY (menu_id) REFERENCES public.t_sys_menu(id) ON DELETE CASCADE;
+
+
+--
+-- Name: t_sys_user_home_quick_launch fk_sys_user_home_quick_launch_user; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_user_home_quick_launch
+    ADD CONSTRAINT fk_sys_user_home_quick_launch_user FOREIGN KEY (user_id) REFERENCES public.t_sys_user(id) ON DELETE CASCADE;
 
 
 --
