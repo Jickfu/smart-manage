@@ -79,8 +79,17 @@
    RefSelector — Modal 整体
    ============================================ */
 
+.sm-ref-selector-modal {
+  --sm-ref-selector-control-text-size: var(--ant-font-size-sm);
+}
+
 .sm-ref-selector-header-search {
   width: 240px;
+}
+
+.sm-ref-selector-header-search input.ant-input,
+.sm-ref-selector-meta .ant-pagination .ant-select-content {
+  font-size: var(--sm-ref-selector-control-text-size);
 }
 
 /* 固定选择器初始高度，避免树筛选后记录数变化带动整个弹框跳动。 */

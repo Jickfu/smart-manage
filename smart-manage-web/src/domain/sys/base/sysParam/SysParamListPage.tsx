@@ -35,7 +35,16 @@ const columnFeatures: ListColumnFeatures = {
   featureName: { label: '所属功能', filter: { type: 'string' } },
   value: { label: '参数值', filter: { type: 'string' } },
   description: { label: '描述', filter: { type: 'string' } },
-  isSystem: { label: '类型', filter: { type: 'boolean' } },
+  isSystem: {
+    label: '类型',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '系统参数', value: true },
+        { label: '业务参数', value: false },
+      ],
+    },
+  },
 };
 
 const EDIT_KEY = componentKeys.sysParamEdit;

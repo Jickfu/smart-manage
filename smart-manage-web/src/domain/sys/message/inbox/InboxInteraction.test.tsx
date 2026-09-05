@@ -240,7 +240,7 @@ it('中心平铺分类显示独立未读数，切换任务隐藏消息分类并�
     expect(mocks.list).toHaveBeenLastCalledWith(
       expect.objectContaining({
         filters: JSON.stringify([
-          { field: 'readStatus', type: 'enum', operator: 'IN', values: [false] },
+          { field: 'readStatus', type: 'boolean', operator: 'IN', values: [false] },
           { field: 'receivedTime', type: 'date', operator: 'THIS_MONTH' },
         ]),
         audienceType: 'USERS',

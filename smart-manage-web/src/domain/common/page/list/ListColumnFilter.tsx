@@ -10,6 +10,7 @@ import type {
   NumberFilterOperator,
   StringFilterOperator,
 } from './listQuery';
+import { resolveListFilterOptions } from './listQuery';
 
 interface ListColumnFilterProps {
   field: string;
@@ -126,13 +127,7 @@ const ListColumnFilter = ({
           ? DATE_OPERATORS
           : [];
 
-  const resolvedOptions =
-    type === 'boolean'
-      ? [
-          { label: '是', value: true },
-          { label: '否', value: false },
-        ]
-      : options;
+  const resolvedOptions = resolveListFilterOptions(type, options);
 
   return (
     <div className="sm-list-column-filter" onKeyDown={(event) => event.stopPropagation()}>

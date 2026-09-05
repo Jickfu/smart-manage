@@ -35,8 +35,26 @@ const columnFeatures: ListColumnFeatures = {
       ],
     },
   },
-  enabled: { label: '使用状态', filter: { type: 'boolean' } },
-  archived: { label: '封存状态', filter: { type: 'boolean' } },
+  enabled: {
+    label: '使用状态',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '启用', value: true },
+        { label: '禁用', value: false },
+      ],
+    },
+  },
+  archived: {
+    label: '封存状态',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '已封存', value: true },
+        { label: '未封存', value: false },
+      ],
+    },
+  },
   archivedAt: { label: '封存日期', filter: { type: 'date' } },
   description: { label: '描述', filter: { type: 'string' } },
 };

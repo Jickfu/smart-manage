@@ -34,7 +34,16 @@ const columnFeatures: ListColumnFeatures = {
     },
   },
   seq: { label: '排序', filter: { type: 'number' }, sorter: true },
-  visible: { label: '目录状态', filter: { type: 'boolean' } },
+  visible: {
+    label: '目录状态',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '显示', value: true },
+        { label: '隐藏', value: false },
+      ],
+    },
+  },
 };
 
 type Scope = { type: 'all' } | { type: 'domain'; id: string } | { type: 'app'; id: string };

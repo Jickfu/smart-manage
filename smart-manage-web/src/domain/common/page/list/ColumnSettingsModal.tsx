@@ -22,6 +22,7 @@ interface ColumnSettingsModalProps {
 }
 
 const DEFAULT_FIXED_WIDTH = 120;
+const COMPACT_SELECT_CLASS_NAMES = { popup: { root: 'sm-column-settings-select-popup' } };
 
 const ColumnSettingsModal = ({
   open,
@@ -58,6 +59,7 @@ const ColumnSettingsModal = ({
       render: (_value, record) => (
         <Select
           size="small"
+          classNames={COMPACT_SELECT_CLASS_NAMES}
           value={record.align}
           options={[
             { label: '默认', value: 'default' },
@@ -89,6 +91,7 @@ const ColumnSettingsModal = ({
       render: (_value, record) => (
         <Select
           size="small"
+          classNames={COMPACT_SELECT_CLASS_NAMES}
           value={record.fixed}
           options={[
             { label: '不冻结', value: 'none' },
@@ -113,6 +116,7 @@ const ColumnSettingsModal = ({
       render: (_value, record) => (
         <Select
           size="small"
+          classNames={COMPACT_SELECT_CLASS_NAMES}
           value={record.widthMode}
           options={[
             { label: '自动', value: 'auto' },

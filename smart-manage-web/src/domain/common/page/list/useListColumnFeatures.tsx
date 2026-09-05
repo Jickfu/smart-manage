@@ -2,7 +2,12 @@ import { useMemo } from 'react';
 import type { ColumnsType, ColumnType, FilterDropdownProps } from 'antd/es/table/interface';
 import { FilterOutlined } from '@ant-design/icons';
 import ListColumnFilter from './ListColumnFilter';
-import type { ListColumnFeatures, ListFilterCondition, ListSortCondition } from './listQuery';
+import {
+  resolveListFilterOptions,
+  type ListColumnFeatures,
+  type ListFilterCondition,
+  type ListSortCondition,
+} from './listQuery';
 
 export const createFilterSummaryLabel = (
   condition: ListFilterCondition,
@@ -28,15 +33,19 @@ export const createFilterSummaryLabel = (
     PAST_MONTH: '过去一个月',
     PAST_THREE_MONTHS: '过去三个月',
     BETWEEN: '从…到…',
-    IN: '是',
   };
   const values = condition.values ?? (condition.value == null ? [] : [condition.value]);
+  const options = feature?.filter
+    ? resolveListFilterOptions(feature.filter.type, feature.filter.options)
+    : [];
   const displayValues = values.map((value) => {
-    const option = feature?.filter?.options?.find((item) => item.value === value);
+    const option = options.find((item) => item.value === value);
     return typeof option?.label === 'string' ? option.label : String(value);
   });
+  const fieldLabel = feature?.label ?? condition.field;
+  if (condition.operator === 'IN') return `${fieldLabel}：${displayValues.join('、')}`;
   const suffix = displayValues.length ? ` ${displayValues.join('、')}` : '';
-  return `${feature?.label ?? condition.field}：${operatorLabels[condition.operator] ?? condition.operator}${suffix}`;
+  return `${fieldLabel}：${operatorLabels[condition.operator] ?? condition.operator}${suffix}`;
 };
 
 interface Options<T> {

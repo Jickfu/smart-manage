@@ -40,7 +40,17 @@ const columnFeatures: ListColumnFeatures = {
   name: { label: '姓名', filter: { type: 'string' }, sorter: true },
   number: { label: '工号', filter: { type: 'string' }, sorter: true },
   username: { label: '用户名', filter: { type: 'string' }, sorter: true },
-  enabled: { label: '账号状态', filter: { type: 'boolean' }, sorter: true },
+  enabled: {
+    label: '账号状态',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '启用', value: true },
+        { label: '禁用', value: false },
+      ],
+    },
+    sorter: true,
+  },
 };
 
 const USER_EDIT_KEY = 'sys/base/user/edit';

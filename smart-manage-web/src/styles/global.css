@@ -38,6 +38,11 @@ body {
   height: 100%;
 }
 
+/* Ant Design 默认只绘制表头下边框；表格自身统一负责完整的上下边界。 */
+.ant-table-wrapper .ant-table-thead > tr > th {
+  border-top: var(--ant-line-width) var(--ant-line-type) var(--ant-table-border-color);
+}
+
 /* 认证检查 — 全屏居中加载 */
 .sm-auth-container {
   height: 100%;

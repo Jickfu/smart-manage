@@ -43,7 +43,16 @@ const columnFeatures: ListColumnFeatures = {
   username: { label: '用户名', filter: { type: 'string' } },
   nickname: { label: '昵称', filter: { type: 'string' } },
   eventType: { label: '事件', filter: { type: 'enum', options: eventTypeOptions } },
-  success: { label: '结果', filter: { type: 'boolean' } },
+  success: {
+    label: '结果',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '成功', value: true },
+        { label: '失败', value: false },
+      ],
+    },
+  },
   ip: { label: 'IP 地址', filter: { type: 'string' } },
   createTime: { label: '发生时间', filter: { type: 'date' }, sorter: true },
   traceId: { label: 'Trace ID', filter: { type: 'string' } },

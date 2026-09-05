@@ -60,7 +60,16 @@ const columnFeatures: ListColumnFeatures = {
     },
   },
   sort: { label: '排序', filter: { type: 'number' } },
-  enabled: { label: '状态', filter: { type: 'boolean' } },
+  enabled: {
+    label: '状态',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '启用', value: true },
+        { label: '禁用', value: false },
+      ],
+    },
+  },
 };
 
 /** 菜单编辑页 componentKey */

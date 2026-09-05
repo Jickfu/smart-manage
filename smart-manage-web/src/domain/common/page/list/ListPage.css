@@ -45,8 +45,14 @@
 }
 
 .sm-list-filter-search {
+  --sm-list-control-text-size: var(--ant-font-size-sm);
+
   width: 220px;
   flex-shrink: 0;
+}
+
+.sm-list-filter-search .ant-input-affix-wrapper > input.ant-input {
+  font-size: var(--sm-list-control-text-size);
 }
 
 .sm-list-filter-toggle {
@@ -125,6 +131,7 @@
 .sm-list-filter-summary-tag {
   flex-shrink: 0;
   margin: 0;
+  border: 1px solid var(--ant-color-border-secondary);
 }
 
 .sm-list-column-filter {
@@ -263,6 +270,8 @@
 /* === 元信息栏 === */
 
 .sm-list-table-meta {
+  --sm-list-control-text-size: var(--ant-font-size-sm);
+
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -271,7 +280,6 @@
   padding-left: 8px;
   min-height: 32px;
   color: var(--sm-color-text);
-  border-bottom: 1px solid var(--sm-color-divider);
 }
 
 .sm-list-table-count {
@@ -279,6 +287,10 @@
   align-items: center;
   gap: 14px;
   white-space: nowrap;
+}
+
+.sm-list-table-meta .ant-pagination .ant-select-content {
+  font-size: var(--sm-list-control-text-size);
 }
 
 /* === 表格主体 === */
@@ -305,6 +317,9 @@
   justify-content: center;
   background: #fafafa;
   border-left: 1px solid var(--sm-color-divider);
+  /* 入口位于 Table 组件 DOM 外，使用项目分隔线变量承接被覆盖表头的上下边界。 */
+  border-top: 1px solid var(--sm-color-divider);
+  border-bottom: 1px solid var(--sm-color-divider);
 }
 
 .sm-list-table-header-extra .ant-btn {
@@ -329,11 +344,21 @@
   flex-shrink: 0;
 }
 
+/* 通用列表表头固定为 32px，并与右侧列设置入口保持同高。 */
+.sm-list-table .ant-table-thead > tr > th {
+  height: 32px;
+}
+
 .sm-list-table .ant-table-body {
   flex: 1;
   min-height: 0;
   max-height: none !important;
   overflow: auto !important;
+}
+
+/* 空状态不是数据行，不展示普通数据单元格的行分隔线。 */
+.sm-list-table .ant-table-tbody > tr.ant-table-placeholder > td {
+  border-bottom: 0;
 }
 
 /* 选择列和序号列属于列表基础结构，宽度固定，不参与剩余空间分配。 */

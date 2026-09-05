@@ -27,7 +27,16 @@ const columnFeatures: ListColumnFeatures = {
     },
   },
   requestUri: { label: '请求 URI', filter: { type: 'string' } },
-  success: { label: '结果', filter: { type: 'boolean' } },
+  success: {
+    label: '结果',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '成功', value: true },
+        { label: '失败', value: false },
+      ],
+    },
+  },
   durationMs: { label: '耗时', filter: { type: 'number' }, sorter: true },
   createTime: { label: '发生时间', filter: { type: 'date' }, sorter: true },
   traceId: { label: 'Trace ID', filter: { type: 'string' } },

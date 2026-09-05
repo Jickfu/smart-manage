@@ -1,6 +1,10 @@
 import { DatePicker, Input, Select } from 'antd';
 import dayjs from 'dayjs';
-import type { ListColumnFeatures, ListFilterCondition } from './listQuery';
+import {
+  resolveListFilterOptions,
+  type ListColumnFeatures,
+  type ListFilterCondition,
+} from './listQuery';
 
 interface Props {
   features: ListColumnFeatures;
@@ -24,13 +28,7 @@ export default function ListExpandedFilters({ features, filters, onChange }: Pro
         const controlKey = `${field}-${JSON.stringify(applied ?? null)}`;
         let control: React.ReactNode;
         if (config.type === 'enum' || config.type === 'boolean') {
-          const options =
-            config.type === 'boolean'
-              ? [
-                  { label: '是', value: true },
-                  { label: '否', value: false },
-                ]
-              : config.options;
+          const options = resolveListFilterOptions(config.type, config.options);
           control = (
             <Select
               mode="multiple"

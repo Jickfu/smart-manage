@@ -59,5 +59,17 @@ export interface ListColumnFeature {
 
 export type ListColumnFeatures = Record<string, ListColumnFeature>;
 
+const DEFAULT_BOOLEAN_FILTER_OPTIONS: ListFilterOption[] = [
+  { label: '是', value: true },
+  { label: '否', value: false },
+];
+
+/** 统一解析枚举和布尔筛选选项；布尔字段可按业务语义覆盖默认“是/否”。 */
+export const resolveListFilterOptions = (
+  type: ListFilterType,
+  options?: ListFilterOption[],
+): ListFilterOption[] =>
+  type === 'boolean' ? (options ?? DEFAULT_BOOLEAN_FILTER_OPTIONS) : (options ?? []);
+
 export const serializeListFilters = (filters: ListFilterCondition[]) =>
   filters.length > 0 ? JSON.stringify(filters) : undefined;

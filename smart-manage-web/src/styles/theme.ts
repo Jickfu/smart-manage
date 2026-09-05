@@ -137,6 +137,8 @@ export function createThemeConfig(themeColor?: string | null): ThemeConfig {
         collapsedWidth: 50,
       },
       Table: {
+        // 表头沿用 Ant Design 的 fontWeightStrong 变量，但仅在 Table 作用域改为常规字重。
+        fontWeightStrong: 400,
         headerBg: '#F4F4F4',
         headerColor: '#404040',
         headerBorderRadius: 0,

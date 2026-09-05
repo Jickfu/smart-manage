@@ -42,8 +42,26 @@ const columnFeatures: ListColumnFeatures = {
     },
   },
   usageCount: { label: '引用数', filter: { type: 'number' }, sorter: true },
-  defaultRule: { label: '默认规则', filter: { type: 'boolean' } },
-  enabled: { label: '状态', filter: { type: 'boolean' } },
+  defaultRule: {
+    label: '默认规则',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '默认', value: true },
+        { label: '非默认', value: false },
+      ],
+    },
+  },
+  enabled: {
+    label: '状态',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '启用', value: true },
+        { label: '禁用', value: false },
+      ],
+    },
+  },
 };
 
 const buildTree = (references: NumberReference[]): DataNode[] => {

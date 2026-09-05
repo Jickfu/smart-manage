@@ -17,7 +17,16 @@ const columnFeatures: ListColumnFeatures = {
   number: { label: '编码', filter: { type: 'string' }, sorter: true },
   name: { label: '名称', filter: { type: 'string' }, sorter: true },
   seq: { label: '排序', filter: { type: 'number' }, sorter: true },
-  enabled: { label: '状态', filter: { type: 'boolean' } },
+  enabled: {
+    label: '状态',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '启用', value: true },
+        { label: '禁用', value: false },
+      ],
+    },
+  },
   createTime: { label: '创建时间', filter: { type: 'date' }, sorter: true },
   updateTime: { label: '更新时间', filter: { type: 'date' }, sorter: true },
 };

@@ -1,4 +1,6 @@
 .sm-column-settings-body {
+  --sm-column-settings-text-size: var(--ant-font-size-sm);
+
   height: 500px;
   display: flex;
   flex-direction: column;
@@ -23,4 +25,16 @@
 .sm-column-settings-table .ant-select,
 .sm-column-settings-table .ant-input-number {
   width: 100%;
+}
+
+.sm-column-settings-table .ant-select-content {
+  font-size: var(--sm-column-settings-text-size);
+}
+
+.sm-column-settings-select-popup {
+  --sm-column-settings-text-size: var(--ant-font-size-sm);
+}
+
+.sm-column-settings-select-popup .ant-select-item {
+  font-size: var(--sm-column-settings-text-size);
 }

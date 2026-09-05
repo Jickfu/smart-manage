@@ -25,7 +25,7 @@ const columnFeatures: ListColumnFeatures = {
   readStatus: {
     label: '状态',
     filter: {
-      type: 'enum',
+      type: 'boolean',
       options: [
         { label: '未读', value: false },
         { label: '已读', value: true },
@@ -50,7 +50,7 @@ export default function InboxMessageList({
   onOpen: (receipt: InboxReceiptKey, title: string) => void;
 }) {
   const [columnFilters, setColumnFilters] = useState<ListFilterCondition[]>([
-    { field: 'readStatus', type: 'enum', operator: 'IN', values: [false] },
+    { field: 'readStatus', type: 'boolean', operator: 'IN', values: [false] },
     { field: 'receivedTime', type: 'date', operator: 'THIS_MONTH' },
   ]);
   const [selectionKeys, setSelectionKeys] = useState<React.Key[]>([]);
@@ -173,10 +173,7 @@ export default function InboxMessageList({
                 <ListFilterSummary
                   items={columnFilters.map((filter) => ({
                     key: filter.field,
-                    label:
-                      filter.field === 'readStatus'
-                        ? `状态：${filter.values?.map((value) => (value ? '已读' : '未读')).join('、')}`
-                        : createFilterSummaryLabel(filter, columnFeatures[filter.field]),
+                    label: createFilterSummaryLabel(filter, columnFeatures[filter.field]),
                     onRemove: () =>
                       updateFilters(columnFilters.filter((item) => item.field !== filter.field)),
                   }))}

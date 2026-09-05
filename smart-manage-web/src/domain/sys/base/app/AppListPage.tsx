@@ -23,7 +23,17 @@ const columnFeatures: ListColumnFeatures = {
   name: { label: '名称', filter: { type: 'string' }, sorter: true },
   domainName: { label: '所属领域', filter: { type: 'string' } },
   seq: { label: '排序', filter: { type: 'number' }, sorter: true },
-  enabled: { label: '状态', filter: { type: 'boolean' }, sorter: true },
+  enabled: {
+    label: '状态',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '启用', value: true },
+        { label: '禁用', value: false },
+      ],
+    },
+    sorter: true,
+  },
   description: { label: '描述', filter: { type: 'string' } },
   createTime: { label: '创建时间', filter: { type: 'date' }, sorter: true },
 };

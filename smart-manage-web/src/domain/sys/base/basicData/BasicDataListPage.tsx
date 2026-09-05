@@ -32,9 +32,36 @@ const columnFeatures: ListColumnFeatures = {
   namePath: { label: '长名称', filter: { type: 'string' } },
   numberPath: { label: '长编码', filter: { type: 'string' } },
   level: { label: '级次', filter: { type: 'number' } },
-  isLeaf: { label: '叶子节点', filter: { type: 'boolean' } },
-  enabled: { label: '状态', filter: { type: 'boolean' } },
-  systemPreset: { label: '系统预置', filter: { type: 'boolean' } },
+  isLeaf: {
+    label: '叶子节点',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '叶子节点', value: true },
+        { label: '非叶子节点', value: false },
+      ],
+    },
+  },
+  enabled: {
+    label: '状态',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '启用', value: true },
+        { label: '禁用', value: false },
+      ],
+    },
+  },
+  systemPreset: {
+    label: '系统预置',
+    filter: {
+      type: 'boolean',
+      options: [
+        { label: '预置', value: true },
+        { label: '非预置', value: false },
+      ],
+    },
+  },
   description: { label: '描述', filter: { type: 'string' } },
 };
 
