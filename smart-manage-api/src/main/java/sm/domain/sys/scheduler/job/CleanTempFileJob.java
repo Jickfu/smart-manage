@@ -13,7 +13,7 @@ import sm.domain.sys.base.fileartifact.service.FileArtifactService;
 /** 按数据库生命周期清理共享存储中的过期临时对象和待删除对象。 */
 @Component
 @RequiredArgsConstructor
-@SchedulerJobDefinition(description = "清理过期临时附件和待删除对象", parameterTemplate = "{}")
+@SchedulerJobDefinition(appNumber = "base", description = "清理过期临时附件和待删除对象", parameterTemplate = "{}")
 public class CleanTempFileJob extends QuartzJobBean {
     private final AttachmentService attachmentService;
     private final FileArtifactService fileArtifactService;

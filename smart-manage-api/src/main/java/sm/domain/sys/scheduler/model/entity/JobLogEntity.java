@@ -25,8 +25,11 @@ public class JobLogEntity {
     /** 任务名称 */
     private String jobName;
 
-    /** 任务分组 */
-    private String jobGroup;
+    /** 执行时的业务归属快照；任务改属或删除不改变历史。 */
+    private Long domainId;
+    private String domainName;
+    private Long appId;
+    private String appName;
 
     /** 开始时间 */
     private LocalDateTime startTime;

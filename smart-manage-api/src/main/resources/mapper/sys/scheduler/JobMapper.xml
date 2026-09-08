@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.sys.scheduler.mapper.JobMapper">
+    <select id="selectListPage" resultType="sm.domain.sys.scheduler.model.vo.JobListVO">
+        SELECT a.id, a.number, a.job_name, a.app_id, b.name AS app_name,
+               b.domain_id, c.name AS domain_name, a.job_class_name, a.mutex_key,
+               a.cron_expression, a.status, a.description, a.is_system, a.version,
+               a.create_time, a.update_time
+        FROM t_sys_job a
+        INNER JOIN t_sys_app b ON b.id = a.app_id
+        INNER JOIN t_sys_domain c ON c.id = b.domain_id
+        <where>
+            <if test="form.domainId != null">AND b.domain_id = #{form.domainId}</if>
+            <if test="form.appId != null">AND a.app_id = #{form.appId}</if>
+            <if test="form.status != null and form.status != ''">AND a.status = #{form.status}</if>
+            <if test="form.keyword != null and form.keyword.trim() != ''">
+                AND (a.number LIKE CONCAT('%', #{form.keyword}, '%')
+                     OR a.job_name LIKE CONCAT('%', #{form.keyword}, '%'))
+            </if>
+            <include refid="sm.system.query.ListSqlQueryMapper.conditions"/>
+        </where>
+        <choose>
+            <when test="listQuery.sortColumn != null">ORDER BY ${listQuery.sortColumn} ${listQuery.sortOrder}, a.id DESC</when>
+            <otherwise>ORDER BY a.create_time DESC, a.id DESC</otherwise>
+        </choose>
+    </select>
+
+    <select id="selectCatalog" resultType="sm.domain.sys.scheduler.model.vo.SchedulerCatalogRowVO">
+        SELECT DISTINCT c.id AS domain_id, c.name AS domain_name, b.id AS app_id, b.name AS app_name,
+                        c.seq AS domain_seq, b.seq AS app_seq
+        FROM t_sys_job a
+        INNER JOIN t_sys_app b ON b.id = a.app_id
+        INNER JOIN t_sys_domain c ON c.id = b.domain_id
+        ORDER BY c.seq, c.id, b.seq, b.id
+    </select>
+
+    <select id="selectExecutionSnapshot" resultType="sm.domain.sys.scheduler.model.vo.JobExecutionSnapshotVO">
+        SELECT a.id AS job_id, a.job_name, a.app_id, b.name AS app_name,
+               b.domain_id, c.name AS domain_name
+        FROM t_sys_job a
+        INNER JOIN t_sys_app b ON b.id = a.app_id
+        INNER JOIN t_sys_domain c ON c.id = b.domain_id
+        WHERE a.id = #{id}
+    </select>
+</mapper>

@@ -2,6 +2,7 @@ package sm.domain.sys.scheduler.model.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import sm.domain.sys.base.common.model.vo.ReferenceVO;
 
 import java.time.LocalDateTime;
 
@@ -20,7 +21,7 @@ public class JobDetailVO {
 
     private String jobName;
 
-    private String jobGroup;
+    private ReferenceVO app;
 
     private String jobClassName;
 

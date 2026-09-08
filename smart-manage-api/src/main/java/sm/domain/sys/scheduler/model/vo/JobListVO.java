@@ -20,7 +20,10 @@ public class JobListVO {
 
     private String jobName;
 
-    private String jobGroup;
+    private Long appId;
+    private String appName;
+    private Long domainId;
+    private String domainName;
 
     private String jobClassName;
 

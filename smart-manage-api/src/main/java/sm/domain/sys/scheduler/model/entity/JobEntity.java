@@ -27,8 +27,8 @@ public class JobEntity extends BaseEntity {
     /** 任务名称 */
     private String jobName;
 
-    /** 任务分组 */
-    private String jobGroup;
+    /** 所属应用，领域由应用推导。 */
+    private Long appId;
 
     /** Job 实现类全限定名 */
     private String jobClassName;

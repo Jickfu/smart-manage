@@ -11,4 +11,6 @@ import java.lang.annotation.Target;
 public @interface SchedulerJobDefinition {
     String description();
     String parameterTemplate() default "{}";
+    /** 默认业务归属的稳定应用编码；未声明时由新增任务明确选择，不从类名推断。 */
+    String appNumber() default "";
 }

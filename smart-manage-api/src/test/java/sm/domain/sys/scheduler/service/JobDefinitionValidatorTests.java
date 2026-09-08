@@ -21,7 +21,8 @@ class JobDefinitionValidatorTests {
 
     private final ApplicationContext applicationContext = mock(ApplicationContext.class);
     private final JobDefinitionValidator validator =
-            new JobDefinitionValidator(applicationContext, mock(JsonMapper.class));
+            new JobDefinitionValidator(applicationContext, mock(JsonMapper.class),
+                    mock(sm.domain.sys.base.app.service.AppReferenceService.class));
 
     @Test
     void discoversPublishedMetadataFromAnotherDomain() {

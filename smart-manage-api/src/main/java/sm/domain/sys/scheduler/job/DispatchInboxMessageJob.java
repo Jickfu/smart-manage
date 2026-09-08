@@ -12,7 +12,7 @@ import sm.domain.sys.message.inbox.service.InboxMessageAdminService;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@SchedulerJobDefinition(description = "生成全站站内消息的用户收件快照", parameterTemplate = "{\"batchSize\":5}")
+@SchedulerJobDefinition(appNumber = "message", description = "生成全站站内消息的用户收件快照", parameterTemplate = "{\"batchSize\":5}")
 public class DispatchInboxMessageJob extends QuartzJobBean {
     private final InboxMessageAdminService service;
 

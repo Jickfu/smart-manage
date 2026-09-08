@@ -14,7 +14,8 @@ const fields: EditField[] = [
   { label: '实例 ID', dataIndex: 'id', type: 'text' },
   { label: '任务 ID', dataIndex: 'jobId', type: 'text' },
   { label: '任务名称', dataIndex: 'jobName', type: 'text' },
-  { label: '任务分组', dataIndex: 'jobGroup', type: 'text' },
+  { label: '执行时所属领域', dataIndex: 'domainName', type: 'text' },
+  { label: '执行时所属应用', dataIndex: 'appName', type: 'text' },
   {
     label: '状态',
     dataIndex: 'statusLabel',

@@ -2,6 +2,7 @@ package sm.domain.sys.scheduler.model.form;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
@@ -27,8 +28,9 @@ public class JobSaveForm {
     @Schema(description = "任务名称")
     private String jobName;
 
-    @Schema(description = "任务分组，默认 DEFAULT")
-    private String jobGroup;
+    @NotNull(message = "所属应用不能为空")
+    @Schema(description = "所属应用 ID")
+    private Long appId;
 
     @NotBlank(message = "执行类不能为空")
     @Schema(description = "Job 实现类全限定名")

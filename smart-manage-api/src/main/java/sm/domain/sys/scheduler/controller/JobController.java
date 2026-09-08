@@ -18,6 +18,8 @@ import sm.domain.sys.scheduler.model.form.CronPreviewForm;
 import sm.domain.sys.scheduler.model.vo.JobDetailVO;
 import sm.domain.sys.scheduler.model.vo.JobListVO;
 import sm.domain.sys.scheduler.service.JobService;
+import sm.domain.sys.scheduler.service.SchedulerCatalogService;
+import sm.domain.sys.scheduler.model.vo.SchedulerCatalogNodeVO;
 import sm.system.form.IdForm;
 import sm.system.response.PageData;
 import sm.system.response.Result;
@@ -36,6 +38,14 @@ import java.util.Map;
 public class JobController {
 
     private final JobService service;
+    private final SchedulerCatalogService catalogService;
+
+    @PostMapping("/sys/scheduler/job/catalog")
+    @Operation(summary = "任务业务目录")
+    @SaCheckPermission(JobPermission.LIST)
+    public Result<List<SchedulerCatalogNodeVO>> catalog() {
+        return Result.success(catalogService.jobs());
+    }
 
     @PostMapping("/sys/scheduler/job/listPage")
     @Operation(summary = "任务列表", description = "获取任务分页列表")

@@ -8,6 +8,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import sm.domain.sys.scheduler.model.form.JobSaveForm;
 import sm.domain.sys.scheduler.contract.SchedulerJobDefinition;
+import sm.domain.sys.base.app.service.AppReferenceService;
+import sm.domain.sys.base.app.model.entity.AppEntity;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import tools.jackson.core.type.TypeReference;
@@ -28,6 +30,7 @@ class JobDefinitionValidator {
 
     private final ApplicationContext applicationContext;
     private final JsonMapper jsonMapper;
+    private final AppReferenceService appReferenceService;
 
     public void validate(JobSaveForm form) {
         if (!CronExpression.isValidExpression(form.getCronExpression().trim())) {
@@ -54,6 +57,16 @@ class JobDefinitionValidator {
                     item.put("simpleName", jobClass.getSimpleName());
                     item.put("description", definition == null ? "" : definition.description());
                     item.put("parameterTemplate", definition == null ? "{}" : definition.parameterTemplate());
+                    if (definition != null && !definition.appNumber().isBlank()) {
+                        AppEntity app = appReferenceService.findByNumber(definition.appNumber());
+                        if (app == null) {
+                            throw new BizException(ResultEnum.CONFIG_ERROR,
+                                    "任务默认所属应用不存在：" + definition.appNumber());
+                        }
+                        item.put("appId", app.getId().toString());
+                        item.put("appNumber", app.getNumber());
+                        item.put("appName", app.getName());
+                    }
                     return item;
                 })
                 .toList();

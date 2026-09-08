@@ -33,7 +33,8 @@ public class JobLogService {
     private static final Map<String, ListQueryUtil.Field<JobLogEntity>> LIST_FIELDS = Map.ofEntries(
             Map.entry("id", ListQueryUtil.number(JobLogEntity::getId, false)),
             Map.entry("jobName", ListQueryUtil.string(JobLogEntity::getJobName, false)),
-            Map.entry("jobGroup", ListQueryUtil.string(JobLogEntity::getJobGroup, false)),
+            Map.entry("appName", ListQueryUtil.string(JobLogEntity::getAppName, false)),
+            Map.entry("domainName", ListQueryUtil.string(JobLogEntity::getDomainName, false)),
             Map.entry("status", ListQueryUtil.enumeration(JobLogEntity::getStatus, true)),
             Map.entry("startTime", ListQueryUtil.dateTime(JobLogEntity::getStartTime, true)),
             Map.entry("endTime", ListQueryUtil.dateTime(JobLogEntity::getEndTime, true)),
@@ -47,7 +48,7 @@ public class JobLogService {
     public PageData<JobLogListVO> listPage(JobLogListForm form) {
         LambdaQueryWrapper<JobLogEntity> qw = new LambdaQueryWrapper<JobLogEntity>();
         qw.select(JobLogEntity::getId, JobLogEntity::getJobId, JobLogEntity::getJobName,
-                JobLogEntity::getJobGroup, JobLogEntity::getStartTime, JobLogEntity::getEndTime,
+                JobLogEntity::getDomainId, JobLogEntity::getDomainName, JobLogEntity::getAppId, JobLogEntity::getAppName, JobLogEntity::getStartTime, JobLogEntity::getEndTime,
                 JobLogEntity::getDurationMs, JobLogEntity::getStatus, JobLogEntity::getErrorMessage,
                 JobLogEntity::getTraceId, JobLogEntity::getCreateTime);
         if (form.getKeyword() != null && !form.getKeyword().isBlank()) {
@@ -57,6 +58,12 @@ public class JobLogService {
         if (form.getStatus() != null && !form.getStatus().isBlank()) {
             JobExecutionStatus.require(form.getStatus());
             qw.eq(JobLogEntity::getStatus, form.getStatus());
+        }
+        // 导航使用当前业务目录；应用改属后，旧记录仍按执行时保存的应用 ID 归入同一应用。
+        if (form.getAppId() != null) {
+            qw.eq(JobLogEntity::getAppId, form.getAppId());
+        } else if (form.getDomainId() != null) {
+            qw.apply("app_id IN (SELECT id FROM t_sys_app WHERE domain_id = {0})", form.getDomainId());
         }
         if (form.getJobId() != null) {
             qw.eq(JobLogEntity::getJobId, form.getJobId());

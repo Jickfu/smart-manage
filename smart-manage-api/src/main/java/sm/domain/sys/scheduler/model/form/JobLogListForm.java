@@ -18,6 +18,9 @@ public class JobLogListForm extends PageForm {
     @Schema(description = "关键词：任务名称")
     private String keyword;
 
+    private Long domainId;
+    private Long appId;
+
     @Schema(description = "实例状态：RUNNING / SUCCESS / FAILED")
     private String status;
 

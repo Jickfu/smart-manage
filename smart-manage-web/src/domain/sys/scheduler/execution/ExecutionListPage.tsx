@@ -1,11 +1,14 @@
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { SchedulerScopeTree } from '../common/SchedulerScopeTree';
+import { parseSchedulerScope } from '../common/schedulerScope';
 import { Button, Select, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ListPage from '@/domain/common/page/list/ListPage';
 import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
-import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
+import { OperationType } from '@/domain/common/page/types';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
 import './ExecutionListPage.css';
 import { useWorkbenchStore } from '@/stores/workbench';
@@ -26,7 +29,7 @@ const executionStatusOptions = [
 const columnFeatures: ListColumnFeatures = {
   id: { label: '实例 ID', filter: { type: 'number' } },
   jobName: { label: '任务名称', filter: { type: 'string' } },
-  jobGroup: { label: '任务分组', filter: { type: 'string' } },
+  appName: { label: '所属应用', filter: { type: 'string' } },
   status: {
     label: '状态',
     filter: { type: 'enum', options: executionStatusOptions },
@@ -41,10 +44,17 @@ const columnFeatures: ListColumnFeatures = {
 
 const ExecutionListPage = (props: PageComponentProps) => {
   const [status, setStatus] = useState<ExecutionStatus>();
+  const [scopeKey, setScopeKey] = useState('all');
+  const scope = parseSchedulerScope(scopeKey);
+  const catalogQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
+    queryKey: executionQueryKeys.catalog(),
+    queryFn: executionApi.catalog,
+  });
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const list = useListPageQuery({
-    queryKey: executionQueryKeys.list(status),
-    queryFn: (params) => executionApi.listPage({ ...params, status }),
+    queryKey: executionQueryKeys.list(status, scope),
+    queryFn: (params) => executionApi.listPage({ ...params, status, ...scope }),
   });
   const columns: ColumnsType<ExecutionVO> = [
     {
@@ -63,7 +73,7 @@ const ExecutionListPage = (props: PageComponentProps) => {
       ),
     },
     { title: '任务名称', dataIndex: 'jobName', width: 180 },
-    { title: '任务分组', dataIndex: 'jobGroup', width: 140 },
+    { title: '所属应用', dataIndex: 'appName', width: 160 },
     {
       title: '状态',
       dataIndex: 'status',
@@ -83,7 +93,7 @@ const ExecutionListPage = (props: PageComponentProps) => {
       width: 110,
       render: (value?: number) => (value === undefined ? '-' : `${value} ms`),
     },
-    { title: 'Trace ID', dataIndex: 'traceId', width: 260 },
+    { title: 'Trace ID', dataIndex: 'traceId', width: 300 },
     { title: '错误信息', dataIndex: 'errorMessage', ellipsis: true },
   ];
 
@@ -91,9 +101,22 @@ const ExecutionListPage = (props: PageComponentProps) => {
     <ListPage<ExecutionVO>
       {...props}
       title="执行记录"
-      loading={list.query.isLoading}
-      error={getBlockingQueryError(list.query) as Error | null}
-      onRetry={() => list.query.refetch()}
+      loading={list.query.isLoading || catalogQuery.isLoading}
+      error={
+        (getBlockingQueryError(list.query) || getBlockingQueryError(catalogQuery)) as Error | null
+      }
+      onRetry={() => Promise.all([list.query.refetch(), catalogQuery.refetch()])}
+      treePanel={
+        <SchedulerScopeTree
+          title="全部执行记录"
+          nodes={catalogQuery.data}
+          selectedKey={scopeKey}
+          onSelect={(nextKey) => {
+            setScopeKey(nextKey);
+            list.resetPage();
+          }}
+        />
+      }
       total={list.total}
       pageNum={list.pageNum}
       pageSize={list.pageSize}
@@ -105,10 +128,15 @@ const ExecutionListPage = (props: PageComponentProps) => {
           value={status}
           options={executionStatusOptions}
           className="sm-execution-status-filter"
-          onChange={(value) => setStatus(value)}
+          onChange={(value) => {
+            setStatus(value);
+            list.resetPage();
+          }}
         />
       }
-      onRefresh={list.onRefresh}
+      onRefresh={() => {
+        void Promise.all([list.query.refetch(), catalogQuery.refetch()]);
+      }}
       onQuickSearch={list.onSearch}
       onPageChange={list.onPageChange}
       rowKey="id"

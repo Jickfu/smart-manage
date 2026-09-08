@@ -15,7 +15,7 @@ import java.util.List;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@SchedulerJobDefinition(
+@SchedulerJobDefinition(appNumber = "monitor",
         description = "将系统日志的到期完整月分区转入历史父表",
         parameterTemplate = "{\"loginLogHotDays\":180,\"operateLogHotDays\":180,\"sqlLogHotDays\":180,"
                 + "\"scriptLogHotDays\":180,\"jobLogHotDays\":90,\"maxPartitionsPerRun\":12}")

@@ -20,7 +20,10 @@ public class JobLogListVO {
 
     private String jobName;
 
-    private String jobGroup;
+    private Long domainId;
+    private String domainName;
+    private Long appId;
+    private String appName;
 
     private LocalDateTime startTime;
 

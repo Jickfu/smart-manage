@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@SchedulerJobDefinition(
+@SchedulerJobDefinition(appNumber = "monitor",
         description = "删除超过历史保留期的系统日志完整月分区",
         parameterTemplate = "{\"loginLogRetentionDays\":1095,\"operateLogRetentionDays\":1095,"
                 + "\"sqlLogRetentionDays\":730,\"scriptLogRetentionDays\":730,"

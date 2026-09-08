@@ -15,8 +15,11 @@ import sm.system.form.PageForm;
 @Schema(description = "任务分页查询")
 public class JobListForm extends PageForm {
 
-    @Schema(description = "关键词：任务名称/分组/描述")
+    @Schema(description = "关键词：任务编码/名称")
     private String keyword;
+
+    private Long domainId;
+    private Long appId;
 
     @Schema(description = "状态：ENABLED / PAUSED")
     private String status;

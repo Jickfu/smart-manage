@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.scheduler.mapper.JobMapper;
+import sm.domain.sys.base.app.service.AppReferenceService;
 import sm.domain.sys.scheduler.model.entity.JobEntity;
 import sm.domain.sys.scheduler.model.form.JobSaveForm;
 import sm.domain.sys.scheduler.model.form.JobCommandForm;
@@ -22,12 +23,15 @@ import java.util.Objects;
 class JobTxService {
 
     private final JobMapper mapper;
+    private final AppReferenceService appReferenceService;
 
     public Long save(JobSaveForm form) {
         String number = form.getNumber().trim();
         String jobName = form.getJobName().trim();
-        String jobGroup = form.getJobGroup() == null || form.getJobGroup().isBlank()
-                ? "DEFAULT" : form.getJobGroup().trim();
+        if (form.getAppId() == null) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "所属应用不能为空");
+        }
+        appReferenceService.require(form.getAppId());
         String jobClassName = form.getJobClassName().trim();
         String mutexKey = form.getMutexKey() == null || form.getMutexKey().isBlank()
                 ? null : form.getMutexKey().trim();
@@ -42,14 +46,14 @@ class JobTxService {
             }
             requireVersion(entity, form.getVersion());
             if (Boolean.TRUE.equals(entity.getIsSystem())) {
-                requireSystemIdentity(entity, number, jobName, jobGroup, jobClassName, mutexKey);
+                requireSystemIdentity(entity, number, jobName, form.getAppId(), jobClassName, mutexKey);
             }
         }
 
-        requireUnique(form.getId(), number, jobName, jobGroup);
+        requireUnique(form.getId(), number);
         entity.setNumber(number);
         entity.setJobName(jobName);
-        entity.setJobGroup(jobGroup);
+        entity.setAppId(form.getAppId());
         entity.setJobClassName(jobClassName);
         entity.setCronExpression(form.getCronExpression().trim());
         entity.setJobData(form.getJobData());
@@ -121,31 +125,24 @@ class JobTxService {
         }
     }
 
-    private void requireUnique(Long id, String number, String jobName, String jobGroup) {
+    private void requireUnique(Long id, String number) {
         Long numberCount = mapper.selectCount(new LambdaQueryWrapper<JobEntity>()
                 .eq(JobEntity::getNumber, number)
                 .ne(id != null, JobEntity::getId, id));
         if (numberCount > 0) {
             throw new BizException(ResultEnum.UNIQUE_CONFLICT, "任务编码已存在");
         }
-        Long keyCount = mapper.selectCount(new LambdaQueryWrapper<JobEntity>()
-                .eq(JobEntity::getJobName, jobName)
-                .eq(JobEntity::getJobGroup, jobGroup)
-                .ne(id != null, JobEntity::getId, id));
-        if (keyCount > 0) {
-            throw new BizException(ResultEnum.UNIQUE_CONFLICT, "同一分组下任务名称已存在");
-        }
     }
 
-    private void requireSystemIdentity(JobEntity entity, String number, String jobName, String jobGroup,
+    private void requireSystemIdentity(JobEntity entity, String number, String jobName, Long appId,
                                        String jobClassName, String mutexKey) {
         if (!Objects.equals(entity.getNumber(), number)
                 || !Objects.equals(entity.getJobName(), jobName)
-                || !Objects.equals(entity.getJobGroup(), jobGroup)
+                || !Objects.equals(entity.getAppId(), appId)
                 || !Objects.equals(entity.getJobClassName(), jobClassName)
                 || !Objects.equals(entity.getMutexKey(), mutexKey)) {
             throw new BizException(ResultEnum.BILL_STATUS_ERROR,
-                    "系统内置任务不可修改编码、名称、分组、执行类或互斥键");
+                    "系统内置任务不可修改编码、名称、所属应用、执行类或互斥键");
         }
     }
 

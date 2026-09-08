@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import sm.domain.sys.scheduler.model.entity.JobLogEntity;
+import sm.domain.sys.scheduler.model.vo.SchedulerCatalogRowVO;
 
 import java.util.List;
 
@@ -14,4 +15,5 @@ import java.util.List;
 public interface JobLogMapper extends BaseMapper<JobLogEntity> {
 
     List<JobLogEntity> selectLatestByJobIds(@Param("jobIds") List<Long> jobIds);
+    List<SchedulerCatalogRowVO> selectCatalog();
 }

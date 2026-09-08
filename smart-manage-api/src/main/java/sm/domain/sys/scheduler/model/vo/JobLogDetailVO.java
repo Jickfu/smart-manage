@@ -13,7 +13,10 @@ public class JobLogDetailVO {
     private Long id;
     private Long jobId;
     private String jobName;
-    private String jobGroup;
+    private Long domainId;
+    private String domainName;
+    private Long appId;
+    private String appName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private Long durationMs;

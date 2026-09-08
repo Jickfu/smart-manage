@@ -1,6 +1,14 @@
 import request from '@/api/request';
+import type { SchedulerCatalogNode } from '../common/schedulerScope';
 import type { PageData, Result } from '@/types/api';
-import type { JobClassOption, JobCommand, JobListForm, JobSaveForm, JobVO } from './types';
+import type {
+  JobClassOption,
+  JobCommand,
+  JobListForm,
+  JobSaveForm,
+  JobVO,
+  JobDetailVO,
+} from './types';
 
 const postCommand = (path: string, id: string, version: number) =>
   request.post<Result<string>>(path, { id, version }).then((response) => response.data.data);
@@ -9,13 +17,17 @@ const postBatchCommand = (path: string, jobs: JobCommand[]) =>
   request.post<Result<string>>(path, { jobs }).then((response) => response.data.data);
 
 export const jobApi = {
+  catalog: () =>
+    request
+      .post<Result<SchedulerCatalogNode[]>>('/sys/scheduler/job/catalog')
+      .then((response) => response.data.data),
   listPage: (form: JobListForm) =>
     request
       .post<Result<PageData<JobVO>>>('/sys/scheduler/job/listPage', form)
       .then((response) => response.data.data),
   detail: (id: string) =>
     request
-      .post<Result<JobVO>>('/sys/scheduler/job/detail', { id })
+      .post<Result<JobDetailVO>>('/sys/scheduler/job/detail', { id })
       .then((response) => response.data.data),
   save: (form: JobSaveForm) =>
     request
@@ -42,6 +54,6 @@ export const jobApi = {
       .then((response) => response.data.data),
   createNewData: () =>
     request
-      .get<Result<Partial<JobVO>>>('/sys/scheduler/job/createNewData')
+      .get<Result<Partial<JobDetailVO>>>('/sys/scheduler/job/createNewData')
       .then((response) => response.data.data),
 };

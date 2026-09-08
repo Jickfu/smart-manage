@@ -12,7 +12,7 @@ import sm.domain.sys.message.email.service.EmailService;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@SchedulerJobDefinition(description = "处理持久化邮件任务并执行有限重试", parameterTemplate = "{\"batchSize\":20}")
+@SchedulerJobDefinition(appNumber = "message", description = "处理持久化邮件任务并执行有限重试", parameterTemplate = "{\"batchSize\":20}")
 public class DispatchEmailJob extends QuartzJobBean {
     private final EmailService emailService;
     @Override protected void executeInternal(JobExecutionContext context) {

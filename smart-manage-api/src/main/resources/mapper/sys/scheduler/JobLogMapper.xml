@@ -10,7 +10,6 @@
             id,
             job_id,
             job_name,
-            job_group,
             start_time,
             end_time,
             duration_ms,
@@ -24,5 +23,14 @@
             #{jobId}
         </foreach>
         ORDER BY job_id, start_time DESC NULLS LAST, id DESC
+    </select>
+
+    <!-- 导航只读取小型业务目录，不扫描执行日志；没有执行记录的应用也可以选择。 -->
+    <select id="selectCatalog" resultType="sm.domain.sys.scheduler.model.vo.SchedulerCatalogRowVO">
+        SELECT a.id AS domain_id, a.name AS domain_name,
+               b.id AS app_id, b.name AS app_name
+        FROM t_sys_domain a
+        LEFT JOIN t_sys_app b ON b.domain_id = a.id
+        ORDER BY a.seq, a.id, b.seq, b.id
     </select>
 </mapper>

@@ -1,9 +1,11 @@
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
+import { SchedulerScopeTree } from '../common/SchedulerScopeTree';
+import { parseSchedulerScope } from '../common/schedulerScope';
 import { Button, Select, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import ListPage from '@/domain/common/page/list/ListPage';
 import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
@@ -24,7 +26,7 @@ const EDIT_KEY = componentKeys.schedulerJobEdit;
 const columnFeatures: ListColumnFeatures = {
   number: { label: '任务编码', filter: { type: 'string' }, sorter: true },
   jobName: { label: '任务名称', filter: { type: 'string' }, sorter: true },
-  jobGroup: { label: '分组', filter: { type: 'string' }, sorter: true },
+  appName: { label: '所属应用', filter: { type: 'string' } },
   cronExpression: { label: 'Cron 表达式', filter: { type: 'string' } },
   status: {
     label: '状态',
@@ -44,13 +46,20 @@ const JobListPage = (props: PageComponentProps) => {
   const feedback = useOperationFeedback();
   const confirmOperation = useOperationConfirm();
   const [status, setStatus] = useState<JobStatus>();
+  const [scopeKey, setScopeKey] = useState('all');
+  const scope = parseSchedulerScope(scopeKey);
+  const catalogQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
+    queryKey: jobQueryKeys.catalog(),
+    queryFn: jobApi.catalog,
+  });
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const openAddNewTab = useWorkbenchStore((state) => state.openAddNewTab);
   const queryClient = useQueryClient();
   const list = useListPageQuery({
-    queryKey: jobQueryKeys.list(status),
-    queryFn: (params) => jobApi.listPage({ ...params, status }),
+    queryKey: jobQueryKeys.list(status, scope),
+    queryFn: (params) => jobApi.listPage({ ...params, status, ...scope }),
   });
   const selectedRecords = list.records.filter((record) => selectedRowKeys.includes(record.id));
   const selected = selectedRecords.length === 1 ? selectedRecords[0] : undefined;
@@ -101,7 +110,7 @@ const JobListPage = (props: PageComponentProps) => {
       ),
     },
     { title: '任务名称', dataIndex: 'jobName', width: 180 },
-    { title: '分组', dataIndex: 'jobGroup', width: 140 },
+    { title: '所属应用', dataIndex: 'appName', width: 160 },
     { title: 'Cron 表达式', dataIndex: 'cronExpression', width: 180 },
     {
       title: '状态',
@@ -120,7 +129,7 @@ const JobListPage = (props: PageComponentProps) => {
     void confirmOperation({
       type: command === 'delete' ? 'delete' : 'normal',
       title,
-      description: `${selected.jobGroup} / ${selected.jobName}`,
+      description: `${selected.appName} / ${selected.jobName}`,
       confirmText: command === 'delete' ? '删除' : '确定',
       onConfirm: () => commandMutation.mutateAsync(command),
     });
@@ -131,13 +140,27 @@ const JobListPage = (props: PageComponentProps) => {
       {...props}
       title="定时任务"
       access={jobAccess}
-      loading={list.query.isLoading}
-      error={getBlockingQueryError(list.query) as Error | null}
-      onRetry={() => list.query.refetch()}
+      loading={list.query.isLoading || catalogQuery.isLoading}
+      error={
+        (getBlockingQueryError(list.query) || getBlockingQueryError(catalogQuery)) as Error | null
+      }
+      onRetry={() => Promise.all([list.query.refetch(), catalogQuery.refetch()])}
+      treePanel={
+        <SchedulerScopeTree
+          title="全部任务"
+          nodes={catalogQuery.data}
+          selectedKey={scopeKey}
+          onSelect={(nextKey) => {
+            setScopeKey(nextKey);
+            list.resetPage();
+            setSelectedRowKeys([]);
+          }}
+        />
+      }
       total={list.total}
       pageNum={list.pageNum}
       pageSize={list.pageSize}
-      quickSearchPlaceholder="搜索任务编码、名称或分组"
+      quickSearchPlaceholder="搜索任务编码或名称"
       filterContent={
         <Select
           allowClear
@@ -148,7 +171,11 @@ const JobListPage = (props: PageComponentProps) => {
             { label: '已暂停', value: 'PAUSED' },
           ]}
           className="sm-job-status-filter"
-          onChange={(value) => setStatus(value)}
+          onChange={(value) => {
+            setStatus(value);
+            list.resetPage();
+            setSelectedRowKeys([]);
+          }}
         />
       }
       filterSummary={status ? `状态：${status === 'ENABLED' ? '已启用' : '已暂停'}` : undefined}
@@ -199,7 +226,9 @@ const JobListPage = (props: PageComponentProps) => {
           onClick: () => confirmCommand('delete', '确认删除该任务？'),
         },
       ]}
-      onRefresh={list.onRefresh}
+      onRefresh={() => {
+        void Promise.all([list.query.refetch(), catalogQuery.refetch()]);
+      }}
       onQuickSearch={list.onSearch}
       onPageChange={list.onPageChange}
       rowKey="id"

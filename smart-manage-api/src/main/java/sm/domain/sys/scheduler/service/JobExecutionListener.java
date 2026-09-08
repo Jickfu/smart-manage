@@ -1,6 +1,5 @@
 package sm.domain.sys.scheduler.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobExecutionContext;
@@ -8,7 +7,7 @@ import org.quartz.JobExecutionException;
 import org.quartz.JobListener;
 import org.quartz.SchedulerException;
 import org.springframework.stereotype.Component;
-import sm.domain.sys.scheduler.model.entity.JobEntity;
+import sm.domain.sys.scheduler.model.vo.JobExecutionSnapshotVO;
 import sm.domain.sys.scheduler.model.entity.JobLogEntity;
 import sm.domain.sys.scheduler.mapper.JobLogMapper;
 import sm.domain.sys.scheduler.mapper.JobMapper;
@@ -40,18 +39,22 @@ public class JobExecutionListener implements JobListener {
     public void jobToBeExecuted(JobExecutionContext context) {
         TraceIdUtil.setTraceId("job-" + UUID.randomUUID());
         try {
-            String jobName = context.getJobDetail().getKey().getName();
-            String jobGroup = context.getJobDetail().getKey().getGroup();
-
-            JobEntity jobEntity = jobMapper.selectOne(
-                    new LambdaQueryWrapper<JobEntity>()
-                            .eq(JobEntity::getJobName, jobName)
-                            .eq(JobEntity::getJobGroup, jobGroup));
-
+            // 只使用受管任务的持久化 ID 关联定义，不能从可修改名称或技术分组反查。
+            String managedId = context.getJobDetail().getJobDataMap().getString(ManagedJobIdentity.JOB_ID_KEY);
+            if (managedId == null) {
+                throw new IllegalStateException("受管任务缺少任务 ID，拒绝执行");
+            }
+            JobExecutionSnapshotVO snapshot = jobMapper.selectExecutionSnapshot(Long.valueOf(managedId));
+            if (snapshot == null) {
+                throw new IllegalStateException("任务或所属应用已不存在，拒绝执行");
+            }
             JobLogEntity logEntity = new JobLogEntity();
-            logEntity.setJobId(jobEntity != null ? jobEntity.getId() : null);
-            logEntity.setJobName(jobName);
-            logEntity.setJobGroup(jobGroup);
+            logEntity.setJobId(snapshot.getJobId());
+            logEntity.setJobName(snapshot.getJobName());
+            logEntity.setDomainId(snapshot.getDomainId());
+            logEntity.setDomainName(snapshot.getDomainName());
+            logEntity.setAppId(snapshot.getAppId());
+            logEntity.setAppName(snapshot.getAppName());
             logEntity.setStartTime(LocalDateTime.now());
             logEntity.setStatus(JobExecutionStatus.RUNNING.name());
             logEntity.setTraceId(TraceIdUtil.getTraceId());

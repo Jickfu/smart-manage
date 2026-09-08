@@ -20,7 +20,9 @@ import org.mockito.ArgumentCaptor;
 class JobTxServiceTests {
 
     private final JobMapper mapper = mock(JobMapper.class);
-    private final JobTxService txService = new JobTxService(mapper);
+    private final sm.domain.sys.base.app.service.AppReferenceService apps =
+            mock(sm.domain.sys.base.app.service.AppReferenceService.class);
+    private final JobTxService txService = new JobTxService(mapper, apps);
 
     @Test
     void newTaskIsAlwaysCreatedPaused() {
@@ -75,7 +77,7 @@ class JobTxServiceTests {
         entity.setIsSystem(true);
         entity.setNumber("SYSTEM_LOG_ARCHIVE");
         entity.setJobName("系统日志分区转储");
-        entity.setJobGroup("SYSTEM");
+        entity.setAppId(31L);
         entity.setJobClassName("example.Job");
         entity.setMutexKey("system-log-lifecycle");
         when(mapper.selectById(1L)).thenReturn(entity);
@@ -84,7 +86,7 @@ class JobTxServiceTests {
         form.setVersion(2);
         form.setNumber("CHANGED");
         form.setJobName(entity.getJobName());
-        form.setJobGroup(entity.getJobGroup());
+        form.setAppId(entity.getAppId());
         form.setMutexKey(entity.getMutexKey());
 
         BizException exception = assertThrows(BizException.class, () -> txService.save(form));
@@ -106,7 +108,7 @@ class JobTxServiceTests {
         JobSaveForm form = new JobSaveForm();
         form.setNumber("JOB-001");
         form.setJobName("测试任务");
-        form.setJobGroup("DEFAULT");
+        form.setAppId(31L);
         form.setJobClassName("example.Job");
         form.setCronExpression("0 0 * * * ?");
         return form;

@@ -12,6 +12,8 @@ import sm.domain.sys.scheduler.model.form.JobLogListForm;
 import sm.domain.sys.scheduler.model.vo.JobLogListVO;
 import sm.domain.sys.scheduler.model.vo.JobLogDetailVO;
 import sm.domain.sys.scheduler.service.JobLogService;
+import sm.domain.sys.scheduler.service.SchedulerCatalogService;
+import sm.domain.sys.scheduler.model.vo.SchedulerCatalogNodeVO;
 import sm.system.form.IdForm;
 import jakarta.validation.Valid;
 import sm.system.response.PageData;
@@ -30,6 +32,14 @@ import java.util.List;
 public class JobLogController {
 
     private final JobLogService service;
+    private final SchedulerCatalogService catalogService;
+
+    @PostMapping("/sys/scheduler/execution/catalog")
+    @Operation(summary = "执行记录业务目录")
+    @SaCheckPermission(JobExecutionPermission.LIST)
+    public Result<List<SchedulerCatalogNodeVO>> catalog() {
+        return Result.success(catalogService.executions());
+    }
 
     @PostMapping("/sys/scheduler/execution/listPage")
     @Operation(summary = "执行实例列表", description = "获取任务执行实例分页列表，支持按状态筛选")

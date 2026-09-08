@@ -18,6 +18,8 @@ import { jobApi } from './api';
 import { jobAccess } from './permissions';
 import { jobQueryKeys } from './queryKeys';
 import type { JobClassOption } from './types';
+import type { ReferenceVO } from '@/domain/sys/base/common/types';
+import { useAppRefSelector } from '@/domain/sys/base/app/refSelector/useAppRefSelector';
 
 const cronPresets = [
   { label: '每天 08:00', value: '0 0 8 * * ?' },
@@ -31,6 +33,7 @@ const cronPresets = [
 
 const JobEditPage = (props: PageComponentProps) => {
   const feedback = useOperationFeedback();
+  const appSelector = useAppRefSelector();
   const queryClient = useQueryClient();
   const isAddNew = props.operationType === OperationType.ADDNEW;
   const [cronExpression, setCronExpression] = useState('');
@@ -107,11 +110,12 @@ const JobEditPage = (props: PageComponentProps) => {
         rules: [{ required: true, message: '任务名称不能为空' }],
       },
       {
-        label: '任务分组',
-        dataIndex: 'jobGroup',
-        type: 'text',
+        label: '所属应用',
+        dataIndex: 'app',
+        type: 'ref-selector',
+        refSelector: appSelector,
         disabled: detail?.isSystem,
-        rules: [{ required: true, message: '任务分组不能为空' }],
+        rules: [{ required: true, message: '所属应用不能为空' }],
       },
       {
         label: '状态',
@@ -186,12 +190,13 @@ const JobEditPage = (props: PageComponentProps) => {
       cronPreviewQuery.isFetching,
       detail?.isSystem,
       jobClassSelector,
+      appSelector,
     ],
   );
   const initialValues = useMemo(
     () => ({
       ...(detail ?? {}),
-      jobGroup: detail?.jobGroup ?? defaultQuery.data?.jobGroup ?? 'DEFAULT',
+      app: detail?.app ?? null,
       status: detail?.status ?? defaultQuery.data?.status ?? 'PAUSED',
       cronExpression: detail?.cronExpression ?? defaultQuery.data?.cronExpression ?? '0 0 3 * * ?',
       jobData: detail?.jobData ?? '',
@@ -208,7 +213,7 @@ const JobEditPage = (props: PageComponentProps) => {
         version: detail?.version,
         number: String(values.number).trim(),
         jobName: String(values.jobName).trim(),
-        jobGroup: String(values.jobGroup).trim(),
+        appId: (values.app as ReferenceVO).id,
         jobClassName: jobClass.className,
         cronExpression: String(values.cronExpression).trim(),
         jobData: String(values.jobData ?? ''),
@@ -262,6 +267,15 @@ const JobEditPage = (props: PageComponentProps) => {
             form.setFieldsValue({
               description: selectedClass.description,
               jobData: selectedClass.parameterTemplate,
+              ...(selectedClass.appId
+                ? {
+                    app: {
+                      id: selectedClass.appId,
+                      number: selectedClass.appNumber,
+                      name: selectedClass.appName,
+                    },
+                  }
+                : {}),
             });
           }
         }

@@ -1,8 +1,10 @@
 import type { PageForm } from '@/types/api';
+import type { ReferenceVO } from '@/domain/sys/base/common/types';
+import type { SchedulerScope } from '../common/schedulerScope';
 
 export type JobStatus = 'ENABLED' | 'PAUSED';
 
-export interface JobListForm extends PageForm {
+export interface JobListForm extends PageForm, SchedulerScope {
   keyword?: string;
   status?: JobStatus;
 }
@@ -12,7 +14,10 @@ export interface JobVO {
   version: number;
   number: string;
   jobName: string;
-  jobGroup: string;
+  appId: string;
+  appName: string;
+  domainId: string;
+  domainName: string;
   jobClassName: string;
   cronExpression: string;
   jobData?: string;
@@ -27,12 +32,16 @@ export interface JobVO {
   updateTime?: string;
 }
 
+export interface JobDetailVO extends Omit<JobVO, 'appId' | 'appName' | 'domainId' | 'domainName'> {
+  app: ReferenceVO;
+}
+
 export interface JobSaveForm {
   id?: string;
   version?: number;
   number: string;
   jobName: string;
-  jobGroup: string;
+  appId: string;
   jobClassName: string;
   cronExpression: string;
   jobData?: string;
@@ -50,4 +59,7 @@ export interface JobClassOption {
   simpleName: string;
   description: string;
   parameterTemplate: string;
+  appId?: string;
+  appNumber?: string;
+  appName?: string;
 }
