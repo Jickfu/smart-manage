@@ -165,7 +165,7 @@ function EditFieldItem({ field, editable }: EditFieldItemProps) {
   if (field.type === 'custom') {
     return (
       <FormFieldCell columnSpan={field.columnSpan} fullWidth={field.fullWidth}>
-        <Form.Item label={field.label} className="sm-edit-field-content">
+        <Form.Item label={field.label} tooltip={field.tooltip} className="sm-edit-field-content">
           <div className="sm-edit-readonly">{field.content}</div>
         </Form.Item>
       </FormFieldCell>
@@ -175,7 +175,12 @@ function EditFieldItem({ field, editable }: EditFieldItemProps) {
   if (field.type === 'readonly') {
     return (
       <FormFieldCell columnSpan={field.columnSpan} fullWidth={field.fullWidth}>
-        <Form.Item name={field.dataIndex} label={field.label} className="sm-edit-field-content">
+        <Form.Item
+          name={field.dataIndex}
+          label={field.label}
+          tooltip={field.tooltip}
+          className="sm-edit-field-content"
+        >
           <ReadonlyText />
         </Form.Item>
       </FormFieldCell>
@@ -187,6 +192,7 @@ function EditFieldItem({ field, editable }: EditFieldItemProps) {
       <Form.Item
         name={field.dataIndex}
         label={field.label}
+        tooltip={field.tooltip}
         rules={field.rules}
         valuePropName={field.type === 'switch' ? 'checked' : undefined}
         getValueProps={

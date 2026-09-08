@@ -2,6 +2,7 @@ package sm.domain.sys.base.user.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import sm.domain.sys.base.weakpassword.service.PasswordPolicyService;
 import org.springframework.stereotype.Component;
 import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.user.constant.UserThemeColor;
@@ -32,6 +33,7 @@ class UserWriter {
     private final UserRoleMapper userRoleMapper;
     private final UserAssignmentMapper userAssignmentMapper;
     private final OrgReferenceReader orgReferenceReader;
+    private final PasswordPolicyService passwordPolicyService;
 
     List<Long> saveBatch(List<UserSaveForm> forms) {
         List<Long> ids = new ArrayList<>();
@@ -80,6 +82,7 @@ class UserWriter {
             throw new BizException(ResultEnum.PARAM_ERROR, "编辑用户不能修改密码，请使用重置密码");
         }
         if (form.getId() == null && form.getPassword() != null && !form.getPassword().isEmpty()) {
+            passwordPolicyService.validate(form.getPassword(), form.getUsername());
             entity.setPassword(Argon2Helper.encode(form.getPassword()));
         }
         entity.setName(form.getName().trim());

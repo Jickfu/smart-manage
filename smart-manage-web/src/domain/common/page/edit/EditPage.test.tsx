@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EditPage from './EditPage';
 import ModalEditPage from './ModalEditPage';
+import { EditFormFields } from './EditFormFields';
 import { OperationType } from '../types';
 import { ApiError } from '@/api/ApiError';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
@@ -42,6 +43,15 @@ const sections = [
 
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  // jsdom 不提供尺寸观察器，提示浮层使用静态尺寸替身。
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
   // jsdom 无伪元素布局；仅忽略滚动条测量使用的第二参数，保留真实元素样式计算。
   const getComputedStyle = window.getComputedStyle.bind(window);
   vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => getComputedStyle(element));
@@ -458,5 +468,39 @@ describe('edit error ownership and state preservation', () => {
     expect(onSave).not.toHaveBeenCalled();
     await renderModal();
     expect(input.value).toBe('未保存');
+  });
+});
+
+describe('通用字段说明', () => {
+  it('在标签旁展示调用方问号提示，支持录入、只读和自定义字段且不增加 extra 区域', async () => {
+    await act(async () => {
+      root.render(
+        <Form layout="vertical">
+          <EditFormFields
+            fields={[
+              { label: '录入字段', dataIndex: 'input', type: 'text', tooltip: '调用方提供的说明' },
+              { label: '只读字段', dataIndex: 'readonly', type: 'readonly', tooltip: '只读说明' },
+              {
+                label: '自定义字段',
+                dataIndex: 'custom',
+                type: 'custom',
+                content: '内容',
+                tooltip: '自定义说明',
+              },
+              { label: '普通字段', dataIndex: 'plain', type: 'text' },
+            ]}
+          />
+        </Form>,
+      );
+    });
+    const icons = container.querySelectorAll('.ant-form-item-label .anticon-question-circle');
+    expect(icons).toHaveLength(3);
+    expect(container.querySelector('.ant-form-item-extra')).toBeNull();
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+    await act(async () => {
+      icons[0]!.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    });
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe('调用方提供的说明');
   });
 });

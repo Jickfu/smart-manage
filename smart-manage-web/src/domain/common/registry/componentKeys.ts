@@ -1,4 +1,5 @@
 export const componentKeys = {
+  weakPassword: 'sys/base/weak-password',
   purchaseRequisition: 'scm/procurement/purchase-requisition',
   purchaseRequisitionEdit: 'scm/procurement/purchase-requisition/edit',
   basicData: 'sys/base/basic-data',

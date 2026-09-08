@@ -98,6 +98,7 @@ const ModalEditPage = ({
       width={width}
       footer={
         <PermissionActions
+          grouped={false}
           prefix={access?.prefix}
           actions={[
             { key: 'cancel', label: '取消', disabled: saving, onClick: onClose },

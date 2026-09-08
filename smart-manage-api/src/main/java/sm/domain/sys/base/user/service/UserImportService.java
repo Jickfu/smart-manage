@@ -158,7 +158,7 @@ public class UserImportService {
             } catch (RuntimeException exception) { errors.add("第 " + rowNumber + " 行：" + exception.getMessage()); continue; }
             Credential credential = null;
             if (existing == null) {
-                String password = PasswordGeneratorUtil.generate(12);
+                String password = PasswordGeneratorUtil.generate(20);
                 form.setPassword(password);
                 credential = new Credential(username, name, password);
             } else {

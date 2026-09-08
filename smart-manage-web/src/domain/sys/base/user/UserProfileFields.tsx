@@ -1,3 +1,4 @@
+import { PASSWORD_POLICY_HINT, passwordPolicyRule } from '@/security/passwordPolicy';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { Button, DatePicker, Form, Input, Select, Upload } from 'antd';
 import type { UploadProps } from 'antd';
@@ -170,9 +171,14 @@ export function UserProfileFields({
                   className="sm-edit-field-content"
                   name="password"
                   label="初始密码"
-                  rules={[{ required: true, message: '初始密码不能为空' }]}
+                  rules={[passwordPolicyRule]}
+                  tooltip={PASSWORD_POLICY_HINT}
                 >
-                  <Input.Password variant="underlined" disabled={!editable} />
+                  <Input.Password
+                    variant="underlined"
+                    disabled={!editable}
+                    autoComplete="new-password"
+                  />
                 </Form.Item>
               </FormFieldCell>
             )}
@@ -182,7 +188,7 @@ export function UserProfileFields({
                 name="phone"
                 label="手机"
                 rules={[{ pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确' }]}
-                extra={
+                tooltip={
                   editable && phoneProtected ? (
                     <Button
                       type="link"
@@ -205,7 +211,7 @@ export function UserProfileFields({
                 name="email"
                 label="邮箱"
                 rules={[{ type: 'email', message: '邮箱格式不正确' }]}
-                extra={
+                tooltip={
                   editable && emailProtected ? (
                     <Button
                       type="link"

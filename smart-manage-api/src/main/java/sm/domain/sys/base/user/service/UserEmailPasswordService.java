@@ -205,7 +205,6 @@ public class UserEmailPasswordService {
     private String decryptNewPassword(String encryptedPassword) {
         try {
             String password = browserPasswordCipher.decrypt(encryptedPassword);
-            if (password.length() < 8) throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能少于8位");
             return password;
         } catch (Sm2CiphertextException exception) {
             throw new BizException(ResultEnum.PARAM_ERROR, "密码加密数据无效");

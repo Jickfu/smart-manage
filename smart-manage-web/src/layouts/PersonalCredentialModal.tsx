@@ -1,3 +1,4 @@
+import { PASSWORD_POLICY_HINT, passwordPolicyRule } from '@/security/passwordPolicy';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
 import { Button, Form, Input, Select } from 'antd';
@@ -213,12 +214,14 @@ export default function PersonalCredentialModal({
                 className="sm-edit-field-content"
                 name="value"
                 label={type === 'PHONE' ? '新手机号' : type === 'EMAIL' ? '新邮箱' : '新密码'}
+                tooltip={type === 'PASSWORD' ? PASSWORD_POLICY_HINT : undefined}
                 rules={[
-                  { required: true, message: '请输入新值' },
+                  ...(type === 'PASSWORD'
+                    ? [passwordPolicyRule]
+                    : [{ required: true, message: '请输入新值' }]),
                   ...(type === 'EMAIL'
                     ? [{ type: 'email' as const, message: '邮箱格式不正确' }]
                     : []),
-                  ...(type === 'PASSWORD' ? [{ min: 8, message: '新密码不能少于8位' }] : []),
                 ]}
               >
                 {type === 'PASSWORD' ? (

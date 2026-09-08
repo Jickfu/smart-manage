@@ -1,5 +1,8 @@
 package sm.domain.sys.base.user.service;
 
+import sm.domain.sys.base.weakpassword.service.PasswordPolicyService;
+import sm.domain.sys.base.weakpassword.mapper.WeakPasswordMapper;
+
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
@@ -52,6 +55,7 @@ class UserCredentialGenerationPostgresTests {
         var configuration = new MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
         configuration.addMapper(UserMapper.class);
+        configuration.addMapper(WeakPasswordMapper.class);
         var interceptor = new MybatisPlusInterceptor();
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         var factory = new MybatisSqlSessionFactoryBean();
@@ -62,7 +66,7 @@ class UserCredentialGenerationPostgresTests {
                 new ClassPathResource("mapper/sys/base/user/UserMapper.xml"));
         mapper = new SqlSessionTemplate(factory.getObject()).getMapper(UserMapper.class);
         var target = new UserTxService(mapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-                mock(OrgReferenceReader.class), mock(CurrentUserContext.class), mock(UserWriter.class));
+                mock(OrgReferenceReader.class), mock(CurrentUserContext.class), mock(UserWriter.class), new PasswordPolicyService(new SqlSessionTemplate(factory.getObject()).getMapper(WeakPasswordMapper.class)));
         var proxy = new ProxyFactory(target);
         proxy.setProxyTargetClass(true);
         proxy.addAdvice(new TransactionInterceptor(manager, new AnnotationTransactionAttributeSource()));
@@ -104,7 +108,7 @@ class UserCredentialGenerationPostgresTests {
         assertEquals(1L, snapshot().generation());
         jdbc.update("UPDATE t_sys_user SET enabled=true WHERE id=?", USER_ID);
         assertEquals(2L, snapshot().generation());
-        assertEquals(0, mapper.updatePasswordByVerifiedEmail(original, "must-not-write"));
+        assertEquals(0, mapper.updatePasswordByVerifiedEmail(original, "must-not-write-password"));
         staleEntity.setName("过期编辑");
         assertEquals(0, mapper.updateById(staleEntity));
         assertThrows(BizException.class, () -> new UserSessionStateVerifier(mapper).verify(USER_ID, 0));
@@ -117,7 +121,7 @@ class UserCredentialGenerationPostgresTests {
         service.bindVerifiedEmail(original, "new@example.invalid");
         service.bindVerifiedEmail(snapshot(), "old@example.invalid");
         assertEquals(2L, snapshot().generation());
-        assertThrows(BizException.class, () -> service.updatePasswordByVerifiedEmail(original, "new-password"));
+        assertThrows(BizException.class, () -> service.updatePasswordByVerifiedEmail(original, "new-test-password"));
         assertEquals(2L, snapshot().generation());
     }
 
@@ -134,7 +138,7 @@ class UserCredentialGenerationPostgresTests {
         assertEquals(1L, snapshot().generation());
         assertEquals(1, mapper.selectById(USER_ID).getVersion());
         assertTrue(Argon2Helper.verify(mapper.selectById(USER_ID).getPassword(), "changed-password"));
-        assertEquals(0, mapper.updatePasswordByVerifiedEmail(original, "must-not-write"));
+        assertEquals(0, mapper.updatePasswordByVerifiedEmail(original, "must-not-write-password"));
     }
 
     @Test
@@ -142,8 +146,8 @@ class UserCredentialGenerationPostgresTests {
         service.resetPassword(USER_ID);
         long firstGeneration = snapshot().generation();
         service.resetPassword(USER_ID);
-        assertThrows(BizException.class, () -> service.changeResetPassword(USER_ID, firstGeneration, "new-password"));
-        service.changeResetPassword(USER_ID, snapshot().generation(), "new-password");
+        assertThrows(BizException.class, () -> service.changeResetPassword(USER_ID, firstGeneration, "new-test-password"));
+        service.changeResetPassword(USER_ID, snapshot().generation(), "new-test-password");
         assertFalse(mapper.selectById(USER_ID).getPasswordReset());
     }
 
@@ -166,7 +170,7 @@ class UserCredentialGenerationPostgresTests {
                     () -> transaction.executeWithoutResult(status -> {
                         passwordBackend.set(jdbc.queryForObject("SELECT pg_backend_pid()", Integer.class));
                         passwordStarted.countDown();
-                        service.updatePasswordByVerifiedEmail(consumedSnapshot, "must-not-write");
+                        service.updatePasswordByVerifiedEmail(consumedSnapshot, "must-not-write-password");
                     })));
             assertTrue(passwordStarted.await(10, TimeUnit.SECONDS));
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);

@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ConfigProvider, Form } from 'antd';
-import type { FormInstance } from 'antd';
+import type { FormInstance, FormItemProps } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { ReactNode } from 'react';
 import { OperationType, BillStatus } from '../types';
@@ -18,6 +18,8 @@ import '../pageLayout.css';
 export interface EditFieldBase {
   label: string;
   dataIndex: string;
+  /** 字段名右侧的问号提示，由调用方提供内容，不占用字段下方空间。 */
+  tooltip?: FormItemProps['tooltip'];
   /** antd Form 校验规则，如 [{ required: true, message: '编码不能为空' }] */
   rules?: Rule[];
   disabled?: boolean;

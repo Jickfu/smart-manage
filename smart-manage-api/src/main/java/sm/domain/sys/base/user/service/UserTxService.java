@@ -2,6 +2,7 @@ package sm.domain.sys.base.user.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import sm.domain.sys.base.weakpassword.service.PasswordPolicyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.dao.DuplicateKeyException;
@@ -52,6 +53,7 @@ class UserTxService {
     private final OrgReferenceReader orgReferenceReader;
     private final CurrentUserContext currentUserContext;
     private final UserWriter userWriter;
+    private final PasswordPolicyService passwordPolicyService;
 
     /** 新增/编辑用户 */
     public Long save(UserSaveForm form) {
@@ -81,7 +83,8 @@ class UserTxService {
         if (UserConstant.SUPER_ADMIN.equals(entity.getUsername()) != administratorTarget) {
             throw new BizException(ResultEnum.PERMISSION_ERROR, "目标用户不属于此凭据重置入口");
         }
-        String password = PasswordGeneratorUtil.generate(12);
+        String password = PasswordGeneratorUtil.generate(20);
+        passwordPolicyService.validate(password, entity.getUsername());
         entity.setPassword(Argon2Helper.encode(password));
         entity.setPasswordReset(true);
         if (mapper.updateById(entity) == 0) {
@@ -98,6 +101,7 @@ class UserTxService {
                 || !expectedGeneration.equals(entity.getCredentialGeneration())) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "改密状态已失效，请重新登录");
         }
+        passwordPolicyService.validate(newPassword, entity.getUsername());
         if (Argon2Helper.verify(entity.getPassword(), newPassword)) {
             throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能与临时密码相同");
         }
@@ -167,6 +171,7 @@ class UserTxService {
         if (!Argon2Helper.verify(entity.getPassword(), currentPassword)) {
             throw new BizException(ResultEnum.PARAM_ERROR, "原密码不正确");
         }
+        passwordPolicyService.validate(newPassword, entity.getUsername());
         if (Argon2Helper.verify(entity.getPassword(), newPassword)) {
             throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能与原密码相同");
         }
@@ -183,6 +188,7 @@ class UserTxService {
         if (entity == null || entity.getEmailVerifiedAt() == null || !Boolean.TRUE.equals(entity.getEnabled())) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "邮箱验证状态已变化，请重新获取验证码");
         }
+        passwordPolicyService.validate(newPassword, entity.getUsername());
         if (Argon2Helper.verify(entity.getPassword(), newPassword)) {
             throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能与原密码相同");
         }

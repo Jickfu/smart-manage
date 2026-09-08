@@ -186,6 +186,62 @@ body {
   color: var(--sm-text-placeholder);
 }
 
+/* 输入框尾部说明不参与纵向布局，鼠标与键盘均可展开。 */
+.sm-field-help {
+  position: relative;
+  flex: 0 0 32px;
+  margin-right: 4px;
+}
+
+.sm-input-wrap:has(.sm-field-help) .sm-input {
+  min-width: 0;
+}
+
+.sm-field-help-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sm-text-secondary);
+  cursor: help;
+}
+
+.sm-field-help-trigger svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sm-field-help-trigger:focus-visible {
+  outline: 2px solid var(--sm-primary);
+  outline-offset: -2px;
+}
+
+.sm-field-help-content {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  z-index: 10;
+  display: none;
+  width: 240px;
+  max-width: calc(100vw - 64px);
+  padding: 8px 12px;
+  border: 1px solid var(--sm-border);
+  border-radius: 4px;
+  background: var(--sm-text);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sm-field-help:hover .sm-field-help-content,
+.sm-field-help:focus-within .sm-field-help-content {
+  display: block;
+}
+
 /* ===== 忘记密码 ===== */
 .sm-form-extra {
   display: flex;

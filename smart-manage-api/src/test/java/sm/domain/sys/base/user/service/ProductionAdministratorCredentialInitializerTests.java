@@ -1,5 +1,9 @@
 package sm.domain.sys.base.user.service;
 
+import sm.domain.sys.base.weakpassword.service.PasswordPolicyService;
+import sm.domain.sys.base.weakpassword.mapper.WeakPasswordMapper;
+import sm.system.exception.BizException;
+
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
@@ -37,6 +41,15 @@ class ProductionAdministratorCredentialInitializerTests {
         assertThrows(IllegalStateException.class, () -> initializer.run(null));
 
         verify(userMapper, never()).selectOne(any());
+    }
+
+    @Test
+    void rejectsShortAndAccountBasedInitialPasswordsBeforeUserWrite() {
+        for (String password : new String[]{"short", "Administrator2026!"}) {
+            UserMapper userMapper = mock(UserMapper.class);
+            assertThrows(BizException.class, () -> initializer(userMapper, password).run(null));
+            verify(userMapper, never()).update(any());
+        }
     }
 
     @Test
@@ -87,7 +100,7 @@ class ProductionAdministratorCredentialInitializerTests {
     private static ProductionAdministratorCredentialInitializer initializer(
             UserMapper userMapper, String initialPassword) {
         ProductionAdministratorCredentialInitializer initializer =
-                new ProductionAdministratorCredentialInitializer(userMapper);
+                new ProductionAdministratorCredentialInitializer(userMapper, new PasswordPolicyService(mock(WeakPasswordMapper.class)));
         try {
             Field field = ProductionAdministratorCredentialInitializer.class
                     .getDeclaredField("initialPassword");

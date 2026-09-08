@@ -144,9 +144,6 @@ public class UserProfileService {
         } catch (Sm2CiphertextException exception) {
             throw new BizException(ResultEnum.PARAM_ERROR, "密码加密数据无效");
         }
-        if (newPassword.length() < 8) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "新密码不能少于8位");
-        }
         Long userId = currentUserContext.getUserId();
         txService.updateCurrentPassword(userId, currentPassword, newPassword);
         userCacheInvalidator.tryRefreshUsers(List.of(userId));

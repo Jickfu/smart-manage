@@ -3,6 +3,7 @@ package sm.domain.sys.base.user.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
+import sm.domain.sys.base.weakpassword.service.PasswordPolicyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -29,6 +30,7 @@ class ProductionAdministratorCredentialInitializer implements ApplicationRunner 
     private static final String DEMO_PASSWORD = "admin";
 
     private final UserMapper userMapper;
+    private final PasswordPolicyService passwordPolicyService;
 
     @Value("${smart-manage.domain.sys.base.user.initial-administrator-password}")
     private String initialPassword;
@@ -38,6 +40,8 @@ class ProductionAdministratorCredentialInitializer implements ApplicationRunner 
         if (initialPassword == null || initialPassword.isBlank() || DEMO_PASSWORD.equals(initialPassword)) {
             throw new IllegalStateException("生产环境必须配置非演示值的初始管理员密码");
         }
+
+        passwordPolicyService.validate(initialPassword, ADMINISTRATOR);
 
         UserEntity administrator = userMapper.selectOne(new LambdaQueryWrapper<UserEntity>()
                 .eq(UserEntity::getUsername, ADMINISTRATOR));
@@ -52,6 +56,7 @@ class ProductionAdministratorCredentialInitializer implements ApplicationRunner 
         String encodedPassword = Argon2Helper.encode(initialPassword);
         int updated = userMapper.update(new LambdaUpdateWrapper<UserEntity>()
                 .set(UserEntity::getPassword, encodedPassword)
+                .set(UserEntity::getPasswordReset, true)
                 .eq(UserEntity::getId, administrator.getId())
                 .eq(UserEntity::getPassword, administrator.getPassword()));
         if (updated != 1) {

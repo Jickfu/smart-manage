@@ -7,7 +7,7 @@
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-A9DvQeVL/qZ8dtfpwLtS7MvN9I12F04KE5fHvsrhPYk='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-R7HmSetnen07lF2MLdIY4Ds78uhNySiOt88fqJLsf/4='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
     <title>Smart Manage - 登录</title>
     <script src="js/sm2.js"></script>
@@ -116,6 +116,35 @@
                   placeholder="新密码"
                   autocomplete="new-password"
                 />
+                <span class="sm-field-help">
+                  <button
+                    type="button"
+                    class="sm-field-help-trigger"
+                    aria-label="新密码规则"
+                    aria-describedby="newPasswordHelp"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="9"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                      />
+                      <path
+                        d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5M12 16h.01"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </button>
+                  <span id="newPasswordHelp" class="sm-field-help-content" role="tooltip"
+                    >15～64个字符，可使用空格和长口令；不能使用弱口令或账号、系统名称的简单变体。</span
+                  >
+                </span>
               </div>
               <div class="sm-input-wrap">
                 <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -191,9 +220,38 @@
                   id="recoveryNewPassword"
                   class="sm-input sm-input--plain"
                   type="password"
-                  placeholder="新密码（至少8位）"
+                  placeholder="新密码"
                   autocomplete="new-password"
                 />
+                <span class="sm-field-help">
+                  <button
+                    type="button"
+                    class="sm-field-help-trigger"
+                    aria-label="新密码规则"
+                    aria-describedby="recoveryNewPasswordHelp"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="9"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                      />
+                      <path
+                        d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5M12 16h.01"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </button>
+                  <span id="recoveryNewPasswordHelp" class="sm-field-help-content" role="tooltip"
+                    >15～64个字符，可使用空格和长口令；不能使用弱口令或账号、系统名称的简单变体。</span
+                  >
+                </span>
               </div>
               <div class="sm-input-wrap">
                 <input
@@ -774,6 +832,25 @@
           });
       }
 
+      // 按 Unicode 码点计数，密码中的空格保持原样；弱口令由后端统一拦截。
+      function getPasswordPolicyError(password) {
+        if (!password || !password.trim()) return '密码不能为空或全为空白';
+        var length = Array.from(password).length;
+        if (length < 15 || length > 64) return '密码须为15～64个字符';
+        if (
+          Array.from(password).some(function (character) {
+            var codePoint = character.codePointAt(0);
+            return (
+              codePoint < 32 ||
+              (codePoint >= 127 && codePoint <= 159) ||
+              (codePoint >= 55296 && codePoint <= 57343)
+            );
+          })
+        )
+          return '密码不能包含控制字符或无效字符';
+        return undefined;
+      }
+
       function resetPasswordByEmail() {
         var code = recoveryCodeEl.value.trim();
         var newPassword = recoveryNewPasswordEl.value;
@@ -783,8 +860,9 @@
           recoveryCodeEl.focus();
           return;
         }
-        if (newPassword.length < 8) {
-          showError('新密码不能少于8位');
+        var policyError = getPasswordPolicyError(newPassword);
+        if (policyError) {
+          showError(policyError);
           recoveryNewPasswordEl.focus();
           return;
         }
@@ -832,8 +910,9 @@
       function changePassword() {
         var newPassword = newPasswordEl.value;
         var confirmPassword = confirmPasswordEl.value;
-        if (!newPassword) {
-          showError('请输入新密码');
+        var policyError = getPasswordPolicyError(newPassword);
+        if (policyError) {
+          showError(policyError);
           newPasswordEl.focus();
           return;
         }
