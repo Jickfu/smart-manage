@@ -33,7 +33,7 @@ Smart Manage 是一个基于 Spring Boot 4、React 19 和 Ant Design
 
 - 前后端分离，后端按业务领域组织模块，前端采用应用工作台与白名单页面注册机制。
 - 功能、菜单、页面和权限使用稳定业务键关联，前端权限负责交互控制，后端始终作为最终鉴权边界。
-- 数据库结构及必要初始化数据全部由 Flyway 管理，`db/migration` 是唯一权威来源。
+- 数据库结构及必要初始化数据由 Flyway 管理：`db/migration` 为平台链，`db/business` 为二次开发业务链，使用独立历史表；升级约束见[数据库开发](docs/development/database.md)。
 - 通用列表、编辑、分配、引用选择、附件和数据交换能力沉淀为共享页面框架，业务模块保留自身状态与规则。
 - 使用自动化测试、架构测试、静态检查和真实 PostgreSQL 验证保护模块边界、权限、事务与迁移行为。
 
@@ -48,7 +48,8 @@ Smart Manage 是一个基于 Spring Boot 4、React 19 和 Ant Design
 
 ```text
 smart-manage/
-├── db/migration/       # Flyway 数据库结构和必要初始化数据
+├── db/migration/       # 上游平台 Flyway 迁移
+├── db/business/        # 二次开发业务迁移（独立版本链，默认关闭）
 ├── docs/               # 架构、开发规范、领域模块和方案文档
 ├── smart-manage-api/   # Spring Boot 后端
 └── smart-manage-web/   # React 前端

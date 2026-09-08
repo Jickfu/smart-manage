@@ -48,6 +48,7 @@ DataScope 的角色配置、Entity、Mapper 和规则解析实现保留在 `sm.d
 | --- | --- |
 | CORS 配置与属性 | `sm.infrastructure.web` |
 | Druid、MyBatis-Plus 配置 | `sm.infrastructure.persistence` |
+| 平台／业务 Flyway 有序迁移策略 | `sm.infrastructure.persistence`，规则见[数据库开发](../development/database.md) |
 | Redis 配置 | `sm.infrastructure.cache` |
 | Jackson 配置与 Long 序列化 | `sm.infrastructure.json` |
 | MapStruct 公共配置 | `sm.infrastructure.mapping` |

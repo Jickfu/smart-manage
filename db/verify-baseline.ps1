@@ -6,7 +6,9 @@ param(
     [string]$DbUser = 'postgres',
     [string]$DbPassword = 'postgres',
     [string]$MavenPath = 'mvn',
-    [string]$NodePath = 'node'
+    [string]$NodePath = 'node',
+    [string]$BusinessMigrationLocation = '',
+    [string]$BusinessMinimumPlatformVersion = '3'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,6 +18,11 @@ $verificationError = $null
 $migrationDirectory = Join-Path $PSScriptRoot 'migration'
 $backendPomPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\smart-manage-api\pom.xml'))
 $migrationLocation = 'filesystem:' + $migrationDirectory.Replace('\', '/')
+# 默认目录出现实际 SQL 即进入双链验证，防止二次开发 CI 只验证平台。
+$businessDirectory = Join-Path $PSScriptRoot 'business'
+if (!$BusinessMigrationLocation -and (Get-ChildItem -LiteralPath $businessDirectory -Filter '*.sql' -Recurse -File -ErrorAction SilentlyContinue)) {
+    $BusinessMigrationLocation = 'filesystem:' + $businessDirectory.Replace('\', '/')
+}
 $env:PGPASSWORD = $DbPassword
 $env:PGCLIENTENCODING = 'UTF8'
 
@@ -66,6 +73,10 @@ try {
         '-Dtest=*PostgresTests'
         'test'
     )
+    if ($BusinessMigrationLocation) {
+        $flywayArguments += "-DsmartManage.testBusinessLocation=$BusinessMigrationLocation"
+        $flywayArguments += "-DsmartManage.testBusinessMinimumPlatformVersion=$BusinessMinimumPlatformVersion"
+    }
     Write-Host "Running Flyway with project: $backendPomPath"
     & $MavenPath @flywayArguments
     if ($LASTEXITCODE -ne 0) {

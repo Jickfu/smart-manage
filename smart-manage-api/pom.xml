@@ -322,6 +322,17 @@
                 <directory>${project.basedir}/../db/migration</directory>
                 <targetPath>db/migration</targetPath>
                 <filtering>false</filtering>
+                <excludes>
+                    <exclude>target/**</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/../db/business</directory>
+                <targetPath>db/business</targetPath>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>target/**</exclude>
+                </excludes>
             </resource>
         </resources>
         <plugins>

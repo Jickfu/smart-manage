@@ -23,16 +23,26 @@ function Invoke-TestPsql {
     else { return 'test-catalog-entry' }
 }
 function Invoke-TestMaven {
+    if ($testState.scenario -eq 'business-location') {
+        if ($args -notcontains '-DsmartManage.testBusinessLocation=filesystem:business-fixture' -or
+            $args -notcontains '-DsmartManage.testBusinessMinimumPlatformVersion=7') {
+            throw '业务迁移参数未传入真实 PostgreSQL 测试'
+        }
+    }
     $global:LASTEXITCODE = if ($testState.scenario -in @('migration-failure', 'double-failure')) { 37 } else { 0 }
 }
 function Invoke-TestNode { $global:LASTEXITCODE = 0 }
 
-foreach ($scenario in @('create-failure', 'migration-failure', 'double-failure', 'cleanup-failure', 'success', 'success')) {
+foreach ($scenario in @('create-failure', 'migration-failure', 'double-failure', 'cleanup-failure', 'success', 'success', 'business-location')) {
     $testState = @{ createCount = 0; dropCount = 0; scenario = $scenario }
 
     $failure = $null
     try {
-        & $verifyScript -PsqlPath 'test-psql' -MavenPath 'Invoke-TestMaven' -NodePath 'Invoke-TestNode' -DbPassword 'unused'
+        $businessArguments = @{}
+        if ($scenario -eq 'business-location') {
+            $businessArguments = @{ BusinessMigrationLocation = 'filesystem:business-fixture'; BusinessMinimumPlatformVersion = '7' }
+        }
+        & $verifyScript -PsqlPath 'test-psql' -MavenPath 'Invoke-TestMaven' -NodePath 'Invoke-TestNode' -DbPassword 'unused' @businessArguments
     } catch { $failure = $_.Exception.Message }
     if ($testState.createCount -ne 1) { throw "${scenario}: 未执行预期建库" }
     $expectedDrops = if ($scenario -eq 'create-failure') { 0 } else { 1 }
@@ -49,4 +59,4 @@ foreach ($scenario in @('create-failure', 'migration-failure', 'double-failure',
         throw "${scenario}: 原始失败未保留，实际 $failure"
     }
 }
-Write-Host 'Baseline cleanup safety: 6 scenarios passed.'
+Write-Host 'Baseline cleanup safety and business migration arguments: 7 scenarios passed.'

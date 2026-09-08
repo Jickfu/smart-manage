@@ -13,6 +13,8 @@ spring:
     validate-on-migrate: true
     out-of-order: false
     clean-disabled: true
+    validate-migration-naming: true
+    ignore-migration-patterns: []
   web:
     resources:
       chain:

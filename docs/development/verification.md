@@ -140,6 +140,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 
 ## 真实 PostgreSQL 验证
 
+`db/verify-baseline.ps1` 检测到 `db/business` 内的 SQL 时自动验证实际业务链；外部目录通过 `-BusinessMigrationLocation 'filesystem:绝对目录'` 指定，非默认依赖使用 `-BusinessMinimumPlatformVersion`。`RepositoryMigrationPostgresTests` 在本次临时库执行实际双链并再次启动，确认平台历史未被改写；`DualFlywayMigrationPostgresTests` 使用独立 schema 验证同号、先业务后平台增量、已有数据保留、启动失败、事务回滚、checksum 和乱序拒绝。这些用例随现有 `*PostgresTests` 进入 CI。
+
+双链机制测试不替代具体发行版本的带数据升级测试。今后每个数据库变更须按[正式发布与升级规则](./database.md#正式发布与升级规则)，为受支持旧版本准备结构与代表性数据，运行新增迁移，断言数据转换和业务不变量，再次迁移确认稳定；不得修改旧脚本制造测试通过。
+
 修改真实数据库测试保护的权限、凭据代际、事务、锁或并发行为时，即使没有迁移变更，也必须执行上节的 `db/verify-baseline.ps1`。脚本迁移临时数据库后，以实际测试数据库参数运行全部 `*PostgresTests`；配置入口以脚本为准，凭据不得写入文档或提交。
 
 空库验证脚本在迁移后自动运行全部 `*PostgresTests`。凭据代际测试必须使用真实触发器、Mapper 和 Spring 事务，覆盖安全变化、普通资料变化、回滚、旧证明 CAS 及验证码消费后的并发变更；角色整体授权测试通过 `pg_blocking_pids` 观察真实锁等待，覆盖替换、清空、删除和失败回滚。普通 `mvn test` 跳过依赖 PostgreSQL 的测试，不能替代该门禁。
