@@ -222,20 +222,22 @@ function ListPage<T>({
     [columnSettings.displayedColumns, pageNum, pageSize, showSequence],
   );
 
-  const resolvedTableHeaderExtra = (
-    <>
-      {tableHeaderExtra}
-      {columnSettings.enabled && (
-        <Button
-          type="text"
-          icon={<SettingOutlined />}
-          title="列设置"
-          aria-label="列设置"
-          onClick={() => columnSettings.setOpen(true)}
-        />
-      )}
-    </>
-  );
+  // 空 Fragment 仍是真值；没有表头操作时传 null，避免外壳渲染空白操作块。
+  const resolvedTableHeaderExtra =
+    tableHeaderExtra || columnSettings.enabled ? (
+      <>
+        {tableHeaderExtra}
+        {columnSettings.enabled && (
+          <Button
+            type="text"
+            icon={<SettingOutlined />}
+            title="列设置"
+            aria-label="列设置"
+            onClick={() => columnSettings.setOpen(true)}
+          />
+        )}
+      </>
+    ) : null;
 
   const resolvedFilterSummary = (
     <div className="sm-list-filter-summary-combined">
