@@ -178,6 +178,7 @@ const InboxMessageListPage = (props: PageComponentProps) => {
       onPageChange={list.onPageChange}
       rowKey="id"
       columns={columns}
+      expandedFilterFields={['level', 'status', 'publishTime']}
       columnFeatures={columnFeatures}
       {...list.columnQueryProps}
       dataSource={list.records}

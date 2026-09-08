@@ -175,6 +175,7 @@ const EmailAccountListPage = (props: PageComponentProps) => {
       onPageChange={list.onPageChange}
       rowKey="id"
       columns={columns}
+      expandedFilterFields={['enabled', 'defaultAccount']}
       columnFeatures={columnFeatures}
       {...list.columnQueryProps}
       dataSource={list.records}

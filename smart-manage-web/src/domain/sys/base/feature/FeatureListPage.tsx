@@ -156,6 +156,7 @@ const FeatureListPage = (props: PageComponentProps) => {
         onPageChange={onPageChange}
         rowKey="id"
         columns={columns}
+        expandedFilterFields={['source', 'visible']}
         columnFeatures={columnFeatures}
         {...columnQueryProps}
         dataSource={records}

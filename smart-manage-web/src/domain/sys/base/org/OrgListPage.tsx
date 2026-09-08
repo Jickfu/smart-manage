@@ -316,6 +316,7 @@ const OrgListPage = (props: PageComponentProps) => {
         onPageChange={onPageChange}
         rowKey="id"
         columns={columns}
+        expandedFilterFields={['orgType', 'enabled', 'archived']}
         columnFeatures={columnFeatures}
         {...columnQueryProps}
         dataSource={records}

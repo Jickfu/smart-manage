@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { Button, Input } from 'antd';
+import { Button, ConfigProvider, Input } from 'antd';
 import { DownOutlined, UpOutlined } from '@ant-design/icons';
 
 interface ListFilterBarProps {
   title: string;
   filterContent?: ReactNode;
+  defaultExpanded?: boolean;
   filterSummary?: ReactNode;
   quickSearchPlaceholder?: string;
   onQuickSearch?: (value: string) => void;
@@ -16,11 +17,12 @@ const { Search } = Input;
 const ListFilterBar = ({
   title,
   filterContent,
+  defaultExpanded = false,
   filterSummary,
   quickSearchPlaceholder = '快速搜索',
   onQuickSearch,
 }: ListFilterBarProps) => {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
     <div className="sm-list-filter">
@@ -40,13 +42,18 @@ const ListFilterBar = ({
             className="sm-list-filter-toggle"
             type="text"
             icon={expanded ? <UpOutlined /> : <DownOutlined />}
+            aria-expanded={expanded}
             onClick={() => setExpanded((current) => !current)}
           >
             {expanded ? '收起过滤' : '展开过滤'}
           </Button>
         )}
       </div>
-      {expanded && filterContent && <div className="sm-list-filter-panel">{filterContent}</div>}
+      {expanded && filterContent && (
+        <ConfigProvider variant="outlined">
+          <div className="sm-list-filter-panel">{filterContent}</div>
+        </ConfigProvider>
+      )}
     </div>
   );
 };

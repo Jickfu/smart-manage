@@ -60,27 +60,64 @@
 }
 
 .sm-list-filter-panel {
-  padding: 8px 0 10px;
-  border-top: 1px solid var(--sm-color-divider);
+  padding: 14px 20px;
+  margin: 6px 0;
+  background: var(--ant-color-fill-quaternary);
+  border: 1px solid var(--ant-color-border);
+  container-type: inline-size;
 }
 
-.sm-list-filter-panel > .ant-form,
-.sm-list-filter-grid {
+.sm-list-filter-fields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px 28px;
+  gap: 12px 28px;
 }
 
-.sm-list-filter-panel .ant-form-item {
+/* 一、两项保留较宽控件；所有字段从轨道左侧开始，起点不随数量改变。 */
+.sm-list-filter-fields:has(> :last-child:nth-child(1)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sm-list-filter-fields:has(> :last-child:nth-child(2)) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sm-list-filter-field {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
   min-width: 0;
-  margin: 0;
+  width: 100%;
+  max-width: 480px;
+  justify-self: start;
 }
 
-.sm-list-filter-panel .ant-form-item-control,
-.sm-list-filter-panel .ant-picker,
-.sm-list-filter-panel .ant-select,
-.sm-list-filter-panel .ant-input-number {
+.sm-list-filter-field > span:first-child {
+  overflow: hidden;
+  color: var(--sm-color-text-secondary);
+  font-size: var(--ant-font-size-lg);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sm-list-filter-field > :last-child {
+  min-width: 0;
   width: 100%;
+}
+
+@container (max-width: 1040px) {
+  .sm-list-filter-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 680px) {
+  .sm-list-filter-fields,
+  .sm-list-filter-fields:has(> :last-child:nth-child(2)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .sm-list-filter-summary-items {
@@ -97,35 +134,6 @@
   align-items: center;
   gap: 6px;
   overflow: hidden;
-}
-
-.sm-list-expanded-filter-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px 20px;
-  width: 100%;
-}
-
-.sm-list-expanded-filter-item {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.sm-list-expanded-filter-item > span:first-child {
-  overflow: hidden;
-  color: var(--sm-color-text-secondary);
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@media (max-width: 960px) {
-  .sm-list-expanded-filter-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 .sm-list-filter-summary-tag {

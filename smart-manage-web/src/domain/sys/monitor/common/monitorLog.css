@@ -1,17 +1,3 @@
-.sm-monitor-log-filter {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px 0;
-}
-
-.sm-monitor-log-filter-select {
-  width: 110px;
-}
-
-.sm-monitor-log-filter-trace {
-  width: 240px;
-}
-
 .sm-monitor-log-detail-value {
   word-break: break-all;
 }

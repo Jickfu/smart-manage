@@ -1,3 +1,4 @@
+import { ListFilterFields, ListFilterField } from '@/domain/common/page/list/ListFilterFields';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { Select, Tag } from 'antd';
@@ -80,20 +81,34 @@ const OpenApiInvocationPage = (props: PageComponentProps) => {
       total={list.total}
       pageNum={list.pageNum}
       pageSize={list.pageSize}
-      filterContent={
+      toolbarExtra={
         <div className="sm-openapi-stats">
           <span>近 24 小时调用：{Number(summary.total_count ?? 0)}</span>
           <span>成功：{Number(summary.success_count ?? 0)}</span>
           <span>平均耗时：{Number(summary.average_duration_ms ?? 0)} ms</span>
           <span>活跃应用：{Number(summary.application_count ?? 0)}</span>
-          <Select
-            allowClear
-            placeholder="全部结果"
-            value={resultType}
-            options={resultOptions}
-            onChange={setResultType}
-          />
         </div>
+      }
+      filterSummary={
+        resultType
+          ? `结果：${resultOptions.find((option) => option.value === resultType)?.label ?? resultType}`
+          : undefined
+      }
+      filterContent={
+        <ListFilterFields>
+          <ListFilterField label="结果">
+            <Select
+              allowClear
+              placeholder="全部结果"
+              value={resultType}
+              options={resultOptions}
+              onChange={(value) => {
+                setResultType(value);
+                list.resetPage();
+              }}
+            />
+          </ListFilterField>
+        </ListFilterFields>
       }
       onRefresh={() => Promise.all([list.onRefresh(), stats.refetch()])}
       onQuickSearch={list.onSearch}

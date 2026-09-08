@@ -1,3 +1,4 @@
+import { ListFilterFields, ListFilterField } from '@/domain/common/page/list/ListFilterFields';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
@@ -12,7 +13,6 @@ import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
-import './JobListPage.css';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { jobApi } from './api';
 import { jobAccess } from './permissions';
@@ -162,21 +162,24 @@ const JobListPage = (props: PageComponentProps) => {
       pageSize={list.pageSize}
       quickSearchPlaceholder="搜索任务编码或名称"
       filterContent={
-        <Select
-          allowClear
-          placeholder="全部状态"
-          value={status}
-          options={[
-            { label: '已启用', value: 'ENABLED' },
-            { label: '已暂停', value: 'PAUSED' },
-          ]}
-          className="sm-job-status-filter"
-          onChange={(value) => {
-            setStatus(value);
-            list.resetPage();
-            setSelectedRowKeys([]);
-          }}
-        />
+        <ListFilterFields>
+          <ListFilterField label="状态">
+            <Select
+              allowClear
+              placeholder="全部状态"
+              value={status}
+              options={[
+                { label: '已启用', value: 'ENABLED' },
+                { label: '已暂停', value: 'PAUSED' },
+              ]}
+              onChange={(value) => {
+                setStatus(value);
+                list.resetPage();
+                setSelectedRowKeys([]);
+              }}
+            />
+          </ListFilterField>
+        </ListFilterFields>
       }
       filterSummary={status ? `状态：${status === 'ENABLED' ? '已启用' : '已暂停'}` : undefined}
       onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY)}

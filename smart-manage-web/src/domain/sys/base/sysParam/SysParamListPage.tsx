@@ -233,6 +233,7 @@ const SysParamListPage = (props: PageComponentProps) => {
       onPageChange={onPageChange}
       rowKey="id"
       columns={columns}
+      expandedFilterFields={['isSystem']}
       columnFeatures={columnFeatures}
       {...columnQueryProps}
       dataSource={records}

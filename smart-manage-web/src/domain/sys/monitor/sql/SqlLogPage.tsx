@@ -1,9 +1,9 @@
+import { ListFilterFields, ListFilterField } from '@/domain/common/page/list/ListFilterFields';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
-import { Button, DatePicker, Select, Space, Tag, Typography } from 'antd';
+import { Button, DatePicker, Select, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
-import './SqlLogPage.css';
 import { useQuery } from '@tanstack/react-query';
 import ListPage from '@/domain/common/page/list/ListPage';
 import type { PageComponentProps } from '@/domain/common/page/types';
@@ -113,27 +113,30 @@ export default function SqlLogPage(props: PageComponentProps) {
         undefined
       }
       filterContent={
-        <Space wrap>
-          <Select
-            allowClear
-            placeholder="执行结果"
-            className="sm-sql-log-result-filter"
-            value={resultType}
-            options={['QUERY', 'DML', 'DDL', 'ERROR'].map((value) => ({ value, label: value }))}
-            onChange={(value) => {
-              setResultType(value);
-              setPageNum(1);
-            }}
-          />
-          <DatePicker.RangePicker
-            showTime
-            value={timeRange}
-            onChange={(value) => {
-              setTimeRange(value as [Dayjs, Dayjs] | null);
-              setPageNum(1);
-            }}
-          />
-        </Space>
+        <ListFilterFields>
+          <ListFilterField label="执行结果">
+            <Select
+              allowClear
+              placeholder="执行结果"
+              value={resultType}
+              options={['QUERY', 'DML', 'DDL', 'ERROR'].map((value) => ({ value, label: value }))}
+              onChange={(value) => {
+                setResultType(value);
+                setPageNum(1);
+              }}
+            />
+          </ListFilterField>
+          <ListFilterField label="执行时间">
+            <DatePicker.RangePicker
+              showTime
+              value={timeRange}
+              onChange={(value) => {
+                setTimeRange(value as [Dayjs, Dayjs] | null);
+                setPageNum(1);
+              }}
+            />
+          </ListFilterField>
+        </ListFilterFields>
       }
       onQuickSearch={(value) => {
         setKeyword(value);

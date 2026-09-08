@@ -278,6 +278,7 @@ const NumberRuleListPage = (props: PageComponentProps) => {
       onPageChange={onPageChange}
       rowKey="id"
       columns={columns}
+      expandedFilterFields={['enabled', 'scopeType']}
       columnFeatures={columnFeatures}
       {...columnQueryProps}
       dataSource={records}

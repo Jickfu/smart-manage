@@ -88,6 +88,8 @@ EditPage 的校验/transformValues 异常尚未进入领域 Mutation，由编辑
 
 列表能力集中在 `page/list/`：包括列表页面、表格与树面板、过滤与查询条件、列设置、选择状态及列表页签适配。组件、纯函数、Hook、测试和专属样式按同一列表能力就近组织，不再按技术形态分散到通用目录。
 
+列表过滤由 `ListFilterBar` 管理初始展开与收起摘要，`ListFilterFields` / `ListFilterField` 统一字段布局，`ListExpandedFilters` 将页面显式选择的高频字段绑定到既有列筛选状态；不为展开区维护第二套通用查询状态。特有查询参数仍由领域页面持有，布局与接入规则见[前端页面指南](../development/frontend-page-guide.md#列表和命令)。
+
 左树右表页面必须完整复用列表框架的组合边界：`ListPage` 负责左右分区，`ListTreePanel` 负责树面板的内边距、头尾区域及独立滚动，`ListTree` 负责节点选择和展开交互。领域封装也必须保留这三层职责，不得只复用 `ListTree` 而遗漏面板容器，或在业务页面复制面板 CSS。具体接入与验收要求见[前端页面指南](../development/frontend-page-guide.md#列表和命令)。
 
 `page/EditPageShell.tsx` 保留在根级：虽然沿用既有命名，其契约只包含标题、加载、错误、操作区和正文，不包含表单或编辑状态，供编辑、监控、控制台和详情等页面复用。它是明确的跨页面族共享入口，不得反向依赖具体页面族；不能只按名称前缀决定目录归属。

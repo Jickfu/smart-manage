@@ -307,6 +307,7 @@ const MenuListPage = (props: PageComponentProps) => {
       }}
       rowKey="id"
       columns={columns}
+      expandedFilterFields={['enabled', 'targetType']}
       columnFeatures={columnFeatures}
       columnFilters={columnFilters}
       onColumnFiltersChange={(filters) => {

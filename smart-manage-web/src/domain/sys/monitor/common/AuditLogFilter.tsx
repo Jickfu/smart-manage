@@ -1,6 +1,6 @@
-import { Button, DatePicker, Form, Input, Select, Space } from 'antd';
+import { DatePicker, Select } from 'antd';
+import { ListFilterFields, ListFilterField } from '@/domain/common/page/list/ListFilterFields';
 import type { AuditLogFilters } from './types';
-import './monitorLog.css';
 
 interface Props<TFilters extends AuditLogFilters> {
   values: TFilters;
@@ -13,58 +13,43 @@ export default function AuditLogFilter<TFilters extends AuditLogFilters>({
   eventTypeOptions,
   onFilter,
 }: Props<TFilters>) {
-  const [form] = Form.useForm<AuditLogFilters>();
-
   return (
-    <Form
-      form={form}
-      className="sm-monitor-log-filter"
-      layout="inline"
-      initialValues={values}
-      onFinish={(submittedValues) => onFilter(submittedValues as TFilters)}
-    >
-      <Form.Item name="success" label="结果">
+    <ListFilterFields>
+      <ListFilterField label="结果">
         <Select
-          className="sm-monitor-log-filter-select"
           allowClear
           placeholder="全部"
+          value={values.success}
           options={[
             { label: '成功', value: true },
             { label: '失败', value: false },
           ]}
+          onChange={(success) => onFilter({ ...values, success })}
         />
-      </Form.Item>
+      </ListFilterField>
       {eventTypeOptions && (
-        <Form.Item name="eventType" label="事件">
+        <ListFilterField label="事件">
           <Select
-            className="sm-monitor-log-filter-select"
             allowClear
             placeholder="全部"
+            value={values.eventType}
             options={eventTypeOptions}
+            onChange={(eventType) => onFilter({ ...values, eventType })}
           />
-        </Form.Item>
+        </ListFilterField>
       )}
-      <Form.Item name="timeRange" label="发生时间">
-        <DatePicker.RangePicker showTime />
-      </Form.Item>
-      <Form.Item name="traceId" label="Trace ID">
-        <Input className="sm-monitor-log-filter-trace" allowClear placeholder="完整 Trace ID" />
-      </Form.Item>
-      <Form.Item>
-        <Space>
-          <Button type="primary" htmlType="submit">
-            查询
-          </Button>
-          <Button
-            onClick={() => {
-              form.resetFields();
-              onFilter({} as TFilters);
-            }}
-          >
-            重置
-          </Button>
-        </Space>
-      </Form.Item>
-    </Form>
+      <ListFilterField label="发生时间">
+        <DatePicker.RangePicker
+          showTime
+          value={values.timeRange ?? null}
+          onChange={(dates) =>
+            onFilter({
+              ...values,
+              timeRange: dates?.[0] && dates[1] ? [dates[0], dates[1]] : undefined,
+            })
+          }
+        />
+      </ListFilterField>
+    </ListFilterFields>
   );
 }

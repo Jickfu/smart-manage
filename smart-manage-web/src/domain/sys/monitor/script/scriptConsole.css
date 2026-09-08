@@ -97,7 +97,3 @@
   border: 1px solid var(--sm-color-divider);
   border-radius: var(--ant-border-radius);
 }
-
-.sm-script-log-filter {
-  width: 160px;
-}

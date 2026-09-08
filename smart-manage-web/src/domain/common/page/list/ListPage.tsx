@@ -29,6 +29,10 @@ interface ListPageProps<T> {
   title: string;
   /** 过滤区内容 */
   filterContent?: ReactNode;
+  /** 首次打开时展开过滤区，默认收起；切换页签保留当前状态。 */
+  defaultFilterExpanded?: boolean;
+  /** 高频筛选字段，按给定顺序展示；未声明时仅保留表头筛选。 */
+  expandedFilterFields?: readonly string[];
   /** 过滤摘要文案 */
   filterSummary?: ReactNode;
   /** 工具栏额外操作 */
@@ -108,6 +112,8 @@ interface ListPageProps<T> {
 function ListPage<T>({
   title,
   filterContent,
+  defaultFilterExpanded = false,
+  expandedFilterFields = [],
   filterSummary,
   toolbarActions,
   toolbarExtra,
@@ -256,8 +262,11 @@ function ListPage<T>({
   );
   const resolvedFilterContent =
     filterContent ??
-    (columnFeatures && onColumnFiltersChange ? (
+    (columnFeatures &&
+    onColumnFiltersChange &&
+    expandedFilterFields.some((field) => columnFeatures[field]?.filter) ? (
       <ListExpandedFilters
+        fields={expandedFilterFields}
         features={columnFeatures}
         filters={columnFilters}
         onChange={onColumnFiltersChange}
@@ -291,6 +300,7 @@ function ListPage<T>({
           <ListFilterBar
             title={title}
             filterContent={resolvedFilterContent}
+            defaultExpanded={defaultFilterExpanded}
             filterSummary={resolvedFilterSummary}
             quickSearchPlaceholder={quickSearchPlaceholder}
             onQuickSearch={onQuickSearch}
@@ -309,6 +319,7 @@ function ListPage<T>({
         <ListFilterBar
           title={title}
           filterContent={resolvedFilterContent}
+          defaultExpanded={defaultFilterExpanded}
           filterSummary={resolvedFilterSummary}
           quickSearchPlaceholder={quickSearchPlaceholder}
           onQuickSearch={onQuickSearch}

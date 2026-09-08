@@ -123,6 +123,7 @@ const DomainListPage = (props: PageComponentProps) => {
         onPageChange={onPageChange}
         rowKey="id"
         columns={columns}
+        expandedFilterFields={['enabled']}
         columnFeatures={columnFeatures}
         {...columnQueryProps}
         dataSource={records}

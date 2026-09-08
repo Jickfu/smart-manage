@@ -1,6 +1,7 @@
+import { ListFilterFields, ListFilterField } from '@/domain/common/page/list/ListFilterFields';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
-import { Button, DatePicker, Select, Space, Tag } from 'antd';
+import { Button, DatePicker, Select, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
@@ -138,41 +139,45 @@ export default function ScriptLogPage(props: PageComponentProps) {
           .join(' / ') || undefined
       }
       filterContent={
-        <Space wrap>
-          <Select
-            allowClear
-            className="sm-script-log-filter"
-            placeholder="执行状态"
-            value={status}
-            options={['SUCCESS', 'ERROR', 'TIMEOUT'].map((value) => ({ value, label: value }))}
-            onChange={(value) => {
-              setStatus(value);
-              setPageNum(1);
-            }}
-          />
-          <Select
-            allowClear
-            className="sm-script-log-filter"
-            placeholder="事务模式"
-            value={transactionMode}
-            options={[
-              { value: 'ATOMIC', label: '原子事务' },
-              { value: 'NON_ATOMIC', label: '非事务' },
-            ]}
-            onChange={(value) => {
-              setTransactionMode(value);
-              setPageNum(1);
-            }}
-          />
-          <DatePicker.RangePicker
-            showTime
-            value={timeRange}
-            onChange={(value) => {
-              setTimeRange(value as [Dayjs, Dayjs] | null);
-              setPageNum(1);
-            }}
-          />
-        </Space>
+        <ListFilterFields>
+          <ListFilterField label="执行状态">
+            <Select
+              allowClear
+              placeholder="执行状态"
+              value={status}
+              options={['SUCCESS', 'ERROR', 'TIMEOUT'].map((value) => ({ value, label: value }))}
+              onChange={(value) => {
+                setStatus(value);
+                setPageNum(1);
+              }}
+            />
+          </ListFilterField>
+          <ListFilterField label="事务模式">
+            <Select
+              allowClear
+              placeholder="事务模式"
+              value={transactionMode}
+              options={[
+                { value: 'ATOMIC', label: '原子事务' },
+                { value: 'NON_ATOMIC', label: '非事务' },
+              ]}
+              onChange={(value) => {
+                setTransactionMode(value);
+                setPageNum(1);
+              }}
+            />
+          </ListFilterField>
+          <ListFilterField label="执行时间">
+            <DatePicker.RangePicker
+              showTime
+              value={timeRange}
+              onChange={(value) => {
+                setTimeRange(value as [Dayjs, Dayjs] | null);
+                setPageNum(1);
+              }}
+            />
+          </ListFilterField>
+        </ListFilterFields>
       }
       onQuickSearch={(value) => {
         setKeyword(value);

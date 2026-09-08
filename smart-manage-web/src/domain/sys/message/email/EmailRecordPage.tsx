@@ -158,6 +158,7 @@ const EmailRecordPage = (props: PageComponentProps) => {
       onPageChange={list.onPageChange}
       rowKey="id"
       columns={columns}
+      expandedFilterFields={['status', 'createTime']}
       columnFeatures={columnFeatures}
       {...list.columnQueryProps}
       dataSource={list.records}

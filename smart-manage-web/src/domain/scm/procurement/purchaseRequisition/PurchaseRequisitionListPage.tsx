@@ -132,6 +132,7 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
       onPageChange={listQuery.onPageChange}
       rowKey="id"
       columns={columns}
+      expandedFilterFields={['bizDate', 'billStatus']}
       columnFeatures={columnFeatures}
       {...listQuery.columnQueryProps}
       dataSource={listQuery.records}

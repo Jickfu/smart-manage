@@ -1,3 +1,4 @@
+import { ListFilterFields, ListFilterField } from '@/domain/common/page/list/ListFilterFields';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -10,7 +11,6 @@ import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { OperationType } from '@/domain/common/page/types';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
-import './ExecutionListPage.css';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { executionApi } from './api';
 import { executionQueryKeys } from './queryKeys';
@@ -121,18 +121,26 @@ const ExecutionListPage = (props: PageComponentProps) => {
       pageNum={list.pageNum}
       pageSize={list.pageSize}
       quickSearchPlaceholder="搜索任务名称"
+      filterSummary={
+        status
+          ? `状态：${executionStatusOptions.find((option) => option.value === status)?.label ?? status}`
+          : undefined
+      }
       filterContent={
-        <Select
-          allowClear
-          placeholder="全部状态"
-          value={status}
-          options={executionStatusOptions}
-          className="sm-execution-status-filter"
-          onChange={(value) => {
-            setStatus(value);
-            list.resetPage();
-          }}
-        />
+        <ListFilterFields>
+          <ListFilterField label="状态">
+            <Select
+              allowClear
+              placeholder="全部状态"
+              value={status}
+              options={executionStatusOptions}
+              onChange={(value) => {
+                setStatus(value);
+                list.resetPage();
+              }}
+            />
+          </ListFilterField>
+        </ListFilterFields>
       }
       onRefresh={() => {
         void Promise.all([list.query.refetch(), catalogQuery.refetch()]);

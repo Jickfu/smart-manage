@@ -1,5 +1,6 @@
 import { DatePicker, Input, Select } from 'antd';
 import dayjs from 'dayjs';
+import { ListFilterFields, ListFilterField } from './ListFilterFields';
 import {
   resolveListFilterOptions,
   type ListColumnFeatures,
@@ -8,20 +9,24 @@ import {
 
 interface Props {
   features: ListColumnFeatures;
+  fields: readonly string[];
   filters: ListFilterCondition[];
   onChange: (filters: ListFilterCondition[]) => void;
 }
 
-/** 列表展开区的预置业务条件；布局固定为每行三项。 */
-export default function ListExpandedFilters({ features, filters, onChange }: Props) {
-  const filterFeatures = Object.entries(features).filter(([, feature]) => feature.filter);
+/** 列表展开区的预置业务条件；复用列筛选协议和公共响应式布局。 */
+export default function ListExpandedFilters({ features, fields, filters, onChange }: Props) {
+  const filterFeatures = fields.flatMap((field) => {
+    const feature = features[field];
+    return feature?.filter ? [[field, feature] as const] : [];
+  });
   const update = (field: string, condition?: ListFilterCondition) => {
     const others = filters.filter((item) => item.field !== field);
     onChange(condition ? [...others, condition] : others);
   };
 
   return (
-    <div className="sm-list-expanded-filter-grid">
+    <ListFilterFields>
       {filterFeatures.map(([field, feature]) => {
         const config = feature.filter!;
         const applied = filters.find((item) => item.field === field);
@@ -93,12 +98,11 @@ export default function ListExpandedFilters({ features, filters, onChange }: Pro
           );
         }
         return (
-          <label className="sm-list-expanded-filter-item" key={field}>
-            <span>{feature.label}</span>
+          <ListFilterField label={feature.label} key={field}>
             {control}
-          </label>
+          </ListFilterField>
         );
       })}
-    </div>
+    </ListFilterFields>
   );
 }
