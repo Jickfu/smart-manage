@@ -46,18 +46,20 @@
     </select>
 
     <select id="selectAll" resultType="sm.domain.sys.base.permission.model.vo.PermissionSelectVO">
-        SELECT <include refid="permissionProjection"/>
+        SELECT <include refid="permissionProjection"/>, c.domain_id, d.name AS domain_name
         FROM t_sys_permission a
         LEFT JOIN t_sys_feature b ON b.id = a.feature_id
         INNER JOIN t_sys_app c ON c.id = COALESCE(b.app_id, a.app_id)
-        ORDER BY COALESCE(b.app_id, a.app_id), COALESCE(b.custom_seq, b.default_seq), a.number
+        INNER JOIN t_sys_domain d ON d.id = c.domain_id
+        ORDER BY d.seq, d.id, c.seq, c.id, COALESCE(b.custom_seq, b.default_seq), b.id, a.number, a.id
     </select>
 
     <select id="selectPage" resultType="sm.domain.sys.base.permission.model.vo.PermissionSelectVO">
-        SELECT <include refid="permissionProjection"/>
+        SELECT <include refid="permissionProjection"/>, c.domain_id, d.name AS domain_name
         FROM t_sys_permission a
         LEFT JOIN t_sys_feature b ON b.id = a.feature_id
         INNER JOIN t_sys_app c ON c.id = COALESCE(b.app_id, a.app_id)
+        INNER JOIN t_sys_domain d ON d.id = c.domain_id
         <where>
             <if test="form.appId != null">COALESCE(b.app_id, a.app_id) = #{form.appId}</if>
             <if test="form.featureId != null">AND a.feature_id = #{form.featureId}</if>

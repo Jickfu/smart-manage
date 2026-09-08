@@ -43,6 +43,11 @@
   border-bottom: 1px solid var(--sm-color-divider);
 }
 
+/* 查询表格紧邻摘要时，由表头绘制唯一分隔线；提示和空状态保留摘要边界。 */
+.sm-sql-result-summary:has(+ .sm-sql-result-table) {
+  border-bottom: 0;
+}
+
 .sm-sql-editor {
   flex: 1;
   min-height: 0;

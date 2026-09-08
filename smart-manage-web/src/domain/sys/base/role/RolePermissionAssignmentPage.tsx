@@ -72,6 +72,7 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
       return [
         permission.number,
         permission.name,
+        permission.domainName,
         permission.appName,
         permission.featureName,
         permission.featureKey,
@@ -100,7 +101,7 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
       { title: '权限编码', dataIndex: 'number', width: 280 },
       { title: '权限名称', dataIndex: 'name' },
     ];
-    if (scope.type === 'all' || scope.type === 'app') {
+    if (scope.type === 'all' || scope.type === 'domain' || scope.type === 'app') {
       result.push({
         title: '所属功能',
         dataIndex: 'featureName',
@@ -108,7 +109,7 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
         render: (featureName) => featureName ?? '应用级权限',
       });
     }
-    if (scope.type === 'all') {
+    if (scope.type === 'all' || scope.type === 'domain') {
       result.push({ title: '所属应用', dataIndex: 'appName', width: 160 });
     }
     return result;
@@ -173,7 +174,7 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
       <AssignmentSelectionPanel
         title="权限选择"
         keyword={keyword}
-        keywordPlaceholder="搜索权限编码/名称/应用/功能"
+        keywordPlaceholder="搜索权限编码/名称/领域/应用/功能"
         onlySelected={onlySelected}
         meta={`${getPermissionAssignmentScopeLabel(permissions, scope)}：当前显示 ${visiblePermissions.length} 项，已选 ${visibleSelectedCount} 项`}
         actions={
@@ -201,7 +202,7 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
             blockNode
             virtual={false}
             treeData={treeData}
-            defaultExpandedKeys={['all']}
+            defaultExpandedKeys={['all', ...(treeData[0]?.children?.map((node) => node.key) ?? [])]}
             selectedKeys={[permissionAssignmentScopeKey(scope)]}
             onSelect={(keys) => setScope(parsePermissionAssignmentScope(keys[0] ?? 'all'))}
           />

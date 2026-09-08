@@ -50,6 +50,8 @@ export interface PermissionSelectVO {
   id: string;
   number: string;
   name: string;
+  domainId: string;
+  domainName: string;
   appId: string;
   appName: string;
   featureId?: string;
