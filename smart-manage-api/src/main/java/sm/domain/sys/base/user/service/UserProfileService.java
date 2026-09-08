@@ -75,6 +75,7 @@ public class UserProfileService {
             invalidateCurrentSession(userId);
         }
         UserInfoVO result = converter.toInfoVO(user);
+        result.setAdministrator(currentUserContext.isAdministrator());
         result.setAvatar(avatarUrl(user.getId(), user.getAvatarAttachmentId()));
         assembleCurrentOrganization(result, user.getId());
         return result;

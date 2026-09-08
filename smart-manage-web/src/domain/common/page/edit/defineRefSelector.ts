@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react';
 import type { RefSelectorFieldConfig } from './EditPage';
+import type { RefSelectorFooterContext } from '@/domain/common/component/RefSelector';
 
 type TypedRefSelectorFieldConfig<T extends object> = Omit<
   RefSelectorFieldConfig,
-  'fetchFn' | 'displayRender' | 'columns'
+  'fetchFn' | 'displayRender' | 'columns' | 'footer' | 'onConfirm'
 > & {
+  footer?: (context: RefSelectorFooterContext<T>) => ReactNode;
+  onConfirm?: (records: readonly T[]) => void | boolean | Promise<void | boolean>;
   fetchFn: (params: Parameters<RefSelectorFieldConfig['fetchFn']>[0]) => Promise<{
     records: T[];
     total: number;
@@ -27,6 +30,13 @@ export function defineRefSelector<T extends object>(
 ): RefSelectorFieldConfig {
   return {
     ...config,
+    footer: config.footer
+      ? (context) =>
+          config.footer!({ ...context, selectedRecords: context.selectedRecords as readonly T[] })
+      : undefined,
+    onConfirm: config.onConfirm
+      ? (records) => config.onConfirm!(records as readonly T[])
+      : undefined,
     fetchFn: async (params) => {
       const result = await config.fetchFn(params);
       return { ...result, records: result.records as Record<string, unknown>[] };

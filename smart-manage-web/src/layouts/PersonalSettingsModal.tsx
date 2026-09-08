@@ -7,6 +7,7 @@ import AppModal from '@/domain/common/component/AppModal';
 import { businessAttachmentApi } from '@/domain/common/attachment/api';
 import { UserAvatar } from '@/domain/sys/base/user/UserAvatar';
 import type { UserInfoVO } from '@/types/api';
+import { selectIsAdministrator } from '@/stores/user';
 import { updateCurrentUserProfile } from '@/api/user';
 import '@/domain/sys/base/user/UserEditPage.css';
 import CurrentLoginLogModal from './CurrentLoginLogModal';
@@ -223,7 +224,7 @@ export default function PersonalSettingsModal({
           onProfileSaved={onProfileSaved}
           onPasswordChanged={onPasswordChanged}
           emailPasswordAvailable={Boolean(
-            userInfo?.emailVerifiedAt && userInfo.username !== 'administrator',
+            userInfo?.emailVerifiedAt && !selectIsAdministrator({ userInfo }),
           )}
         />
       )}

@@ -1,4 +1,4 @@
-package sm.domain.sys.scheduler.job;
+package sm.domain.sys.scheduler.contract;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

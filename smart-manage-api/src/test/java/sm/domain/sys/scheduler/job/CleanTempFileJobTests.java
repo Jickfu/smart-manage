@@ -1,5 +1,7 @@
 package sm.domain.sys.scheduler.job;
 
+import sm.domain.sys.scheduler.contract.SchedulerJobDefinition;
+
 import org.junit.jupiter.api.Test;
 import org.quartz.JobExecutionException;
 import sm.domain.sys.base.attachment.service.AttachmentService;

@@ -90,6 +90,9 @@
 
 ### 结果边界
 
+- `footer(context)` 可替换整个底部操作区，返回 null 隐藏；省略时仍为取消／确定。上下文提供只读 `selectedRecords` 数组快照、`confirming`、`confirm()`、`cancel()` 和 `clearSelection()`；清空只影响弹框暂存选择。
+- 默认确定、调用方的 `context.confirm()` 和单选双击统一先执行 `onConfirm(records)`。回调成功后才触发 `onChange` 并关闭；返回 false 或抛错保留弹框及选择，业务错误反馈由回调负责。异步等待时冻结候选区、禁止重复确认和关闭；回调期间选择器被禁用时撤销本次选择提交。自定义业务确认按钮必须调用 `context.confirm()` 并消费 `confirming`，不能另行绕过共同流程。无需业务前置动作时省略 `onConfirm`。
+
 - 选择器确认后向领域页面返回实体对象，由领域页面合并表单或暂存关系；最终保存只提交实体 ID。
 - 取消或关闭选择器不得修改页面暂存结果。
 - 只有 `RefSelector` 无法表达真实业务交互时才扩展或自定义选择能力，并在实现基线中记录差异及原因。

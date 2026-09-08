@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Form } from 'antd';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { ConfigProvider, Form } from 'antd';
 import type { FormInstance } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { ReactNode } from 'react';
@@ -11,6 +11,7 @@ import { EditSectionCollapse } from './EditSectionCollapse';
 import { useBeforeCloseGuard } from '../tab/useBeforeCloseGuard';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import type { EditPageSection } from './editPageSection';
+import type { RefSelectorFooterContext } from '@/domain/common/component/RefSelector';
 import '../pageLayout.css';
 
 /** 编辑字段公共属性 */
@@ -30,6 +31,10 @@ export interface EditFieldBase {
 
 /** RefSelector 字段配置 — type === 'ref-selector' 时必填 */
 export interface RefSelectorFieldConfig {
+  footer?: (context: RefSelectorFooterContext<Record<string, unknown>>) => ReactNode;
+  onConfirm?: (
+    records: readonly Record<string, unknown>[],
+  ) => void | boolean | Promise<void | boolean>;
   /** 选择器标识，用于隔离不同实例的查询缓存 */
   selectorKey: string | readonly unknown[];
   mode?: 'default' | 'multiple' | 'tree-table' | 'tree-table-multiple';
@@ -164,6 +169,11 @@ const EditPage = ({
   dirtyRevision = 0,
 }: EditPageProps) => {
   const [form] = Form.useForm();
+  // 实例身份不随临时页签晋升变化，隔离保留挂载的同名字段、标签和错误定位。
+  const formId = useId();
+  const commandPending = useRef(false);
+  const pendingErrorFocus = useRef<(string | number)[] | undefined>(undefined);
+  const [pending, setPending] = useState(false);
   const feedback = useOperationFeedback();
   const revisionRef = useRef(0);
   const dirtyRef = useRef(false);
@@ -174,6 +184,16 @@ const EditPage = ({
     sections.map((section) => section.key),
   );
   const editable = isEditable(operationType, billStatus);
+  const busy = saving || pending;
+  const fieldsEditable = editable && !busy;
+
+  useLayoutEffect(() => {
+    // inert 解除后才能聚焦校验错误，避免焦点被冻结中的正文拒绝。
+    if (!busy && !loading && !error && pendingErrorFocus.current) {
+      form.scrollToField(pendingErrorFocus.current, { focus: true });
+      pendingErrorFocus.current = undefined;
+    }
+  }, [busy, error, form, loading]);
 
   useEffect(() => {
     commandBlocked.current = Boolean(error) || loading || saving;
@@ -207,7 +227,7 @@ const EditPage = ({
       )?.errorFields?.[0];
       if (firstError) {
         feedback.warning(firstError.errors[0] ?? '请检查表单中的必填项');
-        form.scrollToField(firstError.name, { focus: true });
+        pendingErrorFocus.current = firstError.name;
       } else {
         feedback.fromError(err, '表单校验失败，请检查输入后重试');
       }
@@ -228,29 +248,43 @@ const EditPage = ({
   };
 
   const handleSave = async () => {
-    if (!onSave || error || loading || saving) return;
-    const values = await prepareValues();
-    // 异步校验期间资源可能被撤权，调用命令前再次检查最新状态。
-    if (!values || commandBlocked.current) return;
-    const savedRevision = revisionRef.current;
+    if (!onSave || error || loading || saving || commandPending.current) return;
+    commandPending.current = true;
+    setPending(true);
     try {
-      const completed = await onSave(values);
-      if (completed !== false) finishSave(savedRevision);
-    } catch {
-      // 进入回调后由领域 Mutation 展示失败，保留脏状态，不二次提示。
+      const values = await prepareValues();
+      // 异步校验期间资源可能被撤权，调用命令前再次检查最新状态。
+      if (!values || commandBlocked.current) return;
+      const savedRevision = revisionRef.current;
+      try {
+        const completed = await onSave(values);
+        if (completed !== false) finishSave(savedRevision);
+      } catch {
+        // 进入回调后由领域 Mutation 展示失败，保留脏状态，不二次提示。
+      }
+    } finally {
+      commandPending.current = false;
+      setPending(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!onSubmit || error || loading || saving) return;
-    const values = await prepareValues();
-    if (!values || commandBlocked.current) return;
-    const submittedRevision = revisionRef.current;
+    if (!onSubmit || error || loading || saving || commandPending.current) return;
+    commandPending.current = true;
+    setPending(true);
     try {
-      await onSubmit(values);
-      finishSave(submittedRevision);
-    } catch {
-      // 提交失败同样由领域 Mutation 负责，不能清除用户修改。
+      const values = await prepareValues();
+      if (!values || commandBlocked.current) return;
+      const submittedRevision = revisionRef.current;
+      try {
+        await onSubmit(values);
+        finishSave(submittedRevision);
+      } catch {
+        // 提交失败同样由领域 Mutation 负责，不能清除用户修改。
+      }
+    } finally {
+      commandPending.current = false;
+      setPending(false);
     }
   };
 
@@ -271,7 +305,7 @@ const EditPage = ({
                     label: saveLabel,
                     permission: access?.permissions.save,
                     type: 'primary' as const,
-                    loading: saving,
+                    loading: busy,
                     disabled: Boolean(error) || loading,
                     onClick: handleSave,
                   },
@@ -284,39 +318,48 @@ const EditPage = ({
                     label: '提交',
                     permission: access?.permissions.submit,
                     type: 'primary' as const,
-                    loading: saving,
+                    loading: busy,
                     disabled: Boolean(error) || loading,
                     onClick: handleSubmit,
                   },
                 ]
               : []),
-            ...(headerActions ?? []),
-            ...(onExit ? [{ key: 'exit', label: '退出', onClick: onExit }] : []),
+            ...(headerActions ?? []).map((action) => ({
+              ...action,
+              disabled: busy || action.disabled,
+            })),
+            ...(onExit ? [{ key: 'exit', label: '退出', disabled: busy, onClick: onExit }] : []),
           ]}
         />
       }
     >
-      <Form
-        form={form}
-        layout="vertical"
-        className={`sm-edit-form${editable ? '' : ' sm-edit-form--view'}`}
-        onValuesChange={(changedValues, allValues) => {
-          revisionRef.current += 1;
-          dirtyRef.current = true;
-          onValuesChange?.(changedValues, allValues, form);
-        }}
-      >
-        <EditSectionCollapse
-          activeKeys={activeCollapseKeys}
-          onActiveKeysChange={setActiveCollapseKeys}
-          items={sections.map((section) => ({
-            key: section.key,
-            label: section.label,
-            children: section.content(editable),
-            extra: (expanded: boolean) => (expanded ? section.extra?.(editable) : undefined),
-          }))}
-        />
-      </Form>
+      <ConfigProvider componentDisabled={busy}>
+        <Form
+          name={`edit-${formId}`}
+          form={form}
+          disabled={!fieldsEditable}
+          inert={busy}
+          layout="vertical"
+          className={`sm-edit-form${editable ? '' : ' sm-edit-form--view'}`}
+          onValuesChange={(changedValues, allValues) => {
+            revisionRef.current += 1;
+            dirtyRef.current = true;
+            onValuesChange?.(changedValues, allValues, form);
+          }}
+        >
+          <EditSectionCollapse
+            activeKeys={activeCollapseKeys}
+            onActiveKeysChange={setActiveCollapseKeys}
+            items={sections.map((section) => ({
+              key: section.key,
+              label: section.label,
+              children: section.content(fieldsEditable),
+              extra: (expanded: boolean) =>
+                expanded ? section.extra?.(fieldsEditable) : undefined,
+            }))}
+          />
+        </Form>
+      </ConfigProvider>
     </EditPageShell>
   );
 };

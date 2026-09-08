@@ -34,6 +34,8 @@ Smart Manage 遵循：**先实现领域，后发现协作，再提取 Contract�
 
 当前附件和编号规则存在采购领域这一真实消费者，用户引用与状态校验也存在已核实的独立业务领域消费者，因此其最小跨领域接口和边界模型位于 `sm.domain.sys` 对应模块的 `contract` 包。消费者项目只用于证明用例，不反向成为 Smart Manage 的架构或业务事实来源。
 
+已核实的独立业务项目需要发布业务定时任务，因此任务展示元数据注解 `SchedulerJobDefinition` 位于 `sm.domain.sys.scheduler.contract`。业务 Job 仅依赖该注解及 Quartz API，不依赖调度模块的内部 Job、Service 或 Mapper；任务发现和执行管理仍由调度领域拥有。
+
 `sm.system` 中不属于任何业务领域的稳定系统机制可以由所有 Domain 直接依赖；`sm.domain.sys` 仍是系统管理业务领域，不因基础性或通用性获得跨领域直连 Service 的例外。提供方模块内部可以使用 Mapper、内部协作者或 Service；同一顶级 Domain 的其他应用需要领域内部能力时可以依赖职责明确的公开 Service，只需要已发布 Contract 的相同语义时优先使用 Contract；其他顶级 Domain 必须使用目标 Domain 的 Contract，禁止自行查询目标领域数据表、复制状态判断或维护目标领域数据缓存。
 
 公开 `*Service` 按清晰、内聚的业务职责划分；同一模块可以有多个不同语义的公开 Service，例如用户管理、当前用户资料、认证和授权边界。不形成独立业务入口的技术协作者不得命名为 `*Service`，应按职责使用 `*Accessor`、`*Gateway` 等名称并尽量保持包级可见。`sm.system.storage` 只能通过 `FileStorageConfigProvider` 获取配置，不得依赖 `sm.domain.sys` 的实体或 Service。

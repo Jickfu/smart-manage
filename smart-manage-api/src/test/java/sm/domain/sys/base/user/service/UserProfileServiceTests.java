@@ -135,6 +135,10 @@ class UserProfileServiceTests {
 
         assertEquals("华东公司", result.getCompanyName());
         assertEquals("集团总部", result.getRootOrgName());
+        assertEquals(false, result.isAdministrator());
+        // 身份取自安全上下文，而不是展示用户名；组织切换不重定义管理员。
+        when(context.isAdministrator()).thenReturn(true);
+        assertEquals(true, service.current().isAdministrator());
     }
 
     private OrgEntity organization(Long id, Long parentId, String name, OrgType orgType) {

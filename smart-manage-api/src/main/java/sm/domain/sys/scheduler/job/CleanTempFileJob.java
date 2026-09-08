@@ -1,5 +1,7 @@
 package sm.domain.sys.scheduler.job;
 
+import sm.domain.sys.scheduler.contract.SchedulerJobDefinition;
+
 import lombok.RequiredArgsConstructor;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;

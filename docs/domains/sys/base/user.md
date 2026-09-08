@@ -9,6 +9,7 @@
 - `UserService` 负责后台用户管理、任职组装和启停命令。
 - `UserImportService` 和 `UserExportService` 分别负责用户 Excel 导入与导出，数据交换职责不混入用户日常管理入口。
 - `UserProfileService` 负责当前用户资料。
+- 当前用户资料中的 `administrator` 是安全上下文提供的会话身份标志，随会话初始化、资料刷新统一返回，不进入用户保存参数或跨领域用户引用。
 - 认证、凭据和授权使用各自职责明确的公开 Service，不通过用户管理 Service 暴露。
 - 跨顶级 Domain 的业务引用只依赖 `sm.domain.sys.base.user.contract`。
 

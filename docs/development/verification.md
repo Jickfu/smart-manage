@@ -136,6 +136,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 
 脚本默认从 PATH 查找 PostgreSQL Client 16，并在迁移前输出和校验 `psql` 版本；特殊本地安装可通过 `-PsqlPath` 显式指定可执行文件。脚本创建临时数据库，通过项目锁定版本的 Flyway 执行全部迁移，校验版本、命名、checksum 和 `flyway_schema_history`，并在验证后清理。数据库结构、初始化数据、迁移顺序或脚本发生变化时必须执行此项验证。
 
+临时库名使用随机 UUID，只在本次 CREATE 明确成功后清理；创建失败或结果不确定时不得执行 DROP。迁移失败与清理失败同时发生时保留原始验证异常并单独警告清理失败；仅清理失败时也以失败退出。
+
 ## 真实 PostgreSQL 验证
 
 修改真实数据库测试保护的权限、凭据代际、事务、锁或并发行为时，即使没有迁移变更，也必须执行上节的 `db/verify-baseline.ps1`。脚本迁移临时数据库后，以实际测试数据库参数运行全部 `*PostgresTests`；配置入口以脚本为准，凭据不得写入文档或提交。
@@ -154,7 +156,7 @@ PostgreSQL 客户端、数据库服务或必要配置缺失时，此项记为未
 
 `.github/workflows/quality-gate.yml` 当前执行：
 
-1. 模块约定脚本；
+1. 模块约定脚本与空库清理安全替身测试；
 2. 后端 `mvn test`；
 3. 前端依赖锁定安装；
 4. `pnpm lint`；
@@ -169,6 +171,8 @@ PostgreSQL 客户端、数据库服务或必要配置缺失时，此项记为未
 主分支保护属于 GitHub 仓库外部设置，需要由仓库管理员启用并要求质量门禁通过。
 
 ## 按风险增加验证
+
+修改空库验证脚本的生命周期时，先运行 `pwsh -NoProfile -File db/verify-baseline.tests.ps1`，以函数替身验证随机库名、创建失败不清理、后续失败清理、清理失败不覆盖原始异常及成功路径；该测试不连接数据库，不能替代真实 Flyway 空库验证。
 
 - 架构边界：架构测试或静态检查。
 - Java 类型、包、注解、可见性和依赖边界：优先扩展 `ArchitectureContractTests`，不得新增 regex/import 源码扫描与其重复校验。

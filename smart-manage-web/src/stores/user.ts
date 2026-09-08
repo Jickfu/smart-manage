@@ -10,6 +10,10 @@ interface UserState {
   clearUser: () => void;
 }
 
+/** 只消费服务端身份声明；未初始化会话默认无特殊管理员能力。 */
+export const selectIsAdministrator = (state: Pick<UserState, 'userInfo'>): boolean =>
+  state.userInfo?.administrator === true;
+
 export const useUserStore = create<UserState>((set) => ({
   userInfo: null,
   csrfToken: null,

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, useMemo, type ComponentProps } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { Form, Input } from 'antd';
+import { Button, Form, Input } from 'antd';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EditPage from './EditPage';
@@ -99,6 +99,114 @@ async function clickButton(label: string) {
 }
 
 describe('edit error ownership and state preservation', () => {
+  it('focuses the current form error only after the validation freeze is released', async () => {
+    const onSave = vi.fn();
+    await renderEdit({
+      onSave,
+      initialValues: { name: '' },
+      sections: [
+        {
+          key: 'required',
+          label: '必填',
+          content: () => (
+            <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+              <Input aria-label="名称" />
+            </Form.Item>
+          ),
+        },
+      ],
+    });
+    await clickButton('保存');
+    const input = container.querySelector('input')!;
+    expect(input.closest('[inert]')).toBeNull();
+    expect(document.activeElement).toBe(input);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('isolates mounted field labels and keeps identity across tab promotion', async () => {
+    const renderTabs = async (tabKey: string) =>
+      act(async () =>
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <div hidden>
+              <EditPage title="旧页" sections={sections} operationType={OperationType.EDIT} />
+            </div>
+            <EditPage
+              title="当前页"
+              sections={sections}
+              operationType={OperationType.EDIT}
+              closeGuard={{ appNumber: 'sys', tabKey }}
+            />
+          </QueryClientProvider>,
+        ),
+      );
+    await renderTabs('temporary');
+    const inputs = [...container.querySelectorAll<HTMLInputElement>('input')];
+    expect(new Set(inputs.map((input) => input.id)).size).toBe(2);
+    const labels = [...container.querySelectorAll('label')];
+    labels.forEach((label, index) => expect(label.control).toBe(inputs[index]));
+    const currentId = inputs[1]!.id;
+    await renderTabs('persisted');
+    expect(container.querySelectorAll('input')[1]!.id).toBe(currentId);
+  });
+
+  it.each(['success', 'failure'] as const)(
+    'freezes all section entry points while saving and restores after %s',
+    async (outcome) => {
+      let resolveSave!: () => void;
+      let rejectSave!: (error: Error) => void;
+      const onSave = vi.fn(
+        () =>
+          new Promise<void>((resolve, reject) => {
+            resolveSave = resolve;
+            rejectSave = reject;
+          }),
+      );
+      const editableStates: boolean[] = [];
+      const editSections = [
+        {
+          ...sections[0]!,
+          content: (editable: boolean) => {
+            editableStates.push(editable);
+            return (
+              <>
+                {sections[0]!.content()}
+                <input aria-label="自定义字段" />
+                <Button disabled={!editable}>明细新增</Button>
+              </>
+            );
+          },
+          extra: (editable: boolean) => <Button disabled={!editable}>外部编辑</Button>,
+        },
+      ];
+      await renderEdit({ onSave, sections: editSections });
+      const input = await enterName('待保存');
+      await clickButton('保存');
+      expect(input.disabled).toBe(true);
+      expect(input.closest('[inert]')).not.toBeNull();
+      expect(editableStates.at(-1)).toBe(false);
+      for (const label of ['明细新增', '外部编辑']) {
+        const button = [...container.querySelectorAll('button')].find(
+          (candidate) => candidate.textContent === label,
+        )!;
+        expect(button.disabled).toBe(true);
+      }
+      expect(mocks.dirty?.current).toBe(true);
+      if (outcome === 'success') {
+        await renderEdit({ onSave, sections: editSections, initialValues: { name: '服务端快照' } });
+        await act(async () => resolveSave());
+        expect(input.value).toBe('服务端快照');
+        expect(mocks.dirty?.current).toBe(false);
+      } else {
+        await act(async () => rejectSave(new Error('保存失败')));
+        expect(input.value).toBe('待保存');
+        expect(mocks.dirty?.current).toBe(true);
+      }
+      expect(input.disabled).toBe(false);
+      expect(input.closest('[inert]')).toBeNull();
+    },
+  );
+
   it('keeps failed rerenders unchanged but synchronizes a successful new server version', async () => {
     const queryKey = ['edit-snapshot'];
     let server = { name: '版本一', version: 1 };

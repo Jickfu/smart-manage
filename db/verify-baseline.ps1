@@ -10,7 +10,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$verifyDatabase = 'smart_manage_verify_' + (Get-Date -Format 'yyyyMMddHHmmss')
+$verifyDatabase = 'smart_manage_verify_' + [Guid]::NewGuid().ToString('N')
+$databaseCreated = $false
+$verificationError = $null
 $migrationDirectory = Join-Path $PSScriptRoot 'migration'
 $backendPomPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\smart-manage-api\pom.xml'))
 $migrationLocation = 'filesystem:' + $migrationDirectory.Replace('\', '/')
@@ -45,6 +47,7 @@ function Invoke-Psql([string]$database, [string[]]$arguments) {
 
 try {
     Invoke-Psql 'postgres' @('-v', 'ON_ERROR_STOP=1', '-c', "CREATE DATABASE $verifyDatabase")
+    $databaseCreated = $true
 
     # Flyway itself must execute migrations so versions, names, checksums, and schema history are verified.
     $flywayArguments = @(
@@ -104,11 +107,23 @@ try {
     }
     Write-Host 'Flyway migration verification passed.'
 }
+catch {
+    $verificationError = $_
+    throw
+}
 finally {
-    # The database name is generated internally, so cleanup cannot target a caller-supplied database.
-    & $resolvedPsqlPath -h $DbHost -p $DbPort -U $DbUser -d postgres -v ON_ERROR_STOP=1 `
-        -c "DROP DATABASE IF EXISTS $verifyDatabase WITH (FORCE)"
-    Remove-Item -LiteralPath $permissionCatalogFile -Force -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath $menuPermissionCatalogFile -Force -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath $featureCatalogFile -Force -ErrorAction SilentlyContinue
+    # 只有收到本次建库成功结果才拥有清理权；创建失败或结果不确定时不得删除同名库。
+    try {
+        if ($databaseCreated) {
+            Invoke-Psql 'postgres' @('-v', 'ON_ERROR_STOP=1', '-c', "DROP DATABASE $verifyDatabase WITH (FORCE)")
+        }
+    } catch {
+        if ($null -eq $verificationError) { throw }
+        # 清理失败单独报告，不能覆盖导致验证失败的原始异常。
+        Write-Warning "验证库清理失败，请核实后清理 ${verifyDatabase}: $_"
+    } finally {
+        Remove-Item -LiteralPath $permissionCatalogFile -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $menuPermissionCatalogFile -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $featureCatalogFile -Force -ErrorAction SilentlyContinue
+    }
 }

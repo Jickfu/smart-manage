@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.quartz.Job;
 import org.springframework.context.ApplicationContext;
 import sm.domain.sys.scheduler.job.CleanTempFileJob;
+import sm.domain.extension.scheduler.ExtensionJob;
 import sm.domain.sys.scheduler.model.form.JobSaveForm;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
@@ -21,6 +22,18 @@ class JobDefinitionValidatorTests {
     private final ApplicationContext applicationContext = mock(ApplicationContext.class);
     private final JobDefinitionValidator validator =
             new JobDefinitionValidator(applicationContext, mock(JsonMapper.class));
+
+    @Test
+    void discoversPublishedMetadataFromAnotherDomain() {
+        when(applicationContext.getBeansOfType(Job.class)).thenReturn(Map.of("extensionJob", new ExtensionJob()));
+
+        Map<String, String> metadata = validator.availableJobClasses().getFirst();
+
+        assertEquals(ExtensionJob.class.getName(), metadata.get("className"));
+        assertEquals("扩展业务任务", metadata.get("description"));
+        assertEquals("{\"batchSize\":10}", metadata.get("parameterTemplate"));
+        assertEquals(ExtensionJob.class, validator.resolveJobClass(ExtensionJob.class.getName()));
+    }
 
     @Test
     void rejectsInvalidCronExpression() {

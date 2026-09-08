@@ -23,6 +23,9 @@ public class UserInfoVO {
 	@Schema(description = "用户名")
 	private String username;
 
+	@Schema(description = "当前会话是否为特殊管理员身份")
+	private boolean administrator;
+
 	@Schema(description = "姓名")
 	private String name;
 	private String number;

@@ -49,6 +49,7 @@ export default function App() {
         {
           id: String(info.id),
           username: info.username,
+          administrator: info.administrator,
           name: info.name,
           avatar: info.avatar,
           avatarAttachmentId: info.avatarAttachmentId ? String(info.avatarAttachmentId) : undefined,

@@ -8,7 +8,7 @@ import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { componentKeys } from '@/domain/common/registry/componentKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
-import { useUserStore } from '@/stores/user';
+import { selectIsAdministrator, useUserStore } from '@/stores/user';
 import { openApiPlatformApi } from './api';
 import { openApiCatalogAccess } from './permissions';
 import { openApiQueryKeys } from './queryKeys';
@@ -277,7 +277,7 @@ function ApiDocument({ detail }: { detail: OpenApiRelease }) {
 }
 
 export default function OpenApiCatalogEditPage(props: PageComponentProps) {
-  const username = useUserStore((state) => state.userInfo?.username);
+  const isAdministrator = useUserStore(selectIsAdministrator);
   const openBillTab = useWorkbenchStore((state) => state.openBillTab);
   const detailQuery = useQuery({
     meta: { errorPresentation: 'local-initial' },
@@ -302,7 +302,7 @@ export default function OpenApiCatalogEditPage(props: PageComponentProps) {
       error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       headerActions={
-        username === 'administrator' && detail?.testable
+        isAdministrator && detail?.testable
           ? [
               {
                 key: 'test',

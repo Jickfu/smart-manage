@@ -32,6 +32,7 @@ export interface IdForm {
 
 /** 用户信息 */
 export interface UserInfoVO {
+  administrator: boolean;
   id: string;
   username: string;
   name: string;

@@ -7,7 +7,7 @@ import org.springframework.aop.support.AopUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import sm.domain.sys.scheduler.model.form.JobSaveForm;
-import sm.domain.sys.scheduler.job.SchedulerJobDefinition;
+import sm.domain.sys.scheduler.contract.SchedulerJobDefinition;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import tools.jackson.core.type.TypeReference;

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Button, Input, Table, Pagination, Spin, Empty, Splitter } from 'antd';
+import { Button, ConfigProvider, Input, Table, Pagination, Spin, Empty, Splitter } from 'antd';
 import { SearchOutlined, CloseOutlined } from '@ant-design/icons';
 import type { InputRef } from 'antd';
 import AppModal from './AppModal';
@@ -34,11 +34,35 @@ interface RefSelectorFieldNames {
   label: string;
 }
 
+/** 底部操作共享当前选择快照；confirm 与单选双击使用同一确认流程。 */
+export interface RefSelectorFooterContext<T> {
+  selectedRecords: readonly T[];
+  confirming: boolean;
+  confirm: () => Promise<boolean>;
+  cancel: () => void;
+  clearSelection: () => void;
+}
+
+/** 渲染扩展只接收公开上下文，内部事件引用留在选择器的交互边界。 */
+function RefSelectorFooter<T>({
+  render,
+  context,
+}: {
+  render: (context: RefSelectorFooterContext<T>) => ReactNode;
+  context: RefSelectorFooterContext<T>;
+}) {
+  return render(context);
+}
+
 /** RefSelector Props */
 interface RefSelectorProps<T extends Record<string, unknown>> {
   /** 受控值（Form.Item 注入），单选为 T，多选为 T[] */
   value?: T | T[] | null;
   onChange?: (value: T | T[] | null) => void;
+  /** 确认前的业务动作；返回 false 或抛错保留弹框，错误反馈由调用方负责。 */
+  onConfirm?: (records: readonly T[]) => void | boolean | Promise<void | boolean>;
+  /** 省略使用取消/确定；可返回 null 隐藏底部。自定义确认按钮调用 context.confirm。 */
+  footer?: (context: RefSelectorFooterContext<T>) => ReactNode;
 
   /** 显示渲染函数，用于触发器展示 */
   displayRender: (record: T) => string;
@@ -95,10 +119,12 @@ interface RefSelectorProps<T extends Record<string, unknown>> {
 function RefSelector<T extends Record<string, unknown>>({
   value,
   onChange,
+  onConfirm,
+  footer,
   displayRender,
   fieldNames,
   placeholder,
-  disabled = false,
+  disabled: disabledProp = false,
   trigger,
   selectorKey,
   fetchFn,
@@ -113,7 +139,26 @@ function RefSelector<T extends Record<string, unknown>>({
   treeFieldNames,
   treeFooter,
 }: RefSelectorProps<T>) {
+  const { componentDisabled } = ConfigProvider.useConfig();
+  const disabled = disabledProp || componentDisabled;
+  const [confirming, setConfirming] = useState(false);
+  const confirmingRef = useRef(false);
+  const disabledRef = useRef(disabled);
+  useLayoutEffect(() => {
+    disabledRef.current = disabled;
+  }, [disabled]);
   const [modalOpen, setModalOpen] = useState(false);
+  if (disabled && modalOpen) setModalOpen(false);
+  const modalOpenRef = useRef(false);
+  const selectionSession = useRef(0);
+  useEffect(
+    () => () => {
+      // 父页签卸载后，仍在途的业务确认不能再提交页面选择。
+      modalOpenRef.current = false;
+      selectionSession.current += 1;
+    },
+    [],
+  );
   const [triggerFocused, setTriggerFocused] = useState(false);
   const [showSelectionTotal, setShowSelectionTotal] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -145,6 +190,9 @@ function RefSelector<T extends Record<string, unknown>>({
 
   /** 打开 Modal：重置查询状态 + 同步外部 value → selectionMap */
   const handleOpen = useCallback(() => {
+    if (disabledRef.current || confirmingRef.current) return;
+    selectionSession.current += 1;
+    modalOpenRef.current = true;
     query.reset();
     refSelection.resetFromValue();
     setModalOpen(true);
@@ -152,28 +200,67 @@ function RefSelector<T extends Record<string, unknown>>({
 
   /** 取消：丢弃选择，关闭 Modal */
   const handleCancel = useCallback(() => {
+    if (confirmingRef.current) return;
+    modalOpenRef.current = false;
+    selectionSession.current += 1;
     setModalOpen(false);
   }, []);
 
-  /** 确认：提交选择给 onChange */
-  const handleConfirm = useCallback(() => {
-    const list = [...refSelection.selection.values()];
-    if (isMultiple) {
-      onChange?.(list.length > 0 ? list : null);
-    } else {
-      onChange?.(list.length > 0 ? list[0]! : null);
+  useEffect(() => {
+    // 编辑页保存冻结也必须撤销已通过 Portal 打开的选择入口。
+    if (disabled) {
+      modalOpenRef.current = false;
+      selectionSession.current += 1;
     }
-    setModalOpen(false);
-  }, [isMultiple, onChange, refSelection.selection]);
+  }, [disabled]);
+
+  /** 确认：提交选择给 onChange */
+  const confirmRecords = useCallback(
+    async (list: T[]) => {
+      if (!modalOpenRef.current || disabledRef.current || confirmingRef.current) return false;
+      const confirmationSession = selectionSession.current;
+      confirmingRef.current = true;
+      setConfirming(true);
+      try {
+        if (
+          (await onConfirm?.(list)) === false ||
+          disabledRef.current ||
+          !modalOpenRef.current ||
+          confirmationSession !== selectionSession.current
+        )
+          return false;
+        if (isMultiple) {
+          onChange?.(list.length > 0 ? list : null);
+        } else {
+          onChange?.(list.length > 0 ? list[0]! : null);
+        }
+        modalOpenRef.current = false;
+        setModalOpen(false);
+        return true;
+      } catch {
+        // 业务动作负责错误反馈；失败不提交选择，也不关闭弹框。
+        return false;
+      } finally {
+        confirmingRef.current = false;
+        setConfirming(false);
+      }
+    },
+    [isMultiple, onChange, onConfirm],
+  );
+  const handleConfirm = useCallback(
+    () => confirmRecords([...refSelection.selection.values()]),
+    [confirmRecords, refSelection.selection],
+  );
 
   /** 双击行（单选模式）：选中 + 确认关闭 */
   const handleRowDoubleClick = useCallback(
     (record: T) => {
       if (isMultiple) return;
-      onChange?.(record);
-      setModalOpen(false);
+      if (disabledRef.current || confirmingRef.current) return;
+      refSelection.replaceSingle(record);
+      void confirmRecords([record]);
     },
-    [isMultiple, onChange],
+    [isMultiple, confirmRecords, refSelection],
   );
 
   /** 清空已选值 */
@@ -229,16 +316,35 @@ function RefSelector<T extends Record<string, unknown>>({
       variant="underlined"
       className="sm-ref-selector-header-search"
       placeholder="快速搜索"
+      disabled={confirming}
       onSearch={query.onSearch}
     />
   );
 
   // ---- 渲染：Modal 底部按钮 ----
 
-  const modalFooter = (
+  const handleClearSelection = useCallback(() => {
+    if (!confirmingRef.current && !disabledRef.current && modalOpenRef.current)
+      refSelection.clear();
+  }, [refSelection]);
+
+  const modalFooter = footer ? (
+    <RefSelectorFooter
+      render={footer}
+      context={{
+        selectedRecords: [...refSelection.selection.values()],
+        confirming,
+        confirm: handleConfirm,
+        cancel: handleCancel,
+        clearSelection: handleClearSelection,
+      }}
+    />
+  ) : (
     <>
-      <Button onClick={handleCancel}>取消</Button>
-      <Button type="primary" onClick={handleConfirm}>
+      <Button disabled={confirming} onClick={handleCancel}>
+        取消
+      </Button>
+      <Button type="primary" loading={confirming} onClick={() => void handleConfirm()}>
         确定
       </Button>
     </>
@@ -305,6 +411,7 @@ function RefSelector<T extends Record<string, unknown>>({
   const onRow = useCallback(
     (record: T) => ({
       onClick: () => {
+        if (disabledRef.current || confirmingRef.current) return;
         refSelection.toggle(record);
       },
       onDoubleClick: () => handleRowDoubleClick(record),
@@ -508,8 +615,11 @@ function RefSelector<T extends Record<string, unknown>>({
         draggable={modalDraggable}
         resizable={modalResizable}
         footer={modalFooter}
+        closeDisabled={confirming}
       >
-        <Spin spinning={query.loading && query.records.length === 0}>{renderModalBody()}</Spin>
+        <div inert={confirming} className="sm-ref-selector-content">
+          <Spin spinning={query.loading && query.records.length === 0}>{renderModalBody()}</Spin>
+        </div>
       </AppModal>
     </>
   );

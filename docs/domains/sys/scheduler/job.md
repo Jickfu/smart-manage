@@ -28,6 +28,8 @@
 
 ## 安全边界
 
+扩展领域通过 `sm.domain.sys.scheduler.contract.SchedulerJobDefinition` 声明任务用途与参数模板；注解只发布展示元数据，不授予任务操作权限，也不改变 Spring Job 注册、发现或执行语义。
+
 - 所有写命令同时执行 Controller 功能授权和公开 Service 管理员身份复核。
 - 任务执行类必须是 Spring 容器中注册的 `org.quartz.Job` Bean，禁止按请求类名动态加载任意类。
 - 任务参数只接受 JSON 对象。

@@ -104,7 +104,8 @@
 }
 
 .sm-ref-selector-modal .ant-modal-body,
-.sm-ref-selector-modal .ant-modal-body > .ant-spin,
+.sm-ref-selector-content,
+.sm-ref-selector-content > .ant-spin,
 .sm-ref-selector-modal .ant-spin-nested-loading,
 .sm-ref-selector-modal .ant-spin-container {
   flex: 1;
@@ -112,7 +113,8 @@
 }
 
 .sm-ref-selector-modal .ant-modal-body,
-.sm-ref-selector-modal .ant-modal-body > .ant-spin,
+.sm-ref-selector-content,
+.sm-ref-selector-content > .ant-spin,
 .sm-ref-selector-modal .ant-spin-nested-loading,
 .sm-ref-selector-modal .ant-spin-container {
   display: flex;
