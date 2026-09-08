@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import type { ComponentType, KeyboardEvent } from 'react';
-import { Button, Empty, Input, Pagination, Segmented, Spin } from 'antd';
+import type { KeyboardEvent } from 'react';
+import { Button, Empty, Input, Pagination, Segmented } from 'antd';
 import { CloseOutlined, SearchOutlined } from '@ant-design/icons';
-import { loadAllIcons, resolveIcon } from '@/domain/common/component/iconResolver';
+import { selectableIconNames, resolveIcon } from '@/domain/common/component/iconResolver';
 import AppModal from './AppModal';
 import './IconSelector.css';
 
@@ -11,11 +11,6 @@ interface IconSelectorProps {
   onChange?: (value?: string) => void;
   disabled?: boolean;
   placeholder?: string;
-}
-
-interface IconOption {
-  name: string;
-  component: ComponentType;
 }
 
 type IconStyle = 'all' | 'outlined' | 'filled' | 'twoTone';
@@ -36,9 +31,6 @@ function IconSelector({
   placeholder = '请选择图标',
 }: IconSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-  const [options, setOptions] = useState<IconOption[]>([]);
   const [keyword, setKeyword] = useState('');
   const [iconStyle, setIconStyle] = useState<IconStyle>('all');
   const [pendingValue, setPendingValue] = useState<string>();
@@ -46,36 +38,20 @@ function IconSelector({
 
   const filteredOptions = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
-    return options.filter(
+    return selectableIconNames.filter(
       (option) =>
-        (iconStyle === 'all' || getIconStyle(option.name) === iconStyle) &&
-        (!normalizedKeyword || option.name.toLowerCase().includes(normalizedKeyword)),
+        (iconStyle === 'all' || getIconStyle(option) === iconStyle) &&
+        (!normalizedKeyword || option.toLowerCase().includes(normalizedKeyword)),
     );
-  }, [iconStyle, keyword, options]);
+  }, [iconStyle, keyword]);
 
   const pagedOptions = useMemo(() => {
     const startIndex = (pageNum - 1) * ICON_PAGE_SIZE;
     return filteredOptions.slice(startIndex, startIndex + ICON_PAGE_SIZE);
   }, [filteredOptions, pageNum]);
 
-  const loadOptions = () => {
-    setLoading(true);
-    setLoadError(false);
-    void loadAllIcons()
-      .then((icons) => {
-        setOptions(
-          Object.entries(icons)
-            .map(([name, component]) => ({ name, component }))
-            .sort((left, right) => left.name.localeCompare(right.name)),
-        );
-      })
-      .catch(() => setLoadError(true))
-      .finally(() => setLoading(false));
-  };
-
   const handleOpen = () => {
     if (disabled) return;
-    if (options.length === 0) loadOptions();
     setPendingValue(value);
     setIconStyle(value ? getIconStyle(value) : 'all');
     setKeyword('');
@@ -188,39 +164,32 @@ function IconSelector({
             />
           </div>
           <div className="sm-icon-selector-content">
-            <Spin spinning={loading}>
-              {pagedOptions.length > 0 ? (
-                <div className="sm-icon-selector-grid">
-                  {pagedOptions.map((option) => {
-                    const IconComponent = option.component;
-                    const selected = pendingValue === option.name;
-                    return (
-                      <button
-                        key={option.name}
-                        type="button"
-                        title={option.name}
-                        aria-pressed={selected}
-                        className={`sm-icon-selector-option${selected ? ' sm-icon-selector-option--selected' : ''}`}
-                        onClick={() => setPendingValue(option.name)}
-                        onDoubleClick={() => {
-                          onChange?.(option.name);
-                          setOpen(false);
-                        }}
-                      >
-                        <IconComponent />
-                        <span>{option.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <Empty
-                  description={
-                    loading ? '正在加载图标' : loadError ? '图标加载失败' : '没有匹配的图标'
-                  }
-                />
-              )}
-            </Spin>
+            {pagedOptions.length > 0 ? (
+              <div className="sm-icon-selector-grid">
+                {pagedOptions.map((option) => {
+                  const selected = pendingValue === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      title={option}
+                      aria-pressed={selected}
+                      className={`sm-icon-selector-option${selected ? ' sm-icon-selector-option--selected' : ''}`}
+                      onClick={() => setPendingValue(option)}
+                      onDoubleClick={() => {
+                        onChange?.(option);
+                        setOpen(false);
+                      }}
+                    >
+                      {resolveIcon(option)}
+                      <span>{option}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <Empty description="没有匹配的图标" />
+            )}
           </div>
         </div>
       </AppModal>

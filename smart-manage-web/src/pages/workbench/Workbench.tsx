@@ -1,3 +1,4 @@
+import { preloadIcons } from '@/domain/common/component/iconResolver';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { memo, useCallback, useEffect, useRef } from 'react';
@@ -33,7 +34,12 @@ const Workbench = ({ appNumber, initialEntryNumber, onInitialEntryConsumed }: Pr
   const menuQuery = useQuery({
     meta: { errorPresentation: 'local-initial' },
     queryKey: menuQueryKeys.userByApp(appNumber),
-    queryFn: () => getUserMenusByAppNumber(appNumber),
+    queryFn: async () => {
+      const menuTree = await getUserMenusByAppNumber(appNumber);
+      // 首屏只准备顶层可见菜单；未展开子菜单仍按实际渲染加载。
+      await preloadIcons((menuTree.routes ?? []).map((item) => item.icon));
+      return menuTree;
+    },
     staleTime: 5 * 60 * 1000,
   });
 

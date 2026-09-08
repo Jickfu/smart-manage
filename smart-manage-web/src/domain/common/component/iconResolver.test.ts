@@ -1,5 +1,6 @@
+import { readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { isSelectableIconName, loadAllIcons, resolveIcon } from './iconResolver';
+import { isSelectableIconName, selectableIconNames, resolveIcon } from './iconResolver';
 
 describe('isSelectableIconName', () => {
   it('只接受 Ant Design 图标组件命名', () => {
@@ -24,8 +25,8 @@ describe('resolveIcon', () => {
     expect(resolveIcon('UnknownOutlined', fallback)).toBe(fallback);
   });
 
-  it('候选白名单覆盖数据库当前使用的图标', async () => {
-    const icons = await loadAllIcons();
+  it('完整候选目录覆盖数据库当前使用的图标', () => {
+    const icons = selectableIconNames;
     const persistedIconNames = [
       'ApartmentOutlined',
       'AppstoreOutlined',
@@ -52,14 +53,26 @@ describe('resolveIcon', () => {
       'UserOutlined',
     ];
 
-    expect(persistedIconNames.every((name) => icons[name])).toBe(true);
+    expect(persistedIconNames.every((name) => icons.includes(name))).toBe(true);
   });
 
-  it('候选白名单覆盖三种图标风格', async () => {
-    const iconNames = Object.keys(await loadAllIcons());
+  it('完整候选目录覆盖三种图标风格', () => {
+    const iconNames = selectableIconNames;
 
     expect(iconNames.some((name) => name.endsWith('Outlined'))).toBe(true);
     expect(iconNames.some((name) => name.endsWith('Filled'))).toBe(true);
     expect(iconNames.some((name) => name.endsWith('TwoTone'))).toBe(true);
   });
+});
+
+it('候选目录与安装包全部图标一致，不暴露包工具函数', () => {
+  const installedNames = readdirSync(
+    new URL('../../../../node_modules/@ant-design/icons/es/icons/', import.meta.url),
+  )
+    .filter((name) => /(?:Outlined|Filled|TwoTone)\.js$/.test(name))
+    .map((name) => name.slice(0, -3))
+    .sort();
+  expect(installedNames.length).toBeGreaterThan(800);
+  expect(selectableIconNames).toEqual(installedNames);
+  expect(isSelectableIconName('UnknownOutlined')).toBe(false);
 });

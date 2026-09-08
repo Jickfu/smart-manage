@@ -8,7 +8,7 @@ import type { TreeDataNode, TreeProps } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import AppModal from '@/domain/common/component/AppModal';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
-import { resolveIcon } from '@/domain/common/component/iconResolver';
+import { preloadIcons, resolveIcon } from '@/domain/common/component/iconResolver';
 import { quickLaunchApi, quickLaunchQueryKeys } from '@/domain/sys/base/user/quickLaunchApi';
 import type {
   HomeQuickLaunchScope,
@@ -71,7 +71,11 @@ const QuickLaunchCard = ({ scope, appNumber }: QuickLaunchCardProps) => {
   );
   const listQuery = useQuery({
     queryKey: quickLaunchQueryKeys.list(scopeForm),
-    queryFn: () => quickLaunchApi.list(scopeForm),
+    queryFn: async () => {
+      const items = await quickLaunchApi.list(scopeForm);
+      await preloadIcons(items.map((item) => item.icon));
+      return items;
+    },
   });
   const configurationQuery = useQuery({
     meta: { errorPresentation: 'local-initial' },

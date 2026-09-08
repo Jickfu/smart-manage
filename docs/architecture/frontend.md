@@ -107,6 +107,8 @@ EditPage 的校验/transformValues 异常尚未进入领域 Mutation，由编辑
 
 `iconResolver` 与 `IconSelector` 同属既有 `common/component/`，不再放入页面框架。具体领域的页面、Hook 和 Mutation 仍归业务模块，不因本次归组继续上提。
 
+图标配置使用稳定的 Ant Design 组件名称。`iconResolver` 通过 Vite 的非 eager glob 枚举已安装图标包的全部 Outlined、Filled、TwoTone 独立模块，名称目录用于检索，实际渲染才加载对应图标；禁止动态导入图标包总入口。`IconSelector` 每页展示 24 个候选，搜索和风格筛选只操作名称，不预加载其他页。相同名称复用请求和组件缓存；图标通过独立订阅更新，已加载组件首帧同步显示，不使用 Suspense 空白回退。菜单顶层、应用卡片及快速发起只预加载本次可见数据引用的图标，最多等待 150ms，超时后继续显示业务内容与图标加载指示，后台完成后更新；资源失败不阻断业务查询，使用默认图标或失败提示，未知名称使用调用方默认图标。静态界面按钮仍可按名称静态导入，由构建去重和 tree shaking 处理。
+
 页面框架的直接依赖规则如下：
 
 - `edit`、`list`、`assignment` 三个具体页面族之间不得直接互相依赖，可使用 `access`、`command`、`tab` 及根级共享文件。

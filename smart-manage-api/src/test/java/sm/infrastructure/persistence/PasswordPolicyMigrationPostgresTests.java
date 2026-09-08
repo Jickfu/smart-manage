@@ -65,15 +65,24 @@ class PasswordPolicyMigrationPostgresTests {
             jdbc.update("UPDATE t_sys_weak_password SET description = '管理员补充的真实说明' WHERE id = 560000000000010001");
             var maintainedWord = jdbc.queryForMap("SELECT * FROM t_sys_weak_password WHERE id = 560000000000010001");
             var wordIdentities = jdbc.queryForList("SELECT id, word, match_digest FROM t_sys_weak_password ORDER BY id");
-            flyway.migrate();
+            Flyway.configure().dataSource(source).locations("classpath:db/migration")
+                    .target("6").cleanDisabled(true).load().migrate();
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM t_sys_weak_password WHERE description = '初始弱口令词库'", Integer.class));
             assertEquals(1000, jdbc.queryForObject("SELECT count(*) FROM t_sys_weak_password WHERE description IS NULL", Integer.class));
             assertEquals(maintainedWord, jdbc.queryForMap("SELECT * FROM t_sys_weak_password WHERE id = 560000000000010001"));
             assertEquals(wordIdentities, jdbc.queryForList("SELECT id, word, match_digest FROM t_sys_weak_password ORDER BY id"));
             var dictionaryAfterV6 = jdbc.queryForList("SELECT * FROM t_sys_weak_password ORDER BY id");
-            flyway.migrate();
-            assertEquals(dictionaryAfterV6, jdbc.queryForList("SELECT * FROM t_sys_weak_password ORDER BY id"));
             assertEquals(menuAfterV5, jdbc.queryForMap("SELECT * FROM t_sys_menu WHERE id = 560000000000000110"));
+            // V7 只补图标，不改变菜单归组、功能与权限身份或词库内容。
+            flyway.migrate();
+            assertEquals("LockOutlined", jdbc.queryForObject("SELECT icon FROM t_sys_menu WHERE id = 560000000000000110", String.class));
+            assertEquals(((Number) menuAfterV5.get("version")).intValue() + 1,
+                    jdbc.queryForObject("SELECT version FROM t_sys_menu WHERE id = 560000000000000110", Integer.class));
+            assertEquals(menuBeforeV5, jdbc.queryForMap("SELECT number, app_id, feature_id, permission_id, component FROM t_sys_menu WHERE id = 560000000000000110"));
+            var menuAfterV7 = jdbc.queryForMap("SELECT * FROM t_sys_menu WHERE id = 560000000000000110");
+            flyway.migrate();
+            assertEquals(menuAfterV7, jdbc.queryForMap("SELECT * FROM t_sys_menu WHERE id = 560000000000000110"));
+            assertEquals(dictionaryAfterV6, jdbc.queryForList("SELECT * FROM t_sys_weak_password ORDER BY id"));
             assertEquals(1001, jdbc.queryForObject("SELECT count(*) FROM t_sys_weak_password", Integer.class));
             assertEquals(before, jdbc.queryForMap("SELECT * FROM t_sys_user WHERE id = 9200000901"));
         } finally {
