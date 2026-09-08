@@ -76,7 +76,7 @@ class JobDefinitionValidator {
                 .map(AopUtils::getTargetClass)
                 .filter(Job.class::isAssignableFrom)
                 .filter(jobClass -> jobClass != ManagedJobDispatcher.class)
-                .map(JobDefinitionValidator::asJobClass)
+                .<Class<? extends Job>>map(JobDefinitionValidator::asJobClass)
                 .distinct()
                 .toList();
     }
