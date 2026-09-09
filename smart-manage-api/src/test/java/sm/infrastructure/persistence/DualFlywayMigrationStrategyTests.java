@@ -36,7 +36,7 @@ class DualFlywayMigrationStrategyTests {
         MigrationInfo current = mock(MigrationInfo.class);
         when(platform.info()).thenReturn(info);
         when(info.current()).thenReturn(current);
-        when(current.getVersion()).thenReturn(MigrationVersion.fromVersion("2"));
+        when(current.getVersion()).thenReturn(MigrationVersion.fromVersion("1"));
         assertThrows(IllegalStateException.class, () -> strategy().migrate(platform));
         verify(platform.getConfiguration(), never()).getDataSource();
     }

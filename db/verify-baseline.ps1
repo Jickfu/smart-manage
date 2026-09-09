@@ -8,7 +8,7 @@ param(
     [string]$MavenPath = 'mvn',
     [string]$NodePath = 'node',
     [string]$BusinessMigrationLocation = '',
-    [string]$BusinessMinimumPlatformVersion = '3'
+    [string]$BusinessMinimumPlatformVersion = '2'
 )
 
 $ErrorActionPreference = 'Stop'

@@ -11,5 +11,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class BusinessMigrationProperties {
     private boolean enabled;
     private String location = "classpath:db/business";
-    private String minimumPlatformVersion = "3";
+    private String minimumPlatformVersion = "2";
 }

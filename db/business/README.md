@@ -2,7 +2,7 @@
 
 此目录由二次开发者维护，构建后位于 `classpath:db/business`，与平台 `db/migration` 分别扫描、分别记账。上游不在这里放置示例 SQL，避免示例在真实数据库自动执行。
 
-首次建立业务链时从 `V1__create_business_tables.sql` 开始，版本必须大于 0；后续所有业务模块共用这条链，继续递增，不能每个模块重新使用 V1。业务链默认关闭；添加实际迁移后，通过 `SMART_MANAGE_BUSINESS_MIGRATION_ENABLED=true` 启用，并用 `SMART_MANAGE_BUSINESS_MINIMUM_PLATFORM_VERSION` 声明该业务发行包要求的平台数据库版本（默认 3）。
+首次建立业务链时从 `V1__create_business_tables.sql` 开始，版本必须大于 0；后续所有业务模块共用这条链，继续递增，不能每个模块重新使用 V1。业务链默认关闭；添加实际迁移后，通过 `SMART_MANAGE_BUSINESS_MIGRATION_ENABLED=true` 启用，并用 `SMART_MANAGE_BUSINESS_MINIMUM_PLATFORM_VERSION` 声明该业务发行包要求的平台数据库版本（默认 2）。
 
 业务链使用同一数据源和默认 schema、独立的 `flyway_business_schema_history`，始终在平台迁移成功后运行。首次只在自己的历史表登记版本 0，再执行全部业务 V1+；不会把已有平台版本当成业务已执行版本，也不会改变平台历史。
 

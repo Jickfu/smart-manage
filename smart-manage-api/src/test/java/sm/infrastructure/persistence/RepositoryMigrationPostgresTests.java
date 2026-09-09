@@ -26,7 +26,7 @@ class RepositoryMigrationPostgresTests {
         if (location != null) {
             properties.setEnabled(true);
             properties.setLocation(location);
-            properties.setMinimumPlatformVersion(System.getProperty("smartManage.testBusinessMinimumPlatformVersion", "3"));
+            properties.setMinimumPlatformVersion(System.getProperty("smartManage.testBusinessMinimumPlatformVersion", "2"));
         }
         DualFlywayMigrationStrategy strategy = new DualFlywayMigrationStrategy(properties);
         strategy.migrate(platform);

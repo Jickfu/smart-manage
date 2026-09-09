@@ -2944,7 +2944,6 @@ CREATE TABLE public.t_sys_inbox_recipient_p202912 (
 CREATE TABLE public.t_sys_job (
     id bigint NOT NULL,
     job_name character varying(200) NOT NULL,
-    job_group character varying(200) DEFAULT 'DEFAULT'::character varying NOT NULL,
     description character varying(500),
     job_class_name character varying(500) NOT NULL,
     cron_expression character varying(100) NOT NULL,
@@ -2957,7 +2956,8 @@ CREATE TABLE public.t_sys_job (
     number character varying(100) NOT NULL,
     is_system boolean DEFAULT false,
     version integer DEFAULT 0 NOT NULL,
-    mutex_key character varying(100)
+    mutex_key character varying(100),
+    app_id bigint NOT NULL
 );
 
 
@@ -2982,11 +2982,6 @@ COMMENT ON COLUMN public.t_sys_job.id IS 'ID';
 COMMENT ON COLUMN public.t_sys_job.job_name IS '任务名称';
 
 
---
--- Name: COLUMN t_sys_job.job_group; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_job.job_group IS '任务组';
 
 
 --
@@ -3088,7 +3083,6 @@ CREATE TABLE public.t_sys_job_log (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3097,7 +3091,11 @@ CREATE TABLE public.t_sys_job_log (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 )
 PARTITION BY RANGE (start_time);
 
@@ -3130,11 +3128,6 @@ COMMENT ON COLUMN public.t_sys_job_log.job_id IS '任务ID';
 COMMENT ON COLUMN public.t_sys_job_log.job_name IS '任务名称';
 
 
---
--- Name: COLUMN t_sys_job_log.job_group; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_job_log.job_group IS '任务组';
 
 
 --
@@ -3208,7 +3201,6 @@ CREATE TABLE public.t_sys_job_log_default (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3217,7 +3209,11 @@ CREATE TABLE public.t_sys_job_log_default (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3229,7 +3225,6 @@ CREATE TABLE public.t_sys_job_log_history (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3238,7 +3233,11 @@ CREATE TABLE public.t_sys_job_log_history (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 )
 PARTITION BY RANGE (start_time);
 
@@ -3271,11 +3270,6 @@ COMMENT ON COLUMN public.t_sys_job_log_history.job_id IS '任务ID';
 COMMENT ON COLUMN public.t_sys_job_log_history.job_name IS '任务名称';
 
 
---
--- Name: COLUMN t_sys_job_log_history.job_group; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.t_sys_job_log_history.job_group IS '任务组';
 
 
 --
@@ -3349,7 +3343,6 @@ CREATE TABLE public.t_sys_job_log_p202601 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3358,7 +3351,11 @@ CREATE TABLE public.t_sys_job_log_p202601 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3370,7 +3367,6 @@ CREATE TABLE public.t_sys_job_log_p202602 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3379,7 +3375,11 @@ CREATE TABLE public.t_sys_job_log_p202602 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3391,7 +3391,6 @@ CREATE TABLE public.t_sys_job_log_p202603 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3400,7 +3399,11 @@ CREATE TABLE public.t_sys_job_log_p202603 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3412,7 +3415,6 @@ CREATE TABLE public.t_sys_job_log_p202604 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3421,7 +3423,11 @@ CREATE TABLE public.t_sys_job_log_p202604 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3433,7 +3439,6 @@ CREATE TABLE public.t_sys_job_log_p202605 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3442,7 +3447,11 @@ CREATE TABLE public.t_sys_job_log_p202605 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3454,7 +3463,6 @@ CREATE TABLE public.t_sys_job_log_p202606 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3463,7 +3471,11 @@ CREATE TABLE public.t_sys_job_log_p202606 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3475,7 +3487,6 @@ CREATE TABLE public.t_sys_job_log_p202607 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3484,7 +3495,11 @@ CREATE TABLE public.t_sys_job_log_p202607 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3496,7 +3511,6 @@ CREATE TABLE public.t_sys_job_log_p202608 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3505,7 +3519,11 @@ CREATE TABLE public.t_sys_job_log_p202608 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3517,7 +3535,6 @@ CREATE TABLE public.t_sys_job_log_p202609 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3526,7 +3543,11 @@ CREATE TABLE public.t_sys_job_log_p202609 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3538,7 +3559,6 @@ CREATE TABLE public.t_sys_job_log_p202610 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3547,7 +3567,11 @@ CREATE TABLE public.t_sys_job_log_p202610 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3559,7 +3583,6 @@ CREATE TABLE public.t_sys_job_log_p202611 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3568,7 +3591,11 @@ CREATE TABLE public.t_sys_job_log_p202611 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3580,7 +3607,6 @@ CREATE TABLE public.t_sys_job_log_p202612 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3589,7 +3615,11 @@ CREATE TABLE public.t_sys_job_log_p202612 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3601,7 +3631,6 @@ CREATE TABLE public.t_sys_job_log_p202701 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3610,7 +3639,11 @@ CREATE TABLE public.t_sys_job_log_p202701 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3622,7 +3655,6 @@ CREATE TABLE public.t_sys_job_log_p202702 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3631,7 +3663,11 @@ CREATE TABLE public.t_sys_job_log_p202702 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3643,7 +3679,6 @@ CREATE TABLE public.t_sys_job_log_p202703 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3652,7 +3687,11 @@ CREATE TABLE public.t_sys_job_log_p202703 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3664,7 +3703,6 @@ CREATE TABLE public.t_sys_job_log_p202704 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3673,7 +3711,11 @@ CREATE TABLE public.t_sys_job_log_p202704 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3685,7 +3727,6 @@ CREATE TABLE public.t_sys_job_log_p202705 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3694,7 +3735,11 @@ CREATE TABLE public.t_sys_job_log_p202705 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3706,7 +3751,6 @@ CREATE TABLE public.t_sys_job_log_p202706 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3715,7 +3759,11 @@ CREATE TABLE public.t_sys_job_log_p202706 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3727,7 +3775,6 @@ CREATE TABLE public.t_sys_job_log_p202707 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3736,7 +3783,11 @@ CREATE TABLE public.t_sys_job_log_p202707 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3748,7 +3799,6 @@ CREATE TABLE public.t_sys_job_log_p202708 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3757,7 +3807,11 @@ CREATE TABLE public.t_sys_job_log_p202708 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3769,7 +3823,6 @@ CREATE TABLE public.t_sys_job_log_p202709 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3778,7 +3831,11 @@ CREATE TABLE public.t_sys_job_log_p202709 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3790,7 +3847,6 @@ CREATE TABLE public.t_sys_job_log_p202710 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3799,7 +3855,11 @@ CREATE TABLE public.t_sys_job_log_p202710 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3811,7 +3871,6 @@ CREATE TABLE public.t_sys_job_log_p202711 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3820,7 +3879,11 @@ CREATE TABLE public.t_sys_job_log_p202711 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3832,7 +3895,6 @@ CREATE TABLE public.t_sys_job_log_p202712 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3841,7 +3903,11 @@ CREATE TABLE public.t_sys_job_log_p202712 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3853,7 +3919,6 @@ CREATE TABLE public.t_sys_job_log_p202801 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3862,7 +3927,11 @@ CREATE TABLE public.t_sys_job_log_p202801 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3874,7 +3943,6 @@ CREATE TABLE public.t_sys_job_log_p202802 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3883,7 +3951,11 @@ CREATE TABLE public.t_sys_job_log_p202802 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3895,7 +3967,6 @@ CREATE TABLE public.t_sys_job_log_p202803 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3904,7 +3975,11 @@ CREATE TABLE public.t_sys_job_log_p202803 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3916,7 +3991,6 @@ CREATE TABLE public.t_sys_job_log_p202804 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3925,7 +3999,11 @@ CREATE TABLE public.t_sys_job_log_p202804 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3937,7 +4015,6 @@ CREATE TABLE public.t_sys_job_log_p202805 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3946,7 +4023,11 @@ CREATE TABLE public.t_sys_job_log_p202805 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3958,7 +4039,6 @@ CREATE TABLE public.t_sys_job_log_p202806 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3967,7 +4047,11 @@ CREATE TABLE public.t_sys_job_log_p202806 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -3979,7 +4063,6 @@ CREATE TABLE public.t_sys_job_log_p202807 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -3988,7 +4071,11 @@ CREATE TABLE public.t_sys_job_log_p202807 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4000,7 +4087,6 @@ CREATE TABLE public.t_sys_job_log_p202808 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4009,7 +4095,11 @@ CREATE TABLE public.t_sys_job_log_p202808 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4021,7 +4111,6 @@ CREATE TABLE public.t_sys_job_log_p202809 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4030,7 +4119,11 @@ CREATE TABLE public.t_sys_job_log_p202809 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4042,7 +4135,6 @@ CREATE TABLE public.t_sys_job_log_p202810 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4051,7 +4143,11 @@ CREATE TABLE public.t_sys_job_log_p202810 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4063,7 +4159,6 @@ CREATE TABLE public.t_sys_job_log_p202811 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4072,7 +4167,11 @@ CREATE TABLE public.t_sys_job_log_p202811 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4084,7 +4183,6 @@ CREATE TABLE public.t_sys_job_log_p202812 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4093,7 +4191,11 @@ CREATE TABLE public.t_sys_job_log_p202812 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4105,7 +4207,6 @@ CREATE TABLE public.t_sys_job_log_p202901 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4114,7 +4215,11 @@ CREATE TABLE public.t_sys_job_log_p202901 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4126,7 +4231,6 @@ CREATE TABLE public.t_sys_job_log_p202902 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4135,7 +4239,11 @@ CREATE TABLE public.t_sys_job_log_p202902 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4147,7 +4255,6 @@ CREATE TABLE public.t_sys_job_log_p202903 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4156,7 +4263,11 @@ CREATE TABLE public.t_sys_job_log_p202903 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4168,7 +4279,6 @@ CREATE TABLE public.t_sys_job_log_p202904 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4177,7 +4287,11 @@ CREATE TABLE public.t_sys_job_log_p202904 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4189,7 +4303,6 @@ CREATE TABLE public.t_sys_job_log_p202905 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4198,7 +4311,11 @@ CREATE TABLE public.t_sys_job_log_p202905 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4210,7 +4327,6 @@ CREATE TABLE public.t_sys_job_log_p202906 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4219,7 +4335,11 @@ CREATE TABLE public.t_sys_job_log_p202906 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4231,7 +4351,6 @@ CREATE TABLE public.t_sys_job_log_p202907 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4240,7 +4359,11 @@ CREATE TABLE public.t_sys_job_log_p202907 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4252,7 +4375,6 @@ CREATE TABLE public.t_sys_job_log_p202908 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4261,7 +4383,11 @@ CREATE TABLE public.t_sys_job_log_p202908 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4273,7 +4399,6 @@ CREATE TABLE public.t_sys_job_log_p202909 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4282,7 +4407,11 @@ CREATE TABLE public.t_sys_job_log_p202909 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4294,7 +4423,6 @@ CREATE TABLE public.t_sys_job_log_p202910 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4303,7 +4431,11 @@ CREATE TABLE public.t_sys_job_log_p202910 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4315,7 +4447,6 @@ CREATE TABLE public.t_sys_job_log_p202911 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4324,7 +4455,11 @@ CREATE TABLE public.t_sys_job_log_p202911 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -4336,7 +4471,6 @@ CREATE TABLE public.t_sys_job_log_p202912 (
     id bigint NOT NULL,
     job_id bigint,
     job_name character varying(200),
-    job_group character varying(200),
     start_time timestamp without time zone NOT NULL,
     end_time timestamp without time zone,
     duration_ms bigint,
@@ -4345,7 +4479,11 @@ CREATE TABLE public.t_sys_job_log_p202912 (
     trace_id character varying(64),
     instance_id character varying(200),
     fire_instance_id character varying(200),
-    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    create_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    domain_id bigint NOT NULL,
+    domain_name varchar(255) NOT NULL,
+    app_id bigint NOT NULL,
+    app_name varchar(255) NOT NULL
 );
 
 
@@ -20987,11 +21125,6 @@ CREATE INDEX idx_sys_job_log_trace_id ON ONLY public.t_sys_job_log USING btree (
 CREATE INDEX idx_sys_job_mutex_key ON public.t_sys_job USING btree (mutex_key) WHERE (mutex_key IS NOT NULL);
 
 
---
--- Name: idx_sys_job_name_group; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_sys_job_name_group ON public.t_sys_job USING btree (job_name, job_group);
 
 
 --
@@ -39457,3 +39590,47 @@ ALTER TABLE ONLY public.t_sys_role_data_scope
 --
 -- PostgreSQL database dump complete
 --
+
+-- 调度任务归属当前应用，执行记录保留领域与应用快照。
+ALTER TABLE public.t_sys_job ADD CONSTRAINT fk_sys_job_app FOREIGN KEY (app_id) REFERENCES public.t_sys_app(id);
+COMMENT ON COLUMN public.t_sys_job.app_id IS '所属应用ID，领域由应用推导';
+CREATE INDEX idx_sys_job_app ON public.t_sys_job(app_id);
+COMMENT ON COLUMN public.t_sys_job_log.domain_id IS '执行时所属领域ID';
+COMMENT ON COLUMN public.t_sys_job_log.domain_name IS '执行时所属领域名称';
+COMMENT ON COLUMN public.t_sys_job_log.app_id IS '执行时所属应用ID';
+COMMENT ON COLUMN public.t_sys_job_log.app_name IS '执行时所属应用名称';
+COMMENT ON COLUMN public.t_sys_job_log_history.domain_id IS '执行时所属领域ID';
+COMMENT ON COLUMN public.t_sys_job_log_history.domain_name IS '执行时所属领域名称';
+COMMENT ON COLUMN public.t_sys_job_log_history.app_id IS '执行时所属应用ID';
+COMMENT ON COLUMN public.t_sys_job_log_history.app_name IS '执行时所属应用名称';
+CREATE INDEX idx_sys_job_log_domain_start ON public.t_sys_job_log(domain_id, start_time DESC, id DESC);
+CREATE INDEX idx_sys_job_log_app_start ON public.t_sys_job_log(app_id, start_time DESC, id DESC);
+CREATE INDEX idx_sys_job_log_history_domain_start ON public.t_sys_job_log_history(domain_id, start_time DESC, id DESC);
+CREATE INDEX idx_sys_job_log_history_app_start ON public.t_sys_job_log_history(app_id, start_time DESC, id DESC);
+
+-- 固定密码策略的本地弱口令词库；初始词条来自用户提供的弱口令列表。
+-- 词条是公共拒绝规则，不保存实际用户密码。匹配使用 NFC + 小写的 SHA-256 摘要。
+CREATE TABLE public.t_sys_weak_password (
+    id bigint PRIMARY KEY,
+    word varchar(64) NOT NULL,
+    match_digest char(64) NOT NULL,
+    description varchar(500),
+    version integer NOT NULL DEFAULT 0,
+    create_time timestamp DEFAULT now(),
+    update_time timestamp DEFAULT now(),
+    create_user bigint,
+    update_user bigint,
+    CONSTRAINT uk_sys_weak_password_digest UNIQUE (match_digest),
+    CONSTRAINT ck_sys_weak_password_word CHECK (char_length(word) BETWEEN 1 AND 64),
+    CONSTRAINT ck_sys_weak_password_digest CHECK (match_digest ~ '^[0-9a-f]{64}$')
+);
+COMMENT ON TABLE public.t_sys_weak_password IS '本地弱口令词库';
+COMMENT ON COLUMN public.t_sys_weak_password.id IS 'ID';
+COMMENT ON COLUMN public.t_sys_weak_password.word IS '完整弱口令词条';
+COMMENT ON COLUMN public.t_sys_weak_password.match_digest IS '规范化词条的SHA-256匹配摘要';
+COMMENT ON COLUMN public.t_sys_weak_password.description IS '描述';
+COMMENT ON COLUMN public.t_sys_weak_password.version IS '乐观锁版本号';
+COMMENT ON COLUMN public.t_sys_weak_password.create_time IS '创建时间';
+COMMENT ON COLUMN public.t_sys_weak_password.update_time IS '更新时间';
+COMMENT ON COLUMN public.t_sys_weak_password.create_user IS '创建人';
+COMMENT ON COLUMN public.t_sys_weak_password.update_user IS '修改人';

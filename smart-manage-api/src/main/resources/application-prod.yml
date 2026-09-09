@@ -140,7 +140,7 @@ smart-manage:
       business:
         enabled: ${SMART_MANAGE_BUSINESS_MIGRATION_ENABLED:false}
         location: ${SMART_MANAGE_BUSINESS_MIGRATION_LOCATION:classpath:db/business}
-        minimum-platform-version: ${SMART_MANAGE_BUSINESS_MINIMUM_PLATFORM_VERSION:3}
+        minimum-platform-version: ${SMART_MANAGE_BUSINESS_MINIMUM_PLATFORM_VERSION:2}
     http:
       connect-timeout: 3s
       request-timeout: 10s
