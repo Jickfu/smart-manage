@@ -1,6 +1,6 @@
 # 前端开发规则
 
-本文件适用于 `smart-manage-web`，同时继承根目录 `AGENTS.md`。
+本文件适用于桌面管理端 `smart-manage-web`，同时继承根目录 `AGENTS.md`。其中 UI、路由和页签规则不自动适用于其他客户端。
 
 前端架构、技术基线和目录规则以[前端架构](../docs/architecture/frontend.md)为权威来源。普通页面实现、样式和交互修改按需阅读[前端页面指南](../docs/development/frontend-page-guide.md)相关章节。
 

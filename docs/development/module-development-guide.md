@@ -2,7 +2,7 @@
 
 本指南用于新增或显著扩展 Smart Manage 业务模块。它负责把仓库架构约束转化为可执行的开发流程；根目录和前后端 `AGENTS.md` 仍是强制规则来源，领域文档仍是具体业务语义来源。
 
-小范围缺陷修复、纯重命名或不改变模块边界的局部调整不要求完整执行本流程，但仍必须遵守相关 `AGENTS.md` 和验证规则。
+小范围缺陷修复、纯重命名或不改变模块边界的局部调整不要求完整执行本流程，但仍必须遵守相关 `AGENTS.md` 和验证规则。本文的前端步骤面向 `smart-manage-web` 桌面管理端，页面注册和页签约束不自动用于其他客户端。
 
 ## 1. 实现前基线
 
@@ -38,7 +38,7 @@
 
 ### 2.2 主数据或独立配置
 
-具有独立编码、列表、新增、编辑和详情语义的主数据或配置，默认采用独立 `LIST + EDIT` 页面。禁止为了少建一个页面，把列表与编辑表单拼进同一个 `CUSTOM` 页面。
+具有独立编码、列表、新增、编辑和详情语义的主数据或配置，默认采用独立 `LIST + EDIT` 页面。少量字段的轻量维护是否使用 `ModalEditPage`，按[页面形态选择](./frontend-page-guide.md#页面形态选择)判断；禁止为了少建一个页面，把列表与编辑表单拼进同一个 `CUSTOM` 页面。
 
 配置中的密码、令牌、私钥或授权码不属于普通参数：必须遵守敏感配置和数据脱敏规范，详情只返回“是否已配置”等安全状态。
 
@@ -76,10 +76,10 @@
 
 ## 4. 前端实现顺序
 
-1. 根据模块类型选择 `LIST + EDIT` 或 `CUSTOM`，并从[模块样板目录](./module-pattern-catalog.md)选择最接近的页面。
+1. 按[页面形态选择](./frontend-page-guide.md#页面形态选择)确定桌面端入口，并从[模块样板目录](./module-pattern-catalog.md)选择最接近的页面。
 2. 定义 `types.ts`、`api.ts`、`permissions.ts`、`queryKeys.ts` 和 `pageRegistration.ts`；前端 ID 一律为 `string`。业务单据 Query Key Factory 至少包含 `all`、`lists`、`list(params)`、`details` 和 `detail(id)`。
 3. 页面注册显式声明稳定 `featureKey`，同一功能的 LIST、EDIT、CUSTOM 页面共享该身份。
-4. 列表优先使用 `ListPage` 和 `useListPageQuery`；编辑优先使用 `EditPage`；实体引用优先复用或新增 `use*RefSelector`。
+4. 列表优先使用 `ListPage` 和 `useListPageQuery`；编辑按页面形态复用通用组件；实体引用优先复用或新增 `use*RefSelector`。
    列表选择状态优先复用 `useListSelection`，仅负责键、命令 ID 和当前页记录派生；树切换、分页、刷新及命令完成时是否清空，由领域页面显式决定，不得在共享 Hook 中隐式重置。
 5. 领域页面负责状态流转、Mutation、缓存失效、详情回显和页签替换，不在页面壳层重复实现通用 loading 与错误提示。
 6. 按[页面交互规范](./frontend-page-guide.md#弹框表格和视觉)接入操作确认和结果反馈。

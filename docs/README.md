@@ -13,7 +13,7 @@
 | --- | --- | --- |
 | 理解项目整体设计 | [架构总览](./architecture/overview.md) | 对应的前端、后端、安全或部署架构 |
 | 修改普通后端代码 | [后端架构](./architecture/backend.md)、[质量验证](./development/verification.md) | 对应领域模块文档 |
-| 修改前端页面或交互 | [前端架构](./architecture/frontend.md)、[前端页面指南](./development/frontend-page-guide.md)、[质量验证](./development/verification.md) | [页面注册约定](./architecture/page-registration-convention.md)、[模块样板目录](./development/module-pattern-catalog.md) |
+| 修改桌面管理端页面或交互 | [前端架构](./architecture/frontend.md)、[前端页面指南](./development/frontend-page-guide.md)、[质量验证](./development/verification.md) | [页面注册约定](./architecture/page-registration-convention.md)、[模块样板目录](./development/module-pattern-catalog.md) |
 | 新增或显著扩展业务模块 | [模块开发指南](./development/module-development-guide.md)、[模块样板目录](./development/module-pattern-catalog.md)、对应领域文档 | 新聚合再使用[业务聚合检查清单](./development/business-aggregate-checklist.md) |
 | 认证、权限或高风险能力 | [安全架构](./architecture/security.md) | [登录保护](./architecture/login-protection.md)、[功能与权限](./architecture/feature-and-permission.md)、[数据权限](./architecture/data-permission.md)、[数据脱敏](./architecture/data-masking.md) |
 | 数据库或迁移 | [数据库开发](./development/database.md)、[质量验证](./development/verification.md) | 日志分区再阅读[日志数据生命周期](./architecture/log-lifecycle.md) |
@@ -61,7 +61,7 @@
 
 ## 领域与模块
 
-领域文档按照 `domains/{领域}/{应用}/{模块}.md` 组织，与前后端代码目录保持一致。
+领域文档按照 `domains/{领域}/{应用}/{模块}.md` 组织，按业务归属对应代码模块；文件名可以采用可读的连字符形式，不要求与 Java 包名或前端目录逐字相同。
 
 领域文档只维护需要跨实现长期保留的业务事实，包括模块职责、聚合边界、状态与不变量、关键交互、事务与并发语义、稳定集成标识以及安全和对象级授权边界。以下内容不在领域文档中重复维护：
 
@@ -86,6 +86,7 @@
 - [系统参数](./domains/sys/base/system-parameter.md)
 - [界面配置](./domains/sys/base/ui-config.md)
 - [用户管理](./domains/sys/base/user.md)
+- [弱口令管理与固定密码策略](./domains/sys/base/weak-password.md)
 
 监控应用（monitor）：
 
@@ -112,6 +113,8 @@
 采购应用（procurement）：
 
 - [采购申请](./domains/scm/procurement/purchase-requisition.md)
+
+桌面管理端的技术基线、页面形态和页签规则只适用于 `smart-manage-web`；其他客户端在实现时另行明确适用规范，不把选型讨论写成当前架构。
 
 模块文档不要求与运行时 Feature 一一对应。新增或修改领域文档时，应按上述边界审查，避免复制由代码、迁移或配置维护的易变清单。
 

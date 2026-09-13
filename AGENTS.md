@@ -10,7 +10,7 @@
 - 如果不明确之处会影响架构方向、数据安全、外部状态或产生明显不同的实现结果，必须停下来询问。
 - 改动保持最小充分范围，不擅自扩展功能、重构无关代码或增加未经需求验证的抽象。
 - 发现无关问题时只记录或说明，不得顺手修改。
-- 项目处于架构搭建阶段，不兼容已废弃逻辑，不增加掩盖问题的冗余兜底。
+- 不兼容已废弃实现，不增加掩盖问题的冗余兜底；已发布接口和数据库的变更仍须明确影响与迁移路径，遵守数据库发布规则。
 - 关键代码、特殊处理和不直观的业务约束必须给出简体中文注释。
 - 禁止单字母变量名。
 - 复杂任务先制定计划，并在实施过程中维护进度。
@@ -36,12 +36,13 @@
 | 任务 | 必读文档 |
 | --- | --- |
 | 后端代码 | `smart-manage-api/AGENTS.md`、`docs/architecture/backend.md` |
-| 前端代码 | `smart-manage-web/AGENTS.md`、`docs/architecture/frontend.md` |
-| 页面实现、布局或交互 | `docs/development/frontend-page-guide.md` |
+| 桌面管理端代码（`smart-manage-web`） | `smart-manage-web/AGENTS.md`、`docs/architecture/frontend.md` |
+| 桌面管理端页面、布局或交互 | `docs/development/frontend-page-guide.md` |
 | 认证、权限或高风险能力 | `docs/architecture/security.md` |
 | 数据脱敏、隐私字段或凭据清除 | `docs/architecture/data-masking.md`、`docs/architecture/security.md` |
 | 功能目录、菜单、权限或页面注册 | `docs/architecture/feature-and-permission.md`、`docs/architecture/security.md` |
 | 数据权限、组织范围或对象级访问 | `docs/architecture/data-permission.md` |
+| 配置、部署或多实例 | `docs/development/configuration.md`、`docs/architecture/deployment.md` |
 | 数据库或迁移 | `docs/development/database.md` |
 | 构建、测试或 CI | `docs/development/verification.md` |
 | 新增或显著扩展业务模块 | `docs/development/module-development-guide.md`、`docs/development/module-pattern-catalog.md`、`docs/domains/{领域}/{应用}/` 下对应模块文档 |

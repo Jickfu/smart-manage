@@ -28,7 +28,7 @@ CUSTOM_ORGS         指定组织集合
 
 ## 后端边界
 
-系统公共能力提供 `DataScopeService.resolve(resourceType, action)`，返回合并后的 `all`、`selfIncluded`、组织 ID 集合和当前用户 ID。
+跨领域通过 `sm.system.datascope.DataScopeResolver.resolve(resourceType, action)` 获取合并后的 `all`、`selfIncluded`、组织 ID 集合和当前用户 ID；`DataScopeService` 是系统管理领域内的实现，不作为跨领域依赖入口。
 
 ## 配置继承与合并
 

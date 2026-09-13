@@ -26,33 +26,17 @@ smart-manage:
 
 | Profile | 用途 | 主要配置来源 |
 | --- | --- | --- |
-| `dev` | IDEA 和个人电脑开发运行 | 后端资源目录私有 `application-dev.yml` |
+| `dev` | IDEA 和个人电脑开发运行 | 内置 `application-dev.yml` 加本机外部覆盖 |
 | `test` | 共享测试服务器 | 内置 `application-test.yml` 加服务器外部覆盖 |
 | `prod` | 生产部署 | Jar 同级 `config/application.yml` 和 `config/application-prod.yml` |
 
-## 本机环境
+## 本机开发
 
-本机完整配置连接个人使用的 PostgreSQL 和 Redis：
+项目默认激活 `dev`。仓库已跟踪 `smart-manage-api/src/main/resources/application-dev.yml`，它是公开开发模板；直接启动方式见 [README](../../README.md#快速开始)。`dev` 不继承 `test`。
 
-```text
-JDBC：jdbc:postgresql://localhost:5432/smart_manage
-数据库用户：postgres
-数据库密码：postgres
-Redis：localhost:6379，密码 redis123，数据库 1
-```
+真实连接信息通过环境变量或不纳入版本控制的外部配置覆盖，不在受跟踪模板中填写个人或生产凭据。使用外部配置时确认进程工作目录与配置位置；配置加载行为以实际启动参数为准。
 
-示例中的数据库凭据和 SM2/SM4 密钥均为公开配置，只允许用于本地开发和演示。
-
-### 本机开发配置文件
-
-不希望设置操作系统环境变量时，复制
-`smart-manage-api/src/main/resources/application-test.yml` 为同级的 `application-dev.yml`，
-再填写本机配置。项目默认激活 `dev`，`dev` 不继承 `test`，因此开发配置文件必须包含运行所需的完整配置。
-该文件位于 classpath，不受 IDEA 工作目录影响。
-实际 `application-dev.yml` 已被 Git 忽略，
-禁止移除忽略规则或提交其中的真实凭据。
-
-Spring Data Redis 与 JetCache 使用两套配置入口，本机文件中的两处 Redis 地址、端口、密码和数据库必须保持一致。
+Spring Data Redis 与 JetCache 使用两套配置入口，两处地址、端口、密码和数据库必须指向同一预期环境。公开示例凭据和加密密钥只允许用于本地开发和演示。
 
 ## 共享测试环境与可选环境变量
 
@@ -116,26 +100,14 @@ Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
 公共配置和生产配置均固定关闭 `sa-token.is-log`。Sa-Token 内置事件日志会输出完整会话 token，
 因此 dev、test 和 prod 都不得重新开启；登录、退出和会话终止审计统一由项目受控的认证日志监听器记录。
 
-可选的生产调优变量：
-
-| 环境变量 | 默认值 |
-| --- | --- |
-| `SMART_MANAGE_SERVER_PORT` | `8080` |
-| `SMART_MANAGE_DB_POOL_INITIAL_SIZE` | `5` |
-| `SMART_MANAGE_DB_POOL_MIN_IDLE` | `10` |
-| `SMART_MANAGE_DB_POOL_MAX_ACTIVE` | `30` |
-| `SMART_MANAGE_REDIS_PORT` | `6379` |
-| `SMART_MANAGE_REDIS_DATABASE` | `1` |
-| `SMART_MANAGE_SLOW_SQL_MILLIS` | `2000` |
+连接池、端口、缓存和慢 SQL 等调优项及默认值以[生产配置模板](../../smart-manage-api/src/main/resources/application-prod.yml)为准，本文不重复维护默认值表。
 
 敏感配置不得写入代码、文档、镜像、提交记录或日志。外部配置文件必须限制为仅服务运行账号和管理员可读，并纳入受控备份；环境变量或密钥管理设施仍可作为更高优先级的可选覆盖方式。
 
-多实例运行监控和线程诊断通过 Redis 注册表发现实例。`SMART_MANAGE_INTERNAL_BASE_URL` 不得填写公网入口、负载均衡地址或浏览器可控地址；目标节点会重新校验共享登录态和权限。
+跨实例内部地址的限制与目标节点鉴权遵守[部署架构](../architecture/deployment.md#节点本地能力)。
 
-`SMART_MANAGE_SM4_KEY` 用于加密文件存储密码等服务端敏感配置。生产环境缺失、Base64 格式错误或解码后不是 16 字节时，应用必须拒绝启动。轮换该密钥前必须先完成既有密文的重新加密，不能直接替换环境变量。
+服务端敏感配置的密钥校验、密文格式与轮换边界遵守[服务端配置加密](../architecture/security.md#服务端配置加密)。不得直接替换密钥导致历史密文无法解密。
 
-当前密文格式固定为带 `sm4-gcm:v1:` 版本前缀的 SM4/GCM 认证密文，不兼容旧的无版本 SM4/CBC 密文。项目尚无真实生产密文时应重新保存相关凭据；如果未来存在生产迁移需求，必须先设计离线迁移和回滚方案，不得在运行时代码中长期保留 CBC 兼容分支。
+配置项以仓库内 `application.yml`、`application-*.yml` 和实际外部覆盖为准；配置入口、环境职责或必要部署条件变化时同步本文，不为每个默认值变化复制一份配置清单。
 
-配置的最终权威来源是 `smart-manage-api/src/main/resources/application-*.yml`；新增或删除配置项时必须同步更新本文档。
-
-所有内置环境均通过 `management.endpoints.web.exposure.exclude: "*"` 禁止 Actuator Web 暴露。内建监控直接调用进程内的 `HealthEndpoint` Bean，不依赖 `/actuator/**` HTTP 地址；当前部署也不提供外部存活与就绪探针。
+管理端点暴露与内建健康采样遵守[浏览器与生产边界](../architecture/security.md#浏览器与生产边界)，不能把进程内健康能力当成外部 HTTP 探针。

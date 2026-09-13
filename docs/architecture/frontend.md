@@ -1,8 +1,6 @@
 # 前端架构
 
-本文档是前端技术基线、路由、状态职责、页面类型和页签生命周期的权威来源。具体页面实现与交互约束归[前端页面指南](../development/frontend-page-guide.md)，注册协议细节归[页面注册约定](./page-registration-convention.md)。
-
-运维中心首页是固定业务总览；运行监控按 Host/Instance 分离快照，历史图按百分比、B/s、req/s、ms 和数量分图展示，见[内建监控架构](./monitoring.md)。
+本文档是桌面管理端 `smart-manage-web` 的技术基线、路由、状态职责、页面类型和页签生命周期的权威来源，不自动约束其他客户端。具体页面实现与交互约束归[前端页面指南](../development/frontend-page-guide.md)，注册协议细节归[页面注册约定](./page-registration-convention.md)。
 
 ## 技术基线与目录
 
@@ -32,8 +30,10 @@ URL 菜单入口必须复用侧边栏菜单的目标解析和工作台页签打�
 | 状态类型 | 负责组件 |
 | --- | --- |
 | 服务端查询、缓存、加载和命令状态 | TanStack Query |
-| 用户、token、侧边栏和当前应用等跨页面客户端状态 | Zustand |
+| 用户会话快照、内存中的 CSRF Token、侧边栏和当前应用等客户端状态 | Zustand |
 | 编辑字段、校验和脏数据 | Ant Design Form |
+
+认证凭据由浏览器 HttpOnly Cookie 管理，前端不读取或保存认证 token；会话与 CSRF 边界见[安全架构](./security.md#认证)。
 
 查询统一使用 `useQuery`，命令统一使用 `useMutation` 或项目领域命令封装。业务单据维护独立 Query Key Factory；命令成功后由领域 Mutation 统一处理缓存失效、详情回显和页签替换。
 
@@ -107,7 +107,7 @@ EditPage 的校验/transformValues 异常尚未进入领域 Mutation，由编辑
 | `command/` | 通用命令 Mutation 与启停命令封装，不承载业务命令参数 |
 | `tab/` | 页签键、标题上下文及关闭保护；编辑保存后的页签适配仍归 `edit/` |
 
-`iconResolver` 与 `IconSelector` 同属既有 `common/component/`，不再放入页面框架。具体领域的页面、Hook 和 Mutation 仍归业务模块，不因本次归组继续上提。
+`iconResolver` 与 `IconSelector` 同属既有 `common/component/`，不再放入页面框架。具体领域的页面、Hook 和 Mutation 仍归业务模块，不因公共目录归组而上提。
 
 图标配置使用稳定的 Ant Design 组件名称。`iconResolver` 通过 Vite 的非 eager glob 枚举已安装图标包的全部 Outlined、Filled、TwoTone 独立模块，名称目录用于检索，实际渲染才加载对应图标；禁止动态导入图标包总入口。`IconSelector` 每页展示 24 个候选，搜索和风格筛选只操作名称，不预加载其他页。相同名称复用请求和组件缓存；图标通过独立订阅更新，已加载组件首帧同步显示，不使用 Suspense 空白回退。菜单顶层、应用卡片及快速发起只预加载本次可见数据引用的图标，最多等待 150ms，超时后继续显示业务内容与图标加载指示，后台完成后更新；资源失败不阻断业务查询，使用默认图标或失败提示，未知名称使用调用方默认图标。静态界面按钮仍可按名称静态导入，由构建去重和 tree shaking 处理。
 

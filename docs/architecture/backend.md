@@ -2,9 +2,6 @@
 
 本文档是后端分层、依赖、接口、Service/事务、数据实现和技术边界的权威来源。具体业务状态与不变量归对应领域文档，验证命令归[质量验证](../development/verification.md)，本文档不重复维护。
 
-内建监控的 Host/Instance 边界、唯一采样链、状态机和 Redis/PostgreSQL 职责见[内建监控架构](./monitoring.md)。
-监控 collector 按职责局部降级，当前遥测缺失通过明确状态表达，不使用业务异常伪装为页面整体失败。
-
 ## 分层边界
 
 - Java 根包为 `sm`。
@@ -65,7 +62,7 @@ JSON 接口返回 `Result<T>`，包含 `code`、`msg`、`data`、`traceId` 和 `
 
 `code=0` 表示成功，此时 `feedbackLevel=null`；失败使用非零业务码，`feedbackLevel` 为 `WARNING` 或 `ERROR`。客户端默认反馈强度由 `ResultEnum` 单一声明，不代表服务端日志级别，也不指定 Modal、Toast 或页面等 UI 形式。整数错误工厂同样按枚举取级别，未知非零码保守使用 `ERROR`，禁止用空码或成功码构造失败响应；自定义说明不改变级别。安全过滤器、异常转换与 OpenAPI 错误出口复用同一契约；序列化器失效时，安全过滤器使用不依赖序列化链、不含异常正文的静态系统失败 JSON，诊断 ID 可以为 null。已经提交的响应或底层 writer 失败不保证还能输出错误体。
 
-HTTP 状态与业务响应码是独立维度；本轮不改变现有 HTTP 200 + 失败 Result 的接口行为，不引入 category、retryable 或后端 UI 指令。协议与浏览器展示边界见[前端架构](./frontend.md)。
+HTTP 状态与业务响应码是独立维度；现有业务失败可以使用 HTTP 200 + 失败 Result 表达，不引入 category、retryable 或后端 UI 指令。协议与浏览器展示边界见[前端架构](./frontend.md)。
 
 接口访问级别按注解判定：
 
@@ -73,7 +70,7 @@ HTTP 状态与业务响应码是独立维度；本轮不改变现有 HTTP 200 + 
 - `@SaCheckPermission`：权限接口；
 - 无上述注解：由全局过滤器执行登录校验。
 
-系统功能、菜单和权限的归属必须遵守[功能、菜单与权限模型](./feature-and-permission.md)。权限直接归属 `Feature`，应用由功能推导；菜单与入口权限必须属于同一功能，写入时必须校验该约束。
+系统功能、菜单和权限的归属必须遵守[功能、菜单与权限模型](./feature-and-permission.md)。业务权限归属 `Feature`，应用级权限直接归属应用，二者互斥；页面菜单的入口权限须属于同一功能，分组菜单须使用同一应用的应用级权限。
 
 Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包内的权限常量，禁止直接书写权限码字符串。JSON 反序列化、ID 转换和持久化结果不得静默吞错。
 

@@ -1,6 +1,6 @@
 # 参与开发
 
-Smart Manage 仍处于架构搭建阶段。贡献应优先提高架构内核和工程质量，不批量铺设未经纵向验证的业务模块。
+Smart Manage 是可二次开发的企业中后台底座。贡献范围与阶段门槛遵守[项目路线图](./docs/roadmap.md)，已发布版本的数据库变更遵守[数据库开发](./docs/development/database.md#正式发布与升级规则)。
 
 ## 开始之前
 
@@ -15,7 +15,7 @@ Smart Manage 仍处于架构搭建阶段。贡献应优先提高架构内核和�
 
 保持单一主题和最小充分范围，不夹带无关重构。按[文档导航](./docs/README.md#按任务阅读)读取涉及的架构和领域规则；新增或显著扩展模块执行[模块开发指南](./docs/development/module-development-guide.md)，普通页面调整按[前端页面指南](./docs/development/frontend-page-guide.md)。
 
-提交前按[质量验证](./docs/development/verification.md#按改动类型选择验证)执行对应检查，并在提交说明中如实列出结果和未验证项。纯文档修改无需代码构建；快速启动命令见 [README](./README.md#快速启动)。
+提交前按[质量验证](./docs/development/verification.md#按改动类型选择验证)执行对应检查，并在提交说明中如实列出结果和未验证项。纯文档修改无需代码构建；快速启动命令见 [README](./README.md#快速开始)。
 
 ## 提交规范
 

@@ -2,18 +2,19 @@
 
 ## 项目定位
 
-Smart Manage 是按领域、应用和模块组织的模块化单体。当前阶段重点是形成可验证、可维护的架构内核和工程质量，不以批量增加业务模块为目标。
+Smart Manage 是可二次开发的企业中后台底座，采用按领域、应用和模块组织的模块化单体。系统管理提供平台业务能力，采购申请作为可移除的纵向业务样板，不代表完整采购产品。当前交付包含后端和桌面管理端，其他客户端尚未实现。
 
-系统仍处于架构搭建阶段，不承诺旧接口、旧数据结构或废弃实现的兼容性。新增设计应保持最小充分范围，不为理论复用建立没有真实使用方的抽象。
+新增设计保持最小充分范围，不为理论复用建立没有真实使用方的抽象。废弃实现不保留冗余兼容分支；已发布接口变更须明确影响，数据库遵守[发布与升级规则](../development/database.md#正式发布与升级规则)。当前阶段目标与扩展门槛见[路线图](../roadmap.md)。
 
 ## 代码组织
 
 ```text
 smart-manage/
-├── db/migration/       # 数据库结构和必要初始化数据
+├── db/migration/       # 平台迁移
+├── db/business/        # 可选二次开发业务迁移
 ├── smart-manage-api/   # Spring Boot 后端
 ├── smart-manage-web/   # React 前端
-└── docs/               # 架构、开发、模块、提案和历史文档
+└── docs/               # 架构、开发、领域与提案文档
 ```
 
 后端业务按 `sm.domain.{领域}.{应用}.{模块}` 组织，前端业务按 `src/domain/{领域}/{应用}/{模块}` 组织。模块是应用内最小的内聚能力边界，可以是业务聚合、主数据、配置、查询记录或监控能力；它通常对应一个 Feature 或业务聚合，但不强制与 Feature 一一对应。非系统内核业务集中在独立领域，系统内核禁止反向依赖可选业务领域。
@@ -41,19 +42,11 @@ smart-manage/
 
 ## 请求与页面主链路
 
-后端请求主链路：
+浏览器请求由 CORS 和 `SaServletFilter` 处理请求边界：非安全方法校验 Origin，受保护请求依次校验登录、凭据代际和 CSRF。进入 MVC 后，`SaInterceptor` 执行注解鉴权，`TraceIdInterceptor` 建立请求诊断上下文；Controller 调用公开 Service，高风险入口另做管理员身份复核，业务命令由 `BizLogAspect` 审计，事务写入交给 TxService 和 Mapper。具体例外与失败语义见[安全架构](./security.md)。
 
-```text
-CorsFilter（跨域处理）
-→ SaServletFilter（登录校验和权限校验）
-→ TraceIdInterceptor（建立并回传请求 Trace ID）
-→ Controller
-→ BizLogAspect 环绕公开 Service（业务入口和操作日志）
-→ TxService（事务写入）
-→ Mapper
-```
+`/openapi/**` 使用独立安全过滤器验证签名、加密、应用授权与代理身份，再进入业务链路，不复用浏览器 Cookie/CSRF 认证。处理顺序见[OpenAPI 协议](../domains/sys/base/openapi-platform.md#处理顺序)。
 
-前端页面遵循三层边界：
+桌面管理端页面遵循三层边界：
 
 ```text
 页面壳层：布局、加载、错误、权限、按钮区
