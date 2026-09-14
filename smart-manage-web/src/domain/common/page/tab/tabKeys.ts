@@ -1,3 +1,5 @@
+import { generateUUID } from '@/utils';
+
 const TAB_KEY_SEPARATOR = ':';
 
 /** 列表页 tab key：list:componentKey */
@@ -12,7 +14,7 @@ export function createBillTabKey(componentKey: string, billId: string) {
 
 /** 新增页 tab key：addnew:componentKey:uuid（每次新增独立 key） */
 export function createAddNewTabKey(componentKey: string) {
-  return ['addnew', componentKey, crypto.randomUUID()].join(TAB_KEY_SEPARATOR);
+  return ['addnew', componentKey, generateUUID()].join(TAB_KEY_SEPARATOR);
 }
 
 /** 外部链接 iframe 页签：同一菜单只保留一个工作台实例。 */

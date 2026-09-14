@@ -1,4 +1,5 @@
 import { QueryCache, QueryClient, isCancelledError, type Query } from '@tanstack/react-query';
+import { generateUUID } from '@/utils';
 import { ApiError } from './ApiError';
 import { getErrorPresentation, isErrorFeedbackSuppressed } from './errorPresentation';
 
@@ -76,7 +77,7 @@ interface Fault {
 
 /** 每个应用 QueryClient 自己拥有故障状态；没有模块级 UI 回调，也不保存错误历史。 */
 export function createQueryFeedbackRuntime() {
-  const runtimeId = crypto.randomUUID();
+  const runtimeId = generateUUID();
   const faults = new Map<string, Fault>();
   const memberships = new Map<string, string>();
   let sink: QueryFeedbackSink | undefined;

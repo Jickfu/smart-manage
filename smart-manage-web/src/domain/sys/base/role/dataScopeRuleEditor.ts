@@ -1,3 +1,4 @@
+import { generateUUID } from '@/utils';
 import type { OrgOptionVO } from '../org/types';
 import type { RoleDataScopeRule } from './types';
 
@@ -12,7 +13,7 @@ export interface DataScopeRuleError {
 }
 
 export function createDataScopeRuleDraft(rule: RoleDataScopeRule): DataScopeRuleDraft {
-  return { ...rule, orgIds: [...rule.orgIds], localKey: crypto.randomUUID() };
+  return { ...rule, orgIds: [...rule.orgIds], localKey: generateUUID() };
 }
 
 /** 本地行身份不参与业务比较、校验或请求序列化。 */
