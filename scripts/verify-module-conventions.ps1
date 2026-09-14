@@ -13,6 +13,9 @@
 7. Controller 权限注解必须引用权限常量，禁止直接填写字符串。
 8. 页面注册文件必须存在，每个注册项必须声明非空 featureKey 和 pageType。
 9. 前端 CSS 禁止重复声明全局 12px 默认字号或 fontSizeSM。
+10. AppModal 页脚禁止 Space、Flex、div 包裹按钮，PermissionActions 必须显式关闭分组。
+
+页脚检查使用前端 TypeScript 依赖；执行前须在 smart-manage-web 中完成 pnpm install --frozen-lockfile。
 
 本脚本只负责适合源码静态扫描的确定性约束。Java 架构边界由 ArchUnit 测试校验；
 业务状态、数据安全和交互语义仍需通过代码评审及风险驱动测试验证。
@@ -162,6 +165,13 @@ Assert-NoFileMatch `
     -Pattern '\bModal\.confirm\s*\(|<Popconfirm\b' `
     -Message 'Frontend operation confirmation must use useOperationConfirm'
 
+# 页脚使用语法树检查，避免将正文布局或其他组件的 footer 误判为按钮包装。
+$footerVerifier = Resolve-RepositoryPath 'smart-manage-web/scripts/modal-footer-conventions.mjs'
+& node $footerVerifier $frontendSourceRoot
+if ($LASTEXITCODE -ne 0) {
+    Add-Violation 'AppModal footer convention verification failed; install frontend dependencies and fix the reported footer violations'
+}
+
 # Controller 权限声明必须引用模块权限常量，禁止散落权限编码字面量。
 Assert-NoFileMatch `
     -RelativeDirectory 'smart-manage-api/src/main/java' `
@@ -208,4 +218,4 @@ if ($violations.Count -gt 0) {
     exit 1
 }
 
-Write-Host "Module convention verification passed for governance routing (including the frontend page guide), $($registrationFiles.Count) page registration file(s), frontend operation interactions, typography, inline styles, and backend permission constants." -ForegroundColor Green
+Write-Host "Module convention verification passed for governance routing (including the frontend page guide), $($registrationFiles.Count) page registration file(s), frontend operation interactions, AppModal footers, typography, inline styles, and backend permission constants." -ForegroundColor Green

@@ -28,6 +28,8 @@ git diff --check
 
 新增或显著扩展业务模块时，先执行仓库级确定性约束检查：
 
+页脚语法树检查依赖 Node.js 22+ 及前端锁定的 TypeScript；首次运行前在 `smart-manage-web` 执行 `pnpm install --frozen-lockfile`。缺少运行时或依赖时检查失败，不跳过该门禁。
+
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-conventions.ps1
 ```
@@ -44,8 +46,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-
 | 前端字号 | `smart-manage-web/src` 下的 CSS 不得重复声明 `font-size: 12px` 或 `font-size: var(--ant-font-size-sm)` | 由全局主题提供默认密度；标题、骨架、图标和特殊展示按明确语义使用 token 或保留必要字号 |
 | 操作反馈 | 除统一封装自身外，前端不得直接调用 Ant Design `message` 的操作反馈方法 | 改用 `useOperationFeedback` |
 | 操作确认 | 前端不得直接调用 `Modal.confirm` 或使用 `Popconfirm` | 改用 `useOperationConfirm` |
+| 弹框页脚 | `AppModal.footer` 渲染树中的按钮不得被 `Space`、`Flex` 或 `div` 包裹，`PermissionActions` 必须在属性展开后显式传 `grouped={false}` | 使用 Fragment 或按钮数组，由 `AppModal` 统一控制 `12px` 间隔；特殊布局先评审公共契约 |
 | 后端权限 | Controller 的 `@SaCheckPermission` 不得直接填写权限编码字符串 | 引用对应模块的权限常量 |
 | 页面注册 | 至少存在一个 `pageRegistration.ts` 或 `pageRegistration.tsx`，每个注册项都必须声明 `componentKey`、`featureKey` 和 `pageType`，且 `featureKey` 不得为空 | 补全显式注册字段，使页面与稳定功能身份建立关联 |
+
+页脚检查由 `smart-manage-web/scripts/modal-footer-conventions.mjs` 使用 TypeScript AST 扫描整个 `src` 下的 TSX，识别组件导入别名、内联 JSX、数组、条件分支及同文件变量的作用域绑定；不执行函数、不展开跨文件自定义组件或动态属性对象，也不验证最终计算样式。正反例与真实仓库扫描由同目录 `modal-footer-conventions.test.mjs` 随 `pnpm test` 执行。单独排查可在前端目录执行 `node scripts/modal-footer-conventions.mjs src`，新增脚本格式使用 `pnpm exec prettier --check "scripts/modal-footer-conventions*.mjs"` 检查。
 
 脚本使用源码静态扫描完成这些适合机械判断的确定性检查，不等价于完整的架构或业务验证。以下内容不由该脚本负责：
 

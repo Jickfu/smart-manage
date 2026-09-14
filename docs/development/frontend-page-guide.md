@@ -153,4 +153,30 @@
 - 固定高度表格建立从容器到 `.ant-table-body` 的完整 flex 高度链，使横向滚动条固定在内容区底部；禁止用固定 `scroll.y` 撑出伪布局。
 - TSX 中禁止 CSS 和内联 `style`；自定义类名以 `sm-` 开头。
 
-弹窗底部按钮间距统一由 `AppModal` 页脚控制（12px），与 `RefSelector` 默认页脚一致；`ModalEditPage` 使用 `PermissionActions grouped={false}` 输出按钮，避免内层 `Space` 覆盖公共间距。
+### 弹框页脚按钮
+
+普通弹框底部按钮统一由 `AppModal` 页脚居中排列，间距为 `12px`，与 `RefSelector` 默认页脚一致。此契约同时适用于编辑、命令参数、操作结果及二开业务弹框。
+
+- `footer` 使用单个按钮、Fragment 或按钮数组，使按钮成为公共页脚容器的直接子元素；不要额外使用 `Space`、`Flex` 或布局 `div` 包裹按钮，也不要在业务侧重复设置 `12px`。
+- `PermissionActions` 必须显式设置 `grouped={false}`，且放在属性展开之后；`ModalEditPage` 已采用此方式。默认分组会生成内层 `Space`，使外层的 `gap` 无法控制按钮间距。
+- 条件显示的按钮同样遵守此规则。正文中的 `Space` 不受页脚约束影响；不显示页脚时传 `null`。
+- 确需左右分组、提示文字等特殊页脚布局时，先明确业务需要并评审布局契约，再扩展公共能力及对应检查；不得通过自定义组件隐藏包装、覆盖嵌套 CSS 或局部间距补丁绕过约定。
+
+```tsx
+<AppModal
+  title="操作结果"
+  open={open}
+  onCancel={onClose}
+  footer={
+    <>
+      <Button onClick={onClose}>关闭</Button>
+      {canCopy && <Button onClick={onCopy}>复制结果</Button>}
+    </>
+  }
+>
+  {content}
+</AppModal>
+```
+
+权限按钮页脚使用 `footer={<PermissionActions actions={actions} grouped={false} />}`。
+常见违规由[质量验证](./verification.md#模块约定)中的页脚语法树检查拦截；跨文件自定义组件、函数返回值及动态属性展开仍需评审确认。

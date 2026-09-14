@@ -13,6 +13,12 @@ interface AppModalProps extends Omit<
   title: ReactNode;
   headerExtra?: ReactNode;
   children: ReactNode;
+  /**
+   * 普通操作按钮由页脚统一居中排列，间距为 12px。
+   * 使用 Fragment 或按钮数组，不额外包裹 Space、Flex 或布局 div；
+   * PermissionActions 必须传 grouped={false}。特殊布局遵守前端页面指南。
+   * @example footer={<><Button>取消</Button><Button type="primary">确定</Button></>}
+   */
   footer?: ReactNode;
   onCancel: () => void;
   className?: string;
