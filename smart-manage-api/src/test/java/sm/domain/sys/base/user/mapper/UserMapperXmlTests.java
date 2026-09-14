@@ -1,16 +1,14 @@
 package sm.domain.sys.base.user.mapper;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
-import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.mapping.BoundSql;
 import org.junit.jupiter.api.Test;
+import sm.test.MapperXmlTestSupport;
 import sm.system.query.ListSqlQuery;
 
-import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -20,7 +18,7 @@ class UserMapperXmlTests {
 
     @Test
     void organizationScopeUsesExistsWithoutDuplicatingUsers() {
-        MybatisConfiguration configuration = configuration();
+        MybatisConfiguration configuration = MapperXmlTestSupport.load("mapper/common/ListSqlQueryMapper.xml", MAPPER_RESOURCE);
         BoundSql boundSql = configuration.getMappedStatement(UserMapper.class.getName() + ".selectScopedPage")
                 .getBoundSql(Map.of("keyword", "", "orgIds", List.of(10L, 11L), "unassigned", false,
                         "listQuery", EMPTY_LIST_QUERY));
@@ -32,7 +30,7 @@ class UserMapperXmlTests {
 
     @Test
     void unassignedScopeUsesNotExists() {
-        MybatisConfiguration configuration = configuration();
+        MybatisConfiguration configuration = MapperXmlTestSupport.load("mapper/common/ListSqlQueryMapper.xml", MAPPER_RESOURCE);
         BoundSql boundSql = configuration.getMappedStatement(UserMapper.class.getName() + ".selectScopedPage")
                 .getBoundSql(Map.of("keyword", "", "orgIds", List.of(), "unassigned", true,
                         "listQuery", EMPTY_LIST_QUERY));
@@ -42,7 +40,7 @@ class UserMapperXmlTests {
 
     @Test
     void cacheSnapshotQueryDoesNotSelectAuthenticationOrContactFields() {
-        MybatisConfiguration configuration = configuration();
+        MybatisConfiguration configuration = MapperXmlTestSupport.load("mapper/common/ListSqlQueryMapper.xml", MAPPER_RESOURCE);
         BoundSql boundSql = configuration.getMappedStatement(UserMapper.class.getName() + ".selectCacheSnapshotById")
                 .getBoundSql(Map.of("id", 1L));
         String sql = boundSql.getSql().replaceAll("\\s+", " ").toLowerCase();
@@ -56,15 +54,4 @@ class UserMapperXmlTests {
         assertFalse(sql.contains("phone"));
     }
 
-    private MybatisConfiguration configuration() {
-        MybatisConfiguration configuration = new MybatisConfiguration();
-        String commonResource = "mapper/common/ListSqlQueryMapper.xml";
-        InputStream commonInput = getClass().getClassLoader().getResourceAsStream(commonResource);
-        assertNotNull(commonInput, "公共列表查询 Mapper XML 不存在");
-        new XMLMapperBuilder(commonInput, configuration, commonResource, configuration.getSqlFragments()).parse();
-        InputStream mapperInput = getClass().getClassLoader().getResourceAsStream(MAPPER_RESOURCE);
-        assertNotNull(mapperInput, "用户 Mapper XML 不存在");
-        new XMLMapperBuilder(mapperInput, configuration, MAPPER_RESOURCE, configuration.getSqlFragments()).parse();
-        return configuration;
-    }
 }

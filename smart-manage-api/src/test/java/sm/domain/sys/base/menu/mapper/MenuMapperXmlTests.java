@@ -1,15 +1,13 @@
 package sm.domain.sys.base.menu.mapper;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
-import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.mapping.BoundSql;
 import org.junit.jupiter.api.Test;
+import sm.test.MapperXmlTestSupport;
 
-import java.io.InputStream;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MenuMapperXmlTests {
@@ -17,12 +15,7 @@ class MenuMapperXmlTests {
 
     @Test
     void userMenuQueryUsesCurrentMenuLevelCodes() {
-        MybatisConfiguration configuration = new MybatisConfiguration();
-        InputStream mapperInput = getClass().getClassLoader().getResourceAsStream(MAPPER_RESOURCE);
-        assertNotNull(mapperInput, "菜单 Mapper XML 不存在");
-        new XMLMapperBuilder(
-                mapperInput, configuration, MAPPER_RESOURCE, configuration.getSqlFragments())
-                .parse();
+        MybatisConfiguration configuration = MapperXmlTestSupport.load(MAPPER_RESOURCE);
 
         BoundSql boundSql = configuration
                 .getMappedStatement(MenuMapper.class.getName() + ".selectUserMenus")
@@ -35,12 +28,7 @@ class MenuMapperXmlTests {
 
     @Test
     void fullColumnUpdateIncludesFeatureAndExternalNavigationFields() {
-        MybatisConfiguration configuration = new MybatisConfiguration();
-        InputStream mapperInput = getClass().getClassLoader().getResourceAsStream(MAPPER_RESOURCE);
-        assertNotNull(mapperInput, "菜单 Mapper XML 不存在");
-        new XMLMapperBuilder(
-                mapperInput, configuration, MAPPER_RESOURCE, configuration.getSqlFragments())
-                .parse();
+        MybatisConfiguration configuration = MapperXmlTestSupport.load(MAPPER_RESOURCE);
 
         BoundSql boundSql = configuration
                 .getMappedStatement(MenuMapper.class.getName() + ".updateAllColumns")

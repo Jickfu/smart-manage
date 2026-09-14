@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { installJsdomBrowserStubs } from '@/test/jsdomBrowserStubs';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Button } from 'antd';
@@ -8,26 +9,7 @@ import RefSelector from './RefSelector';
 import { ApiError } from '@/api/ApiError';
 
 it('renders the actual local request error and retries without falling into ErrorBoundary', async () => {
-  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  // jsdom 没有布局观察器；本测试关注真实错误分支与请求重试，不模拟尺寸变化。
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    },
-  );
-  const getComputedStyle = window.getComputedStyle.bind(window);
-  vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => getComputedStyle(element));
-  Object.defineProperty(window, 'matchMedia', {
-    configurable: true,
-    value: () => ({
-      matches: false,
-      addListener: () => undefined,
-      removeListener: () => undefined,
-    }),
-  });
+  installJsdomBrowserStubs();
   const container = document.createElement('div');
   document.body.append(container);
   const root = createRoot(container);

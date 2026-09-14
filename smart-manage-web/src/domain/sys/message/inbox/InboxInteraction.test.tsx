@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { installJsdomBrowserStubs } from '@/test/jsdomBrowserStubs';
 import { act, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -29,27 +30,8 @@ vi.mock('@/domain/common/component/useOperationConfirm', () => ({
 vi.mock('@/services/navigationService', () => ({ openInboxCenter: vi.fn() }));
 
 beforeEach(() => {
-  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  installJsdomBrowserStubs();
   Element.prototype.scrollIntoView = vi.fn();
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    },
-  );
-  const nativeGetComputedStyle = window.getComputedStyle.bind(window);
-  vi.spyOn(window, 'getComputedStyle').mockImplementation((element) =>
-    nativeGetComputedStyle(element),
-  );
-  vi.stubGlobal('matchMedia', () => ({
-    matches: false,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  }));
 });
 afterEach(() => {
   vi.useRealTimers();

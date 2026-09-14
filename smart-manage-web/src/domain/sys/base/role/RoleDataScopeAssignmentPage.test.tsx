@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { installJsdomBrowserStubs } from '@/test/jsdomBrowserStubs';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -41,27 +42,7 @@ const organizations = [{ id: 'org-one', number: 'ONE', name: '组织一', namePa
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    },
-  );
-  const computedStyle = window.getComputedStyle.bind(window);
-  vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => computedStyle(element));
-  Object.defineProperty(window, 'matchMedia', {
-    configurable: true,
-    value: () => ({
-      matches: false,
-      addListener() {},
-      removeListener() {},
-      addEventListener() {},
-      removeEventListener() {},
-    }),
-  });
+  installJsdomBrowserStubs();
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);

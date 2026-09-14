@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { installJsdomBrowserStubs } from '@/test/jsdomBrowserStubs';
 import { act, type ComponentProps } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Button, ConfigProvider } from 'antd';
@@ -13,25 +14,7 @@ let container: HTMLDivElement;
 let client: QueryClient;
 
 beforeEach(() => {
-  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    },
-  );
-  const getComputedStyle = window.getComputedStyle.bind(window);
-  vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => getComputedStyle(element));
-  Object.defineProperty(window, 'matchMedia', {
-    configurable: true,
-    value: () => ({
-      matches: false,
-      addListener() {},
-      removeListener() {},
-    }),
-  });
+  installJsdomBrowserStubs();
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);

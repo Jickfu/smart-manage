@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { installJsdomBrowserStubs } from '@/test/jsdomBrowserStubs';
 import { act, useMemo, type ComponentProps } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Button, Form, Input } from 'antd';
@@ -42,27 +43,7 @@ const sections = [
 ];
 
 beforeEach(() => {
-  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  // jsdom 不提供尺寸观察器，提示浮层使用静态尺寸替身。
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    },
-  );
-  // jsdom 无伪元素布局；仅忽略滚动条测量使用的第二参数，保留真实元素样式计算。
-  const getComputedStyle = window.getComputedStyle.bind(window);
-  vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => getComputedStyle(element));
-  Object.defineProperty(window, 'matchMedia', {
-    configurable: true,
-    value: vi.fn().mockImplementation(() => ({
-      matches: false,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-    })),
-  });
+  installJsdomBrowserStubs();
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);

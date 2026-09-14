@@ -1,18 +1,16 @@
 package sm.domain.sys.message.inbox.mapper;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
-import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.mapping.BoundSql;
 import org.junit.jupiter.api.Test;
+import sm.test.MapperXmlTestSupport;
 import sm.domain.sys.message.inbox.model.form.InboxCursorListForm;
 import sm.domain.sys.message.inbox.model.form.InboxReceiptKeyForm;
 
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class InboxRecipientMapperXmlTests {
@@ -20,13 +18,8 @@ class InboxRecipientMapperXmlTests {
 
     @Test
     void timelineQueryAlwaysUsesPartitionBoundaryAndStableCursor() {
-        MybatisConfiguration configuration = new MybatisConfiguration();
-        String sharedResource = "mapper/common/ListSqlQueryMapper.xml";
-        new XMLMapperBuilder(getClass().getClassLoader().getResourceAsStream(sharedResource), configuration,
-                sharedResource, configuration.getSqlFragments()).parse();
-        InputStream mapperInput = getClass().getClassLoader().getResourceAsStream(RESOURCE);
-        assertNotNull(mapperInput, "站内消息 Mapper XML 不存在");
-        new XMLMapperBuilder(mapperInput, configuration, RESOURCE, configuration.getSqlFragments()).parse();
+        MybatisConfiguration configuration = MapperXmlTestSupport.load(
+                "mapper/common/ListSqlQueryMapper.xml", RESOURCE);
         InboxCursorListForm form = new InboxCursorListForm();
         form.setUnreadOnly(true);
         form.setAudienceType("USERS");
