@@ -17,6 +17,8 @@ class RepositoryMigrationPostgresTests {
                 System.getProperty("smartManage.testDbUrl"), System.getProperty("smartManage.testDbUser"),
                 System.getProperty("smartManage.testDbPassword"));
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        assertEquals("./smfiles/", jdbc.queryForObject(
+                "SELECT local_dir FROM t_sys_file_config WHERE storage_type = 'LOCAL'", String.class));
         var platformHistory = jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank");
         Flyway platform = Flyway.configure().dataSource(dataSource).locations("classpath:db/migration")
                 .cleanDisabled(true).validateMigrationNaming(true).validateOnMigrate(true)

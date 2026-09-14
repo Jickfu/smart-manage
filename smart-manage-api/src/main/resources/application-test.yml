@@ -172,8 +172,6 @@ smart-manage:
   system:
     runtime:
       instance-id: ${SMART_MANAGE_INSTANCE_ID:instance1}
-    upload:
-      dir: ${SMART_MANAGE_UPLOAD_DIR:./smfiles/}
     security:
       argon2:
         iterations: 2

@@ -110,7 +110,7 @@ INSERT INTO public.t_sys_feature VALUES (520000000000000020, 'sys/base/openapi-c
 -- Data for Name: t_sys_file_config; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.t_sys_file_config VALUES (2082478248768778241, 'LOCAL', 'E:/smfiles/', NULL, 21, NULL, NULL, true, '2026-07-29 22:47:59.740268', '2026-09-01 10:57:48.107604', 1, 1, NULL, 4, NULL, NULL, NULL, NULL, NULL, true);
+INSERT INTO public.t_sys_file_config VALUES (2082478248768778241, 'LOCAL', './smfiles/', NULL, 21, NULL, NULL, true, '2026-07-29 22:47:59.740268', '2026-09-01 10:57:48.107604', 1, 1, NULL, 4, NULL, NULL, NULL, NULL, NULL, true);
 
 
 --

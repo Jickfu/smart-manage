@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
+import sm.system.exception.BizException;
+import sm.system.response.ResultEnum;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,7 +39,7 @@ public class LocalFileStorageService implements FileStorageService {
     private String getBaseDir() {
         String dir = configProvider.getFileStorageConfig().localDir();
         if (dir == null || dir.isBlank()) {
-            dir = "./smfiles/";
+            throw new BizException(ResultEnum.CONFIG_ERROR, "本地存储目录未配置，请先在存储配置中填写目录");
         }
         if (!dir.endsWith("/") && !dir.endsWith("\\")) {
             dir = dir + "/";

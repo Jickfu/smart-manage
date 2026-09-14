@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
 import sm.domain.sys.base.fileconfig.model.entity.FileConfigEntity;
 import sm.domain.sys.base.fileconfig.model.form.FileConfigSaveForm;
 import sm.domain.sys.base.fileconfig.model.form.FtpTestForm;
@@ -23,7 +22,6 @@ import sm.system.security.authorization.AdministratorOnly;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 文件配置服务
@@ -38,17 +36,12 @@ public class FileConfigService implements FileStorageConfigProvider {
     private final FileConfigTxService txService;
     private final Sm4Cipher sm4Helper;
     private final FileConfigConverter converter;
-    private final AtomicBoolean defaultStorageWarningLogged = new AtomicBoolean();
-    @Value("${smart-manage.system.upload.dir:./smfiles/}")
-    private String defaultLocalDir = "./smfiles/";
-
-    /** 单例管理页读取；尚未配置时返回本地存储默认值。 */
+    /** 单例管理页读取；配置缺失时返回待填写表单，允许管理员补建。 */
     public FileConfigDetailVO singleton() {
         List<FileConfigEntity> entityList = mapper.selectList(null);
         if (entityList.isEmpty()) {
             FileConfigDetailVO detail = new FileConfigDetailVO();
             detail.setStorageType("LOCAL");
-            detail.setLocalDir(defaultLocalDir);
             detail.setFtpPort(21);
             detail.setFtpPassiveMode(true);
             detail.setFtpPasswordConfigured(false);
@@ -62,13 +55,14 @@ public class FileConfigService implements FileStorageConfigProvider {
     public FileStorageConfig getFileStorageConfig() {
         List<FileConfigEntity> entityList = mapper.selectList(null);
         if (entityList.isEmpty()) {
-            if (defaultStorageWarningLogged.compareAndSet(false, true)) {
-                log.warn("文件存储尚未持久化配置，当前使用显式部署目录的 Local 默认配置；多实例部署前必须改为 S3 或 FTP");
-            }
-            return new FileStorageConfig("LOCAL", defaultLocalDir, null, null, null, null, null, null,
-                    null, null, null, null, null, null);
+            throw new BizException(ResultEnum.CONFIG_ERROR, "文件存储未配置，请先在存储配置中保存配置");
         }
         FileConfigEntity entity = entityList.get(0);
+        // 数据库是存储配置的唯一来源，禁止在配置不完整时使用隐式目录。
+        if ("LOCAL".equalsIgnoreCase(entity.getStorageType())
+                && (entity.getLocalDir() == null || entity.getLocalDir().isBlank())) {
+            throw new BizException(ResultEnum.CONFIG_ERROR, "本地存储目录未配置，请先在存储配置中填写目录");
+        }
         String ftpPassword = entity.getFtpPasswordCipher() == null
                 ? null : sm4Helper.decrypt(entity.getFtpPasswordCipher());
         String s3SecretKey = entity.getS3SecretKeyCipher() == null

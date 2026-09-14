@@ -86,7 +86,6 @@ Spring Data Redis 与 JetCache 使用两套配置入口，两处地址、端口�
 | `SMART_MANAGE_REDIS_PORT` | Redis 端口 |
 | `SMART_MANAGE_REDIS_PASSWORD` | Redis 密码 |
 | `SMART_MANAGE_REDIS_DATABASE` | Redis 数据库编号 |
-| `SMART_MANAGE_UPLOAD_DIR` | 上传文件目录 |
 | `SMART_MANAGE_SM4_KEY` | 服务端敏感配置加密密钥，Base64 编码后必须解码为 16 字节 |
 | `SMART_MANAGE_SM2_PRIVATE_KEY` | SM2 私钥 |
 | `SMART_MANAGE_SM2_PUBLIC_KEY` | SM2 公钥 |
@@ -97,6 +96,12 @@ Spring Data Redis 与 JetCache 使用两套配置入口，两处地址、端口�
 | `SMART_MANAGE_TRUSTED_PROXY_CIDRS` | 允许提供转发头的受信代理网段 |
 
 开发环境还支持 `SMART_MANAGE_DRUID_USERNAME` 和 `SMART_MANAGE_DRUID_PASSWORD` 配置 Druid 监控登录。
+
+## 文件存储配置
+
+文件存储配置只由数据库 `t_sys_file_config` 管理，通过管理端“存储配置”页面维护，不提供 YAML 或环境变量覆盖入口。Flyway 基线初始化 Local 存储，默认目录为 `./smfiles/`；配置记录缺失或 Local 目录为空时，文件存储操作明确报错，不使用代码兜底目录。配置记录缺失时，管理员仍可通过存储配置页面补建。
+
+相对目录按 Java 进程的工作目录解析，不自动定位到 JAR 所在目录。使用 Local 时必须固定启动工作目录，保证存储目录可写；单实例生产还须将目录持久化并纳入备份。多实例必须在存储配置页面设置所有实例可访问的 S3 或 FTP 存储，具体要求见[部署与多实例架构](../architecture/deployment.md#文件与对象存储)。
 
 ## 生产环境
 
@@ -123,7 +128,6 @@ Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
 - Redis 地址和密码；
 - SM2 公私钥；
 - SM4 敏感配置加密密钥；
-- 上传目录；
 - `SMART_MANAGE_CORS_ALLOWED_ORIGIN`；
 - `SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD`，且不能为 `admin`。
 - `SMART_MANAGE_INSTANCE_ID`，且每个应用实例必须唯一。
