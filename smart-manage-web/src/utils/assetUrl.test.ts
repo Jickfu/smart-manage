@@ -13,7 +13,7 @@ describe('resolveAssetUrl', () => {
 
   it('为界面配置公开图片接口补齐应用上下文', () => {
     expect(resolveAssetUrl('/sys/base/ui-config/image/header-logo?v=123')).toBe(
-      '/smart-manage-api/sys/base/ui-config/image/header-logo?v=123',
+      `${import.meta.env.VITE_API_BASE_PATH}/sys/base/ui-config/image/header-logo?v=123`,
     );
   });
 

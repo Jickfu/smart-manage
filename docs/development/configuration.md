@@ -22,6 +22,40 @@ smart-manage:
 
 环境变量继续负责具体部署实例的覆盖。是否归入环境文件按配置语义判断，不按当前值是否重复判断。`SmartManageConfigurationNamespaceTests` 同时防止已识别的环境配置重新进入公共文件。
 
+## 修改 API context path
+
+后端 context path、浏览器 API 前缀和部署代理分别属于后端、前端与部署层。默认均使用 `/smart-manage-api`，当前开发代理和 Nginx 示例保留原请求路径，因此三者应保持一致；它们不是项目目录名、前端页面基路径或应用身份，修改时不需要重命名项目。
+
+### 配置入口与修改步骤
+
+以改为 `/custom/api` 为例：
+
+| 层次 | 需要配置的位置 | 配置方式 |
+| --- | --- | --- |
+| 后端 | [`application.yml`](../../smart-manage-api/src/main/resources/application.yml) 的 `server.servlet.context-path` | 推荐使用外部 YAML 同名属性或环境变量 `SERVER_SERVLET_CONTEXT_PATH=/custom/api`；衍生项目改变默认值时才修改仓库配置 |
+| 前端 | [`smart-manage-web/.env`](../../smart-manage-web/.env) 的 `VITE_API_BASE_PATH` | 本机可在 `smart-manage-web/.env.local` 写入 `VITE_API_BASE_PATH=/custom/api`；构建环境也可直接提供同名环境变量。两个 local env 文件模式已被 Git 忽略 |
+| 生产代理 | 部署环境中的 Nginx 配置，参考 [`smart-manage.conf.example`](../../deploy/nginx/smart-manage.conf.example) | 将 `location` 改为 `/custom/api/`，保持 `proxy_pass` 不带 URI，以保留完整请求路径 |
+| 生产内部地址 | `SMART_MANAGE_INTERNAL_BASE_URL`，入口见 [`application-prod.yml`](../../smart-manage-api/src/main/resources/application-prod.yml) | 显式提供包含新路径的完整内部 HTTPS 地址，例如 `https://node.example.com:9443/custom/api`；每个节点必须可被其他实例直接访问 |
+
+前端变量是**开发启动／构建时配置**，不是浏览器运行时配置：修改后重启开发服务器，生产环境重新构建并部署整个 `dist`。仅在运行 Nginx 时设置变量不会修改已构建的前端。路径必须非空、以 `/` 开头且不带尾斜杠，路径段支持字母、数字、`_`、`-`，支持 `/custom/api` 这样的多级前缀；Vite 启动和构建会拒绝非法配置。
+
+Axios 请求、界面配置图片、独立登录页与 Vite 开发代理均读取这一项前端变量，无需逐文件修改。登录页源码位于 [`smart-manage-web/login.html`](../../smart-manage-web/login.html)，通过 Vite 多 HTML 入口生成，发布路径仍是 `/login.html`，没有并入 React 路由。API 前缀替换发生在 meta 标签中，固定的内联脚本读取该值；改前缀不需要重新计算 CSP 摘要，修改脚本本身仍需同步摘要并通过测试。
+
+[`application-dev.yml`](../../smart-manage-api/src/main/resources/application-dev.yml) 和 [`application-test.yml`](../../smart-manage-api/src/main/resources/application-test.yml) 的本机内部地址默认引用 `server.port` 和 `server.servlet.context-path`，无需重复修改。若已显式提供 `SMART_MANAGE_INTERNAL_BASE_URL`，仍以该完整地址为准，需要同步更新。生产环境继续强制显式提供内部地址，不从本机监听地址推导跨节点可达地址。
+
+### 仍需单独维护的内容
+
+- **部署代理和生产内部地址**：Nginx 不自动读取 Spring 或 Vite 配置，生产节点的主机名、协议和端口也不能从浏览器地址推导；保留上表两个部署入口。
+- **开发后端端口**：若同时修改后端端口，更新 [`vite.config.ts`](../../smart-manage-web/vite.config.ts) 的 `apiProxyTarget`。它表示开发代理目标，不是 API 路径；`preview` 当前没有 API 代理，预览完整功能仍需部署层转发。
+- **衍生项目的默认说明**：改变仓库默认值时，更新 [README 快速开始](../../README.md#快速开始)中的后端、Swagger UI、Scalar 和开发代理示例；单个环境覆盖无需改动上游默认示例。
+- **外部调用方**：检查衍生项目新增的客户端、网关规则及保存的完整接口地址。这些由各调用方维护，不能通过本项目配置自动修改。
+
+不需要修改后端 Mock 测试的路径样例；这些测试不加载部署前缀。安全测试应保留非空 context path 场景，URI 与 `setContextPath` 保持一致。前端图片补齐测试已读取配置，完整 URL 的透传样例也无需随部署改名。
+
+不要直接删除浏览器 API 前缀或用 Vite 的 `base` 替代它：`base` 表示前端资源基路径，页面地址不能推导独立后端路径。后端可通过外部配置将 `server.servlet.context-path` 设为空字符串，但如果采用根路径后端，部署代理必须另行明确将非空的浏览器 API 前缀映射到后端根路径；当前代理模板不提供这种重写，不能仅清空一个配置就完成迁移。浏览器连接继续保持同源，不因引入变量而改为任意跨域 API 地址。
+
+实际修改后的检查按[质量验证](./verification.md)执行，覆盖登录、会话请求、图片地址、代理转发和跨实例内部调用。可从仓库根目录运行 `rg -n --hidden -g '!.git/**' '/smart-manage-api'` 排查残余默认值，但不要全局替换源码目录链接或独立测试样例。
+
 ## 环境划分
 
 | Profile | 用途 | 主要配置来源 |

@@ -24,6 +24,8 @@ target/
 **/node_modules
 **/.vscode
 *.tsbuildinfo
+smart-manage-web/.env.local
+smart-manage-web/.env.*.local
 
 ### files ###
 logs

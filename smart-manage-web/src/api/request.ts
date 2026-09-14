@@ -9,7 +9,7 @@ const CSRF_HEADER_NAME = 'sm-csrf-token';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 const request = axios.create({
-  baseURL: '/smart-manage-api',
+  baseURL: import.meta.env.VITE_API_BASE_PATH,
   timeout: 30000,
 });
 

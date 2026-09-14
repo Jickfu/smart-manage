@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('login CSP', () => {
   it('only authorizes the current inline login script by hash', () => {
-    const html = readFileSync('public/login.html', 'utf8');
+    const html = readFileSync('login.html', 'utf8');
     const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 
     expect(inlineScript).toBeDefined();
@@ -20,7 +20,7 @@ describe('login CSP', () => {
 
 describe('login form visibility', () => {
   it('keeps the password change form hidden until it is requested', () => {
-    const html = readFileSync('public/login.html', 'utf8');
+    const html = readFileSync('login.html', 'utf8');
     const css = readFileSync('public/css/login.css', 'utf8');
 
     expect(html).toMatch(/<form id="passwordChangeForm"[^>]*\shidden>/);
@@ -28,7 +28,7 @@ describe('login form visibility', () => {
   });
 
   it('opens slider verification as a hidden modal instead of rendering the retired text captcha', () => {
-    const html = readFileSync('public/login.html', 'utf8');
+    const html = readFileSync('login.html', 'utf8');
     const css = readFileSync('public/css/login.css', 'utf8');
 
     expect(html).toMatch(/<div\s+id="captchaModal"[^>]*\shidden\s*>/);
@@ -39,7 +39,7 @@ describe('login form visibility', () => {
   });
 
   it('tracks drag distance from the actual pointer-down position', () => {
-    const html = readFileSync('public/login.html', 'utf8');
+    const html = readFileSync('login.html', 'utf8');
     const css = readFileSync('public/css/login.css', 'utf8');
 
     expect(html).toContain('x: position.x - captchaDragStartX');
@@ -48,7 +48,7 @@ describe('login form visibility', () => {
   });
 
   it('keeps email recovery in the login panel and reserves the unsupported phone entry', () => {
-    const html = readFileSync('public/login.html', 'utf8');
+    const html = readFileSync('login.html', 'utf8');
 
     expect(html).toMatch(/<form id="emailRecoveryForm"[^>]*\shidden>/);
     expect(html).toMatch(/<form id="emailResetForm"[^>]*\shidden>/);

@@ -208,7 +208,7 @@ smart-manage:
           evaluation-interval-ms: 10000
           notification-interval-ms: 10000
         cluster:
-          internal-base-url: ${SMART_MANAGE_INTERNAL_BASE_URL:http://127.0.0.1:8080/smart-manage-api}
+          internal-base-url: ${SMART_MANAGE_INTERNAL_BASE_URL:http://127.0.0.1:${server.port}${server.servlet.context-path:}}
           require-https: false
           heartbeat-interval-ms: 10000
           catalog-refresh-interval-ms: 300000

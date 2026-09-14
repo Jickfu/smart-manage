@@ -2,16 +2,17 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
+    <meta name="sm-api-base-path" content="%VITE_API_BASE_PATH%" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-R7HmSetnen07lF2MLdIY4Ds78uhNySiOt88fqJLsf/4='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-Rawdj+UbWnLO0vyJKB6h/HPA9y86bTVs38T+WXM8tjo='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
     <title>Smart Manage - 登录</title>
-    <script src="js/sm2.js"></script>
-    <link rel="stylesheet" href="css/login.css" />
+    <script src="/js/sm2.js"></script>
+    <link rel="stylesheet" href="/css/login.css" />
   </head>
   <body>
     <main class="sm-login">
@@ -328,7 +329,7 @@
     <script>
       var SM2_PUBLIC_KEY =
         '0405102042204d15e802522ea09eb609358e4c72295e0ca44727eef75faac9afb3eeaa3e9df5af87e205e6ce5cb351e4fb30c37602f32aad969d2b222f05f8fa99';
-      var API_BASE = '/smart-manage-api';
+      var API_BASE = document.querySelector('meta[name="sm-api-base-path"]').content;
 
       var captchaChallenge = null;
       var captchaLoading = false;

@@ -17,7 +17,7 @@ describe('固定密码策略', () => {
   });
 
   it('登录页和 React 表单对同一输入给出一致结果', () => {
-    const html = readFileSync('public/login.html', 'utf8');
+    const html = readFileSync('login.html', 'utf8');
     const start = html.indexOf('      function getPasswordPolicyError(password)');
     const end = html.indexOf('      function resetPasswordByEmail()', start);
     const loginValidate = runInNewContext(`${html.slice(start, end)}; getPasswordPolicyError;`) as (

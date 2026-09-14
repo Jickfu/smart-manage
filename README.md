@@ -96,6 +96,8 @@ pnpm dev
 
 前端默认地址为 `http://localhost:8000`，开发服务器会将 `/smart-manage-api` 代理到后端。
 
+自定义 API 前缀时，通过后端 `server.servlet.context-path` 和前端 `VITE_API_BASE_PATH` 配置，部署侧同步代理与内部地址；详见 [修改 API context path](./docs/development/configuration.md#修改-api-context-path)。
+
 开发环境初始化账号为 `administrator/admin`
 ，仅用于本地开发和演示。生产环境禁止使用该密码。完整配置说明见[环境与配置](./docs/development/configuration.md)。
 

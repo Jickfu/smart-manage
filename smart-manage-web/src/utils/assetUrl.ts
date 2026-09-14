@@ -1,4 +1,4 @@
-const API_BASE_PATH = '/smart-manage-api';
+const API_BASE_PATH = import.meta.env.VITE_API_BASE_PATH;
 
 /** 将受控的后端资源接口补齐应用上下文，外部存储 URL 保持不变。 */
 export function resolveAssetUrl(url?: string | null, fallback = ''): string {
