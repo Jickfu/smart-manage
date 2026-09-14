@@ -8,7 +8,7 @@
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-Rawdj+UbWnLO0vyJKB6h/HPA9y86bTVs38T+WXM8tjo='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-4+GwqVC+jTsX7Zj5m8l5B6Gaw4Z8miHUOLxwFHtG5pA='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
     <title>Smart Manage - 登录</title>
     <script src="/js/sm2.js"></script>
@@ -146,6 +146,19 @@
                     >15～64个字符，可使用空格和长口令；不能使用弱口令或账号、系统名称的简单变体。</span
                   >
                 </span>
+                <button
+                  type="button"
+                  class="sm-password-toggle"
+                  aria-label="显示新密码"
+                  aria-controls="newPassword"
+                  aria-pressed="false"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                    <circle cx="12" cy="12" r="3" />
+                    <path class="sm-password-toggle-slash" d="m3 3 18 18" />
+                  </svg>
+                </button>
               </div>
               <div class="sm-input-wrap">
                 <svg class="sm-input-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -165,6 +178,19 @@
                   placeholder="确认新密码"
                   autocomplete="new-password"
                 />
+                <button
+                  type="button"
+                  class="sm-password-toggle"
+                  aria-label="显示确认新密码"
+                  aria-controls="confirmPassword"
+                  aria-pressed="false"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                    <circle cx="12" cy="12" r="3" />
+                    <path class="sm-password-toggle-slash" d="m3 3 18 18" />
+                  </svg>
+                </button>
               </div>
               <button id="changePasswordBtn" class="sm-login-btn" type="submit">确认修改</button>
               <button id="backToLoginBtn" class="sm-secondary-btn" type="button">返回登录</button>
@@ -752,7 +778,28 @@
         loginBtnEl.textContent = loading ? '登录中...' : '登录';
       }
 
+      var passwordToggleButtons = document.querySelectorAll('.sm-password-toggle');
+      function setPasswordVisible(button, visible) {
+        var input = document.getElementById(button.getAttribute('aria-controls'));
+        input.type = visible ? 'text' : 'password';
+        button.setAttribute('aria-pressed', String(visible));
+        button.setAttribute('aria-label', (visible ? '隐藏' : '显示') + input.placeholder);
+      }
+      passwordToggleButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+          setPasswordVisible(button, button.getAttribute('aria-pressed') !== 'true');
+        });
+      });
+
+      function resetPasswordVisibility() {
+        // 离开或重新进入首次改密时恢复遮蔽，避免沿用上一次的明文显示状态。
+        passwordToggleButtons.forEach(function (button) {
+          setPasswordVisible(button, false);
+        });
+      }
+
       function showPasswordChange(ticket) {
+        resetPasswordVisibility();
         passwordChangeTicket = ticket;
         defaultLoginTitle = defaultLoginTitle || loginTitleEl.textContent;
         loginTitleEl.textContent = '首次登录修改密码';
@@ -766,6 +813,7 @@
       }
 
       function showLoginForm(successMessage) {
+        resetPasswordVisibility();
         passwordChangeTicket = '';
         newPasswordEl.value = '';
         confirmPasswordEl.value = '';
