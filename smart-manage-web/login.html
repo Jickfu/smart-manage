@@ -8,7 +8,7 @@
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-4+GwqVC+jTsX7Zj5m8l5B6Gaw4Z8miHUOLxwFHtG5pA='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-BtFNBHLVi7+bLXxPH+LwsII6FAKeV9ZVTzHW5uftgBQ='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
     <title>Smart Manage - 登录</title>
     <script src="/js/sm2.js"></script>
@@ -595,7 +595,9 @@
           })
           .then(function (result) {
             if (result.code !== 0 || !result.data) {
-              throw new Error(result.msg || '获取滑块验证失败');
+              throw Object.assign(new Error(result.msg || '获取滑块验证失败'), {
+                code: result.code,
+              });
             }
             captchaChallenge = result.data;
             return Promise.all([
@@ -610,6 +612,12 @@
           })
           .catch(function (error) {
             captchaChallenge = null;
+            // 登录限流属于表单级错误，不能让用户留在无法继续验证的滑块弹框中。
+            if (error.code === 100429) {
+              closeCaptchaModal();
+              showError(error.message);
+              return;
+            }
             setCaptchaStatus(error.message || '网络异常，获取滑块验证失败', 'error');
           })
           .finally(function () {
@@ -733,7 +741,9 @@
           })
           .then(function (result) {
             if (result.code !== 0 || !result.data || !result.data.captchaTicket) {
-              throw new Error(result.msg || '滑块验证失败');
+              throw Object.assign(new Error(result.msg || '滑块验证失败'), {
+                code: result.code,
+              });
             }
             setCaptchaStatus('验证成功', 'success');
             captchaModalEl.hidden = true;
@@ -745,6 +755,11 @@
             }
           })
           .catch(function (error) {
+            if (error.code === 100429) {
+              closeCaptchaModal();
+              showError(error.message);
+              return;
+            }
             setCaptchaStatus(error.message || '滑块验证失败，请重试', 'error');
             window.setTimeout(loadCaptchaChallenge, 1000);
           })

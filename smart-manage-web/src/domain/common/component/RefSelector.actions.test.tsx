@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// 交互测试保留真实组件与 DOM；jsdom 不验收视觉，避免运行时样式触发昂贵的选择器计算。
 import { installJsdomBrowserStubs } from '@/test/jsdomBrowserStubs';
 import { act, type ComponentProps } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -34,7 +35,7 @@ async function renderSelector(
   await act(async () =>
     root.render(
       <QueryClientProvider client={client}>
-        <ConfigProvider componentDisabled={disabled}>
+        <ConfigProvider componentDisabled={disabled} theme={{ zeroRuntime: true }}>
           <RefSelector<RecordValue>
             selectorKey="footer-test"
             fetchFn={async () => ({ records: [record], total: 1 })}

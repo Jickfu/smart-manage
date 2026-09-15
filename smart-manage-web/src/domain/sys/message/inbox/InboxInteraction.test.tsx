@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
+// 交互测试保留真实组件与 DOM；jsdom 不验收视觉，避免运行时样式触发昂贵的选择器计算。
 import { installJsdomBrowserStubs } from '@/test/jsdomBrowserStubs';
 import { act, StrictMode } from 'react';
+import { ConfigProvider } from 'antd';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -52,7 +54,9 @@ it('真实查询按60秒轮询，服务端返回0后停止定时请求', async (
     await act(async () =>
       root.render(
         <QueryClientProvider client={client}>
-          <InboxHeaderButton />
+          <ConfigProvider theme={{ zeroRuntime: true }}>
+            <InboxHeaderButton />
+          </ConfigProvider>
         </QueryClientProvider>,
       ),
     );
@@ -99,7 +103,9 @@ it('详情成功后原样提交收件键且StrictMode不重复标记，正文按
       root.render(
         <StrictMode>
           <QueryClientProvider client={client}>
-            <InboxDetailView receipt={receipt} active onBack={() => undefined} />
+            <ConfigProvider theme={{ zeroRuntime: true }}>
+              <InboxDetailView receipt={receipt} active onBack={() => undefined} />
+            </ConfigProvider>
           </QueryClientProvider>
         </StrictMode>,
       ),
@@ -126,11 +132,13 @@ it('详情被拒绝时不发送已读命令', async () => {
     await act(async () =>
       root.render(
         <QueryClientProvider client={client}>
-          <InboxDetailView
-            receipt={{ messageId: '30', receivedTime: '2026-09-01 12:00:00.123456' }}
-            active
-            onBack={() => undefined}
-          />
+          <ConfigProvider theme={{ zeroRuntime: true }}>
+            <InboxDetailView
+              receipt={{ messageId: '30', receivedTime: '2026-09-01 12:00:00.123456' }}
+              active
+              onBack={() => undefined}
+            />
+          </ConfigProvider>
         </QueryClientProvider>,
       ),
     );
@@ -161,7 +169,9 @@ it('预览只查询未读消息，不显示最新条数说明，已读后刷新�
     await act(async () =>
       root.render(
         <QueryClientProvider client={client}>
-          <InboxPreviewDrawer open onClose={() => undefined} />
+          <ConfigProvider theme={{ zeroRuntime: true }}>
+            <InboxPreviewDrawer open onClose={() => undefined} />
+          </ConfigProvider>
         </QueryClientProvider>,
       ),
     );
@@ -204,7 +214,9 @@ it('中心平铺分类显示独立未读数，切换任务隐藏消息分类并�
     await act(async () =>
       root.render(
         <QueryClientProvider client={client}>
-          <InboxCenter initialSection="messages" />
+          <ConfigProvider theme={{ zeroRuntime: true }}>
+            <InboxCenter initialSection="messages" />
+          </ConfigProvider>
         </QueryClientProvider>,
       ),
     );
@@ -270,11 +282,13 @@ it('标题打开独立页签，返回列表保留节点和滚动，预览导航�
   const render = (revision: number, target?: typeof receipt) =>
     root.render(
       <QueryClientProvider client={client}>
-        <InboxCenter
-          initialSection="messages"
-          initialReceipt={target}
-          navigationRevision={revision}
-        />
+        <ConfigProvider theme={{ zeroRuntime: true }}>
+          <InboxCenter
+            initialSection="messages"
+            initialReceipt={target}
+            navigationRevision={revision}
+          />
+        </ConfigProvider>
       </QueryClientProvider>,
     );
   try {
@@ -336,7 +350,9 @@ it('列过滤通过普通列表控件提交服务端条件并可重置', async (
     await act(async () =>
       root.render(
         <QueryClientProvider client={client}>
-          <InboxCenter initialSection="messages" />
+          <ConfigProvider theme={{ zeroRuntime: true }}>
+            <InboxCenter initialSection="messages" />
+          </ConfigProvider>
         </QueryClientProvider>,
       ),
     );

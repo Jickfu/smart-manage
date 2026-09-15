@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
+// 交互测试保留真实组件与 DOM；jsdom 不验收视觉，避免运行时样式触发昂贵的选择器计算。
 import { installJsdomBrowserStubs } from '@/test/jsdomBrowserStubs';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Button } from 'antd';
+import { Button, ConfigProvider } from 'antd';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, it, vi } from 'vitest';
 import RefSelector from './RefSelector';
@@ -28,15 +29,17 @@ it('renders the actual local request error and retries without falling into Erro
     await act(async () =>
       root.render(
         <QueryClientProvider client={client}>
-          <RefSelector
-            selectorKey="error-render-test"
-            fetchFn={fetchFn}
-            displayRender={(record) => String(record.name)}
-            fieldNames={{ key: 'id', label: 'name' }}
-            columns={[{ title: '名称', dataIndex: 'name' }]}
-            modalTitle="选择记录"
-            trigger={<Button>打开选择器</Button>}
-          />
+          <ConfigProvider theme={{ zeroRuntime: true }}>
+            <RefSelector
+              selectorKey="error-render-test"
+              fetchFn={fetchFn}
+              displayRender={(record) => String(record.name)}
+              fieldNames={{ key: 'id', label: 'name' }}
+              columns={[{ title: '名称', dataIndex: 'name' }]}
+              modalTitle="选择记录"
+              trigger={<Button>打开选择器</Button>}
+            />
+          </ConfigProvider>
         </QueryClientProvider>,
       ),
     );
