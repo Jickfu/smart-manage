@@ -55,6 +55,11 @@ public class LoginService {
 	private final BrowserPasswordCipher browserPasswordCipher;
 	private final UserEmailPasswordService userEmailPasswordService;
 
+	/** 登录前只公开经过启动校验的公钥，不返回任何私钥配置。 */
+	public String passwordPublicKey() {
+		return browserPasswordCipher.publicKey();
+	}
+
 	public SessionVO session() {
 		return new SessionVO(userProfileService.current(), csrfTokenManager.getCurrentToken());
 	}

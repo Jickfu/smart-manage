@@ -105,6 +105,8 @@ Spring Data Redis 与 JetCache 使用两套配置入口，两处地址、端口�
 
 ## 生产环境
 
+首次部署先按[生产密钥生成与部署](./production-keys.md)生成 SM2 密钥对和部署级 SM4 密钥。该指南包含 OpenAPI 凭据区别、配置接入、替换清单、备份及存量轮换边界。
+
 推荐部署目录：
 
 ```text

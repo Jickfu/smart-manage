@@ -32,6 +32,15 @@ import sm.system.response.Result;
 public class LoginController {
 	private final LoginService service;
 
+	@SaIgnore
+	@Operation(summary = "获取密码传输公钥", description = "仅返回当前部署的 SM2 公钥")
+	@GetMapping("/sys/base/login/password/publicKey")
+	public Result<String> passwordPublicKey(jakarta.servlet.http.HttpServletResponse response) {
+		// 公钥无需保密，但轮换后不能继续使用浏览器或代理缓存中的旧值。
+		response.setHeader("Cache-Control", "no-store");
+		return Result.success(service.passwordPublicKey());
+	}
+
 	@Operation(summary = "当前会话", description = "获取当前登录用户和会话绑定的 CSRF Token")
 	@GetMapping("/sys/base/session")
 	public Result<SessionVO> session() {

@@ -8,7 +8,7 @@
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-BtFNBHLVi7+bLXxPH+LwsII6FAKeV9ZVTzHW5uftgBQ='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'sha256-ohabW4S1Hvd+BN+bS3SyM/iNfnRAKZ/AmTzXePrQ0JE='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
     />
     <title>Smart Manage - 登录</title>
     <script src="/js/sm2.js"></script>
@@ -353,9 +353,28 @@
     </div>
 
     <script>
-      var SM2_PUBLIC_KEY =
-        '0405102042204d15e802522ea09eb609358e4c72295e0ca44727eef75faac9afb3eeaa3e9df5af87e205e6ce5cb351e4fb30c37602f32aad969d2b222f05f8fa99';
       var API_BASE = document.querySelector('meta[name="sm-api-base-path"]').content;
+
+      async function encryptPassword(password) {
+        // 每次提交获取当前部署公钥，前端制品不包含环境密钥，也不回退开发公钥。
+        try {
+          var response = await fetch(API_BASE + '/sys/base/login/password/publicKey', {
+            cache: 'no-store',
+          });
+          if (!response.ok) throw new Error();
+          var result = await response.json();
+          if (
+            result.code !== 0 ||
+            typeof result.data !== 'string' ||
+            !/^04[0-9a-fA-F]{128}$/.test(result.data) ||
+            !sm2.verifyPublicKey(result.data)
+          )
+            throw new Error();
+          return sm2.doEncrypt(password, result.data, 1);
+        } catch (_error) {
+          throw new Error('获取密码加密公钥失败，请稍后重试');
+        }
+      }
 
       var captchaChallenge = null;
       var captchaLoading = false;
@@ -915,7 +934,7 @@
         return undefined;
       }
 
-      function resetPasswordByEmail() {
+      async function resetPasswordByEmail() {
         var code = recoveryCodeEl.value.trim();
         var newPassword = recoveryNewPasswordEl.value;
         var confirmPassword = recoveryConfirmPasswordEl.value;
@@ -937,13 +956,22 @@
         }
         resetPasswordByEmailBtnEl.disabled = true;
         resetPasswordByEmailBtnEl.textContent = '重置中...';
+        var encryptedNewPassword;
+        try {
+          encryptedNewPassword = await encryptPassword(newPassword);
+        } catch (error) {
+          showError(error.message);
+          resetPasswordByEmailBtnEl.disabled = false;
+          resetPasswordByEmailBtnEl.textContent = '重置密码';
+          return;
+        }
         fetch(API_BASE + '/sys/base/login/password/email/reset', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: recoveryEmail,
             code: code,
-            newPassword: sm2.doEncrypt(newPassword, SM2_PUBLIC_KEY, 1),
+            newPassword: encryptedNewPassword,
           }),
         })
           .then(function (res) {
@@ -971,7 +999,7 @@
         changePasswordBtnEl.textContent = loading ? '修改中...' : '确认修改';
       }
 
-      function changePassword() {
+      async function changePassword() {
         var newPassword = newPasswordEl.value;
         var confirmPassword = confirmPasswordEl.value;
         var policyError = getPasswordPolicyError(newPassword);
@@ -992,7 +1020,14 @@
 
         hideError();
         setPasswordChangeLoading(true);
-        var encryptedNewPassword = sm2.doEncrypt(newPassword, SM2_PUBLIC_KEY, 1);
+        var encryptedNewPassword;
+        try {
+          encryptedNewPassword = await encryptPassword(newPassword);
+        } catch (error) {
+          showError(error.message);
+          setPasswordChangeLoading(false);
+          return;
+        }
         fetch(API_BASE + '/sys/base/login/change-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1039,12 +1074,19 @@
         openCaptchaModal('login');
       }
 
-      function submitLogin(captchaTicket) {
+      async function submitLogin(captchaTicket) {
         var username = usernameEl.value.trim();
         var password = passwordEl.value;
 
         // SM2 C1C3C2 模式加密密码，滑块票据本身是短时高熵一次性凭证。
-        var encryptedPassword = sm2.doEncrypt(password, SM2_PUBLIC_KEY, 1);
+        var encryptedPassword;
+        try {
+          encryptedPassword = await encryptPassword(password);
+        } catch (error) {
+          showError(error.message);
+          setCaptchaActionLoading(false);
+          return;
+        }
 
         fetch(API_BASE + '/sys/base/login', {
           method: 'POST',

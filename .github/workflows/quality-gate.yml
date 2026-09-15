@@ -26,6 +26,8 @@ jobs:
       - name: Verify baseline cleanup safety
         shell: pwsh
         run: ./db/verify-baseline.tests.ps1
+      - name: Verify deployment key generator
+        run: node --test scripts/generate-deployment-keys.test.mjs
 
   backend:
     runs-on: ubuntu-latest
