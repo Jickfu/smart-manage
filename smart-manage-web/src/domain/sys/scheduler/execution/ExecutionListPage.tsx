@@ -91,7 +91,7 @@ const ExecutionListPage = (props: PageComponentProps) => {
       title: '耗时',
       dataIndex: 'durationMs',
       width: 110,
-      render: (value?: number) => (value === undefined ? '-' : `${value} ms`),
+      render: (value?: number | null) => (value == null ? '-' : `${value} ms`),
     },
     { title: 'Trace ID', dataIndex: 'traceId', width: 300 },
     { title: '错误信息', dataIndex: 'errorMessage', ellipsis: true },

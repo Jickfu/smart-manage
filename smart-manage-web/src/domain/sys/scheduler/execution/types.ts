@@ -19,7 +19,7 @@ export interface ExecutionVO {
   appName: string;
   startTime?: string;
   endTime?: string;
-  durationMs?: number;
+  durationMs?: number | null;
   status: ExecutionStatus;
   errorMessage?: string;
   traceId?: string;
