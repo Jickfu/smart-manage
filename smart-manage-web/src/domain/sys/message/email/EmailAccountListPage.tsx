@@ -136,6 +136,8 @@ const EmailAccountListPage = (props: PageComponentProps) => {
       quickSearchPlaceholder="搜索编码/名称"
       onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY)}
       toolbarActions={[
+        { builtin: 'add' },
+        { builtin: 'refresh' },
         {
           key: 'test',
           label: '测试连接',

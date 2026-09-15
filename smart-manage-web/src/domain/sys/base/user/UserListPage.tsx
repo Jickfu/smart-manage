@@ -361,6 +361,10 @@ const UserListPage = (props: PageComponentProps) => {
         }
         enabledCommandLoading={enabledMutation.isPending}
         toolbarActions={[
+          { builtin: 'add' },
+          { builtin: 'enable' },
+          { builtin: 'disable' },
+          { builtin: 'refresh' },
           {
             key: 'resetPassword',
             label: '重置密码',
@@ -420,6 +424,7 @@ const UserListPage = (props: PageComponentProps) => {
               });
             },
           },
+          { builtin: 'delete' },
         ]}
         toolbarExtra={
           <DataExchangeActions

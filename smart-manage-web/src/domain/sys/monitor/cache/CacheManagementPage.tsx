@@ -188,6 +188,7 @@ export default function CacheManagementPage(props: PageComponentProps) {
           </ListTreePanel>
         }
         toolbarActions={[
+          { builtin: 'refresh' },
           {
             key: 'delete',
             label: '删除所选',

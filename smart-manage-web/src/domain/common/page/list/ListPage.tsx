@@ -7,8 +7,9 @@ import { SettingOutlined } from '@ant-design/icons';
 import type { ColumnsType, SorterResult, TableRowSelection } from 'antd/es/table/interface';
 import ListFilterBar from './ListFilterBar';
 import ListTableShell from './ListTableShell';
-import type { AccessResource, PermissionAction } from '../access/access';
-import { PermissionActions } from '../access/PermissionActions';
+import type { AccessResource } from '../access/access';
+import { PageActionBar } from '../command/PageActionBar';
+import { type PageAction } from '../command/pageActions';
 import './ListPage.css';
 import { usePageTabTitle } from '../tab/usePageTabTitle';
 import ColumnSettingsModal from './ColumnSettingsModal';
@@ -35,8 +36,8 @@ interface ListPageProps<T> {
   expandedFilterFields?: readonly string[];
   /** 过滤摘要文案 */
   filterSummary?: ReactNode;
-  /** 工具栏额外操作 */
-  toolbarActions?: PermissionAction[];
+  /** 完整有序操作声明；省略使用默认按钮，空数组隐藏全部按钮。 */
+  toolbarActions?: readonly PageAction<'add' | 'delete' | 'enable' | 'disable' | 'refresh'>[];
   /** 业务自定义工具区内容。 */
   toolbarExtra?: ReactNode;
   /** 固定在表头可视区域右侧、不随表头横向滚动的操作。 */
@@ -325,9 +326,10 @@ function ListPage<T>({
           onQuickSearch={onQuickSearch}
         />
         <div className="sm-list-toolbar">
-          <PermissionActions
+          <PageActionBar
             prefix={access?.prefix}
-            actions={[
+            declaration={toolbarActions}
+            builtins={[
               ...(onAddNew
                 ? [
                     {
@@ -377,7 +379,6 @@ function ListPage<T>({
               ...(onRefresh
                 ? [{ key: 'refresh', label: '刷新', type: 'primary' as const, onClick: onRefresh }]
                 : []),
-              ...(toolbarActions ?? []),
             ]}
           />
           {toolbarExtra}

@@ -102,6 +102,8 @@ const OpenApiApplicationListPage = (props: PageComponentProps) => {
       columnSettingsKey="sys/base/openapi-application/list"
       onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY)}
       toolbarActions={[
+        { builtin: 'add' },
+        { builtin: 'refresh' },
         {
           key: 'enable',
           label: selected?.enabled ? '停用' : '启用',

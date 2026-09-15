@@ -58,6 +58,7 @@ export default function SqlLogDetailPage(props: PageComponentProps) {
           disabled: !query.data?.sqlText,
           onClick: handleCopySql,
         },
+        { builtin: 'exit' },
       ]}
       onExit={() => useWorkbenchStore.getState().removeContentTab(props.appNumber, props.tabKey)}
     />

@@ -281,6 +281,10 @@ const OrgListPage = (props: PageComponentProps) => {
         }
         enabledCommandLoading={enabledMutation.isPending}
         toolbarActions={[
+          { builtin: 'add' },
+          { builtin: 'enable' },
+          { builtin: 'disable' },
+          { builtin: 'refresh' },
           {
             key: 'edit',
             label: '编辑',
@@ -292,6 +296,15 @@ const OrgListPage = (props: PageComponentProps) => {
             },
           },
           {
+            key: 'unarchive',
+            label: '解封',
+            permission: orgAccess.permissions.unarchive,
+            disabled:
+              selectedRecords.length === 0 || selectedRecords.some((record) => !record.archived),
+            loading: archiveMutation.isPending,
+            onClick: () => confirmArchive(false),
+          },
+          {
             key: 'archive',
             label: '封存',
             permission: orgAccess.permissions.archive,
@@ -300,15 +313,6 @@ const OrgListPage = (props: PageComponentProps) => {
               selectedRecords.length === 0 || selectedRecords.some((record) => record.archived),
             loading: archiveMutation.isPending,
             onClick: () => confirmArchive(true),
-          },
-          {
-            key: 'unarchive',
-            label: '解封',
-            permission: orgAccess.permissions.unarchive,
-            disabled:
-              selectedRecords.length === 0 || selectedRecords.some((record) => !record.archived),
-            loading: archiveMutation.isPending,
-            onClick: () => confirmArchive(false),
           },
         ]}
         onRefresh={onRefresh}

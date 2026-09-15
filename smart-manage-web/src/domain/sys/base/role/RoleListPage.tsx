@@ -139,6 +139,8 @@ const RoleListPage = (props: PageComponentProps) => {
       onDelete={handleDelete}
       onRefresh={onRefresh}
       toolbarActions={[
+        { builtin: 'add' },
+        { builtin: 'refresh' },
         {
           key: 'assignPermissions',
           label: '分配权限',
@@ -153,6 +155,7 @@ const RoleListPage = (props: PageComponentProps) => {
           disabled: selectedRowKeys.length !== 1,
           onClick: handleAssignDataScopes,
         },
+        { builtin: 'delete' },
       ]}
       onQuickSearch={onSearch}
       onPageChange={onPageChange}

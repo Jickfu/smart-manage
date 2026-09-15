@@ -128,6 +128,7 @@ const EmailRecordPage = (props: PageComponentProps) => {
       pageSize={list.pageSize}
       quickSearchPlaceholder="搜索主题或收件地址"
       toolbarActions={[
+        { builtin: 'refresh' },
         {
           key: 'retry',
           label: '重新发送',

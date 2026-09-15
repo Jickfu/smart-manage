@@ -12,10 +12,7 @@ interface PermissionActionsProps {
 /** 统一渲染页面命令，并按后端返回的当前用户权限过滤。 */
 export function PermissionActions({ prefix, actions, grouped = true }: PermissionActionsProps) {
   const { can } = usePermissionAccess(prefix);
-  const visibleActions = actions
-    .filter((action) => can(action.permission))
-    // 危险命令统一排在同组末尾，降低与常规命令混排造成的误触风险。
-    .sort((leftAction, rightAction) => Number(leftAction.danger) - Number(rightAction.danger));
+  const visibleActions = actions.filter((action) => can(action.permission));
   const buttons = visibleActions.map((action) => (
     <Button
       key={action.key}

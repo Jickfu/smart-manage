@@ -184,6 +184,8 @@ const JobListPage = (props: PageComponentProps) => {
       filterSummary={status ? `状态：${status === 'ENABLED' ? '已启用' : '已暂停'}` : undefined}
       onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY)}
       toolbarActions={[
+        { builtin: 'add' },
+        { builtin: 'refresh' },
         {
           key: 'pause',
           label: '暂停',

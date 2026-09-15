@@ -4,8 +4,9 @@ import type { FormInstance, FormItemProps } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { ReactNode } from 'react';
 import { OperationType, BillStatus } from '../types';
-import type { AccessResource, PermissionAction } from '../access/access';
-import { PermissionActions } from '../access/PermissionActions';
+import type { AccessResource } from '../access/access';
+import { PageActionBar } from '../command/PageActionBar';
+import { type PageAction } from '../command/pageActions';
 import { EditPageShell } from '../EditPageShell';
 import { EditSectionCollapse } from './EditSectionCollapse';
 import { useBeforeCloseGuard } from '../tab/useBeforeCloseGuard';
@@ -126,8 +127,8 @@ interface EditPageProps {
   onExit?: () => void;
   /** 当前领域的编辑命令权限声明 */
   access?: AccessResource<{ save: string; submit?: string }>;
-  /** 提交、审核、关闭等扩展业务命令 */
-  headerActions?: PermissionAction[];
+  /** 完整有序操作声明；内置引用复用表单校验和保存流程。省略使用默认按钮。 */
+  headerActions?: readonly PageAction<'save' | 'submit' | 'exit'>[];
   /** 注册页签关闭前的脏数据检查。 */
   closeGuard?: { appNumber: string; tabKey: string };
   onValuesChange?: (
@@ -297,9 +298,11 @@ const EditPage = ({
       error={error}
       onRetry={onRetry}
       actions={
-        <PermissionActions
+        <PageActionBar
           prefix={access?.prefix}
-          actions={[
+          declaration={headerActions}
+          disabled={busy}
+          builtins={[
             ...(editable && onSave
               ? [
                   {
@@ -326,10 +329,6 @@ const EditPage = ({
                   },
                 ]
               : []),
-            ...(headerActions ?? []).map((action) => ({
-              ...action,
-              disabled: busy || action.disabled,
-            })),
             ...(onExit ? [{ key: 'exit', label: '退出', disabled: busy, onClick: onExit }] : []),
           ]}
         />

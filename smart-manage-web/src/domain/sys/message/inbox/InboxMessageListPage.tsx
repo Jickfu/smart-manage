@@ -149,6 +149,8 @@ const InboxMessageListPage = (props: PageComponentProps) => {
       quickSearchPlaceholder="搜索消息标题/正文"
       onAddNew={() => openAddNewTab(props.appNumber, componentKeys.inboxBroadcastEdit)}
       toolbarActions={[
+        { builtin: 'add' },
+        { builtin: 'refresh' },
         {
           key: 'publish',
           label: selected?.status === 'FAILED' ? '重试发布' : '发布',

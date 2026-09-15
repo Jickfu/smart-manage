@@ -90,6 +90,52 @@ async function clickButton(label: string) {
 }
 
 describe('edit error ownership and state preservation', () => {
+  it('显式混排保持危险按钮位置，内置保存仍校验并冻结所有操作', async () => {
+    let completeSave!: () => void;
+    const onSave = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          completeSave = resolve;
+        }),
+    );
+    const onExit = vi.fn();
+    await renderEdit({
+      onSave,
+      onExit,
+      headerActions: [
+        { key: 'delete', label: '删除', danger: true, onClick: vi.fn() },
+        { builtin: 'save' },
+        { builtin: 'exit' },
+      ],
+    });
+    const commandButtons = [...container.querySelectorAll<HTMLButtonElement>('button')].filter(
+      (button) => ['删除', '保存', '退出'].includes(button.textContent?.replace(/\s/g, '') ?? ''),
+    );
+    expect(commandButtons.map((button) => button.textContent?.replace(/\s/g, ''))).toEqual([
+      '删除',
+      '保存',
+      '退出',
+    ]);
+    await clickButton('保存');
+    expect(onSave).toHaveBeenCalledWith({ name: '原值' });
+    expect(commandButtons.every((button) => button.disabled)).toBe(true);
+    await act(async () => completeSave());
+    await clickButton('退出');
+    expect(onExit).toHaveBeenCalledOnce();
+  });
+
+  it('显式空数组隐藏内置操作，只读模式跳过保存引用', async () => {
+    const onSave = vi.fn();
+    await renderEdit({ onSave, headerActions: [] });
+    expect(container.textContent).not.toContain('保存');
+    await renderEdit({
+      onSave,
+      operationType: OperationType.VIEW,
+      headerActions: [{ builtin: 'save' }],
+    });
+    expect(container.textContent).not.toContain('保存');
+  });
+
   it('focuses the current form error only after the validation freeze is released', async () => {
     const onSave = vi.fn();
     await renderEdit({

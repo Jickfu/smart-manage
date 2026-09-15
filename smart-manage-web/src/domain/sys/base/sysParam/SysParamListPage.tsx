@@ -208,6 +208,8 @@ const SysParamListPage = (props: PageComponentProps) => {
       filterSummary={keyword ? `关键字：${keyword}` : undefined}
       onAddNew={() => openAddNewTab(props.appNumber, EDIT_KEY)}
       toolbarActions={[
+        { builtin: 'add' },
+        { builtin: 'refresh' },
         {
           key: 'delete',
           label: '删除',

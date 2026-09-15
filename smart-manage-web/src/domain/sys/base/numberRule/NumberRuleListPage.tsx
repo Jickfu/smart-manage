@@ -231,6 +231,10 @@ const NumberRuleListPage = (props: PageComponentProps) => {
       }
       enabledCommandLoading={enabledMutation.isPending}
       toolbarActions={[
+        { builtin: 'add' },
+        { builtin: 'enable' },
+        { builtin: 'disable' },
+        { builtin: 'refresh' },
         {
           key: 'setDefault',
           label: '设为默认',

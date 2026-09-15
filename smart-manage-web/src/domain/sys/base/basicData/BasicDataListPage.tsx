@@ -302,6 +302,10 @@ const BasicDataListPage = (props: PageComponentProps) => {
         }
         enabledCommandLoading={enabledMutation.isPending}
         toolbarActions={[
+          { builtin: 'add' },
+          { builtin: 'enable' },
+          { builtin: 'disable' },
+          { builtin: 'refresh' },
           {
             key: 'delete',
             label: '删除',

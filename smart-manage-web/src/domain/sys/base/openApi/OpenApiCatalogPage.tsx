@@ -144,6 +144,7 @@ const OpenApiCatalogPage = (props: PageComponentProps) => {
         </ListTreePanel>
       }
       toolbarActions={[
+        { builtin: 'refresh' },
         {
           key: 'export',
           label: '导出 Markdown',

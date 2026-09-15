@@ -66,6 +66,7 @@ export default function ScriptLogDetailPage(props: PageComponentProps) {
           disabled: !query.data?.output,
           onClick: () => copy(query.data?.output, '输出已复制'),
         },
+        { builtin: 'exit' },
       ]}
       onExit={() => useWorkbenchStore.getState().removeContentTab(props.appNumber, props.tabKey)}
     />

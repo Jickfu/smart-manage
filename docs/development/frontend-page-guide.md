@@ -153,6 +153,30 @@
 - 固定高度表格建立从容器到 `.ant-table-body` 的完整 flex 高度链，使横向滚动条固定在内容区底部；禁止用固定 `scroll.y` 撑出伪布局。
 - TSX 中禁止 CSS 和内联 `style`；自定义类名以 `sm-` 开头。
 
+### 页面操作的有序声明
+
+- `ListPage.toolbarActions` 和 `EditPage.headerActions` 是完整有序声明，不再表示追加业务按钮。省略或传 `undefined` 使用底座默认布局；传 `[]` 不展示操作按钮；显式数组中未声明的内置按钮不会自动追加。
+- 数组可混合业务 `PermissionAction` 与 `{ builtin: '...' }` 引用。列表内置名称为 `add`、`delete`、`enable`、`disable`、`refresh`；编辑内置名称为 `save`、`submit`、`exit`。回调及 `access` 仍通过页面原有属性传入，引用只控制位置，不能覆盖内置权限、校验、加载状态和保存流程。
+- 未提供对应回调、只读状态等导致内置按钮不可用时跳过该引用；权限过滤后其余按钮保持声明顺序。业务按钮条件显示仍使用条件数组展开。
+- `PermissionActions` 只过滤权限并按输入顺序渲染，`danger` 不触发自动排序。默认页面布局仍把危险命令放在末尾；显式布局应遵守上文命令分组规范，业务流程例外在调用处说明。
+- 同一数组内业务 key 必须唯一，同一内置引用不能重复；重复声明直接报配置错误。业务 key 与内置名称使用不同命名空间，可以同名。
+- 迁移旧调用时，在原业务按钮数组中显式补齐所需内置引用；直接使用 `PermissionActions` 的调用方也应自行声明危险命令的位置。
+
+```tsx
+<ListPage
+  onRefresh={handleRefresh}
+  toolbarActions={[registerAction, renewAction, { builtin: 'refresh' }, deleteAction]}
+  {...listProps}
+/>
+
+<EditPage
+  onSave={handleSave}
+  onExit={handleExit}
+  headerActions={[{ builtin: 'save' }, previewAction, { builtin: 'exit' }]}
+  {...editProps}
+/>
+```
+
 ### 弹框页脚按钮
 
 普通弹框底部按钮统一由 `AppModal` 页脚居中排列，间距为 `12px`，与 `RefSelector` 默认页脚一致。此契约同时适用于编辑、命令参数、操作结果及二开业务弹框。

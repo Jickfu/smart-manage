@@ -85,6 +85,7 @@ const OperateLogDetailPage = (props: PageComponentProps) => {
           disabled: !detail,
           onClick: handleCopy,
         },
+        { builtin: 'exit' },
       ]}
       onExit={() => useWorkbenchStore.getState().removeContentTab(props.appNumber, props.tabKey)}
     />

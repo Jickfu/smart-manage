@@ -89,6 +89,8 @@ export default function WeakPasswordListPage(props: PageComponentProps) {
           setModalOpen(true);
         }}
         toolbarActions={[
+          { builtin: 'add' },
+          { builtin: 'refresh' },
           {
             key: 'delete',
             label: '删除',

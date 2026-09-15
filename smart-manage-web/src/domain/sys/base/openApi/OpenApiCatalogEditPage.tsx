@@ -318,6 +318,7 @@ export default function OpenApiCatalogEditPage(props: PageComponentProps) {
                     OperationType.EDIT,
                   ),
               },
+              { builtin: 'exit' },
             ]
           : undefined
       }
