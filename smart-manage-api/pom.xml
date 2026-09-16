@@ -313,9 +313,23 @@
         </dependency>
     </dependencies>
     <build>
+        <!-- 部署路径保持固定，产品版本保存在构建信息中。 -->
+        <finalName>smart-manage-api</finalName>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>META-INF/build-info.properties</exclude>
+                </excludes>
+            </resource>
+            <!-- IDEA 和 Maven 均通过资源过滤读取项目版本，仅替换版本文件。 -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>META-INF/build-info.properties</include>
+                </includes>
             </resource>
             <!-- 根目录为 Flyway 脚本唯一源码位置，构建时复制到标准类路径供应用启动和打包使用 -->
             <resource>

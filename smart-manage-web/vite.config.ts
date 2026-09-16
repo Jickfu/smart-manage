@@ -1,6 +1,7 @@
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import packageInfo from './package.json';
 
 const apiProxyTarget = 'http://localhost:8080';
 
@@ -42,6 +43,9 @@ export default defineConfig(({ mode }) => {
     } satisfies import('vite').Plugin;
   });
   return {
+    define: {
+      __PRODUCT_VERSION__: JSON.stringify(packageInfo.version),
+    },
     plugins: [browserCryptoStub, reactPlugins],
     resolve: {
       alias: {

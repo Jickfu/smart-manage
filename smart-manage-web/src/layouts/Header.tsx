@@ -21,6 +21,7 @@ import { resolveAssetUrl } from '@/utils/assetUrl';
 import HeaderTabs from './HeaderTabs';
 import HeaderUserPanel from './HeaderUserPanel';
 import PersonalSettingsModal from './PersonalSettingsModal';
+import AboutProductModal from './AboutProductModal';
 import InboxHeaderButton from '@/domain/sys/message/inbox/InboxHeaderButton';
 import ListTableShell from '@/domain/common/page/list/ListTableShell';
 import './Header.css';
@@ -385,20 +386,13 @@ const Header = () => {
         />
       </AppModal>
 
-      <AppModal
-        title="关于产品"
-        open={aboutOpen}
-        width={440}
-        bodyMode="natural"
-        onCancel={() => setAboutOpen(false)}
-        footer={<Button onClick={() => setAboutOpen(false)}>关闭</Button>}
-      >
-        <div className="sm-about-product">
-          <img src={headerLogo} alt={systemName} />
-          <strong>{systemName}</strong>
-          <span>模块化企业管理平台</span>
-        </div>
-      </AppModal>
+      {aboutOpen && (
+        <AboutProductModal
+          systemName={systemName}
+          logo={headerLogo}
+          onClose={() => setAboutOpen(false)}
+        />
+      )}
     </header>
   );
 };

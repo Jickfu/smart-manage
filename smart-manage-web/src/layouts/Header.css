@@ -686,7 +686,7 @@
   align-items: center;
   flex-direction: column;
   gap: 10px;
-  padding: 18px 0;
+  padding: 18px 24px;
 }
 
 .sm-about-product img {
@@ -699,6 +699,24 @@
   font-size: 18px;
 }
 
-.sm-about-product span {
-  color: #8a8f99;
+.sm-about-versions {
+  width: fit-content;
+  max-width: 100%;
+  margin: 10px 0 0;
+}
+
+.sm-about-versions > div {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.sm-about-versions dt {
+  color: var(--ant-color-text-secondary);
+}
+
+.sm-about-versions dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }

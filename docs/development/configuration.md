@@ -1,5 +1,15 @@
 # 环境与配置
 
+## 关于产品与构建版本
+
+“关于产品”显示前端、后端各自的版本号。前端版本来自 `smart-manage-web/package.json` 的 `version`，后端版本来自 `smart-manage-api/pom.xml` 的项目 `version`；正式发布时人工维护，构建不会自动递增版本。
+
+前端 Vite 启动／构建时读取版本并注入产物。后端通过 Maven 资源过滤，将 `@project.version@` 写入 `META-INF/build-info.properties`，Spring Boot 通过 `BuildProperties` 读取。IDEA 按 Maven 项目导入后，普通构建与 `mvn package` 使用同一份资源过滤配置，无需额外配置启动前任务。修改 POM 后需同步 Maven 项目并重新构建；修改前端版本后需重新启动开发服务或构建。
+
+后端 `GET /sys/base/product/version` 沿用全局登录校验、返回 `no-store`，仅提供当前响应实例的版本。版本资源缺失或未正确处理时显示“版本不可用”。
+
+后端构建产物固定为 `smart-manage-api/target/smart-manage-api.jar`，版本变化不改变文件名，systemd 可以保持固定启动路径。
+
 ## 项目配置命名空间
 
 Spring Boot、Sa-Token、MyBatis-Plus、JetCache 等框架或第三方组件继续使用各自原生配置前缀。项目自定义配置统一放在 `smart-manage` 下，并以架构层级作为第一级命名空间：
