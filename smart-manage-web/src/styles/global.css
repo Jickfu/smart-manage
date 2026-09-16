@@ -70,3 +70,17 @@ body {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* 表格中的文本入口允许拖选复制，统一原生按钮与 Ant Design 链接按钮的交互。 */
+.sm-table-link,
+.ant-table-wrapper .ant-table-tbody .ant-btn-variant-link {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.sm-table-link:not(:disabled):hover,
+.ant-table-wrapper
+  .ant-table-tbody
+  .ant-btn-variant-link:not(:disabled):not(.ant-btn-disabled):hover {
+  text-decoration: underline;
+}

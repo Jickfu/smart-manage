@@ -391,7 +391,3 @@
   border: 0;
   cursor: pointer;
 }
-
-.sm-table-link:hover {
-  text-decoration: underline;
-}

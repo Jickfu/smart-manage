@@ -100,6 +100,8 @@ pnpm verify:page-framework
 pnpm exec prettier --check "scripts/*page-framework*.mjs"
 ```
 
+表格文本入口的公共选择样式和悬停规则由 `src/styles/tableLink.test.ts` 随 `pnpm test` 校验，覆盖原生按钮、Ant Design 链接按钮、禁用状态和工具栏隔离。真实悬停、拖选复制和键盘激活通过浏览器验收；按钮语义及接入方式见[前端页面指南](./frontend-page-guide.md#列表和命令)。
+
 ### 页面注册生成
 
 在 `smart-manage-web` 目录执行。实际入口为 `package.json` 的 `gen:registry`，脚本为 `scripts/gen-registry.mjs`，输出为 `src/domain/common/registry/registry.gen.ts`；`predev`、`prebuild` 也调用该生成器。
