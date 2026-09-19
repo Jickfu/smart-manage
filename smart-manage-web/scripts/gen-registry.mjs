@@ -2,15 +2,15 @@
  * 自动发现 domain 目录下的 pageRegistration.ts(x)，生成模块页面清单导入文件。
  * 页面键、类型和组件完全由清单显式声明，生成器不解析业务源码。
  */
+import { format } from 'prettier';
+import { selectedDomains } from './selected-domains.mjs';
 import { writeFileSync } from 'node:fs';
-import { readdir } from 'node:fs/promises';
+import { access, readdir } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
-const rootDir = join(scriptDir, '..');
-const sourceDir = join(rootDir, 'src');
-const outputFile = join(sourceDir, 'domain', 'common', 'registry', 'registry.gen.ts');
+const defaultRoot = join(scriptDir, '..');
 
 function toPosixPath(filePath) {
   return filePath.replace(/\\/g, '/');
@@ -36,9 +36,14 @@ async function discoverRegistrations(directory) {
   return results;
 }
 
-async function main() {
+export async function generateRegistry(rootDir = defaultRoot, domains = selectedDomains()) {
+  const sourceDir = join(rootDir, 'src');
+  const outputFile = join(sourceDir, 'domain', 'common', 'registry', 'registry.gen.ts');
   console.log('[gen:registry] 扫描模块页面注册清单...');
-  const files = await discoverRegistrations(join(sourceDir, 'domain'));
+  const files = [];
+  for (const domain of domains) {
+    files.push(...(await discoverRegistrations(join(sourceDir, 'domain', domain))));
+  }
   files.sort();
 
   if (files.length === 0) {
@@ -65,6 +70,30 @@ async function main() {
   lines.push(']);');
   writeFileSync(outputFile, `${lines.join('\n')}\n`, 'utf-8');
 
+  const homeLines = [
+    header,
+    "import type { ApplicationHomeRegistration } from './applicationHomeRegistry';",
+  ];
+  const homeModules = [];
+  for (const [index, domain] of domains.entries()) {
+    await access(join(sourceDir, 'domain', domain, 'applicationHomes.ts'));
+    const name = `domainHomes${index + 1}`;
+    homeLines.push(`import ${name} from '../../${domain}/applicationHomes';`);
+    homeModules.push(`...${name}`);
+  }
+  homeLines.push(
+    `export const applicationHomes: readonly ApplicationHomeRegistration[] = [${homeModules.join(', ')}];`,
+  );
+  writeFileSync(
+    join(dirname(outputFile), 'applicationHomes.gen.ts'),
+    await format(`${homeLines.join('\n')}\n`, {
+      parser: 'typescript',
+      singleQuote: true,
+      printWidth: 100,
+    }),
+    'utf-8',
+  );
+
   console.log(
     `[gen:registry] 已生成 ${toPosixPath(relative(rootDir, outputFile))}，共 ${files.length} 个模块清单`,
   );
@@ -73,7 +102,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('[gen:registry] 错误：', error);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  generateRegistry().catch((error) => {
+    console.error('[gen:registry] 错误：', error);
+    process.exitCode = 1;
+  });
+}

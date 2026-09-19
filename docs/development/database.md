@@ -2,42 +2,36 @@
 
 ## 权威来源
 
-数据库结构和必要初始化数据只由 Flyway 迁移定义。平台迁移位于根目录 `db/migration`，二次开发业务迁移位于 `db/business`；后端构建分别复制到对应类路径。两条链独立记录版本，不能把两个目录合并到同一个 `spring.flyway.locations`。
+数据库结构和必要初始化数据只由所属模块的 Flyway 迁移定义。平台位于 `platform/src/main/resources/db/platform/migration`，可选 DEMO 位于 `domains/demo/src/main/resources/db/demo/migration`。构建后资源随普通 JAR 交付，不再使用根目录 `db/business` 或复制迁移目录。
 
-- 已发布或进入共享、长期使用环境的迁移禁止删除或修改；个人可重建库中的未发布草稿按下述发布规则处理。
-- 结构和初始化数据调整必须新增版本脚本。
-- 系统内置功能和权限目录通过新增迁移显式维护，禁止运行时扫描代码自动写库。
-- 查询实际数据库状态用于排障和核实迁移结果，不能替代迁移。
-- Flyway 版本允许存在空缺。
+当前尚未正式发布，本次直接重组 V1/V2 基线，不兼容旧开发库，不自动修改历史或删除数据。新安装使用空库；已有个人开发库是否重建由使用者明确决定。正式发布后的规则见下文。
 
-## 平台与业务迁移链
+## 平台与领域迁移链
 
-| 项目 | 平台链 | 业务链 |
+| 项目 | 平台 | 可选领域（DEMO 示例） |
 | --- | --- | --- |
-| 维护者 | Smart Manage 上游 | 二次开发项目 |
-| 默认位置 | `classpath:db/migration` | `classpath:db/business` |
-| 历史表 | `flyway_schema_history`（保留已有记录） | `flyway_business_schema_history` |
-| 版本空间 | V1 结构、V2 初始化数据，后续递增 | 独立从 V1 开始，版本必须大于 0 |
-| 启用方式 | `spring.flyway.enabled` | 默认关闭，存在实际脚本后显式启用 |
+| 类路径 | `classpath:db/platform/migration` | `classpath:db/demo/migration` |
+| 历史表 | `flyway_schema_history` | `flyway_demo_schema_history` |
+| 版本 | V1 结构、V2 必要数据，后续递增 | 独立从 V1 开始 |
+| 启用 | 默认 | Maven `with-demo` 装配进最终包 |
 
-`FlywayMigrationConfig` 保留 Spring Boot 管理的平台 Flyway Bean 和数据库初始化依赖，由 `DualFlywayMigrationStrategy` 执行“平台迁移 → 平台最低版本检查 → 业务迁移”。任一步失败都阻止启动。业务共用平台数据源、默认 schema 和 schemas，不继承平台 locations、历史表、target 或 baseline 设置。
+领域 JAR 的 `META-INF/smart-manage/migration.properties` 声明 `id`、`location`、`table`、`minimum-platform-version`。平台通用配置发现声明，保留 Boot 的平台 Flyway Bean 与初始化依赖，先执行平台，再检查领域最低平台版本并执行领域迁移。已声明领域的配置无效、目录缺失、空链、重名或迁移失败均拒绝启动，不自动跳过；装配测试确认选入的领域声明确实存在。
 
-业务发行包使用以下环境变量配置（dev/test/prod 一致）：
+当前各可选领域只依赖平台，按标识稳定排序，不支持领域依赖图。平台不得声明采购专属目录、业务键或迁移。每条链使用独立历史表和版本空间，不能合并到同一 `spring.flyway.locations`。
 
-- `SMART_MANAGE_BUSINESS_MIGRATION_ENABLED=true`：启用业务链。
-- `SMART_MANAGE_BUSINESS_MIGRATION_LOCATION`：默认 `classpath:db/business`；支持明确的 `classpath:` 或 `filesystem:` 目录，禁止通配符以及与平台相同或包含的目录。
-- `SMART_MANAGE_BUSINESS_MINIMUM_PLATFORM_VERSION`：当前默认 `2`；维护者随依赖变化更新为实际最低平台数据库版本。这不是业务版本号，也不替代应用代码兼容性验证。
-
-平台完成后 schema 已非空，业务首次启动仅在自己的历史表登记版本 0，再执行全部 V1+。版本 0 专用于初始化，禁止放置 V0；目录缺失或没有版本迁移时拒绝启动。此初始化只适用于尚无业务对象的新链，不能接管手工建表或已混入平台历史的旧业务迁移。
-
-两条链都校验历史和文件命名，禁止乱序和自动 clean；不执行自动 repair。平台链与业务链之间可以使用相同版本号，同一业务链内部仍需协调版本。时间戳只能减少重号，不能消除执行顺序和对象依赖冲突。
+平台完成后 schema 已非空，领域首次启动只在自己的历史表登记版本 0，随后执行全部 V1+。版本 0 不得作为实际 SQL 版本。各链校验 checksum 和命名，禁用乱序、自动 clean 和 repair；平台成功、领域失败不会回滚已经提交的平台变更。
 
 ## 对象所有权与二次开发
 
-- 上游维护现有平台表、上游自带领域表及内置数据；业务链维护自有业务表和明确归属的扩展数据。现有上游采购等领域仍属于平台发行包，不搬迁历史脚本。
-- 二次开发优先新增带自有领域前缀的表，避免自行更改上游字段、约束、触发器或索引。确需更改时必须与上游升级逐版本协调；独立历史表不能消除对象冲突。
-- 业务 Feature、权限、菜单、应用等扩展数据仍由业务迁移显式维护，使用自有稳定编码和独立主键；不得覆盖上游种子 ID，或用忽略冲突的 SQL 掩盖不同语义。仅更新本业务拥有的行。
-- 已经把业务脚本放进平台链的项目必须先核对历史和实际对象，制定单独接管方案；不得直接移动文件、删除历史记录或 baseline 到当前平台版本。
+平台拥有系统表与自身必要目录数据；可选领域拥有自身表、Feature、权限、菜单、应用、编号规则及相关测试和文档。扩展使用独立稳定编码和主键，不覆盖平台行，不以忽略冲突 SQL 掩盖不同语义。
+
+删除后端及前端领域目录只能裁剪源码与新安装产物，不能卸载已经初始化的数据库；已有数据的卸载须另行设计。独立版本链也不能消除对象冲突或应用版本兼容问题。
+
+## 必要数据与开发 fixtures
+
+平台 V2 默认只保留一个公司、管理员及关联和运行所需的系统目录、规则。管理员密码为空的不可登录标记，由首次启动的外部配置初始化，规则见[环境与配置](./configuration.md#管理员首次初始化)。
+
+多部门开发数据位于根目录 `dev-support/fixtures/multiple-departments.sql`，仅在明确需要时由开发者向自己的测试库显式导入，不随任何 profile、首次启动或领域装配自动执行。领域自有 fixtures 应放在 `domains/{领域}/fixtures`。当前 DEMO 不含演示单据；选择它只创建必要结构和目录数据。
 
 ## 正式发布与升级规则
 

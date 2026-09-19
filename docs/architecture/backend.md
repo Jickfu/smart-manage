@@ -2,6 +2,14 @@
 
 本文档是后端分层、依赖、接口、Service/事务、数据实现和技术边界的权威来源。具体业务状态与不变量归对应领域文档，验证命令归[质量验证](../development/verification.md)，本文档不重复维护。
 
+## Maven 交付边界
+
+根父 POM 统一依赖和插件；`platform`（`smart-manage-platform`）交付 `sm.infrastructure`、`sm.system` 和 `sm.domain.sys`，为普通 JAR。`bootstrap`（`smart-manage-bootstrap`）只负责启动、配置、领域装配与可执行包。可选 `domains/demo`（`smart-manage-domain-demo`）依赖平台，平台不得反向依赖它，也不保留采购专属声明。`domains` 仅为目录容器。
+
+默认装配纯平台，Maven `with-demo` 同时选择 DEMO reactor 模块和启动依赖。架构测试位于 bootstrap，在发行实际 classpath 中检查所有已装配业务；领域专属测试随领域维护。普通 JAR 不包含 Boot 重打包布局，只有 bootstrap 执行 repackage。
+
+同一个 Maven 模块不取消逻辑边界：跨领域仍只通过提供方稳定 Contract，不能直接访问其他领域 Mapper、Entity 或 TxService。本次演示领域统一使用 `demo` 标识，包括 Java 包、权限码、Feature、API、表名和迁移历史表，不保留旧 `scm` 兼容入口；平台 Java 包和 HTTP context path 不变。
+
 ## 分层边界
 
 - Java 根包为 `sm`。
@@ -12,7 +20,7 @@
 - `sm.domain.{领域}.{应用}.{模块}`：应用内最小的内聚能力模块，可以是业务聚合、主数据、配置、查询记录或监控能力。
 - 领域或应用内的公共能力放在对应 `common` 包。
 
-`sm.domain.sys` 是系统管理业务领域，与 `sm.domain.scm` 同级；用户、组织、角色、权限、菜单、应用、功能、调度、消息、基础资料和系统参数等具有完整业务生命周期的模块都保留在该领域。不得因名称中的 `sys` 将这些业务迁入 `sm.system`。
+`sm.domain.sys` 是系统管理业务领域，与 `sm.domain.demo` 同级；用户、组织、角色、权限、菜单、应用、功能、调度、消息、基础资料和系统参数等具有完整业务生命周期的模块都保留在该领域。不得因名称中的 `sys` 将这些业务迁入 `sm.system`。
 
 顶层依赖方向为 `domain -> system -> infrastructure`：Domain 可以依赖 System；System 可以依赖 Infrastructure；Infrastructure 不得依赖 System 或 Domain，System 不得依赖 Domain。Domain 不得任意依赖 Infrastructure，目前只开放 `sm.infrastructure.mapping.SmMapperConfig` 这一明确技术 Contract。
 

@@ -1,0 +1,20 @@
+import { lazy } from 'react';
+import { definePageRegistrations } from '@/domain/common/registry/componentRegistry';
+import { componentKeys } from '@/domain/demo/componentKeys';
+
+export default definePageRegistrations([
+  {
+    componentKey: componentKeys.purchaseRequisition,
+    featureKey: 'demo/procurement/purchase-requisition',
+    title: '采购申请',
+    pageType: 'LIST',
+    component: lazy(() => import('./PurchaseRequisitionListPage')),
+  },
+  {
+    componentKey: componentKeys.purchaseRequisitionEdit,
+    featureKey: 'demo/procurement/purchase-requisition',
+    title: '采购申请',
+    pageType: 'EDIT',
+    component: lazy(() => import('./PurchaseRequisitionEditPage')),
+  },
+]);

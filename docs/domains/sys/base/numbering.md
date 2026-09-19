@@ -12,7 +12,7 @@
 
 编号引用表达“哪个业务功能的哪个字段需要编号”，稳定键例如：
 
-- `scm/procurement/purchase-requisition.number`；
+- `demo/procurement/purchase-requisition.number`；
 - `sys/base/basic-data-item.number`。
 
 编号引用明确归属于 Feature，所属应用和领域由 Feature 推导。系统内置引用由版本化的系统目录建立，
@@ -67,7 +67,7 @@
 
 | 编号引用 | 默认规则键 | 默认格式 | 作用域 | 重置周期 |
 | --- | --- | --- | --- | --- |
-| `scm/procurement/purchase-requisition.number` | `scm/procurement/purchase-requisition` | `PR-{bill.bizDate:yyyyMMdd}-{seq:5}` | 组织 | 每天 |
+| `demo/procurement/purchase-requisition.number` | `demo/procurement/purchase-requisition` | `PR-{bill.bizDate:yyyyMMdd}-{seq:5}` | 组织 | 每天 |
 | `sys/base/basic-data-item.number` | `sys/base/basic-data-item` | `BD-{seq:4}` | 基础资料分类 | 不重置 |
 
 采购申请可以在格式中加入 `org.number`；基础资料可以加入 `category.number`。流水仍分别使用稳定的组织 ID 和

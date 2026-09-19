@@ -10,16 +10,19 @@ Smart Manage 是可二次开发的企业中后台底座，采用按领域、应�
 
 ```text
 smart-manage/
-├── db/migration/       # 平台迁移
-├── db/business/        # 可选二次开发业务迁移
-├── smart-manage-api/   # Spring Boot 后端
-├── smart-manage-web/   # React 前端
-└── docs/               # 架构、开发、领域与提案文档
+├── pom.xml             # 父 POM，默认装配平台
+├── platform/           # 平台普通 JAR，含 system/infrastructure/domain.sys 及平台迁移
+├── bootstrap/          # 启动入口、配置和最终可执行 JAR
+├── domains/demo/        # 可选采购领域，含代码、迁移、测试和文档
+├── dev-support/fixtures/ # 显式导入的开发数据，不进入自动迁移
+├── db/                 # 空库验证脚本
+├── docs/               # 平台架构和开发规范
+└── smart-manage-web/    # 一个前端工程，构建时选择领域
 ```
 
 后端业务按 `sm.domain.{领域}.{应用}.{模块}` 组织，前端业务按 `src/domain/{领域}/{应用}/{模块}` 组织。模块是应用内最小的内聚能力边界，可以是业务聚合、主数据、配置、查询记录或监控能力；它通常对应一个 Feature 或业务聚合，但不强制与 Feature 一一对应。非系统内核业务集中在独立领域，系统内核禁止反向依赖可选业务领域。
 
-后端顶层语义固定为 Infrastructure、System、Domain：Infrastructure 承担第三方技术与外部设施适配；System 承担跨所有领域共享且不具有独立业务生命周期的系统内核能力；Domain 承担具有独立业务语义和生命周期的模块，其中 `sm.domain.sys`（系统管理）与 `sm.domain.scm`（供应链）是同级领域。依赖方向为 `domain -> system -> infrastructure`，跨领域只允许显式稳定 Contract。
+后端顶层语义固定为 Infrastructure、System、Domain：Infrastructure 承担第三方技术与外部设施适配；System 承担跨所有领域共享且不具有独立业务生命周期的系统内核能力；Domain 承担具有独立业务语义和生命周期的模块，其中 `sm.domain.sys`（系统管理）与 `sm.domain.demo`（演示）是同级领域。依赖方向为 `domain -> system -> infrastructure`，跨领域只允许显式稳定 Contract。
 
 跨领域 Contract 不在创建 Domain 时预先设计。只有真实业务首次需要跨领域协作时，才由能力提供方根据当前用例提取最小稳定 Contract；调用方依赖该 Contract，不穿透目标领域内部实现。项目遵循“先实现领域，后发现协作，再提取 Contract”。
 
@@ -29,7 +32,7 @@ smart-manage/
 | --- | --- |
 | 总体架构 | 保留领域模块化单体，不额外拆分 Application、Domain、Infrastructure 层 |
 | 事务边界 | 公开 Service 负责查询和命令入口，包级 TxService 负责事务写入 |
-| 数据库 | 根目录 Flyway 迁移是结构和必要初始化数据的唯一权威来源 |
+| 数据库 | 各后端模块的 Flyway 迁移是结构和必要初始化数据的唯一权威来源 |
 | 并发控制 | 可修改聚合使用 `version` 和 MyBatis-Plus 乐观锁 |
 | 接口基础设施 | 统一响应、全局异常、权限注解、操作日志和 Trace ID |
 | 权限 | 功能权限使用权限码，高风险能力额外校验 `administrator`；数据权限按独立规范演进 |

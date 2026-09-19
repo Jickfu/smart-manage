@@ -32,14 +32,14 @@ const permissions: PermissionListAllVO[] = [
   },
   {
     id: '3',
-    number: 'scm:purchase:listPage',
+    number: 'demo:purchase:listPage',
     name: '采购申请列表',
     appId: '11',
-    appName: '供应链',
+    appName: '演示',
     domainId: '101',
-    domainName: '供应链领域',
+    domainName: '演示领域',
     featureId: '21',
-    featureKey: 'scm/procurement/purchase-requisition',
+    featureKey: 'demo/procurement/purchase-requisition',
     featureName: '采购申请',
   },
 ];
@@ -54,7 +54,7 @@ describe('permissionAssignment', () => {
     expect(root?.title).toBe('全部权限（1/3）');
     expect(systemDomain?.key).toBe('domain:100');
     expect(systemDomain?.title).toBe('系统领域（1/2）');
-    expect(root?.children?.[1]?.title).toBe('供应链领域（0/1）');
+    expect(root?.children?.[1]?.title).toBe('演示领域（0/1）');
     expect(systemApp?.title).toBe('系统管理（1/2）');
     expect(systemApp?.children?.map((node) => node.title)).toEqual([
       '应用级权限（0/1）',

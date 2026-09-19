@@ -6,12 +6,12 @@ import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import type { AppVO } from '@/domain/sys/base/app/types';
 import { useWorkbenchStore } from './workbench';
 
-const APP_NUMBER = 'scm';
-const COMPONENT_KEY = 'scm/procurement/purchase-requisition/edit';
+const APP_NUMBER = 'demo';
+const COMPONENT_KEY = 'demo/procurement/purchase-requisition/edit';
 
 const appInfo: AppVO = {
   id: '1',
-  domainNumber: 'scm',
+  domainNumber: 'demo',
   number: APP_NUMBER,
   name: '采购管理',
   icon: 'app',
@@ -23,7 +23,7 @@ const appInfo: AppVO = {
 describe('workbench store', () => {
   beforeEach(() => {
     componentRegistry[COMPONENT_KEY] = {
-      featureKey: 'scm/procurement/purchase-requisition',
+      featureKey: 'demo/procurement/purchase-requisition',
       title: '采购申请',
       pageType: 'EDIT',
       component: () => null,

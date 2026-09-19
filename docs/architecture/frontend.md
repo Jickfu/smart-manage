@@ -2,6 +2,14 @@
 
 本文档是桌面管理端 `smart-manage-web` 的技术基线、路由、状态职责、页面类型和页签生命周期的权威来源，不自动约束其他客户端。具体页面实现与交互约束归[前端页面指南](../development/frontend-page-guide.md)，注册协议细节归[页面注册约定](./page-registration-convention.md)。
 
+## 领域裁剪与加载
+
+保持一个前端工程、一次构建和统一部署。构建环境变量 `SMART_MANAGE_DOMAINS` 默认 `sys`，采购发行显式设为 `sys,demo`；维护者同时选择后端相应 Maven profile，不建立额外跨端同步协议。
+
+`gen:registry` 只导入所选领域的页面清单和 `applicationHomes.ts`，分别生成 `registry.gen.ts` 和 `applicationHomes.gen.ts`。未选领域不进入运行依赖图，显式选择不存在的目录直接失败。领域首页注册使用 React lazy，工作台通过 Suspense 加载；业务页面保留各自动态 import 和已有页签生命周期。领域或应用目录不强制合并为一个大 JS，重型能力按现有实际引用拆分，登录页仍是独立入口。
+
+提交的生成文件始终对应默认 `sys`。DEMO 专属组件键和应用首页在 DEMO 目录内维护；公共注册器不静态导入可选业务。
+
 ## 技术基线与目录
 
 - 使用 pnpm、React、TypeScript 和 Ant Design，不引入其他 UI 组件库。

@@ -19,7 +19,7 @@ asset/{domainNumber}/{appNumber}/{resourceNumber}/{yyyy}/{MM}/{shard}/{uuid}.{ex
 例如：
 
 ```text
-biz/scm/procurement/purchase-requisition/2026/08/a7/a7f3c9d4b35f4d6699bcdf51ca7b28cd.pdf
+biz/demo/procurement/purchase-requisition/2026/08/a7/a7f3c9d4b35f4d6699bcdf51ca7b28cd.pdf
 asset/sys/base/ui-config/2026/08/42/42c1fbe574f947bea0b3425776279d1a.png
 ```
 
@@ -32,7 +32,7 @@ asset/sys/base/ui-config/2026/08/42/42c1fbe574f947bea0b3425776279d1a.png
 `bizType` 是服务端注册的稳定业务资源类型，不是前端自定义目录。编码使用 `{domain}.{application}.{resource}`：
 
 ```text
-scm.procurement.purchase-requisition
+demo.procurement.purchase-requisition
 sys.base.ui-config
 sys.report.report-template
 ```
@@ -47,7 +47,7 @@ sys.report.report-template
 
 ### 注册位置和方式
 
-系统公共层定义业务资源协议和注册表，并通过 Spring 收集全部注册 Bean；具体业务模块拥有自己的注册实现。系统内核只依赖注册接口，不反向依赖 SCM 等可选业务模块。当前保留显式注册，不通过扫描 Entity、Controller、表名或注解猜测业务权限。
+系统公共层定义业务资源协议和注册表，并通过 Spring 收集全部注册 Bean；具体业务模块拥有自己的注册实现。系统内核只依赖注册接口，不反向依赖 DEMO 等可选业务模块。当前保留显式注册，不通过扫描 Entity、Controller、表名或注解猜测业务权限。
 
 推荐结构：
 
@@ -73,7 +73,7 @@ final class PurchaseRequisitionResourceRegistration
 
     @Override
     public String resourceType() {
-        return "scm.procurement.purchase-requisition";
+        return "demo.procurement.purchase-requisition";
     }
 
     @Override
@@ -127,7 +127,7 @@ TEMP 转 ACTIVE 只更新数据库归属和状态，不移动对象。过期 TEM
 
 正式附件不采用“仅创建人可读”，也不为每个附件维护用户授权表。附件通过业务资源注册表继承业务对象权限：
 
-资源类型由 `BusinessResourceRegistration` 显式注册，授权策略通过 `BusinessResourceAccessPolicy.requireAllowed(resourceId, action)` 校验对象；完整接口以[策略源码](../../../../smart-manage-api/src/main/java/sm/system/resource/BusinessResourceAccessPolicy.java)为准。
+资源类型由 `BusinessResourceRegistration` 显式注册，授权策略通过 `BusinessResourceAccessPolicy.requireAllowed(resourceId, action)` 校验对象；完整接口以[策略源码](../../../../platform/src/main/java/sm/system/resource/BusinessResourceAccessPolicy.java)为准。
 
 - `READ` 控制预览和下载；业务模块可以综合申请人、审批人、部门负责人、数据范围和审计权限判断。
 - `ATTACH`、`DETACH` 和 `DELETE` 分别控制绑定、解除和删除，禁止用含义宽泛的 `canManage` 合并不同状态规则。

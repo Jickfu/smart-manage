@@ -65,7 +65,7 @@
 
 领域文档只维护需要跨实现长期保留的业务事实，包括模块职责、聚合边界、状态与不变量、关键交互、事务与并发语义、稳定集成标识以及安全和对象级授权边界。以下内容不在领域文档中重复维护：
 
-- Flyway 版本、迁移文件名、建表过程和当前基线组成；数据库规则统一引用[数据库开发](./development/database.md)，实际结构以 `db/migration` 为准；
+- Flyway 版本、迁移文件名、建表过程和当前基线组成；数据库规则统一引用[数据库开发](./development/database.md)，实际结构以 各模块 `src/main/resources/db/{领域}/migration` 为准；
 - 权限码、权限前缀及权限与接口的逐项清单；权限事实以代码中的权限常量、Controller 注解和数据库内置目录为准，并由质量门禁校验；
 - 可以直接从 Controller、路由注册、实体或配置读取的完整接口、表字段和配置项清单；只有构成稳定跨模块契约的标识才保留；
 - 实施进度、临时兼容过程和移除脚本；未来工作进入路线图或提案，历史过程通过 Git 历史和 Issue 追溯。
@@ -108,11 +108,11 @@
 - [邮件](./domains/sys/message/email.md)
 - [站内消息](./domains/sys/message/inbox.md)
 
-### 供应链领域（scm）
+### 演示领域（demo）
 
 采购应用（procurement）：
 
-- [采购申请](./domains/scm/procurement/purchase-requisition.md)
+- [采购申请](../domains/demo/docs/procurement/purchase-requisition.md)
 
 桌面管理端的技术基线、页面形态和页签规则只适用于 `smart-manage-web`；其他客户端在实现时另行明确适用规范，不把选型讨论写成当前架构。
 

@@ -1,8 +1,18 @@
+import { selectedDomains } from './selected-domains.mjs';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const webRoot = resolve(import.meta.dirname, '..');
 const repoRoot = resolve(webRoot, '..');
+const domains = selectedDomains();
+const backendRoots = [
+  join(repoRoot, 'platform'),
+  ...domains
+    .filter((domain) => domain !== 'sys')
+    .map((domain) => join(repoRoot, 'domains', domain)),
+];
+const domainFiles = (predicate) =>
+  domains.flatMap((domain) => filesUnder(join(webRoot, 'src', 'domain', domain), predicate));
 const catalogFileArgument = process.argv.find((argument) => argument.startsWith('--catalog-file='));
 const menuCatalogFileArgument = process.argv.find((argument) =>
   argument.startsWith('--menu-catalog-file='),
@@ -31,8 +41,8 @@ if (catalogFileArgument) {
   }
 } else {
   // 本地快速检查没有数据库时使用迁移字面量；CI 会传入 Flyway 迁移后的最终目录。
-  for (const path of filesUnder(join(repoRoot, 'db', 'migration'), (file) =>
-    file.endsWith('.sql'),
+  for (const path of backendRoots.flatMap((directory) =>
+    filesUnder(join(directory, 'src/main/resources/db'), (file) => file.endsWith('.sql')),
   )) {
     const text = readFileSync(path, 'utf8');
     for (const match of text.matchAll(/['"]([a-z][a-z0-9-]*(?::[A-Za-z][A-Za-z0-9-]*){2,})['"]/g)) {
@@ -55,9 +65,7 @@ if (featureCatalogFileArgument) {
 }
 
 const registeredFeatures = new Set();
-for (const path of filesUnder(join(webRoot, 'src', 'domain'), (file) =>
-  file.endsWith('pageRegistration.ts'),
-)) {
+for (const path of domainFiles((file) => file.endsWith('pageRegistration.ts'))) {
   const text = readFileSync(path, 'utf8');
   for (const match of text.matchAll(/featureKey:\s*'([^']+)'/g)) registeredFeatures.add(match[1]);
 }
@@ -72,7 +80,7 @@ if (featureCatalogFileArgument) {
 }
 
 const used = new Set();
-for (const path of filesUnder(join(webRoot, 'src'), (file) => file.endsWith('permissions.ts'))) {
+for (const path of domainFiles((file) => file.endsWith('permissions.ts'))) {
   const text = readFileSync(path, 'utf8');
   const resource = text.match(/defineAccessResource\('([^']+)'\s*,\s*\{([\s\S]*?)\}\)/);
   if (!resource) continue;
@@ -80,8 +88,9 @@ for (const path of filesUnder(join(webRoot, 'src'), (file) => file.endsWith('per
   for (const match of entries.matchAll(/:\s*'([^']+)'/g)) used.add(`${prefix}:${match[1]}`);
 }
 
-const javaRoot = join(repoRoot, 'smart-manage-api', 'src', 'main', 'java');
-for (const path of filesUnder(javaRoot, (file) => file.endsWith('.java'))) {
+for (const path of backendRoots.flatMap((directory) =>
+  filesUnder(join(directory, 'src/main/java'), (file) => file.endsWith('.java')),
+)) {
   const text = readFileSync(path, 'utf8');
   const permissionSource = path.endsWith('Permission.java')
     ? text

@@ -36,7 +36,7 @@
 
 | 任务 | 必读文档 |
 | --- | --- |
-| 后端代码 | `smart-manage-api/AGENTS.md`、`docs/architecture/backend.md` |
+| 后端代码 | 所属模块 `AGENTS.md`、`platform/AGENTS.md`、`docs/architecture/backend.md` |
 | 桌面管理端代码（`smart-manage-web`） | `smart-manage-web/AGENTS.md`、`docs/architecture/frontend.md` |
 | 桌面管理端页面、布局或交互 | `docs/development/frontend-page-guide.md` |
 | 认证、权限或高风险能力 | `docs/architecture/security.md` |
@@ -46,8 +46,8 @@
 | 配置、部署或多实例 | `docs/development/configuration.md`、`docs/architecture/deployment.md` |
 | 数据库或迁移 | `docs/development/database.md` |
 | 构建、测试或 CI | `docs/development/verification.md` |
-| 新增或显著扩展业务模块 | `docs/development/module-development-guide.md`、`docs/development/module-pattern-catalog.md`、`docs/domains/{领域}/{应用}/` 下对应模块文档 |
+| 新增或显著扩展业务模块 | `docs/development/module-development-guide.md`、`docs/development/module-pattern-catalog.md`、平台 `docs/domains/sys/{应用}/` 或可选领域 `domains/{领域}/docs/{应用}/` 下对应模块文档 |
 | 新增业务聚合 | 上述模块文档及 `docs/development/business-aggregate-checklist.md` |
-| 具体业务模块 | `docs/domains/{领域}/{应用}/` 下对应模块文档 |
+| 具体业务模块 | 平台 `docs/domains/sys/{应用}/` 或可选领域 `domains/{领域}/docs/{应用}/` 下对应模块文档 |
 
 `docs/proposals/` 保留方案背景与后续设想，不作为生效规则；已采纳约束以对应架构和领域文档为准。

@@ -3,7 +3,6 @@ import { resolveApplicationHome } from './applicationHomeRegistry';
 
 describe('applicationHomeRegistry', () => {
   it('resolves registered application homes', () => {
-    expect(resolveApplicationHome('procurement')).toBeTruthy();
     expect(resolveApplicationHome('scheduler')).toBeTruthy();
     expect(resolveApplicationHome('message')).toBeTruthy();
   });

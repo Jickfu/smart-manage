@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Card, Empty } from 'antd';
 import QuickLaunchCard from '@/domain/common/home/QuickLaunchCard';
 import { resolveApplicationHome } from './applicationHomeRegistry';
@@ -9,7 +10,7 @@ interface ApplicationHomeProps {
 
 const ApplicationHome = ({ appNumber }: ApplicationHomeProps) => {
   const home = resolveApplicationHome(appNumber);
-  if (home) return home;
+  if (home) return <Suspense fallback={<div role="status">正在加载首页…</div>}>{home}</Suspense>;
   return (
     <div className="sm-app-home">
       <QuickLaunchCard scope="APPLICATION" appNumber={appNumber} />

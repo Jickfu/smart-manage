@@ -10,9 +10,9 @@ Smart Manage 保持模块化单体，不拆分微服务。生产目标部署方�
 ```text
 客户端
   → Nginx / 负载均衡器
-    → smart-manage-api 实例 A
-    → smart-manage-api 实例 B
-    → smart-manage-api 实例 N
+    → smart-manage-bootstrap 实例 A
+    → smart-manage-bootstrap 实例 B
+    → smart-manage-bootstrap 实例 N
 
 所有实例共享：
   PostgreSQL

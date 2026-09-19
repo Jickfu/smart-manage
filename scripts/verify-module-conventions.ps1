@@ -125,7 +125,7 @@ foreach ($requiredFile in $requiredFiles) {
 }
 
 Assert-FileContains 'AGENTS.md' 'docs/development/module-development-guide\.md' 'Root AGENTS.md does not route to the module development guide'
-Assert-FileContains 'smart-manage-api/AGENTS.md' 'module-development-guide\.md' 'Backend AGENTS.md does not route to the module development guide'
+Assert-FileContains 'platform/AGENTS.md' 'module-development-guide\.md' 'Backend AGENTS.md does not route to the module development guide'
 Assert-FileContains 'smart-manage-web/AGENTS.md' 'module-development-guide\.md' 'Frontend AGENTS.md does not route to the module development guide'
 Assert-FileContains 'smart-manage-web/AGENTS.md' '\.\./docs/development/frontend-page-guide\.md' 'Frontend AGENTS.md does not route to the frontend page guide (../docs/development/frontend-page-guide.md)'
 Assert-FileContains '.agents/skills/smart-manage-module/SKILL.md' 'scripts\\verify-module-conventions\.ps1|scripts/verify-module-conventions\.ps1' 'Module skill does not invoke the convention verifier'
@@ -173,11 +173,15 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Controller 权限声明必须引用模块权限常量，禁止散落权限编码字面量。
+$backendSourceDirectories = @('platform/src/main/java')
+$backendSourceDirectories += @(Get-ChildItem -LiteralPath (Join-Path $resolvedRoot 'domains') -Directory -ErrorAction SilentlyContinue | ForEach-Object { "domains/$($_.Name)/src/main/java" })
+foreach ($sourceDirectory in $backendSourceDirectories) {
 Assert-NoFileMatch `
-    -RelativeDirectory 'smart-manage-api/src/main/java' `
+    -RelativeDirectory $sourceDirectory `
     -Filter '*Controller.java' `
     -Pattern '@SaCheckPermission\s*\(\s*["'']' `
     -Message 'Controller permission annotations must reference permission constants'
+}
 
 # 页面注册必须显式关联组件、功能和页面类型，不得通过命名或路径推断归属。
 $registrationRoot = Resolve-RepositoryPath 'smart-manage-web/src/domain'

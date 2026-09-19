@@ -31,6 +31,10 @@ jobs:
 
   backend:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ['', '-Pwith-demo']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -38,12 +42,20 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Test backend
-        working-directory: smart-manage-api
-        run: mvn --batch-mode --no-transfer-progress test
+      - name: Remove optional domain for platform-only verification
+        if: matrix.profile == ''
+        run: rm -rf domains/demo
+      - name: Test and package backend
+        run: mvn --batch-mode --no-transfer-progress ${{ matrix.profile }} verify
 
   frontend:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        domains: ['sys', 'sys,demo']
+    env:
+      SMART_MANAGE_DOMAINS: ${{ matrix.domains }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -57,6 +69,12 @@ jobs:
       - name: Install dependencies
         working-directory: smart-manage-web
         run: pnpm install --frozen-lockfile
+      - name: Remove optional frontend domain for platform-only verification
+        if: matrix.domains == 'sys'
+        run: rm -rf smart-manage-web/src/domain/demo
+      - name: Generate selected registries
+        working-directory: smart-manage-web
+        run: pnpm gen:registry
       - name: Lint
         working-directory: smart-manage-web
         run: pnpm lint
@@ -69,11 +87,16 @@ jobs:
       - name: Build
         working-directory: smart-manage-web
         run: pnpm build
-      - name: Verify generated registry is committed
-        run: git diff --exit-code -- smart-manage-web/src/domain/common/registry/registry.gen.ts
+      - name: Verify default registries are committed
+        if: matrix.domains == 'sys'
+        run: git diff --exit-code -- smart-manage-web/src/domain/common/registry/registry.gen.ts smart-manage-web/src/domain/common/registry/applicationHomes.gen.ts
 
   migrations:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        selection: ['', '-WithDemo']
     services:
       postgres:
         image: postgres:16
@@ -103,4 +126,4 @@ jobs:
           psql --version
       - name: Verify migrations from an empty database
         shell: pwsh
-        run: ./db/verify-baseline.ps1
+        run: ./db/verify-baseline.ps1 ${{ matrix.selection }}
