@@ -25,6 +25,17 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@ant-design/icons',
+              message: '请从 @ant-design/icons/具体图标 独立导入，避免开发环境加载整套图标。',
+            },
+          ],
+        },
+      ],
     },
   },
   // Prettier 关掉所有与格式化冲突的 ESLint 规则

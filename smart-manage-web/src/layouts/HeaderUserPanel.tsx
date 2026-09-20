@@ -1,5 +1,7 @@
 import { Button, Popover, Tooltip } from 'antd';
-import { LogoutOutlined, SettingOutlined, SwapOutlined } from '@ant-design/icons';
+import LogoutOutlined from '@ant-design/icons/LogoutOutlined';
+import SettingOutlined from '@ant-design/icons/SettingOutlined';
+import SwapOutlined from '@ant-design/icons/SwapOutlined';
 import type { UserInfoVO } from '@/types/api';
 import type { ReactNode } from 'react';
 import { UserAvatar } from '@/domain/sys/base/user/UserAvatar';

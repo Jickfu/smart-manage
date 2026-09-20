@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Badge, Button } from 'antd';
-import { MessageOutlined } from '@ant-design/icons';
+import MessageOutlined from '@ant-design/icons/MessageOutlined';
 import { useQuery } from '@tanstack/react-query';
 import { inboxApi } from './api';
 import { inboxQueryKeys } from './queryKeys';

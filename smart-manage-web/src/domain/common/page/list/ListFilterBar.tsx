@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Button, ConfigProvider, Input } from 'antd';
-import { DownOutlined, UpOutlined } from '@ant-design/icons';
+import DownOutlined from '@ant-design/icons/DownOutlined';
+import UpOutlined from '@ant-design/icons/UpOutlined';
 
 interface ListFilterBarProps {
   title: string;

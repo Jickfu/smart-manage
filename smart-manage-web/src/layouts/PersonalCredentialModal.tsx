@@ -2,7 +2,7 @@ import { PASSWORD_POLICY_HINT, passwordPolicyRule } from '@/security/passwordPol
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
 import { Button, Form, Input, Select } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import ArrowLeftOutlined from '@ant-design/icons/ArrowLeftOutlined';
 import { sm2 } from 'sm-crypto';
 import AppModal from '@/domain/common/component/AppModal';
 import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';

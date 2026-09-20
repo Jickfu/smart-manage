@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { ColumnsType, ColumnType, FilterDropdownProps } from 'antd/es/table/interface';
-import { FilterOutlined } from '@ant-design/icons';
+import FilterOutlined from '@ant-design/icons/FilterOutlined';
 import ListColumnFilter from './ListColumnFilter';
 import {
   resolveListFilterOptions,

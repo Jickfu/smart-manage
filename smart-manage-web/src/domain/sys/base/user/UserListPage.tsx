@@ -3,7 +3,7 @@ import { useOperationFeedback } from '@/domain/common/component/useOperationFeed
 import { useCallback, useMemo, useState } from 'react';
 import { Button, Checkbox, Form, Input, Modal, Space, Tag, Typography } from 'antd';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
-import { CheckOutlined } from '@ant-design/icons';
+import CheckOutlined from '@ant-design/icons/CheckOutlined';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';

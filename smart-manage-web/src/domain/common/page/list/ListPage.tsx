@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import type { TableProps } from 'antd';
 import { Button, Spin, Table } from 'antd';
 import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
-import { SettingOutlined } from '@ant-design/icons';
+import SettingOutlined from '@ant-design/icons/SettingOutlined';
 import type { ColumnsType, SorterResult, TableRowSelection } from 'antd/es/table/interface';
 import ListFilterBar from './ListFilterBar';
 import ListTableShell from './ListTableShell';

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { Button, Empty, Input, Pagination, Segmented } from 'antd';
-import { CloseOutlined, SearchOutlined } from '@ant-design/icons';
+import CloseOutlined from '@ant-design/icons/CloseOutlined';
+import SearchOutlined from '@ant-design/icons/SearchOutlined';
 import { selectableIconNames, resolveIcon } from '@/domain/common/component/iconResolver';
 import AppModal from './AppModal';
 import './IconSelector.css';

@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Button, ConfigProvider, Input, Table, Pagination, Spin, Empty, Splitter } from 'antd';
-import { SearchOutlined, CloseOutlined } from '@ant-design/icons';
+import CloseOutlined from '@ant-design/icons/CloseOutlined';
+import SearchOutlined from '@ant-design/icons/SearchOutlined';
 import type { InputRef } from 'antd';
 import AppModal from './AppModal';
 import type { ColumnsType, TableRowSelection } from 'antd/es/table/interface';

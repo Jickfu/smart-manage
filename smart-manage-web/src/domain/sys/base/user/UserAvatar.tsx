@@ -1,5 +1,5 @@
 import { Avatar, Skeleton } from 'antd';
-import { UserOutlined } from '@ant-design/icons';
+import UserOutlined from '@ant-design/icons/UserOutlined';
 import { useEffect, useState } from 'react';
 import request from '@/api/request';
 import './UserAvatar.css';

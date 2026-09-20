@@ -1,6 +1,7 @@
 import { useHorizontalTabScroll } from '@/hooks/useHorizontalTabScroll';
 import type { HeaderTabItem } from '@/stores/headerTabs';
-import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
+import LockOutlined from '@ant-design/icons/LockOutlined';
+import UnlockOutlined from '@ant-design/icons/UnlockOutlined';
 
 interface Props {
   tabs: HeaderTabItem[];

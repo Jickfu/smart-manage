@@ -1,7 +1,9 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useState } from 'react';
 import { Button, Form, Upload } from 'antd';
-import { DeleteOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons';
+import DeleteOutlined from '@ant-design/icons/DeleteOutlined';
+import EditOutlined from '@ant-design/icons/EditOutlined';
+import UploadOutlined from '@ant-design/icons/UploadOutlined';
 import type { UploadProps } from 'antd';
 import AppModal from '@/domain/common/component/AppModal';
 import { businessAttachmentApi } from '@/domain/common/attachment/api';

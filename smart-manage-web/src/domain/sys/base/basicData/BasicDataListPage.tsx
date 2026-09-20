@@ -3,7 +3,9 @@ import { useOperationFeedback } from '@/domain/common/component/useOperationFeed
 import { useMemo, useState } from 'react';
 import { Button, Input, Tag } from 'antd';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import DeleteOutlined from '@ant-design/icons/DeleteOutlined';
+import EditOutlined from '@ant-design/icons/EditOutlined';
+import PlusOutlined from '@ant-design/icons/PlusOutlined';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

@@ -1,5 +1,5 @@
 import { Button, Empty } from 'antd';
-import { CloseOutlined } from '@ant-design/icons';
+import CloseOutlined from '@ant-design/icons/CloseOutlined';
 import type { DataNode } from 'antd/es/tree';
 import ListTree from '@/domain/common/page/list/ListTree';
 import ListTreePanel from '@/domain/common/page/list/ListTreePanel';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
-import { QuestionCircleOutlined } from '@ant-design/icons';
+import QuestionCircleOutlined from '@ant-design/icons/QuestionCircleOutlined';
 import { Spin } from 'antd';
 import { getIconSnapshot, loadIcon, subscribeIcon } from './iconCatalog';
 

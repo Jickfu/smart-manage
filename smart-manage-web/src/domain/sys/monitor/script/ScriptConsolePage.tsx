@@ -1,7 +1,9 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useRef, useState } from 'react';
 import { Alert, Button, Empty, Select, Space, Splitter, Tag, Typography } from 'antd';
-import { ClearOutlined, PlayCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import ClearOutlined from '@ant-design/icons/ClearOutlined';
+import PlayCircleOutlined from '@ant-design/icons/PlayCircleOutlined';
+import QuestionCircleOutlined from '@ant-design/icons/QuestionCircleOutlined';
 import { useQuery } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';

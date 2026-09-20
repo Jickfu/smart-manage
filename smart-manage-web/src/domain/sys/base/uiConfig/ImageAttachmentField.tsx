@@ -1,7 +1,7 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useMemo } from 'react';
 import { Button, Upload } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import PlusOutlined from '@ant-design/icons/PlusOutlined';
 import type { UploadFile, UploadProps } from 'antd';
 import { resolveAssetUrl } from '@/utils/assetUrl';
 import { uiConfigApi } from './api';

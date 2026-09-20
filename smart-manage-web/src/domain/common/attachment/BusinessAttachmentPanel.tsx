@@ -1,12 +1,10 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useRef, useState } from 'react';
 import { Button, Empty, Image, Input, Modal, Popover, Progress, Tooltip, Upload } from 'antd';
-import {
-  FileImageOutlined,
-  FilePdfOutlined,
-  PaperClipOutlined,
-  UploadOutlined,
-} from '@ant-design/icons';
+import FileImageOutlined from '@ant-design/icons/FileImageOutlined';
+import FilePdfOutlined from '@ant-design/icons/FilePdfOutlined';
+import PaperClipOutlined from '@ant-design/icons/PaperClipOutlined';
+import UploadOutlined from '@ant-design/icons/UploadOutlined';
 import type { UploadProps } from 'antd';
 import { businessAttachmentApi } from './api';
 import type { BusinessAttachment } from './types';

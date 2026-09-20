@@ -2,7 +2,8 @@ import { useOperationFeedback } from '@/domain/common/component/useOperationFeed
 import { useMemo, useRef, useState } from 'react';
 import { Alert, Button, Empty, Space, Splitter, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlayCircleOutlined, ClearOutlined } from '@ant-design/icons';
+import ClearOutlined from '@ant-design/icons/ClearOutlined';
+import PlayCircleOutlined from '@ant-design/icons/PlayCircleOutlined';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';

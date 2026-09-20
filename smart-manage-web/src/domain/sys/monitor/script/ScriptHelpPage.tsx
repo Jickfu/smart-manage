@@ -14,7 +14,7 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { CopyOutlined } from '@ant-design/icons';
+import CopyOutlined from '@ant-design/icons/CopyOutlined';
 import { useQuery } from '@tanstack/react-query';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import type { PageComponentProps } from '@/domain/common/page/types';

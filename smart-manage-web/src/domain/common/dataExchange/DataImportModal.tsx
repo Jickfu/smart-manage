@@ -1,4 +1,4 @@
-import { InboxOutlined } from '@ant-design/icons';
+import InboxOutlined from '@ant-design/icons/InboxOutlined';
 import { Alert, Button, Radio, Typography, Upload } from 'antd';
 import type { ReactNode } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
