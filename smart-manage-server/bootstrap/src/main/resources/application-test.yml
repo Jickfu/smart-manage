@@ -207,6 +207,3 @@ smart-manage:
           catalog-refresh-interval-ms: 300000
           instance-ttl-ms: 30000
           request-timeout-ms: 10000
-
-# 仅首次安装需要，初始化成功后可以移除外部值。
-smart-manage.domain.sys.base.user.initial-administrator-password: ${SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD:}

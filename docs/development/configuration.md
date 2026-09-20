@@ -84,9 +84,9 @@ Spring Data Redis 与 JetCache 使用两套配置入口，两处地址、端口�
 
 ## 管理员首次初始化
 
-所有环境首次安装都必须通过环境变量 `SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD` 或外部 YAML 的 `smart-manage.domain.sys.base.user.initial-administrator-password` 提供临时密码。密码遵守统一的 15～64 个 Unicode 码点及弱口令规则，不在命令行、日志或仓库中记录明文。
+Flyway 只创建账号 `administrator` 和不可登录的空密码标记。首次启动自动生成 20 位安全随机临时密码，通过统一密码策略后执行一次数据库条件更新，并保留首次强制改密。明文只写入 `administrator-initial-password.txt`：IDEA 启动时文件位于 Run Configuration 的 Working directory，运行打包后的 JAR 时文件位于 JAR 同级目录。日志只输出文件绝对路径，不输出密码。
 
-Flyway 只创建账号 `administrator` 和不可登录的空密码标记。启动时校验临时密码并进行一次数据库条件更新，保留首次强制改密；多个实例竞争不会覆盖已写入凭据。缺少配置时首次启动失败，已初始化后无需保留配置，再次提供其他值也不会重置密码。正常改密、重置走现有用户能力。
+文件创建后权限限制为当前运行用户读写；运维人员读取密码后必须删除。数据库仍为空密码但文件已存在时会复用文件内容，以覆盖文件已落盘但数据库更新前进程退出的恢复场景。多个实例共享同一运行目录时复用同一文件；运行目录不同时各自生成，未赢得数据库条件更新的实例会删除自己的无效文件。初始化完成后的启动不再生成或覆盖文件及数据库凭据。正常改密、重置走现有用户能力。
 
 ## 共享测试环境与可选环境变量
 
@@ -147,7 +147,7 @@ Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
 - SM2 公私钥；
 - SM4 敏感配置加密密钥；
 - `SMART_MANAGE_CORS_ALLOWED_ORIGIN`；
-- 首次安装提供 `SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD`，符合统一密码策略；初始化完成后可移除。
+- 首次安装确认 JAR 同级目录可写，并从生成的 `administrator-initial-password.txt` 获取管理员临时密码；获取后删除该文件。
 - `SMART_MANAGE_INSTANCE_ID`，且每个应用实例必须唯一。
 - 可选 `SMART_MANAGE_HOST_ID`；显式配置时只能包含字母、数字、点、下划线和连字符。同一主机上的实例必须配置为相同值。
 - `SMART_MANAGE_INTERNAL_BASE_URL`，且必须是其他应用实例可直接访问的 HTTPS 内部地址。

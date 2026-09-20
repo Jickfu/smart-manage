@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.test.util.ReflectionTestUtils;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.weakpassword.service.PasswordPolicyService;
 import sm.system.helper.Argon2Helper;
@@ -15,6 +14,7 @@ import sm.system.helper.Argon2Helper;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -63,8 +63,9 @@ class AdministratorInitializationPostgresTests {
     }
 
     private AdministratorCredentialInitializer initializer(UserMapper mapper, PasswordPolicyService policy, String password) {
-        var initializer = new AdministratorCredentialInitializer(mapper, policy);
-        ReflectionTestUtils.setField(initializer, "initialPassword", password);
-        return initializer;
+        AdministratorInitialPasswordFile passwordFile = mock(AdministratorInitialPasswordFile.class);
+        when(passwordFile.prepare()).thenReturn(new AdministratorInitialPasswordFile.PreparedPassword(
+                password, Path.of(AdministratorInitialPasswordFile.FILE_NAME).toAbsolutePath()));
+        return new AdministratorCredentialInitializer(mapper, policy, passwordFile);
     }
 }

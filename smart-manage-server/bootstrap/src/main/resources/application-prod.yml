@@ -166,9 +166,6 @@ smart-manage:
       keep-alive-seconds: 60
   domain:
     sys:
-      base:
-        user:
-          initial-administrator-password: ${SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD:}
       monitor:
         # host-id 表示 Smart Manage 认知中的运行主机；缺省时使用稳定 hostname。
         host-id: ${SMART_MANAGE_HOST_ID:}

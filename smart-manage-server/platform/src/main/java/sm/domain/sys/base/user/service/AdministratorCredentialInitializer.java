@@ -3,7 +3,7 @@ package sm.domain.sys.base.user.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -15,23 +15,21 @@ import sm.system.helper.Argon2Helper;
 /** 所有环境统一的一次性管理员初始化；空密码仅是不可登录的未初始化标记。 */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 class AdministratorCredentialInitializer implements ApplicationRunner {
     private final UserMapper userMapper;
     private final PasswordPolicyService passwordPolicyService;
-
-    @Value("${smart-manage.domain.sys.base.user.initial-administrator-password:}")
-    private String initialPassword;
+    private final AdministratorInitialPasswordFile initialPasswordFile;
 
     @Override
     public void run(ApplicationArguments arguments) {
         UserEntity administrator = userMapper.selectOne(new LambdaQueryWrapper<UserEntity>()
                 .eq(UserEntity::getUsername, "administrator"));
         if (administrator == null) { throw new IllegalStateException("缺少 administrator 管理员账号"); }
-        // 已初始化时不再读取或校验临时配置，重启不能修改既有凭据。
+        // 已初始化时不再生成或读取临时密码文件，重启不能修改既有凭据。
         if (!"".equals(administrator.getPassword())) { return; }
-        if (initialPassword == null || initialPassword.isBlank()) {
-            throw new IllegalStateException("首次安装必须通过外部配置提供管理员临时初始密码");
-        }
+        AdministratorInitialPasswordFile.PreparedPassword preparedPassword = initialPasswordFile.prepare();
+        String initialPassword = preparedPassword.password();
         passwordPolicyService.validate(initialPassword, "administrator");
         String encoded = Argon2Helper.encode(initialPassword);
         // 数据库条件更新保证多实例竞争只有一次生效，不覆盖并发初始化或主动改密。
@@ -43,6 +41,13 @@ class AdministratorCredentialInitializer implements ApplicationRunner {
             if (current == null || current.getPassword() == null || current.getPassword().isBlank()) {
                 throw new IllegalStateException("管理员初始化未完成");
             }
+            // 不同工作目录下的并发实例可能各自生成文件，失败实例不能留下无效凭据。
+            if (!Argon2Helper.verify(current.getPassword(), initialPassword)) {
+                initialPasswordFile.deleteIfMatches(preparedPassword);
+                return;
+            }
         }
+        log.warn("首次安装已生成 administrator 临时密码文件，请读取后妥善删除: {}",
+                preparedPassword.path());
     }
 }

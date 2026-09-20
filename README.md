@@ -79,7 +79,7 @@ CREATE DATABASE smart_manage;
 
 ### 2. 启动后端
 
-首次启动前通过外部配置提供管理员临时初始密码，见下方说明。以下命令在仓库根目录执行。
+以下命令在仓库根目录执行。
 
 ```bash
 mvn -f smart-manage-server/pom.xml package
@@ -103,7 +103,7 @@ pnpm dev
 
 自定义 API 前缀时，通过后端 `server.servlet.context-path` 和前端 `VITE_API_BASE_PATH` 配置，部署侧同步代理与内部地址；详见 [修改 API context path](./docs/development/configuration.md#修改-api-context-path)。
 
-所有环境首次安装都必须从外部配置提供 `SMART_MANAGE_INITIAL_ADMINISTRATOR_PASSWORD`，符合统一密码策略；账号为 `administrator`，首次登录强制改密。初始化完成后可移除临时配置，重启不会覆盖密码。没有公开的可用管理员初始密码。完整配置说明见[环境与配置](./docs/development/configuration.md)。
+所有环境首次安装都会为账号 `administrator` 自动生成安全随机临时密码，并要求首次登录强制改密。IDEA 启动时，密码文件 `administrator-initial-password.txt` 位于 Run Configuration 的 Working directory；运行打包后的 JAR 时，文件位于 JAR 同级目录。日志只提示文件路径，不输出密码；获取密码后应删除该文件。完整说明见[环境与配置](./docs/development/configuration.md)。
 
 ## 可选演示领域
 

@@ -30,6 +30,7 @@ smart-manage-web/.env.*.local
 ### files ###
 logs
 .pnpm-store
+administrator-initial-password.txt
 
 ### AI ###
 .claude
