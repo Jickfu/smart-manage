@@ -126,6 +126,8 @@ logging:
   level:
     root: INFO
     sm: INFO
+    # 保留 JetCache 统计采集供缓存监控使用，仅关闭生产环境的周期性统计表日志。
+    com.alicp.jetcache.support.StatInfoLogger: "OFF"
   file:
     name: logs/smart-manage.log
   logback:
