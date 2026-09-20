@@ -54,6 +54,11 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
+    optimizeDeps: {
+      // React 图标入口保持独立 ESM 按需加载，避免懒页面首次触达新入口时，
+      // 依赖优化器提交增量结果并触发整页刷新；底层 icons-svg 是 CommonJS，仍由 Vite 转换。
+      exclude: ['@ant-design/icons'],
+    },
     server: {
       port: 8000,
       host: '0.0.0.0',
