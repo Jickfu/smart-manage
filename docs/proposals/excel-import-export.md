@@ -6,7 +6,7 @@
 
 - 分层、存储及受管理制品边界见[后端架构](../architecture/backend.md)。
 - 用户匹配、导入模式、批次事务和一次性凭据见[用户管理](../domains/sys/base/user.md)。
-- 导出布局、服务端权限与 DataScope 见[采购申请](../../domains/demo/docs/procurement/purchase-requisition.md)。
+- 导出布局、服务端权限与 DataScope 见[采购申请](../../smart-manage-server/domains/demo/docs/procurement/purchase-requisition.md)。
 - 隐私字段边界见[数据脱敏](../architecture/data-masking.md)，前端适配职责见[前端架构](../architecture/frontend.md)。
 
 ## 设计理由

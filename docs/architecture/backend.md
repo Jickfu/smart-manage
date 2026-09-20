@@ -4,7 +4,7 @@
 
 ## Maven 交付边界
 
-根父 POM 统一依赖和插件；`platform`（`smart-manage-platform`）交付 `sm.infrastructure`、`sm.system` 和 `sm.domain.sys`，为普通 JAR。`bootstrap`（`smart-manage-bootstrap`）只负责启动、配置、领域装配与可执行包。可选 `domains/demo`（`smart-manage-domain-demo`）依赖平台，平台不得反向依赖它，也不保留采购专属声明。`domains` 仅为目录容器。
+后端工程位于 `smart-manage-server`，其父 POM 统一依赖和插件，仓库根不保留 POM；`platform`（`smart-manage-platform`）交付 `sm.infrastructure`、`sm.system` 和 `sm.domain.sys`，为普通 JAR。`bootstrap`（`smart-manage-bootstrap`）只负责启动、配置、领域装配与可执行包。可选 `smart-manage-server/domains/demo`（`smart-manage-domain-demo`）依赖平台，平台不得反向依赖它，也不保留采购专属声明。`domains` 仅为目录容器。
 
 默认装配纯平台，Maven `with-demo` 同时选择 DEMO reactor 模块和启动依赖。架构测试位于 bootstrap，在发行实际 classpath 中检查所有已装配业务；领域专属测试随领域维护。普通 JAR 不包含 Boot 重打包布局，只有 bootstrap 执行 repackage。
 

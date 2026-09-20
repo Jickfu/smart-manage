@@ -44,9 +44,9 @@ jobs:
           cache: maven
       - name: Remove optional domain for platform-only verification
         if: matrix.profile == ''
-        run: rm -rf domains/demo
+        run: rm -rf smart-manage-server/domains/demo
       - name: Test and package backend
-        run: mvn --batch-mode --no-transfer-progress ${{ matrix.profile }} verify
+        run: mvn -f smart-manage-server/pom.xml --batch-mode --no-transfer-progress ${{ matrix.profile }} verify
 
   frontend:
     runs-on: ubuntu-latest

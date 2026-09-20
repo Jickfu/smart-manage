@@ -2,7 +2,7 @@
 
 ## 权威来源
 
-数据库结构和必要初始化数据只由所属模块的 Flyway 迁移定义。平台位于 `platform/src/main/resources/db/platform/migration`，可选 DEMO 位于 `domains/demo/src/main/resources/db/demo/migration`。构建后资源随普通 JAR 交付，不再使用根目录 `db/business` 或复制迁移目录。
+数据库结构和必要初始化数据只由所属模块的 Flyway 迁移定义。平台位于 `smart-manage-server/platform/src/main/resources/db/platform/migration`，可选 DEMO 位于 `smart-manage-server/domains/demo/src/main/resources/db/demo/migration`。构建后资源随普通 JAR 交付，不再使用根目录 `db/business` 或复制迁移目录。
 
 当前尚未正式发布，本次直接重组 V1/V2 基线，不兼容旧开发库，不自动修改历史或删除数据。新安装使用空库；已有个人开发库是否重建由使用者明确决定。正式发布后的规则见下文。
 

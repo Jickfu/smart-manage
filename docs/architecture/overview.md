@@ -10,10 +10,11 @@ Smart Manage 是可二次开发的企业中后台底座，采用按领域、应�
 
 ```text
 smart-manage/
-├── pom.xml             # 父 POM，默认装配平台
-├── platform/           # 平台普通 JAR，含 system/infrastructure/domain.sys 及平台迁移
-├── bootstrap/          # 启动入口、配置和最终可执行 JAR
-├── domains/demo/        # 可选采购领域，含代码、迁移、测试和文档
+├── smart-manage-server/ # 后端 Maven 工程
+│   ├── pom.xml         # 父 POM，默认装配平台
+│   ├── platform/       # 平台普通 JAR 与平台迁移
+│   ├── bootstrap/      # 启动配置、装配与可执行 JAR
+│   └── domains/demo/   # 可选演示领域，含采购样板代码、迁移、测试和文档
 ├── dev-support/fixtures/ # 显式导入的开发数据，不进入自动迁移
 ├── db/                 # 空库验证脚本
 ├── docs/               # 平台架构和开发规范

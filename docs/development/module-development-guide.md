@@ -59,7 +59,7 @@
 以下是按实际能力检查的接入要点，不规定文件修改顺序；不涉及数据库结构或初始化数据变更时无需新增迁移，没有写入能力时无需事务写服务。必需结构及依赖约束仍按后端架构执行。
 
 1. 确认领域文档、安全边界、数据归属和状态机。
-2. 涉及数据库结构或初始化数据变更时，设计新增 Flyway 迁移；平台能力使用 `platform/src/main/resources/db/platform/migration`，可选领域使用各自 `src/main/resources/db/{领域}/migration`，遵守[迁移及升级规则](database.md)。系统内置 Feature、权限、菜单和必要初始化数据一并通过所属链维护。
+2. 涉及数据库结构或初始化数据变更时，设计新增 Flyway 迁移；平台能力使用 `smart-manage-server/platform/src/main/resources/db/platform/migration`，可选领域使用各自 `src/main/resources/db/{领域}/migration`，遵守[迁移及升级规则](database.md)。系统内置 Feature、权限、菜单和必要初始化数据一并通过所属链维护。
 3. 定义 Entity、Form、VO 和权限常量，明确 ID、`version`、引用对象及敏感字段的 JSON 边界。
 4. 建立 Mapper 和纯字段 Converter；关联查询应批量加载或由 MyBatis 直接投影。
 5. 按查询管理、当前用户资料、认证或授权等明确业务职责建立一个或多个公开 `*Service`，分别承担对应查询、命令入口、权限补充校验、业务组装和 `@BizLog`；不得为维持单一 Service 而混合不同业务语义。

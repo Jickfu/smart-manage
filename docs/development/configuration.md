@@ -2,13 +2,13 @@
 
 ## 关于产品与构建版本
 
-“关于产品”显示前端、后端各自的版本号。前端版本来自 `smart-manage-web/package.json` 的 `version`，后端版本来自 `pom.xml` 的项目 `version`；正式发布时人工维护，构建不会自动递增版本。
+“关于产品”显示前端、后端各自的版本号。前端版本来自 `smart-manage-web/package.json` 的 `version`，后端版本来自 `smart-manage-server/pom.xml` 的项目 `version`；正式发布时人工维护，构建不会自动递增版本。
 
 前端 Vite 启动／构建时读取版本并注入产物。后端通过 Maven 资源过滤，将 `@project.version@` 写入 `META-INF/build-info.properties`，Spring Boot 通过 `BuildProperties` 读取。IDEA 按 Maven 项目导入后，普通构建与 `mvn package` 使用同一份资源过滤配置，无需额外配置启动前任务。修改 POM 后需同步 Maven 项目并重新构建；修改前端版本后需重新启动开发服务或构建。
 
 后端 `GET /sys/base/product/version` 沿用全局登录校验、返回 `no-store`，仅提供当前响应实例的版本。版本资源缺失或未正确处理时显示“版本不可用”。
 
-后端构建产物固定为 `bootstrap/target/smart-manage-bootstrap.jar`，版本变化不改变文件名，systemd 可以保持固定启动路径。
+后端构建产物固定为 `smart-manage-server/bootstrap/target/smart-manage-bootstrap.jar`，版本变化不改变文件名，systemd 可以保持固定启动路径。
 
 ## 项目配置命名空间
 
@@ -42,16 +42,16 @@ smart-manage:
 
 | 层次 | 需要配置的位置 | 配置方式 |
 | --- | --- | --- |
-| 后端 | [`application.yml`](../../bootstrap/src/main/resources/application.yml) 的 `server.servlet.context-path` | 推荐使用外部 YAML 同名属性或环境变量 `SERVER_SERVLET_CONTEXT_PATH=/custom/api`；衍生项目改变默认值时才修改仓库配置 |
+| 后端 | [`application.yml`](../../smart-manage-server/bootstrap/src/main/resources/application.yml) 的 `server.servlet.context-path` | 推荐使用外部 YAML 同名属性或环境变量 `SERVER_SERVLET_CONTEXT_PATH=/custom/api`；衍生项目改变默认值时才修改仓库配置 |
 | 前端 | [`smart-manage-web/.env`](../../smart-manage-web/.env) 的 `VITE_API_BASE_PATH` | 本机可在 `smart-manage-web/.env.local` 写入 `VITE_API_BASE_PATH=/custom/api`；构建环境也可直接提供同名环境变量。两个 local env 文件模式已被 Git 忽略 |
 | 生产代理 | 部署环境中的 Nginx 配置，参考 [`smart-manage.conf.example`](../../deploy/nginx/smart-manage.conf.example) | 将 `location` 改为 `/custom/api/`，保持 `proxy_pass` 不带 URI，以保留完整请求路径 |
-| 生产内部地址 | `SMART_MANAGE_INTERNAL_BASE_URL`，入口见 [`application-prod.yml`](../../bootstrap/src/main/resources/application-prod.yml) | 显式提供包含新路径的完整内部 HTTPS 地址，例如 `https://node.example.com:9443/custom/api`；每个节点必须可被其他实例直接访问 |
+| 生产内部地址 | `SMART_MANAGE_INTERNAL_BASE_URL`，入口见 [`application-prod.yml`](../../smart-manage-server/bootstrap/src/main/resources/application-prod.yml) | 显式提供包含新路径的完整内部 HTTPS 地址，例如 `https://node.example.com:9443/custom/api`；每个节点必须可被其他实例直接访问 |
 
 前端变量是**开发启动／构建时配置**，不是浏览器运行时配置：修改后重启开发服务器，生产环境重新构建并部署整个 `dist`。仅在运行 Nginx 时设置变量不会修改已构建的前端。路径必须非空、以 `/` 开头且不带尾斜杠，路径段支持字母、数字、`_`、`-`，支持 `/custom/api` 这样的多级前缀；Vite 启动和构建会拒绝非法配置。
 
 Axios 请求、界面配置图片、独立登录页与 Vite 开发代理均读取这一项前端变量，无需逐文件修改。登录页源码位于 [`smart-manage-web/login.html`](../../smart-manage-web/login.html)，通过 Vite 多 HTML 入口生成，发布路径仍是 `/login.html`，没有并入 React 路由。API 前缀替换发生在 meta 标签中，固定的内联脚本读取该值；改前缀不需要重新计算 CSP 摘要，修改脚本本身仍需同步摘要并通过测试。
 
-[`application-dev.yml`](../../bootstrap/src/main/resources/application-dev.yml) 和 [`application-test.yml`](../../bootstrap/src/main/resources/application-test.yml) 的本机内部地址默认引用 `server.port` 和 `server.servlet.context-path`，无需重复修改。若已显式提供 `SMART_MANAGE_INTERNAL_BASE_URL`，仍以该完整地址为准，需要同步更新。生产环境继续强制显式提供内部地址，不从本机监听地址推导跨节点可达地址。
+[`application-dev.yml`](../../smart-manage-server/bootstrap/src/main/resources/application-dev.yml) 和 [`application-test.yml`](../../smart-manage-server/bootstrap/src/main/resources/application-test.yml) 的本机内部地址默认引用 `server.port` 和 `server.servlet.context-path`，无需重复修改。若已显式提供 `SMART_MANAGE_INTERNAL_BASE_URL`，仍以该完整地址为准，需要同步更新。生产环境继续强制显式提供内部地址，不从本机监听地址推导跨节点可达地址。
 
 ### 仍需单独维护的内容
 
@@ -76,7 +76,7 @@ Axios 请求、界面配置图片、独立登录页与 Vite 开发代理均读�
 
 ## 本机开发
 
-项目默认激活 `dev`。仓库已跟踪 `bootstrap/src/main/resources/application-dev.yml`，它是公开开发模板；直接启动方式见 [README](../../README.md#快速开始)。`dev` 不继承 `test`。
+项目默认激活 `dev`。仓库已跟踪 `smart-manage-server/bootstrap/src/main/resources/application-dev.yml`，它是公开开发模板；直接启动方式见 [README](../../README.md#快速开始)。`dev` 不继承 `test`。
 
 真实连接信息通过环境变量或不纳入版本控制的外部配置覆盖，不在受跟踪模板中填写个人或生产凭据。使用外部配置时确认进程工作目录与配置位置；配置加载行为以实际启动参数为准。
 
@@ -135,7 +135,7 @@ smart-manage/
 └─ smfiles/
 ```
 
-以仓库中的 `bootstrap/src/main/resources/application-prod.yml` 为配置项参考，在部署目录创建不纳入版本控制的
+以仓库中的 `smart-manage-server/bootstrap/src/main/resources/application-prod.yml` 为配置项参考，在部署目录创建不纳入版本控制的
 `config/application.yml` 或 `config/application-prod.yml` 并填写真实配置。启动进程的工作目录必须是 Jar 所在目录。
 外部 YAML 优先于 Jar 内配置，因此生产部署可以使用外部 YAML、环境变量或外部密钥管理设施提供配置；
 Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
@@ -156,7 +156,7 @@ Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
 公共配置和生产配置均固定关闭 `sa-token.is-log`。Sa-Token 内置事件日志会输出完整会话 token，
 因此 dev、test 和 prod 都不得重新开启；登录、退出和会话终止审计统一由项目受控的认证日志监听器记录。
 
-连接池、端口、缓存和慢 SQL 等调优项及默认值以[生产配置模板](../../bootstrap/src/main/resources/application-prod.yml)为准，本文不重复维护默认值表。
+连接池、端口、缓存和慢 SQL 等调优项及默认值以[生产配置模板](../../smart-manage-server/bootstrap/src/main/resources/application-prod.yml)为准，本文不重复维护默认值表。
 
 敏感配置不得写入代码、文档、镜像、提交记录或日志。外部配置文件必须限制为仅服务运行账号和管理员可读，并纳入受控备份；环境变量或密钥管理设施仍可作为更高优先级的可选覆盖方式。
 

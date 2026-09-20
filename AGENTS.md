@@ -36,7 +36,7 @@
 
 | 任务 | 必读文档 |
 | --- | --- |
-| 后端代码 | 所属模块 `AGENTS.md`、`platform/AGENTS.md`、`docs/architecture/backend.md` |
+| 后端代码 | 所属模块 `AGENTS.md`、`smart-manage-server/platform/AGENTS.md`、`docs/architecture/backend.md` |
 | 桌面管理端代码（`smart-manage-web`） | `smart-manage-web/AGENTS.md`、`docs/architecture/frontend.md` |
 | 桌面管理端页面、布局或交互 | `docs/development/frontend-page-guide.md` |
 | 认证、权限或高风险能力 | `docs/architecture/security.md` |

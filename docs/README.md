@@ -112,7 +112,7 @@
 
 采购应用（procurement）：
 
-- [采购申请](../domains/demo/docs/procurement/purchase-requisition.md)
+- [采购申请](../smart-manage-server/domains/demo/docs/procurement/purchase-requisition.md)
 
 桌面管理端的技术基线、页面形态和页签规则只适用于 `smart-manage-web`；其他客户端在实现时另行明确适用规范，不把选型讨论写成当前架构。
 

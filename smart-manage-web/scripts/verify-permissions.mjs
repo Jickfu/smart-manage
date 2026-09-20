@@ -3,13 +3,13 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const webRoot = resolve(import.meta.dirname, '..');
-const repoRoot = resolve(webRoot, '..');
+const backendRoot = resolve(webRoot, '..', 'smart-manage-server');
 const domains = selectedDomains();
 const backendRoots = [
-  join(repoRoot, 'platform'),
+  join(backendRoot, 'platform'),
   ...domains
     .filter((domain) => domain !== 'sys')
-    .map((domain) => join(repoRoot, 'domains', domain)),
+    .map((domain) => join(backendRoot, 'domains', domain)),
 ];
 const domainFiles = (predicate) =>
   domains.flatMap((domain) => filesUnder(join(webRoot, 'src', 'domain', domain), predicate));

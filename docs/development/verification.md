@@ -70,8 +70,8 @@ pwsh.exe -NoProfile -Command "Get-Help .\scripts\verify-module-conventions.ps1 -
 从仓库根目录验证默认平台和包含采购的装配；领域边界变更必须执行两种配置：
 
 ```bash
-mvn verify
-mvn -Pwith-demo verify
+mvn -f smart-manage-server/pom.xml verify
+mvn -f smart-manage-server/pom.xml -Pwith-demo verify
 ```
 
 纯文档修改不要求执行 Maven。确认不影响测试代码的简单后端改动才可以仅执行 `mvn compile`；影响安全、权限、事务或并发语义的改动不属于该例外。实体、Mapper、配置和迁移变更还必须确认相关代码能够正常编译。
