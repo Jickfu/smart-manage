@@ -1,4 +1,4 @@
-import { useHorizontalTabScroll } from '@/hooks/useHorizontalTabScroll';
+import { useHorizontalTabScroll } from './useHorizontalTabScroll';
 import type { HeaderTabItem } from '@/stores/headerTabs';
 import LockOutlined from '@ant-design/icons/LockOutlined';
 import UnlockOutlined from '@ant-design/icons/UnlockOutlined';

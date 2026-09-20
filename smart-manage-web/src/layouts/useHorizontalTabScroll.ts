@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 const SCROLL_DISTANCE = 240;
 
-/** 管理页签横向滚动，并确保新激活的页签始终进入可视区域。 */
+/** 管理应用壳层的页签横向滚动，并确保新激活的页签始终进入可视区域。 */
 export function useHorizontalTabScroll(activeKey: string, tabCount: number) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<HTMLDivElement>(null);

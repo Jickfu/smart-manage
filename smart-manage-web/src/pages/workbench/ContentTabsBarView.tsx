@@ -2,7 +2,7 @@ import { Tooltip } from 'antd';
 import CloseCircleOutlined from '@ant-design/icons/CloseCircleOutlined';
 import CloseSquareOutlined from '@ant-design/icons/CloseSquareOutlined';
 import HomeOutlined from '@ant-design/icons/HomeOutlined';
-import { useHorizontalTabScroll } from '@/hooks/useHorizontalTabScroll';
+import { useHorizontalTabScroll } from '@/layouts/useHorizontalTabScroll';
 import './ContentTabsBar.css';
 
 export interface ContentTabViewItem {
