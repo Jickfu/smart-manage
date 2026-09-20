@@ -84,6 +84,12 @@ export function useListColumnFeatures<T>({
                 filterIcon: (filtered: boolean) => (
                   <FilterOutlined className={filtered ? 'sm-list-filter-icon-active' : undefined} />
                 ),
+                filterDropdownProps: {
+                  ...typedColumn.filterDropdownProps,
+                  // 摘要或展开区可能在弹层关闭时修改已应用条件；销毁旧弹层，
+                  // 下次打开时让所有筛选类型都从最新条件重新初始化草稿值。
+                  destroyOnHidden: true,
+                },
                 filterDropdown: ({ confirm }: FilterDropdownProps) => (
                   <ListColumnFilter
                     key={`${columnKey}-${JSON.stringify(filter ?? null)}`}
