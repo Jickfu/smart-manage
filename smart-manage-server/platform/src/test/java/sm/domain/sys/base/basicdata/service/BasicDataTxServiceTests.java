@@ -53,6 +53,9 @@ class BasicDataTxServiceTests {
         BasicDataItemEntity item = item(10L, null, false);
         item.setVersion(2);
         when(itemMapper.selectById(10L)).thenReturn(item);
+        BasicDataCategoryEntity category = new BasicDataCategoryEntity();
+        category.setId(1L);
+        when(categoryMapper.selectForUpdate(1L)).thenReturn(category);
         BasicDataDeleteForm form = new BasicDataDeleteForm();
         form.setId(10L);
         form.setVersion(2);
@@ -73,7 +76,7 @@ class BasicDataTxServiceTests {
         parent.setLevel(1);
         parent.setNumberPath("A");
         parent.setNamePath("农业");
-        when(categoryMapper.selectById(1L)).thenReturn(category);
+        when(categoryMapper.selectForUpdate(1L)).thenReturn(category);
         when(itemMapper.selectById(10L)).thenReturn(parent);
         when(itemMapper.selectCount(any())).thenReturn(0L, 1L);
         when(itemMapper.insert(isA(BasicDataItemEntity.class))).thenAnswer(invocation -> {
@@ -98,7 +101,7 @@ class BasicDataTxServiceTests {
         category.setNumber("industry");
         category.setNumberMode(BasicDataNumberMode.AUTO_DEFAULT.name());
         category.setNumberRuleKey("sys/base/basic-data-item");
-        when(categoryMapper.selectById(1L)).thenReturn(category);
+        when(categoryMapper.selectForUpdate(1L)).thenReturn(category);
         when(numberGeneratorAccessor.nextNumber(any(), any(), any())).thenReturn("BD-0001");
         when(itemMapper.selectCount(any())).thenReturn(0L);
         when(itemMapper.insert(isA(BasicDataItemEntity.class))).thenAnswer(invocation -> {
@@ -130,7 +133,7 @@ class BasicDataTxServiceTests {
         existing.setNumberPath("A01");
         existing.setNamePath("原名称");
         existing.setLevel(1);
-        when(categoryMapper.selectById(1L)).thenReturn(category);
+        when(categoryMapper.selectForUpdate(1L)).thenReturn(category);
         when(itemMapper.selectById(10L)).thenReturn(existing);
         when(itemMapper.selectCount(any())).thenReturn(0L);
         when(itemMapper.updateById(existing)).thenReturn(1);
@@ -151,7 +154,7 @@ class BasicDataTxServiceTests {
         category.setId(1L);
         category.setNumber("industry");
         category.setNumberMode(BasicDataNumberMode.MANUAL.name());
-        when(categoryMapper.selectById(1L)).thenReturn(category);
+        when(categoryMapper.selectForUpdate(1L)).thenReturn(category);
         when(itemMapper.selectCount(any())).thenReturn(0L);
         when(itemMapper.insert(isA(BasicDataItemEntity.class))).thenAnswer(invocation -> {
             BasicDataItemEntity inserted = invocation.getArgument(0);

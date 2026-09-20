@@ -132,7 +132,14 @@ try {
     }
     [System.IO.File]::WriteAllLines($featureCatalogFile, [string[]]$featureKeys)
     $permissionVerifier = Join-Path $PSScriptRoot '..\smart-manage-web\scripts\verify-permissions.mjs'
-    & $NodePath $permissionVerifier "--catalog-file=$permissionCatalogFile" "--menu-catalog-file=$menuPermissionCatalogFile" "--feature-catalog-file=$featureCatalogFile" "--backend-domains=$backendDomains"
+    $permissionArguments = @(
+        "--catalog-file=$permissionCatalogFile"
+        "--menu-catalog-file=$menuPermissionCatalogFile"
+        "--feature-catalog-file=$featureCatalogFile"
+        $(if ($PlatformOnly) { '--backend-domains=sys' } else { "--backend-domains=$backendDomains" })
+    )
+    Write-Host "Verifying permission catalog with $($permissionArguments[-1])"
+    & $NodePath $permissionVerifier @permissionArguments
     if ($LASTEXITCODE -ne 0) {
         throw "permission catalog verification failed with exit code $LASTEXITCODE"
     }

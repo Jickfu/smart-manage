@@ -77,7 +77,7 @@ class BasicDataTxService {
     }
 
     public void deleteCategory(BasicDataDeleteForm form) {
-        BasicDataCategoryEntity entity = requireCategory(form.getId());
+        BasicDataCategoryEntity entity = requireLockedCategory(form.getId());
         requireVersion(entity.getVersion(), form.getVersion(), "基础资料分类");
         if (Boolean.TRUE.equals(entity.getSystemPreset())) {
             throw new BizException(ResultEnum.PARAM_ERROR, "系统预置分类不能删除");
@@ -95,7 +95,8 @@ class BasicDataTxService {
 
     public Long saveItem(BasicDataItemSaveForm form) {
         normalizeItem(form);
-        BasicDataCategoryEntity category = requireCategory(form.getCategoryId());
+        // 分类行是整棵树的事务互斥点，串行化父子关系、物化路径与叶子标记更新。
+        BasicDataCategoryEntity category = requireLockedCategory(form.getCategoryId());
         BasicDataItemEntity oldEntity = form.getId() == null ? null : requireItem(form.getId());
         if (oldEntity != null) {
             requireVersion(oldEntity.getVersion(), form.getVersion(), "基础资料");
@@ -145,6 +146,9 @@ class BasicDataTxService {
 
     public void deleteItem(BasicDataDeleteForm form) {
         BasicDataItemEntity entity = requireItem(form.getId());
+        requireLockedCategory(entity.getCategoryId());
+        // 等待分类锁期间节点可能已变化，必须在获得锁后重新读取并校验。
+        entity = requireItem(form.getId());
         requireVersion(entity.getVersion(), form.getVersion(), "基础资料");
         if (Boolean.TRUE.equals(entity.getSystemPreset())) {
             throw new BizException(ResultEnum.PARAM_ERROR, "系统预置基础资料不能删除");
@@ -317,6 +321,12 @@ class BasicDataTxService {
 
     private BasicDataCategoryEntity requireCategory(Long id) {
         BasicDataCategoryEntity entity = categoryMapper.selectById(id);
+        if (entity == null) throw new BizException(ResultEnum.NOT_FOUND, "基础资料分类不存在");
+        return entity;
+    }
+
+    private BasicDataCategoryEntity requireLockedCategory(Long id) {
+        BasicDataCategoryEntity entity = id == null ? null : categoryMapper.selectForUpdate(id);
         if (entity == null) throw new BizException(ResultEnum.NOT_FOUND, "基础资料分类不存在");
         return entity;
     }
