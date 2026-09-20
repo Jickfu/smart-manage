@@ -2,6 +2,8 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import packageInfo from './package.json';
+import { assetFileName, chunkFileName } from './scripts/build-output';
+import { buildAudit } from './scripts/build-audit';
 
 const apiProxyTarget = 'http://localhost:8080';
 
@@ -46,7 +48,7 @@ export default defineConfig(({ mode }) => {
     define: {
       __PRODUCT_VERSION__: JSON.stringify(packageInfo.version),
     },
-    plugins: [browserCryptoStub, reactPlugins],
+    plugins: [browserCryptoStub, reactPlugins, buildAudit()],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -71,25 +73,43 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       sourcemap: false,
+      manifest: true,
       chunkSizeWarningLimit: 700,
-      rollupOptions: {
+      rolldownOptions: {
         input: {
           main: fileURLToPath(new URL('./index.html', import.meta.url)),
           login: fileURLToPath(new URL('./login.html', import.meta.url)),
         },
         output: {
-          manualChunks(id) {
-            if (id.includes('node_modules/react') || id.includes('node_modules/react-router-dom')) {
-              return 'react';
-            }
-            if (
-              id.includes('node_modules/@tanstack/') ||
-              id.includes('node_modules/axios') ||
-              id.includes('node_modules/zustand')
-            ) {
-              return 'vendors';
-            }
+          // 归并本来就在初始依赖链中的库，减少碎片请求；异步页面依赖不因同属组件库而提前加载。
+          codeSplitting: {
+            groups: [
+              {
+                name: 'react',
+                priority: 20,
+                test: /node_modules[\\/](?:react(?:-dom|-router|-router-dom|-is)?|scheduler)[\\/]/,
+              },
+              {
+                name: 'data',
+                priority: 20,
+                test: /node_modules[\\/](?:@tanstack[\\/]|axios[\\/]|zustand[\\/])/,
+              },
+              {
+                name: 'initial-ui-runtime',
+                priority: 10,
+                test: /node_modules[\\/](?:@rc-component|rc-[^\\/]+|@ant-design)[\\/]/,
+                tags: ['$initial'],
+              },
+              {
+                name: 'initial-ui',
+                test: /node_modules[\\/]/,
+                tags: ['$initial'],
+              },
+            ],
           },
+          entryFileNames: chunkFileName,
+          chunkFileNames: chunkFileName,
+          assetFileNames: assetFileName,
         },
       },
     },

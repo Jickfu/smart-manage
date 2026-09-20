@@ -88,6 +88,15 @@ pnpm test
 pnpm build
 ```
 
+`pnpm build` 自动执行 `scripts/build-audit.ts` 的产物检查：验证领域裁剪、页面/首页异步入口及输出目录、JS 依赖完整性，并防止图表与代码编辑器进入初始加载链。修改构建策略时分别以默认 `SMART_MANAGE_DOMAINS=sys` 和 `sys,demo` 构建，对比 `dist/.vite/build-report.json` 与 manifest 中典型页面的静态依赖闭包，不能只比较文件总数。CI 的两个前端领域配置均执行该检查；本地 Demo 构建后恢复默认领域并重新生成注册清单。
+
+构建配置及脚本变更还需检查配置类型与脚本格式：
+
+```bash
+pnpm exec tsc -p tsconfig.node.json --noEmit
+pnpm exec prettier --check vite.config.ts "scripts/build-*.ts"
+```
+
 `pnpm test` 包含页面框架的真实仓库扫描与正反例架构测试。门禁与独立命令共用 `scripts/page-framework-boundaries.mjs`，检查 `common/page` 的根文件/能力目录白名单、聚合与旧平铺入口以及页面族直接依赖；规则范围见[前端架构](../architecture/frontend.md)。测试不依赖 Git 历史或固定迁移基线，随现有前端 CI 执行。单独排查时运行：
 
 ```bash
