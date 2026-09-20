@@ -74,7 +74,7 @@ mvn -f smart-manage-server/pom.xml verify
 mvn -f smart-manage-server/pom.xml -Pwith-demo verify
 ```
 
-纯文档修改不要求执行 Maven。确认不影响测试代码的简单后端改动才可以仅执行 `mvn compile`；影响安全、权限、事务或并发语义的改动不属于该例外。实体、Mapper、配置和迁移变更还必须确认相关代码能够正常编译。
+纯文档修改不要求执行 Maven。确认不影响测试代码的简单后端改动才可以仅执行 `mvn -f smart-manage-server/pom.xml compile`；影响安全、权限、事务或并发语义的改动不属于该例外。实体、Mapper、配置和迁移变更还必须确认相关代码能够正常编译。
 
 ## 前端
 
@@ -141,8 +141,8 @@ ESLint 报错不得用注释跳过，也不得修改 `eslint.config.js` 降低�
 Windows 环境可以运行：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1 -WithDemo
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baseline.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baseline.ps1 -WithDemo
 ```
 
 脚本默认从 PATH 查找 PostgreSQL Client 16，并在迁移前输出和校验 `psql` 版本；特殊本地安装可通过 `-PsqlPath` 显式指定可执行文件。脚本创建临时数据库，通过项目锁定版本的 Flyway 执行全部迁移，校验版本、命名、checksum 和 `flyway_schema_history`，并在验证后清理。数据库结构、初始化数据、迁移顺序或脚本发生变化时必须执行此项验证。
@@ -151,11 +151,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\db\verify-baseline.ps1
 
 ## 真实 PostgreSQL 验证
 
-`db/verify-baseline.ps1` 默认验证平台，`-WithDemo` 显式选择 DEMO。脚本以临时数据库运行 reactor 的全部 `*PostgresTests`；bootstrap 中的 `AssemblyMigrationPostgresTests` 在真实装配 classpath 发现领域声明、执行对应链并再次迁移，确认平台历史未改写以及未选择的采购对象不存在。`DomainFlywayMigrationPostgresTests` 用独立 schema 验证同号、平台增量、数据保留、启动失败、事务回滚、checksum 和乱序拒绝。管理员并发初始化通过真实 Mapper 和 PostgreSQL 触发器确认只写入一次，重启不覆盖。
+`scripts/verify-baseline.ps1` 默认验证平台，`-WithDemo` 显式选择 DEMO。脚本以临时数据库运行 reactor 的全部 `*PostgresTests`；bootstrap 中的 `AssemblyMigrationPostgresTests` 在真实装配 classpath 发现领域声明、执行对应链并再次迁移，确认平台历史未改写以及未选择的采购对象不存在。`DomainFlywayMigrationPostgresTests` 用独立 schema 验证同号、平台增量、数据保留、启动失败、事务回滚、checksum 和乱序拒绝。管理员并发初始化通过真实 Mapper 和 PostgreSQL 触发器确认只写入一次，重启不覆盖。
 
 双链机制测试不替代具体发行版本的带数据升级测试。今后每个数据库变更须按[正式发布与升级规则](./database.md#正式发布与升级规则)，为受支持旧版本准备结构与代表性数据，运行新增迁移，断言数据转换和业务不变量，再次迁移确认稳定；不得修改旧脚本制造测试通过。
 
-修改真实数据库测试保护的权限、凭据代际、事务、锁或并发行为时，即使没有迁移变更，也必须执行上节的 `db/verify-baseline.ps1`。脚本迁移临时数据库后，以实际测试数据库参数运行全部 `*PostgresTests`；配置入口以脚本为准，凭据不得写入文档或提交。
+修改真实数据库测试保护的权限、凭据代际、事务、锁或并发行为时，即使没有迁移变更，也必须执行上节的 `scripts/verify-baseline.ps1`。脚本迁移临时数据库后，以实际测试数据库参数运行全部 `*PostgresTests`；配置入口以脚本为准，凭据不得写入文档或提交。
 
 空库验证脚本在迁移后自动运行全部 `*PostgresTests`。凭据代际测试必须使用真实触发器、Mapper 和 Spring 事务，覆盖安全变化、普通资料变化、回滚、旧证明 CAS 及验证码消费后的并发变更；角色整体授权测试通过 `pg_blocking_pids` 观察真实锁等待，覆盖替换、清空、删除和失败回滚。普通 `mvn test` 跳过依赖 PostgreSQL 的测试，不能替代该门禁。
 
@@ -191,7 +191,7 @@ PostgreSQL 客户端、数据库服务或必要配置缺失时，此项记为未
 
 部署密钥生成工具修改时，在仓库根目录执行 `node --test scripts/generate-deployment-keys.test.mjs`，验证生成、权限和拒绝覆盖。公钥发布与登录页加密流程修改时，执行后端安全过滤器测试和前端真实登录脚本测试，并保持 CSP 摘要一致。
 
-修改空库验证脚本的生命周期时，先运行 `pwsh -NoProfile -File db/verify-baseline.tests.ps1`，以函数替身验证随机库名、创建失败不清理、后续失败清理、清理失败不覆盖原始异常及成功路径；该测试不连接数据库，不能替代真实 Flyway 空库验证。
+修改空库验证脚本的生命周期时，先运行 `pwsh -NoProfile -File scripts/verify-baseline.tests.ps1`，以函数替身验证随机库名、创建失败不清理、后续失败清理、清理失败不覆盖原始异常及成功路径；该测试不连接数据库，不能替代真实 Flyway 空库验证。
 
 - 架构边界：架构测试或静态检查。
 - Java 类型、包、注解、可见性和依赖边界：优先扩展 `ArchitectureContractTests`，不得新增 regex/import 源码扫描与其重复校验。

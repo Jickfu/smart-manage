@@ -90,7 +90,10 @@ try {
     # OpenAPI 授权实体继承 BaseEntity；最后一项查询防止迁移遗漏实体自动映射的审计列。
     $baselineVerificationArguments = @('-v', 'ON_ERROR_STOP=1', '-c', "SELECT 1 / count(*) AS administrator_ready FROM t_sys_user WHERE username = 'administrator' AND enabled AND password = '' AND password_reset;", '-c', "SELECT 1 / count(*) AS attachment_cleanup_job_ready FROM t_sys_job WHERE number = 'ATTACHMENT_OBJECT_CLEANUP' AND is_system AND status = 'ENABLED' AND job_class_name = 'sm.domain.sys.scheduler.job.CleanTempFileJob';", '-c', "SELECT count(*) AS permission_count FROM t_sys_permission;", '-c', "SELECT count(*) AS menu_count FROM t_sys_menu;", '-c', "SELECT count(*) AS flyway_version_count FROM flyway_schema_history WHERE success;", '-c', "SELECT update_time, update_user FROM t_sys_openapi_grant LIMIT 0;")
     Invoke-Psql $verifyDatabase $baselineVerificationArguments
-    Invoke-Psql $verifyDatabase @('-v', 'ON_ERROR_STOP=1', '-c', "SELECT 1 / (CASE WHEN count(*) = 1 THEN 1 ELSE 0 END) AS single_company FROM t_sys_org;")
+    # 默认平台仅一家公司；演示装配额外包含三个部门，不能放宽成只检查总数。
+    $expectedOrganizations = if ($WithDemo) { 4 } else { 1 }
+    $expectedDepartments = if ($WithDemo) { 3 } else { 0 }
+    Invoke-Psql $verifyDatabase @('-v', 'ON_ERROR_STOP=1', '-c', "SELECT 1 / (CASE WHEN count(*) = $expectedOrganizations AND count(*) FILTER (WHERE id = 1 AND org_type = 'COMPANY' AND parent_id IS NULL) = 1 AND count(*) FILTER (WHERE parent_id = 1 AND org_type = 'DEPARTMENT' AND number IN ('101','102','103')) = $expectedDepartments THEN 1 ELSE 0 END) AS assembly_organizations FROM t_sys_org;")
     $menuFeatureMismatchCount = & $resolvedPsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
         -v ON_ERROR_STOP=1 -A -t -c 'SELECT count(*) FROM t_sys_menu menu JOIN t_sys_permission permission ON permission.id = menu.permission_id WHERE menu.feature_id <> permission.feature_id'
     if ($LASTEXITCODE -ne 0 -or [int]$menuFeatureMismatchCount -ne 0) {

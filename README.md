@@ -53,8 +53,7 @@ smart-manage/
 │   ├── platform/       # 平台普通 JAR 与平台迁移
 │   ├── bootstrap/      # 启动配置、装配与可执行 JAR
 │   └── domains/demo/   # 可选演示领域，含采购样板代码、迁移、测试和文档
-├── dev-support/fixtures/ # 显式导入的开发数据，不进入自动迁移
-├── db/                 # 空库验证脚本
+├── scripts/            # 仓库检查与数据库验证脚本
 ├── docs/               # 平台架构和开发规范
 └── smart-manage-web/    # 一个前端工程，构建时选择领域
 ```

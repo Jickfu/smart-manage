@@ -25,7 +25,7 @@ jobs:
         run: ./scripts/verify-module-conventions.ps1
       - name: Verify baseline cleanup safety
         shell: pwsh
-        run: ./db/verify-baseline.tests.ps1
+        run: ./scripts/verify-baseline.tests.ps1
       - name: Verify deployment key generator
         run: node --test scripts/generate-deployment-keys.test.mjs
 
@@ -126,4 +126,4 @@ jobs:
           psql --version
       - name: Verify migrations from an empty database
         shell: pwsh
-        run: ./db/verify-baseline.ps1 ${{ matrix.selection }}
+        run: ./scripts/verify-baseline.ps1 ${{ matrix.selection }}

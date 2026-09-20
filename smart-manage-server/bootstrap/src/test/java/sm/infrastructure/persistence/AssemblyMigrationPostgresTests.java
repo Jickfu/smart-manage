@@ -31,8 +31,10 @@ class AssemblyMigrationPostgresTests {
         assertEquals(withDemo, jdbc.queryForObject("SELECT to_regclass('t_demo_purchase_requisition') IS NOT NULL", Boolean.class));
         assertEquals(withDemo, jdbc.queryForObject("SELECT to_regclass('flyway_demo_schema_history') IS NOT NULL", Boolean.class));
         assertEquals(withDemo, jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM t_sys_feature WHERE feature_key LIKE 'demo/%')", Boolean.class));
+        assertEquals(withDemo ? 4 : 1, jdbc.queryForObject("SELECT count(*) FROM t_sys_org", Integer.class));
+        assertEquals(withDemo ? 3 : 0, jdbc.queryForObject("SELECT count(*) FROM t_sys_org WHERE parent_id = 1 AND org_type = 'DEPARTMENT' AND number IN ('101','102','103')", Integer.class));
         if (withDemo) {
-            assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM flyway_demo_schema_history WHERE version IN ('1','2') AND success", Integer.class));
+            assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM flyway_demo_schema_history WHERE version IN ('1','2','3') AND success", Integer.class));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM t_demo_purchase_requisition", Integer.class));
         }
     }
