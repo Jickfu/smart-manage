@@ -18,6 +18,7 @@ import type {
   QuickLaunchScopeForm,
 } from '@/domain/sys/base/user/quickLaunchApi';
 import { openMenuItem } from '@/services/navigationService';
+import { retainedPageLimitMessage } from '@/stores/workbench';
 import './QuickLaunchCard.css';
 
 interface QuickLaunchCardProps {
@@ -134,7 +135,7 @@ const QuickLaunchCard = ({ scope, appNumber }: QuickLaunchCardProps) => {
       });
       if (result.status === 'failed') feedback.fromError(result.error, '快捷入口打开失败');
       if (result.status === 'capacity-exceeded') {
-        feedback.warning('已达到 50 个页面的保留上限，请关闭部分页面后再打开');
+        feedback.warning(retainedPageLimitMessage());
       }
     } catch (error) {
       feedback.fromError(error, '快捷入口打开失败');

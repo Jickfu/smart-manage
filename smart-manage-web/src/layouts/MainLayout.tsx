@@ -8,6 +8,7 @@ import { parseStartupNavigation } from '@/services/startupNavigation';
 import { fetchPinnedApps } from '@/domain/sys/base/user/appPinApi';
 import './MainLayout.css';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
+import { retainedPageLimitMessage } from '@/stores/workbench';
 
 const { Content } = Layout;
 
@@ -57,7 +58,7 @@ const MainLayout = () => {
       const result = await openApp(startupTarget.appNumber, true);
       if (result.status === 'failed') feedback.fromError(result.error, '指定应用打开失败');
       if (result.status === 'capacity-exceeded') {
-        feedback.warning('已达到 50 个页面的保留上限，已停留在应用列表');
+        feedback.warning(`${retainedPageLimitMessage()}，已停留在应用列表`);
         useHeaderTabsStore.getState().activate('apps');
       }
     };

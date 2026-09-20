@@ -15,13 +15,18 @@ import { pushTabHistory, resolveNextActiveTabKey } from './tabHistory';
 export const RETAINED_PAGE_WARNING_THRESHOLD = 40;
 export const RETAINED_PAGE_LIMIT = 50;
 
+export const retainedPageWarningMessage = () =>
+  `已保留 ${RETAINED_PAGE_WARNING_THRESHOLD} 个页面；达到 ${RETAINED_PAGE_LIMIT} 个后将不再打开新页面`;
+export const retainedPageLimitMessage = () =>
+  `已达到 ${RETAINED_PAGE_LIMIT} 个页面的保留上限，请关闭部分页面后再打开`;
+
 export type AddTabResult = 'opened' | 'activated' | 'capacity-exceeded';
 export type InitWorkspaceResult = 'initialized' | 'existing' | 'capacity-exceeded';
 
 export interface CapacityNotice {
   revision: number;
   appNumber: string;
-  type: 'warning' | 'limit';
+  type: 'warning';
   retainedPageCount: number;
 }
 
@@ -70,6 +75,7 @@ interface WorkbenchState {
   /** 页面渲染失败后由页签外壳持有的保守关闭确认，不与子页面守卫共用生命周期。 */
   failedCloseCallbacks: Record<string, BeforeCloseFn>;
   capacityNotice?: CapacityNotice;
+  consumeCapacityNotice: (revision: number) => void;
   initWorkspace: (appNumber: string, appInfo: AppVO) => InitWorkspaceResult;
   destroyWorkspace: (appNumber: string) => void;
   /** 异步关闭 Workspace — 先顺序检查所有内容页 beforeClose，全部通过后一次性销毁 */
@@ -78,6 +84,8 @@ interface WorkbenchState {
   closeContentTabs: (appNumber: string, tabKeys: string[]) => Promise<boolean>;
   /** 检查所有 Workspace 是否有未保存数据（供退出登录等全局操作使用） */
   checkAllDirty: () => Promise<boolean>;
+  /** 仅检查仍存活页面的正常关闭守卫，供整页刷新在最终故障风险确认前调用。 */
+  checkAllBeforeClose: () => Promise<boolean>;
   /** 页面组件注册关闭前检查回调 */
   registerBeforeClose: (appNumber: string, tabKey: string, fn: BeforeCloseFn) => void;
   /** 页面组件注销关闭前检查回调 */
@@ -86,6 +94,8 @@ interface WorkbenchState {
   unregisterFailedClose: (appNumber: string, tabKey: string) => void;
   /** 添加/激活 content tab — 返回操作结果供调用层反馈 */
   addContentTab: (appNumber: string, tab: ContentTabItem) => AddTabResult;
+  /** 原子提交组合菜单导航，避免先创建应用首页、后因内容页超限留下半完成状态。 */
+  openMenuTarget: (appNumber: string, appInfo: AppVO, tab: ContentTabItem | null) => AddTabResult;
   openListTab: (appNumber: string, componentKey: string) => AddTabResult;
   openCustomTab: (appNumber: string, componentKey: string) => AddTabResult;
   openExternalLinkTab: (
@@ -112,12 +122,11 @@ interface WorkbenchState {
 }
 
 /** 顺序执行最新的页面关闭守卫；任一页面拒绝或检查异常都终止整个关闭事务。 */
-async function runBeforeCloseGuards(
+async function runNormalCloseGuards(
   getState: () => WorkbenchState,
   appNumber: string,
   tabKeys: string[],
 ): Promise<boolean> {
-  // 正常页面守卫先执行；全部通过后再确认故障页的未知状态。
   for (const tabKey of tabKeys) {
     if (tabKey === '__home__') continue;
     const beforeClose = getState().beforeCloseCallbacks[callbackKey(appNumber, tabKey)];
@@ -128,6 +137,14 @@ async function runBeforeCloseGuards(
       return false;
     }
   }
+  return true;
+}
+
+async function runFailedCloseGuards(
+  getState: () => WorkbenchState,
+  appNumber: string,
+  tabKeys: string[],
+): Promise<boolean> {
   for (const tabKey of tabKeys) {
     const failedClose = getState().failedCloseCallbacks[callbackKey(appNumber, tabKey)];
     if (!failedClose) continue;
@@ -138,6 +155,17 @@ async function runBeforeCloseGuards(
     }
   }
   return true;
+}
+
+async function runBeforeCloseGuards(
+  getState: () => WorkbenchState,
+  appNumber: string,
+  tabKeys: string[],
+): Promise<boolean> {
+  return (
+    (await runNormalCloseGuards(getState, appNumber, tabKeys)) &&
+    (await runFailedCloseGuards(getState, appNumber, tabKeys))
+  );
 }
 
 function defaultWorkspace(appInfo: AppVO): WorkspaceState {
@@ -171,14 +199,17 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
   failedCloseCallbacks: {},
   capacityNotice: undefined,
 
+  consumeCapacityNotice: (revision) => {
+    set((state) =>
+      state.capacityNotice?.revision === revision ? { capacityNotice: undefined } : state,
+    );
+  },
+
   initWorkspace: (appNumber, appInfo) => {
     const { workspaces, capacityNotice } = get();
     if (workspaces[appNumber]) return 'existing';
     const retainedPageCount = countRetainedPages(workspaces);
     if (retainedPageCount >= RETAINED_PAGE_LIMIT) {
-      set({
-        capacityNotice: nextCapacityNotice(capacityNotice, 'limit', appNumber, retainedPageCount),
-      });
       return 'capacity-exceeded';
     }
     const nextRetainedPageCount = retainedPageCount + 1;
@@ -226,9 +257,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     while (true) {
       const currentWs = get().workspaces[appNumber];
       if (!currentWs) return true;
-      const unchecked = currentWs.contentTabs.filter(
-        (t) => t.key !== '__home__' && !checkedKeys.has(t.key),
-      );
+      const unchecked = currentWs.contentTabs.filter((t) => !checkedKeys.has(t.key));
       if (unchecked.length === 0) break;
       const uncheckedKeys = unchecked.map((tab) => tab.key);
       if (!(await runBeforeCloseGuards(get, appNumber, uncheckedKeys))) return false;
@@ -312,7 +341,19 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     const { workspaces } = get();
     for (const [appNumber, ws] of Object.entries(workspaces)) {
       const tabKeys = ws.contentTabs.map((tab) => tab.key);
-      if (!(await runBeforeCloseGuards(get, appNumber, tabKeys))) return false;
+      if (!(await runNormalCloseGuards(get, appNumber, tabKeys))) return false;
+    }
+    for (const [appNumber, ws] of Object.entries(get().workspaces)) {
+      const tabKeys = ws.contentTabs.map((tab) => tab.key);
+      if (!(await runFailedCloseGuards(get, appNumber, tabKeys))) return false;
+    }
+    return true;
+  },
+
+  checkAllBeforeClose: async () => {
+    for (const [appNumber, ws] of Object.entries(get().workspaces)) {
+      const tabKeys = ws.contentTabs.map((tab) => tab.key);
+      if (!(await runNormalCloseGuards(get, appNumber, tabKeys))) return false;
     }
     return true;
   },
@@ -351,6 +392,54 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     });
   },
 
+  openMenuTarget: (appNumber, appInfo, tab) => {
+    const { workspaces, capacityNotice } = get();
+    const currentWorkspace = workspaces[appNumber];
+    const existingTab = tab
+      ? currentWorkspace?.contentTabs.find((item) => item.key === tab.key)
+      : undefined;
+    const additionalPages = (currentWorkspace ? 0 : 1) + (tab && !existingTab ? 1 : 0);
+    const retainedPageCount = countRetainedPages(workspaces);
+    if (retainedPageCount + additionalPages > RETAINED_PAGE_LIMIT) {
+      return 'capacity-exceeded';
+    }
+
+    const workspace = currentWorkspace ?? defaultWorkspace(appInfo);
+    const nextWorkspace = existingTab
+      ? {
+          ...workspace,
+          activeContentTabKey: existingTab.key,
+          activeContentTabHistory: pushTabHistory(
+            workspace.activeContentTabHistory,
+            existingTab.key,
+          ),
+        }
+      : tab
+        ? {
+            ...workspace,
+            contentTabs: [...workspace.contentTabs, tab],
+            activeContentTabKey: tab.key,
+            activeContentTabHistory: pushTabHistory(workspace.activeContentTabHistory, tab.key),
+          }
+        : workspace;
+    const nextRetainedPageCount = retainedPageCount + additionalPages;
+    set({
+      workspaces: { ...workspaces, [appNumber]: nextWorkspace },
+      ...(retainedPageCount < RETAINED_PAGE_WARNING_THRESHOLD &&
+      nextRetainedPageCount >= RETAINED_PAGE_WARNING_THRESHOLD
+        ? {
+            capacityNotice: nextCapacityNotice(
+              capacityNotice,
+              'warning',
+              appNumber,
+              nextRetainedPageCount,
+            ),
+          }
+        : {}),
+    });
+    return existingTab || (currentWorkspace && !tab) ? 'activated' : 'opened';
+  },
+
   addContentTab: (appNumber, tab) => {
     const { workspaces, capacityNotice } = get();
     const ws = workspaces[appNumber];
@@ -376,9 +465,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
 
     const retainedPageCount = countRetainedPages(workspaces);
     if (retainedPageCount >= RETAINED_PAGE_LIMIT) {
-      set({
-        capacityNotice: nextCapacityNotice(capacityNotice, 'limit', appNumber, retainedPageCount),
-      });
       return 'capacity-exceeded';
     }
 

@@ -288,6 +288,53 @@ describe('workbench store', () => {
     ).toBe(true);
   });
 
+  it('全局关闭先检查所有工作区的正常守卫，再确认任一故障页', async () => {
+    const store = useWorkbenchStore.getState();
+    const otherAppNumber = 'other';
+    store.initWorkspace(otherAppNumber, { ...appInfo, id: '2', number: otherAppNumber });
+    store.openBillTab(otherAppNumber, COMPONENT_KEY, 'normal', OperationType.EDIT);
+    const calls: string[] = [];
+    store.registerFailedClose(APP_NUMBER, '__home__', async () => {
+      calls.push('failed');
+      return true;
+    });
+    store.registerBeforeClose(
+      otherAppNumber,
+      createBillTabKey(COMPONENT_KEY, 'normal'),
+      async () => {
+        calls.push('normal');
+        return true;
+      },
+    );
+
+    expect(await store.checkAllDirty()).toBe(true);
+    expect(calls).toEqual(['normal', 'failed']);
+  });
+
+  it('整页刷新预检只运行正常守卫，故障风险由刷新入口最终统一确认', async () => {
+    const store = useWorkbenchStore.getState();
+    const normalGuard = vi.fn().mockResolvedValue(true);
+    const failedGuard = vi.fn().mockResolvedValue(true);
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, 'reload', OperationType.EDIT);
+    const tabKey = createBillTabKey(COMPONENT_KEY, 'reload');
+    store.registerBeforeClose(APP_NUMBER, tabKey, normalGuard);
+    store.registerFailedClose(APP_NUMBER, tabKey, failedGuard);
+
+    expect(await store.checkAllBeforeClose()).toBe(true);
+    expect(normalGuard).toHaveBeenCalledOnce();
+    expect(failedGuard).not.toHaveBeenCalled();
+  });
+
+  it('关闭整个应用时包含不可单独关闭的故障首页确认', async () => {
+    const store = useWorkbenchStore.getState();
+    const failedHomeGuard = vi.fn().mockResolvedValue(false);
+    store.registerFailedClose(APP_NUMBER, '__home__', failedHomeGuard);
+
+    expect(await store.closeWorkspace(APP_NUMBER)).toBe(false);
+    expect(failedHomeGuard).toHaveBeenCalledOnce();
+    expect(useWorkbenchStore.getState().workspaces[APP_NUMBER]).toBeDefined();
+  });
+
   it('关闭工作区时会检查守卫等待期间新增的页签', async () => {
     const store = useWorkbenchStore.getState();
     const firstTabKey = createBillTabKey(COMPONENT_KEY, '120');
@@ -334,7 +381,9 @@ describe('workbench store', () => {
 
   it('跨应用累计保活页面并在 40 个时提醒、超过 50 个时拒绝新增', () => {
     const store = useWorkbenchStore.getState();
-    for (let index = 0; index < RETAINED_PAGE_WARNING_THRESHOLD - 1; index += 1) {
+    const otherAppNumber = 'other';
+    store.initWorkspace(otherAppNumber, { ...appInfo, id: '2', number: otherAppNumber });
+    for (let index = 0; index < RETAINED_PAGE_WARNING_THRESHOLD - 2; index += 1) {
       expect(store.openBillTab(APP_NUMBER, COMPONENT_KEY, String(index), OperationType.VIEW)).toBe(
         'opened',
       );
@@ -345,8 +394,8 @@ describe('workbench store', () => {
     });
 
     for (
-      let index = RETAINED_PAGE_WARNING_THRESHOLD - 1;
-      index < RETAINED_PAGE_LIMIT - 1;
+      let index = RETAINED_PAGE_WARNING_THRESHOLD - 2;
+      index < RETAINED_PAGE_LIMIT - 2;
       index += 1
     ) {
       expect(store.openBillTab(APP_NUMBER, COMPONENT_KEY, String(index), OperationType.VIEW)).toBe(
@@ -359,11 +408,16 @@ describe('workbench store', () => {
       'capacity-exceeded',
     );
     const state = useWorkbenchStore.getState();
-    expect(state.workspaces[APP_NUMBER]!.contentTabs).toHaveLength(RETAINED_PAGE_LIMIT);
+    expect(
+      Object.values(state.workspaces).reduce(
+        (count, workspace) => count + workspace.contentTabs.length,
+        0,
+      ),
+    ).toBe(RETAINED_PAGE_LIMIT);
     expect(state.workspaces[APP_NUMBER]!.activeContentTabKey).toBe(activeBeforeRejection);
     expect(state.capacityNotice).toMatchObject({
-      type: 'limit',
-      retainedPageCount: RETAINED_PAGE_LIMIT,
+      type: 'warning',
+      retainedPageCount: RETAINED_PAGE_WARNING_THRESHOLD,
     });
   });
 

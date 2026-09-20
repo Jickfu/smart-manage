@@ -4,7 +4,11 @@ import { memo, useCallback, useEffect, useRef } from 'react';
 import { Spin } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { menuQueryKeys } from '@/domain/sys/base/menu/queryKeys';
-import { useWorkbenchStore } from '@/stores/workbench';
+import {
+  retainedPageLimitMessage,
+  retainedPageWarningMessage,
+  useWorkbenchStore,
+} from '@/stores/workbench';
 import { getUserMenusByAppNumber } from '@/domain/sys/base/menu/api';
 import AppSidebar from './AppSidebar';
 import ContentTabsBar from './ContentTabsBar';
@@ -31,22 +35,18 @@ const Workbench = ({ appNumber, appActive, initialEntryNumber, onInitialEntryCon
   const startupEntryConsumed = useRef(false);
   const ws = useWorkbenchStore((s) => s.workspaces[appNumber]);
   const capacityNotice = useWorkbenchStore((s) => s.capacityNotice);
+  const consumeCapacityNotice = useWorkbenchStore((s) => s.consumeCapacityNotice);
   const openListTab = useWorkbenchStore((s) => s.openListTab);
   const openCustomTab = useWorkbenchStore((s) => s.openCustomTab);
   const openExternalLinkTab = useWorkbenchStore((s) => s.openExternalLinkTab);
 
   useEffect(() => {
     if (!capacityNotice || capacityNotice.appNumber !== appNumber) return;
-    if (capacityNotice.type === 'warning') {
-      feedback.warning('已保留 40 个页面；达到 50 个后将不再打开新页面', {
-        key: `workbench-capacity-${capacityNotice.revision}`,
-      });
-    } else {
-      feedback.warning('已达到 50 个页面的保留上限，请关闭部分页面后再打开', {
-        key: `workbench-capacity-${capacityNotice.revision}`,
-      });
-    }
-  }, [appNumber, capacityNotice, feedback]);
+    feedback.warning(retainedPageWarningMessage(), {
+      key: `workbench-capacity-${capacityNotice.revision}`,
+    });
+    consumeCapacityNotice(capacityNotice.revision);
+  }, [appNumber, capacityNotice, consumeCapacityNotice, feedback]);
 
   const menuQuery = useQuery({
     meta: { errorPresentation: 'local-initial' },
@@ -68,13 +68,22 @@ const Workbench = ({ appNumber, appActive, initialEntryNumber, onInitialEntryCon
           return;
         }
         if (action.type === 'EXTERNAL_IFRAME') {
-          openExternalLinkTab(appNumber, action.menuId, action.title, action.externalUrl);
+          if (
+            openExternalLinkTab(appNumber, action.menuId, action.title, action.externalUrl) ===
+            'capacity-exceeded'
+          ) {
+            feedback.warning(retainedPageLimitMessage());
+          }
           return;
         }
         if (componentRegistry[action.componentKey]?.pageType === 'CUSTOM') {
-          openCustomTab(appNumber, action.componentKey);
+          if (openCustomTab(appNumber, action.componentKey) === 'capacity-exceeded') {
+            feedback.warning(retainedPageLimitMessage());
+          }
         } else {
-          openListTab(appNumber, action.componentKey);
+          if (openListTab(appNumber, action.componentKey) === 'capacity-exceeded') {
+            feedback.warning(retainedPageLimitMessage());
+          }
         }
       } catch (error) {
         feedback.fromError(error, '菜单配置无效');

@@ -52,7 +52,7 @@ export default function ContentTabErrorBoundary({
   const registerFailedClose = useWorkbenchStore((state) => state.registerFailedClose);
   const unregisterFailedClose = useWorkbenchStore((state) => state.unregisterFailedClose);
   const removeContentTab = useWorkbenchStore((state) => state.removeContentTab);
-  const checkAllDirty = useWorkbenchStore((state) => state.checkAllDirty);
+  const checkAllBeforeClose = useWorkbenchStore((state) => state.checkAllBeforeClose);
 
   const confirmFailedTabClose = useCallback(
     () =>
@@ -76,7 +76,16 @@ export default function ContentTabErrorBoundary({
   }, [appNumber, tabKey, unregisterFailedClose]);
 
   const handleReload = async () => {
-    if (await checkAllDirty()) window.location.reload();
+    if (!(await checkAllBeforeClose())) return;
+    const confirmed = await confirmOperation({
+      type: 'warning',
+      title: '刷新整个系统页面',
+      description:
+        '刷新会离开全部页面；故障页的未保存内容可能已经丢失或无法恢复。刷新不会撤销已经发出的操作，是否继续？',
+      confirmText: '继续刷新',
+      cancelText: '取消',
+    });
+    if (confirmed) window.location.reload();
   };
 
   return (

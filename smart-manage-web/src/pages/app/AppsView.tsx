@@ -10,6 +10,7 @@ import { openApp } from '@/services/navigationService';
 import AppCardIcon from './AppCardIcon';
 import './AppsView.css';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
+import { retainedPageLimitMessage } from '@/stores/workbench';
 
 const AppsView = () => {
   const feedback = useOperationFeedback();
@@ -24,7 +25,7 @@ const AppsView = () => {
     const result = await openApp(app.number);
     if (result.status === 'failed') feedback.fromError(result.error, '应用打开失败');
     if (result.status === 'capacity-exceeded') {
-      feedback.warning('已达到 50 个页面的保留上限，请关闭部分页面后再打开');
+      feedback.warning(retainedPageLimitMessage());
     }
   };
 

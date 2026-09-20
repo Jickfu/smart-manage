@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { UserAvatar } from '@/domain/sys/base/user/UserAvatar';
 import AppModal from '@/domain/common/component/AppModal';
 import { useHeaderTabsStore } from '@/stores/headerTabs';
-import { useWorkbenchStore } from '@/stores/workbench';
+import { retainedPageLimitMessage, useWorkbenchStore } from '@/stores/workbench';
 import { useUserStore } from '@/stores/user';
 import { openApp, closeAppAndRemove } from '@/services/navigationService';
 import { pinApp, unpinApp } from '@/domain/sys/base/user/appPinApi';
@@ -66,7 +66,7 @@ const Header = () => {
     const result = await openApp(key);
     if (result.status === 'failed') feedback.fromError(result.error, '应用打开失败');
     if (result.status === 'capacity-exceeded') {
-      feedback.warning('已达到 50 个页面的保留上限，请关闭部分页面后再打开');
+      feedback.warning(retainedPageLimitMessage());
     }
   };
 

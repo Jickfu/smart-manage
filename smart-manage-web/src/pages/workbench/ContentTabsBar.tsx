@@ -36,25 +36,25 @@ const ContentTabsBar = ({ appNumber }: Props) => {
     }
   };
 
-  const handleCloseAll = () => {
+  const handleCloseAll = async () => {
     const allKeys = scrollableTabs.map((tab) => tab.key);
     if (allKeys.length === 0) return;
 
-    void confirmOperation({
+    const confirmed = await confirmOperation({
       type: 'warning',
       title: '关闭全部页签',
       description: `确定关闭全部 ${allKeys.length} 个页签吗？`,
       confirmText: '确定',
       cancelText: '取消',
-      onConfirm: async () => {
-        setClosing(true);
-        try {
-          await closeContentTabs(appNumber, allKeys);
-        } finally {
-          setClosing(false);
-        }
-      },
     });
+    if (!confirmed) return;
+    // 外层确认完全结束后再执行页面守卫，避免故障页确认被 Provider 的重入保护拒绝。
+    setClosing(true);
+    try {
+      await closeContentTabs(appNumber, allKeys);
+    } finally {
+      setClosing(false);
+    }
   };
 
   return (
@@ -68,7 +68,7 @@ const ContentTabsBar = ({ appNumber }: Props) => {
       onCloseOthers={() => {
         void handleCloseOthers();
       }}
-      onCloseAll={handleCloseAll}
+      onCloseAll={() => void handleCloseAll()}
       closing={closing}
     />
   );

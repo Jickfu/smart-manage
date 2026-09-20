@@ -11,8 +11,12 @@ import { useHeaderTabsStore } from '@/stores/headerTabs';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { openByNumber } from '@/domain/sys/base/app/api';
 import { componentRegistry } from '@/domain/common/registry/componentRegistry';
+import { getRegisteredTabTitle } from '@/domain/common/registry/componentRegistry';
+import { createExternalLinkTabKey, createListTabKey } from '@/domain/common/page/tab/tabKeys';
 import type { MenuVO } from '@/types/api';
 import { resolveMenuAction } from '@/pages/workbench/menuNavigation';
+import type { MenuAction } from '@/pages/workbench/menuNavigation';
+import type { ContentTabItem } from '@/stores/workbench';
 
 /** 请求序号 — 每次 openApp 递增，防止异步竞态导致旧数据覆盖新状态 */
 let requestSeq = 0;
@@ -27,6 +31,27 @@ export type OpenMenuItemResult =
   | OpenAppResult
   | { status: 'menu-opened' }
   | { status: 'external-opened' };
+
+function createMenuTargetTab(action: MenuAction): ContentTabItem | null {
+  if (action.type === 'EXTERNAL_NEW_TAB') return null;
+  if (action.type === 'EXTERNAL_IFRAME') {
+    return {
+      key: createExternalLinkTabKey(action.menuId),
+      label: action.title,
+      closable: true,
+      externalUrl: action.externalUrl,
+    };
+  }
+  const pageType =
+    componentRegistry[action.componentKey]?.pageType === 'CUSTOM' ? 'CUSTOM' : 'LIST';
+  return {
+    key: createListTabKey(action.componentKey),
+    label: getRegisteredTabTitle(action.componentKey, pageType),
+    closable: true,
+    componentKey: action.componentKey,
+    pageType,
+  };
+}
 
 /**
  * 统一的异步应用打开服务。
@@ -79,36 +104,29 @@ export async function openApp(appNumber: string, fallbackToApps = false): Promis
 
 /** 从已授权菜单入口打开页面，首页快捷入口与侧边栏共享同一目标解析规则。 */
 export async function openMenuItem(appNumber: string, item: MenuVO): Promise<OpenMenuItemResult> {
-  const appResult = await openApp(appNumber);
-  if (appResult.status !== 'opened' && appResult.status !== 'activated') return appResult;
+  const seq = ++requestSeq;
   const action = resolveMenuAction(item);
+  const targetTab = createMenuTargetTab(action);
+  const currentWorkspace = useWorkbenchStore.getState().workspaces[appNumber];
+  let appInfo = currentWorkspace?.appInfo;
+  if (!appInfo) {
+    try {
+      appInfo = await openByNumber(appNumber);
+    } catch (error) {
+      return seq === requestSeq ? { status: 'failed', error } : { status: 'superseded' };
+    }
+  }
+  if (seq !== requestSeq) return { status: 'superseded' };
+
+  const targetResult = useWorkbenchStore.getState().openMenuTarget(appNumber, appInfo, targetTab);
+  if (targetResult === 'capacity-exceeded') return { status: 'capacity-exceeded' };
+  useHeaderTabsStore.getState().addAppTab(appNumber, appInfo.name);
+
   if (action.type === 'EXTERNAL_NEW_TAB') {
     window.open(action.externalUrl, '_blank', 'noopener,noreferrer');
     return { status: 'external-opened' };
   }
-  const workbenchStore = useWorkbenchStore.getState();
-  if (!workbenchStore.workspaces[appNumber]) {
-    return { status: 'superseded' };
-  }
-  if (action.type === 'EXTERNAL_IFRAME') {
-    return workbenchStore.openExternalLinkTab(
-      appNumber,
-      action.menuId,
-      action.title,
-      action.externalUrl,
-    ) === 'capacity-exceeded'
-      ? { status: 'capacity-exceeded' }
-      : { status: 'menu-opened' };
-  }
-  if (componentRegistry[action.componentKey]?.pageType === 'CUSTOM') {
-    return workbenchStore.openCustomTab(appNumber, action.componentKey) === 'capacity-exceeded'
-      ? { status: 'capacity-exceeded' }
-      : { status: 'menu-opened' };
-  } else {
-    return workbenchStore.openListTab(appNumber, action.componentKey) === 'capacity-exceeded'
-      ? { status: 'capacity-exceeded' }
-      : { status: 'menu-opened' };
-  }
+  return { status: 'menu-opened' };
 }
 
 /**
