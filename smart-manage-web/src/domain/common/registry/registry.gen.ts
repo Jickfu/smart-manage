@@ -2,92 +2,95 @@
  * 页面注册清单导入文件，由 pnpm gen:registry 自动生成，禁止手动修改。
  */
 
+// src/domain/demo/procurement/purchaseRequisition/pageRegistration.ts
+import pageRegistrationModule1 from '../../demo/procurement/purchaseRequisition/pageRegistration';
+
 // src/domain/sys/base/app/pageRegistration.ts
-import pageRegistrationModule1 from '../../sys/base/app/pageRegistration';
+import pageRegistrationModule2 from '../../sys/base/app/pageRegistration';
 
 // src/domain/sys/base/attachmentConfig/pageRegistration.ts
-import pageRegistrationModule2 from '../../sys/base/attachmentConfig/pageRegistration';
+import pageRegistrationModule3 from '../../sys/base/attachmentConfig/pageRegistration';
 
 // src/domain/sys/base/basicData/pageRegistration.ts
-import pageRegistrationModule3 from '../../sys/base/basicData/pageRegistration';
+import pageRegistrationModule4 from '../../sys/base/basicData/pageRegistration';
 
 // src/domain/sys/base/domain/pageRegistration.ts
-import pageRegistrationModule4 from '../../sys/base/domain/pageRegistration';
+import pageRegistrationModule5 from '../../sys/base/domain/pageRegistration';
 
 // src/domain/sys/base/feature/pageRegistration.ts
-import pageRegistrationModule5 from '../../sys/base/feature/pageRegistration';
+import pageRegistrationModule6 from '../../sys/base/feature/pageRegistration';
 
 // src/domain/sys/base/fileConfig/pageRegistration.ts
-import pageRegistrationModule6 from '../../sys/base/fileConfig/pageRegistration';
+import pageRegistrationModule7 from '../../sys/base/fileConfig/pageRegistration';
 
 // src/domain/sys/base/menu/pageRegistration.ts
-import pageRegistrationModule7 from '../../sys/base/menu/pageRegistration';
+import pageRegistrationModule8 from '../../sys/base/menu/pageRegistration';
 
 // src/domain/sys/base/numberRule/pageRegistration.ts
-import pageRegistrationModule8 from '../../sys/base/numberRule/pageRegistration';
+import pageRegistrationModule9 from '../../sys/base/numberRule/pageRegistration';
 
 // src/domain/sys/base/openApi/pageRegistration.ts
-import pageRegistrationModule9 from '../../sys/base/openApi/pageRegistration';
+import pageRegistrationModule10 from '../../sys/base/openApi/pageRegistration';
 
 // src/domain/sys/base/org/pageRegistration.ts
-import pageRegistrationModule10 from '../../sys/base/org/pageRegistration';
+import pageRegistrationModule11 from '../../sys/base/org/pageRegistration';
 
 // src/domain/sys/base/permission/pageRegistration.ts
-import pageRegistrationModule11 from '../../sys/base/permission/pageRegistration';
+import pageRegistrationModule12 from '../../sys/base/permission/pageRegistration';
 
 // src/domain/sys/base/role/pageRegistration.ts
-import pageRegistrationModule12 from '../../sys/base/role/pageRegistration';
+import pageRegistrationModule13 from '../../sys/base/role/pageRegistration';
 
 // src/domain/sys/base/sysParam/pageRegistration.ts
-import pageRegistrationModule13 from '../../sys/base/sysParam/pageRegistration';
+import pageRegistrationModule14 from '../../sys/base/sysParam/pageRegistration';
 
 // src/domain/sys/base/uiConfig/pageRegistration.ts
-import pageRegistrationModule14 from '../../sys/base/uiConfig/pageRegistration';
+import pageRegistrationModule15 from '../../sys/base/uiConfig/pageRegistration';
 
 // src/domain/sys/base/user/pageRegistration.ts
-import pageRegistrationModule15 from '../../sys/base/user/pageRegistration';
+import pageRegistrationModule16 from '../../sys/base/user/pageRegistration';
 
 // src/domain/sys/base/weakPassword/pageRegistration.ts
-import pageRegistrationModule16 from '../../sys/base/weakPassword/pageRegistration';
+import pageRegistrationModule17 from '../../sys/base/weakPassword/pageRegistration';
 
 // src/domain/sys/message/email/pageRegistration.ts
-import pageRegistrationModule17 from '../../sys/message/email/pageRegistration';
+import pageRegistrationModule18 from '../../sys/message/email/pageRegistration';
 
 // src/domain/sys/message/inbox/pageRegistration.ts
-import pageRegistrationModule18 from '../../sys/message/inbox/pageRegistration';
+import pageRegistrationModule19 from '../../sys/message/inbox/pageRegistration';
 
 // src/domain/sys/monitor/alert/pageRegistration.ts
-import pageRegistrationModule19 from '../../sys/monitor/alert/pageRegistration';
+import pageRegistrationModule20 from '../../sys/monitor/alert/pageRegistration';
 
 // src/domain/sys/monitor/cache/pageRegistration.ts
-import pageRegistrationModule20 from '../../sys/monitor/cache/pageRegistration';
+import pageRegistrationModule21 from '../../sys/monitor/cache/pageRegistration';
 
 // src/domain/sys/monitor/loginLog/pageRegistration.ts
-import pageRegistrationModule21 from '../../sys/monitor/loginLog/pageRegistration';
+import pageRegistrationModule22 from '../../sys/monitor/loginLog/pageRegistration';
 
 // src/domain/sys/monitor/operateLog/pageRegistration.ts
-import pageRegistrationModule22 from '../../sys/monitor/operateLog/pageRegistration';
+import pageRegistrationModule23 from '../../sys/monitor/operateLog/pageRegistration';
 
 // src/domain/sys/monitor/runtime/pageRegistration.ts
-import pageRegistrationModule23 from '../../sys/monitor/runtime/pageRegistration';
+import pageRegistrationModule24 from '../../sys/monitor/runtime/pageRegistration';
 
 // src/domain/sys/monitor/script/pageRegistration.ts
-import pageRegistrationModule24 from '../../sys/monitor/script/pageRegistration';
+import pageRegistrationModule25 from '../../sys/monitor/script/pageRegistration';
 
 // src/domain/sys/monitor/slowSql/pageRegistration.ts
-import pageRegistrationModule25 from '../../sys/monitor/slowSql/pageRegistration';
+import pageRegistrationModule26 from '../../sys/monitor/slowSql/pageRegistration';
 
 // src/domain/sys/monitor/sql/pageRegistration.ts
-import pageRegistrationModule26 from '../../sys/monitor/sql/pageRegistration';
+import pageRegistrationModule27 from '../../sys/monitor/sql/pageRegistration';
 
 // src/domain/sys/monitor/thread/pageRegistration.ts
-import pageRegistrationModule27 from '../../sys/monitor/thread/pageRegistration';
+import pageRegistrationModule28 from '../../sys/monitor/thread/pageRegistration';
 
 // src/domain/sys/scheduler/execution/pageRegistration.ts
-import pageRegistrationModule28 from '../../sys/scheduler/execution/pageRegistration';
+import pageRegistrationModule29 from '../../sys/scheduler/execution/pageRegistration';
 
 // src/domain/sys/scheduler/job/pageRegistration.ts
-import pageRegistrationModule29 from '../../sys/scheduler/job/pageRegistration';
+import pageRegistrationModule30 from '../../sys/scheduler/job/pageRegistration';
 
 import { registerPageRegistrationModules } from './componentRegistry';
 
@@ -121,4 +124,5 @@ registerPageRegistrationModules([
   pageRegistrationModule27,
   pageRegistrationModule28,
   pageRegistrationModule29,
+  pageRegistrationModule30,
 ]);

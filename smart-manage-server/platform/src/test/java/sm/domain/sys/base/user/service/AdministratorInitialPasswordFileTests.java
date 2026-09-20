@@ -23,7 +23,7 @@ class AdministratorInitialPasswordFileTests {
         Files.createDirectories(classesDirectory);
         Path jarDirectory = temporaryDirectory.resolve("release");
         Files.createDirectories(jarDirectory);
-        Path jarFile = Files.createFile(jarDirectory.resolve("smart-manage-bootstrap.jar"));
+        Path jarFile = Files.createFile(jarDirectory.resolve("smart-manage-server.jar"));
 
         assertEquals(ideWorkingDirectory,
                 AdministratorInitialPasswordFile.resolveRuntimeDirectory(

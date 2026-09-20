@@ -13,7 +13,7 @@
 | 类路径 | `classpath:db/platform/migration` | `classpath:db/demo/migration` |
 | 历史表 | `flyway_schema_history` | `flyway_demo_schema_history` |
 | 版本 | V1 结构、V2 必要数据，后续递增 | 独立从 V1 开始 |
-| 启用 | 默认 | Maven `with-domains` 装配进最终包 |
+| 启用 | 始终 | 默认随 `current-domains` 装配；`platform-only` 排除 |
 
 领域 JAR 的 `META-INF/smart-manage/migration.properties` 声明 `id`、`location`、`table`、`minimum-platform-version`。平台通用配置发现声明，保留 Boot 的平台 Flyway Bean 与初始化依赖，先执行平台，再检查领域最低平台版本并执行领域迁移。已声明领域的配置无效、目录缺失、空链、重名或迁移失败均拒绝启动，不自动跳过；装配测试确认选入的领域声明确实存在。
 
@@ -31,7 +31,7 @@
 
 平台 V2 默认只保留一个公司、管理员及关联和运行所需的系统目录、规则。管理员密码为空的不可登录标记，由首次启动的外部配置初始化，规则见[环境与配置](./configuration.md#管理员首次初始化)。
 
-DEMO 的 `V3__demo_data.sql` 在显式装配 `with-domains` 时自动添加领导层、财务部、销售部三个演示部门，均归属平台默认公司。默认平台不创建这些部门；DEMO 只添加自有演示记录，不覆盖平台行，不修改管理员密码。当前仍不包含采购演示单据。演示数据随 Demo 的 Flyway 历史只执行一次，删除源码不撤销已写入的数据。
+DEMO 的 `V3__demo_data.sql` 在默认当前领域装配中自动添加领导层、财务部、销售部三个演示部门，均归属平台默认公司。`platform-only` 不创建这些部门；DEMO 只添加自有演示记录，不覆盖平台行，不修改管理员密码。当前仍不包含采购演示单据。演示数据随 Demo 的 Flyway 历史只执行一次，删除源码不撤销已写入的数据。
 
 ## 正式发布与升级规则
 

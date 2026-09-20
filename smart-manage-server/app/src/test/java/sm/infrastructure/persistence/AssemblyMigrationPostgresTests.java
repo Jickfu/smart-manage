@@ -27,9 +27,6 @@ class AssemblyMigrationPostgresTests {
             strategy.migrate(platform);
         }
         assertEquals(history, jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank"));
-        var expectedDomains = new java.util.HashSet<>(java.util.Set.of(
-                System.getProperty("smartManage.expectedDomains", "sys").split(",")));
-        expectedDomains.remove("sys");
         var actualDomains = new java.util.HashSet<String>();
         for (var resource : new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
                 .getResources("classpath*:META-INF/smart-manage/migration.properties")) {
@@ -39,8 +36,7 @@ class AssemblyMigrationPostgresTests {
             assertNotNull(jdbc.queryForObject("SELECT to_regclass(?)", String.class, declaration.getProperty("table")),
                     "已装配领域必须实际建立迁移历史表");
         }
-        assertEquals(expectedDomains, actualDomains, "完整装配必须包含所有所选领域的迁移声明");
-        if (expectedDomains.isEmpty()) {
+        if (actualDomains.isEmpty()) {
             assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM t_sys_org", Integer.class));
         }
     }

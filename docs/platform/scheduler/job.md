@@ -43,6 +43,7 @@ Quartz 使用共享 PostgreSQL JDBC JobStore 并开启集群模式。数据库�
 2. 提交后同步对应 Quartz Job 和 Trigger。
 3. Quartz 临时故障时保留数据库期望状态，由“重新同步”命令恢复。
 4. 全量同步会重建期望任务，并清理不存在或 Quartz Key 已与数据库不一致的受管任务。
+5. 应用启动时 Quartz 扫描线程保持停止，完成上述全量同步后再启动；历史库即使残留半完整 Trigger，也不得先被调度线程读取。
 
 每个实例使用唯一 Quartz instanceId。任务必须考虑节点故障恢复导致的重复执行，并通过业务幂等键、状态条件或可检测执行记录控制副作用。执行实例记录保存实际节点 ID、Quartz fire instance ID 和 Trace ID。
 

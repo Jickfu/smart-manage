@@ -62,5 +62,6 @@ class QuartzConfigurationTests {
         new QuartzConfiguration().quartzCustomizer(List.of(listener)).customize(factory);
 
         verify(factory).setGlobalJobListeners(listener);
+        verify(factory).setAutoStartup(false);
     }
 }

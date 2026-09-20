@@ -61,6 +61,10 @@ public class QuartzConfiguration {
      */
     @Bean
     SchedulerFactoryBeanCustomizer quartzCustomizer(List<JobListener> listeners) {
-        return factoryBean -> factoryBean.setGlobalJobListeners(listeners.toArray(JobListener[]::new));
+        return factoryBean -> {
+            factoryBean.setGlobalJobListeners(listeners.toArray(JobListener[]::new));
+            // 受管任务可能需要修复历史残留的半完整 Trigger，必须先同步再启动扫描线程。
+            factoryBean.setAutoStartup(false);
+        };
     }
 }

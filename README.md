@@ -49,10 +49,10 @@ Smart Manage 是一个基于 Spring Boot 4、React 19 和 Ant Design
 ```text
 smart-manage/
 ├── smart-manage-server/ # 后端 Maven 工程
-│   ├── pom.xml         # 父 POM，默认装配平台
+│   ├── pom.xml         # 父 POM，默认装配当前全部领域
 │   ├── platform/       # 平台普通 JAR 与平台迁移
-│   ├── bootstrap/      # 启动配置、装配与可执行 JAR
-│   └── domains/demo/   # 可选演示领域，含采购样板代码、迁移、测试和文档
+│   ├── app/            # 唯一可运行应用、配置与可执行 JAR
+│   └── domains/        # 领域聚合模块及 Demo 等业务领域
 ├── scripts/            # 仓库检查与数据库验证脚本
 ├── docs/               # 平台架构和开发规范
 └── smart-manage-web/    # 一个前端工程，构建时选择领域
@@ -83,7 +83,7 @@ CREATE DATABASE smart_manage;
 
 ```bash
 mvn -f smart-manage-server/pom.xml package
-java -jar smart-manage-server/bootstrap/target/smart-manage-bootstrap.jar
+java -jar smart-manage-server/app/target/smart-manage-server.jar
 ```
 
 后端默认地址为 `http://localhost:8080/smart-manage-api`，同时提供以下接口文档：
@@ -107,11 +107,11 @@ pnpm dev
 
 ## 可选演示领域
 
-`demo`（演示）是可选业务样板集合，目前以采购申请展示真实业务模块的开发方式，不代表完整供应链产品；自动化测试仍位于 `src/test`。默认后端和前端只交付平台。需要演示样板时，在根目录使用 `mvn -f smart-manage-server/pom.xml -Pwith-domains package`；前端构建或开发时设置 `SMART_MANAGE_DOMAINS=all`（读取 `smart-manage-web/domains.json`） 后执行原有 `pnpm build` 或 `pnpm dev`。两端由维护者选择同一领域组合。
+`demo`（演示）是可选业务样板集合，目前以采购申请展示真实业务模块的开发方式，不代表完整供应链产品；自动化测试仍位于 `src/test`。默认后端构建和前端开发会装配仓库中当前存在的全部领域，因此上游开发可直接使用 Demo。需要只验证平台时，后端使用 `-Pplatform-only`，前端显式设置 `SMART_MANAGE_DOMAINS=sys`。
 
-后端选入 DEMO 后执行独立迁移，创建业务结构、必要目录，并通过 V3 自动添加领导层、财务部、销售部三个演示部门；目前不插入采购演示单据。默认平台不创建这些部门，删除 Demo 源码不会撤销已写入的数据。前端应用首页与业务页面分别懒加载，仍一次构建、统一部署。
+后端默认执行 DEMO 独立迁移，创建业务结构、必要目录，并通过 V3 自动添加领导层、财务部、销售部三个演示部门；目前不插入采购演示单据。`platform-only` 不创建这些部门，删除 Demo 源码不会撤销已写入的数据。前端应用首页与业务页面分别懒加载，仍一次构建、统一部署。
 
-不需要采购的衍生项目按[移除 Demo](docs/development/remove-demo.md)删除两端目录并清理装配声明，CI 无需修改；显式选择不存在的领域会失败。删除源码不等于卸载已初始化数据库中的表或数据。本次调整针对未发布基线，不提供旧开发库自动升级或清理。
+不需要采购的衍生项目按[移除 Demo](docs/development/remove-demo.md)删除两端目录并清理后端领域聚合声明，CI 无需修改；前端会自动发现剩余领域，显式选择不存在的领域仍会失败。删除源码不等于卸载已初始化数据库中的表或数据。本次调整针对未发布基线，不提供旧开发库自动升级或清理。
 
 ## 质量验证
 

@@ -34,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile: ['', '-Pwith-domains']
+        profile: ['', '-Pplatform-only']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -43,8 +43,8 @@ jobs:
           java-version: '21'
           cache: maven
       - name: Remove optional domain for platform-only verification
-        if: matrix.profile == ''
-        run: rm -rf smart-manage-server/domains
+        if: matrix.profile == '-Pplatform-only'
+        run: find smart-manage-server/domains -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
       - name: Test and package backend
         run: mvn -f smart-manage-server/pom.xml --batch-mode --no-transfer-progress ${{ matrix.profile }} verify
 
@@ -53,9 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        domains: ['sys', 'all']
-    env:
-      SMART_MANAGE_DOMAINS: ${{ matrix.domains }}
+        mode: ['current', 'platform-only']
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -70,7 +68,7 @@ jobs:
         working-directory: smart-manage-web
         run: pnpm install --frozen-lockfile
       - name: Remove optional frontend domain for platform-only verification
-        if: matrix.domains == 'sys'
+        if: matrix.mode == 'platform-only'
         run: find smart-manage-web/src/domain -mindepth 1 -maxdepth 1 -type d ! -name sys ! -name common -exec rm -rf {} +
       - name: Generate selected registries
         working-directory: smart-manage-web
@@ -88,7 +86,7 @@ jobs:
         working-directory: smart-manage-web
         run: pnpm build
       - name: Verify default registries are committed
-        if: matrix.domains == 'sys'
+        if: matrix.mode == 'current'
         run: git diff --exit-code -- smart-manage-web/src/domain/common/registry/registry.gen.ts smart-manage-web/src/domain/common/registry/applicationHomes.gen.ts
 
   migrations:
@@ -96,7 +94,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        selection: ['', '-WithDomains']
+        selection: ['', '-PlatformOnly']
     services:
       postgres:
         image: postgres:16

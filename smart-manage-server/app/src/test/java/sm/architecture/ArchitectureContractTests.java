@@ -42,8 +42,15 @@ class ArchitectureContractTests {
     }
 
     @Test
-    void assembledDomainMustActuallyBeIncludedInArchitectureChecks() {
-        var expectedDomains = java.util.Set.of(System.getProperty("smartManage.expectedDomains", "sys").split(","));
+    void assembledDomainMustActuallyBeIncludedInArchitectureChecks() throws Exception {
+        var expectedDomains = new java.util.HashSet<>(java.util.Set.of("sys"));
+        for (var resource : new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
+                .getResources("classpath*:META-INF/smart-manage/migration.properties")) {
+            var declaration = new java.util.Properties();
+            try (var input = resource.getInputStream()) { declaration.load(input); }
+            org.junit.jupiter.api.Assertions.assertTrue(expectedDomains.add(declaration.getProperty("id")),
+                    "领域迁移声明不得重复");
+        }
         var actualDomains = productionClasses.stream()
                 .map(JavaClass::getPackageName)
                 .filter(packageName -> packageName.startsWith("sm.domain."))

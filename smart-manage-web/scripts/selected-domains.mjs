@@ -1,13 +1,20 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 
-// 完整发行清单属于前端装配配置；CI 只引用 all，不维护领域名称。
+// 默认装配当前源码树中的全部领域；显式值只用于 platform-only 等发行裁剪。
 export function selectedDomains(
-  value = process.env.SMART_MANAGE_DOMAINS ?? 'sys',
-  manifest = new URL('../domains.json', import.meta.url),
+  value = process.env.SMART_MANAGE_DOMAINS,
+  domainRoot = new URL('../src/domain/', import.meta.url),
 ) {
   const domains =
-    value === 'all'
-      ? JSON.parse(readFileSync(manifest, 'utf8'))
+    value === undefined || value === 'all'
+      ? readdirSync(domainRoot, { withFileTypes: true })
+          .filter((entry) => entry.isDirectory() && entry.name !== 'common')
+          .map((entry) => entry.name)
+          .sort((left, right) => {
+            if (left === 'sys') return -1;
+            if (right === 'sys') return 1;
+            return left.localeCompare(right);
+          })
       : value.split(',').map((domain) => domain.trim());
   if (
     !Array.isArray(domains) ||

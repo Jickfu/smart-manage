@@ -50,16 +50,9 @@
     </properties>
     <modules>
         <module>platform</module>
-        <module>bootstrap</module>
+        <module>domains</module>
+        <module>app</module>
     </modules>
-    <profiles>
-        <profile>
-            <id>with-domains</id>
-            <modules>
-                <module>domains/demo</module>
-            </modules>
-        </profile>
-    </profiles>
     <dependencies>
         <dependency>
             <groupId>org.projectlombok</groupId>

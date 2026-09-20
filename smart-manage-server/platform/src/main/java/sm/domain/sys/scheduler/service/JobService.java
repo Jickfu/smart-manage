@@ -9,8 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
 import org.quartz.impl.matchers.GroupMatcher;
 import org.springframework.stereotype.Service;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import sm.domain.sys.scheduler.constant.JobStatus;
 import sm.domain.sys.scheduler.model.entity.JobEntity;
 import sm.domain.sys.scheduler.model.entity.JobLogEntity;
@@ -44,7 +43,7 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class JobService {
+public class JobService implements SmartInitializingSingleton {
     private static final Map<String, ListSqlQuery.Field> LIST_FIELDS = Map.of(
             "number", ListSqlQuery.string("a.number", true),
             "jobName", ListSqlQuery.string("a.job_name", true),
@@ -139,10 +138,15 @@ public class JobService {
     }
 
     /** 数据库定义是权威来源；启动时恢复全部任务，包括用户配置的暂停任务。 */
-    @EventListener(ApplicationReadyEvent.class)
-    void synchronizeJobsOnStartup() {
+    @Override
+    public void afterSingletonsInstantiated() {
         List<JobEntity> jobs = mapper.selectList(new LambdaQueryWrapper<>());
         synchronizeAll(jobs, true);
+        try {
+            scheduler.start();
+        } catch (SchedulerException exception) {
+            throw new IllegalStateException("Quartz 任务同步完成后无法启动调度器", exception);
+        }
     }
 
     private void synchronizeAll(List<JobEntity> entities, boolean removeOrphans) {

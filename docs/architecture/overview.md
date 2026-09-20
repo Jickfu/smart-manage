@@ -13,7 +13,7 @@ smart-manage/
 ├── smart-manage-server/ # 后端 Maven 工程
 │   ├── pom.xml         # 父 POM，默认装配平台
 │   ├── platform/       # 平台普通 JAR 与平台迁移
-│   ├── bootstrap/      # 启动配置、装配与可执行 JAR
+│   ├── app/            # 唯一可运行应用、配置与可执行 JAR
 │   └── domains/demo/   # 可选演示领域，含采购样板代码、迁移、测试和文档
 ├── scripts/            # 仓库检查与数据库验证脚本
 ├── docs/               # 平台架构和开发规范

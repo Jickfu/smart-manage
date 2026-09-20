@@ -41,7 +41,7 @@ class JobServiceStartupSynchronizationTests {
         JobService service = new JobService(mapper, mock(JobLogMapper.class), scheduler,
                 mock(JobTxService.class), mock(JobConverter.class), validator, mock(AppReferenceService.class));
 
-        service.synchronizeJobsOnStartup();
+        service.afterSingletonsInstantiated();
 
         ArgumentCaptor<JobDetail> details = ArgumentCaptor.forClass(JobDetail.class);
         ArgumentCaptor<Trigger> triggers = ArgumentCaptor.forClass(Trigger.class);
@@ -54,15 +54,35 @@ class JobServiceStartupSynchronizationTests {
         verify(scheduler).pauseJob(ManagedJobIdentity.jobKey(2L));
         verify(scheduler).deleteJob(orphanKey);
         verify(scheduler, never()).deleteJob(externalKey);
+        verify(scheduler).start();
 
         // 改名称和业务应用后继续更新同一 Quartz 身份，不产生第二套调度项。
         userJob.setJobName("重命名任务");
         userJob.setAppId(30L);
         when(scheduler.checkExists(any(JobKey.class))).thenReturn(true);
         when(scheduler.checkExists(any(TriggerKey.class))).thenReturn(true);
-        service.synchronizeJobsOnStartup();
+        service.afterSingletonsInstantiated();
         verify(scheduler).rescheduleJob(eq(ManagedJobIdentity.triggerKey(2L)), any());
         verify(scheduler, times(2)).scheduleJob(any(JobDetail.class), any(Trigger.class));
+        verify(scheduler, times(2)).start();
+    }
+
+    @Test
+    void startupDoesNotStartSchedulerWhenManagedTaskRepairFails() throws Exception {
+        JobMapper mapper = mock(JobMapper.class);
+        Scheduler scheduler = mock(Scheduler.class);
+        JobDefinitionValidator validator = mock(JobDefinitionValidator.class);
+        when(mapper.selectList(any(Wrapper.class))).thenReturn(List.of(task(1L, "系统任务", "ENABLED", true)));
+        doReturn(CleanTempFileJob.class).when(validator).resolveJobClass(any());
+        when(validator.parseJobData(any())).thenReturn(Map.of());
+        doThrow(new SchedulerException("broken trigger")).when(scheduler).scheduleJob(any(JobDetail.class), any(Trigger.class));
+        JobService service = new JobService(mapper, mock(JobLogMapper.class), scheduler,
+                mock(JobTxService.class), mock(JobConverter.class), validator, mock(AppReferenceService.class));
+
+        org.junit.jupiter.api.Assertions.assertThrows(sm.system.exception.BizException.class,
+                service::afterSingletonsInstantiated);
+
+        verify(scheduler, never()).start();
     }
 
     private static JobEntity task(Long id, String name, String status, boolean system) {

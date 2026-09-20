@@ -7,7 +7,7 @@ param(
     [string]$DbPassword = 'postgres',
     [string]$MavenPath = 'mvn',
     [string]$NodePath = 'node',
-    [switch]$WithDomains
+    [switch]$PlatformOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,14 +39,16 @@ Write-Host "Using PostgreSQL Client: $psqlVersion ($resolvedPsqlPath)"
 if ($psqlVersion -notmatch 'PostgreSQL\)\s+(\d+)' -or [int]$Matches[1] -ne $ExpectedPsqlMajor) {
     throw "PostgreSQL Client 主版本必须为 $ExpectedPsqlMajor，实际版本: $psqlVersion"
 }
-# 后端期望领域由启动模块的显式装配配置维护，与前端清单分开。
+# 后端当前领域由聚合模块维护；平台隔离模式显式排除所有可选领域。
 $backendDomains = 'sys'
-if ($WithDomains) {
-    [xml]$bootstrapPom = Get-Content -LiteralPath (Join-Path $backendRoot 'bootstrap/pom.xml') -Raw
-    $assemblyProfile = @($bootstrapPom.project.profiles.profile | Where-Object { $_.id -eq 'with-domains' })
-    if ($assemblyProfile.Count -ne 1) { throw '缺少唯一的 with-domains 装配配置' }
-    $backendDomains = [string]$assemblyProfile[0].properties.'smartManage.expectedDomains'
-    if ([string]::IsNullOrWhiteSpace($backendDomains)) { throw '完整装配必须声明 smartManage.expectedDomains' }
+if (!$PlatformOnly) {
+    [xml]$domainsPom = Get-Content -LiteralPath (Join-Path $backendRoot 'domains/pom.xml') -Raw
+    $assemblyProfile = @($domainsPom.project.profiles.profile | Where-Object { $_.id -eq 'current-domains' })
+    if ($assemblyProfile.Count -ne 1) { throw '缺少唯一的 current-domains 装配配置' }
+    $domainModules = if ($null -eq $assemblyProfile[0].modules) { @() } else {
+        @($assemblyProfile[0].modules.module | ForEach-Object { [string]$_ })
+    }
+    $backendDomains = (@('sys') + $domainModules) -join ','
 }
 
 $permissionCatalogFile = [System.IO.Path]::GetTempFileName()
@@ -60,7 +62,7 @@ function Invoke-Psql([string]$database, [string[]]$arguments) {
     }
 }
 
-$env:SMART_MANAGE_DOMAINS = if ($WithDomains) { 'all' } else { 'sys' }
+$env:SMART_MANAGE_DOMAINS = if ($PlatformOnly) { 'sys' } else { 'all' }
 $env:PGPASSWORD = $DbPassword
 $env:PGCLIENTENCODING = 'UTF8'
 
@@ -90,7 +92,7 @@ try {
         "-DsmartManage.testDbPassword=$DbPassword"
         '-Dtest=*PostgresTests', '-Dsurefire.failIfNoSpecifiedTests=false'
     )
-    if ($WithDomains) { $testArguments += '-Pwith-domains' }
+    if ($PlatformOnly) { $testArguments += '-Pplatform-only' }
     Write-Host "Running Flyway with project: $backendPomPath"
     & $MavenPath @testArguments
     if ($LASTEXITCODE -ne 0) {
@@ -101,7 +103,7 @@ try {
     $baselineVerificationArguments = @('-v', 'ON_ERROR_STOP=1', '-c', "SELECT 1 / count(*) AS administrator_ready FROM t_sys_user WHERE username = 'administrator' AND enabled AND password = '' AND password_reset;", '-c', "SELECT 1 / count(*) AS attachment_cleanup_job_ready FROM t_sys_job WHERE number = 'ATTACHMENT_OBJECT_CLEANUP' AND is_system AND status = 'ENABLED' AND job_class_name = 'sm.domain.sys.scheduler.job.CleanTempFileJob';", '-c', "SELECT count(*) AS permission_count FROM t_sys_permission;", '-c', "SELECT count(*) AS menu_count FROM t_sys_menu;", '-c', "SELECT count(*) AS flyway_version_count FROM flyway_schema_history WHERE success;", '-c', "SELECT update_time, update_user FROM t_sys_openapi_grant LIMIT 0;")
     Invoke-Psql $verifyDatabase $baselineVerificationArguments
     # 平台默认数据保持最小集合；业务领域自己的数据断言随领域测试维护。
-    if (!$WithDomains) {
+    if ($PlatformOnly) {
         Invoke-Psql $verifyDatabase @('-v', 'ON_ERROR_STOP=1', '-c', "SELECT 1 / (CASE WHEN count(*) = 1 AND count(*) FILTER (WHERE id = 1 AND org_type = 'COMPANY' AND parent_id IS NULL) = 1 THEN 1 ELSE 0 END) AS platform_organizations FROM t_sys_org;")
     }
     $menuFeatureMismatchCount = & $resolvedPsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `

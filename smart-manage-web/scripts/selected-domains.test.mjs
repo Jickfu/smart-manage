@@ -32,32 +32,22 @@ async function generated(root) {
 }
 
 describe('领域构建选择', () => {
-  it('完整发行读取装配清单，新增和移除领域无需修改 CI', async () => {
+  it('默认发现当前领域目录，新增和移除领域无需修改 CI', async () => {
     const root = await fixture();
-    const manifest = join(root, 'domains.json');
-    for (const domains of [['sys', 'demo'], ['sys', 'demo', 'orders'], ['sys']]) {
-      await writeFile(manifest, JSON.stringify(domains));
-      expect(selectedDomains('all', manifest)).toEqual(domains);
-    }
-    for (const invalid of [
-      {},
-      ['sys', 'sys'],
-      ['sys', '../orders'],
-      ['sys', 'common'],
-      ['sys', null],
-    ]) {
-      await writeFile(manifest, JSON.stringify(invalid));
-      expect(() => selectedDomains('all', manifest)).toThrow();
-    }
-    await writeFile(manifest, JSON.stringify(['sys', 'missing']));
-    await expect(generateRegistry(root, selectedDomains('all', manifest))).rejects.toThrow();
+    const domainRoot = join(root, 'src/domain');
+    expect(selectedDomains(undefined, domainRoot)).toEqual(['sys', 'demo']);
+    expect(selectedDomains('all', domainRoot)).toEqual(['sys', 'demo']);
+    await mkdir(join(domainRoot, 'orders'));
+    expect(selectedDomains(undefined, domainRoot)).toEqual(['sys', 'demo', 'orders']);
+    await rm(join(domainRoot, 'demo'), { recursive: true });
+    expect(selectedDomains(undefined, domainRoot)).toEqual(['sys', 'orders']);
   });
   it('要求平台且拒绝空值、重复和路径穿越', () => {
     expect(selectedDomains('sys,demo')).toEqual(['sys', 'demo']);
     for (const value of ['', 'demo', 'sys,sys', 'sys,../demo'])
       expect(() => selectedDomains(value)).toThrow();
   });
-  it('仅生成选中领域，两次生成稳定，删除可选领域后默认仍生成', async () => {
+  it('仅生成选中领域，两次生成稳定，删除可选领域后默认自动收敛', async () => {
     const root = await fixture();
     await generateRegistry(root, ['sys', 'demo']);
     const both = await generated(root);
@@ -65,7 +55,7 @@ describe('领域构建选择', () => {
     await generateRegistry(root, ['sys', 'demo']);
     expect(await generated(root)).toEqual(both);
     await rm(join(root, 'src/domain/demo'), { recursive: true });
-    await generateRegistry(root, ['sys']);
+    await generateRegistry(root, selectedDomains(undefined, join(root, 'src/domain')));
     expect((await generated(root)).every((content) => !content.includes('demo'))).toBe(true);
     await expect(generateRegistry(root, ['sys', 'demo'])).rejects.toThrow();
   });

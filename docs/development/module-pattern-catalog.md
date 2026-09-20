@@ -39,7 +39,7 @@
 | 事务入口 | `smart-manage-server/domains/demo/src/main/java/sm/domain/demo/procurement/purchaserequisition/service` | 公开 Service 与 TxService | 不照搬状态机 |
 | 复用事务内写能力 | `smart-manage-server/platform/src/main/java/sm/domain/sys/base/user/service/UserWriter.java`、`smart-manage-server/platform/src/main/java/sm/domain/sys/base/user/service/UserImportTxService.java` | 多入口共享 Writer | 不创建第二个事务 owner；跨领域须使用提供方 Contract |
 | 权限常量 | `smart-manage-server/domains/demo/src/main/java/sm/domain/demo/procurement/purchaserequisition/constant/PurchaseRequisitionPermission.java` | Controller 引用常量 | 不复制权限码 |
-| 架构与并发测试 | `smart-manage-server/bootstrap/src/test/java/sm/architecture/ArchitectureContractTests.java`、`smart-manage-server/domains/demo/src/test/java/sm/domain/demo/procurement/purchaserequisition/service/PurchaseRequisitionTxServiceTests.java` | 类型依赖、状态和乐观锁 | Mock 测试不能替代真实 PostgreSQL 验证 |
+| 架构与并发测试 | `smart-manage-server/app/src/test/java/sm/architecture/ArchitectureContractTests.java`、`smart-manage-server/domains/demo/src/test/java/sm/domain/demo/procurement/purchaserequisition/service/PurchaseRequisitionTxServiceTests.java` | 类型依赖、状态和乐观锁 | Mock 测试不能替代真实 PostgreSQL 验证 |
 | 生成与权限校验 | `smart-manage-web/scripts/gen-registry.mjs`、`smart-manage-web/scripts/verify-permissions.mjs` | 生成输出与目录一致性 | 本地生成和 CI 判定见[质量验证](./verification.md#页面注册生成) |
 
 ### 明细分区示例

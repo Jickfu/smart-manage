@@ -23,36 +23,38 @@ function Invoke-TestPsql {
     else { return 'test-catalog-entry' }
 }
 function Invoke-TestMaven {
-    if ($testState.scenario -like 'with-domains*' -and $args -contains 'test' -and
-        $args -notcontains '-Pwith-domains') {
-        throw '可选领域未传入真实 PostgreSQL 测试'
+    if ($testState.scenario -eq 'platform-only' -and $args -contains 'test' -and
+        $args -notcontains '-Pplatform-only') {
+        throw '平台隔离模式未传入真实 PostgreSQL 测试'
+    }
+    if ($testState.scenario -ne 'platform-only' -and $args -contains '-Pplatform-only') {
+        throw '默认装配不应启用平台隔离 profile'
     }
     $global:LASTEXITCODE = if ($testState.scenario -in @('migration-failure', 'double-failure')) { 37 } else { 0 }
 }
 function Get-Content {
     param($LiteralPath, [switch]$Raw)
-    if ($LiteralPath -notmatch 'bootstrap[\\/]pom.xml$') { throw "非预期配置读取：$LiteralPath" }
+    if ($LiteralPath -notmatch 'domains[\\/]pom.xml$') { throw "非预期配置读取：$LiteralPath" }
     # 用两个其他业务领域验证通用装配，不让测试依赖上游当前的 Demo 清单。
-    $expectedDomains = if ($testState.scenario -eq 'with-domains-empty') { 'sys' } else { 'sys,orders,invoices' }
-    return "<project><profiles><profile><id>with-domains</id><properties><smartManage.expectedDomains>$expectedDomains</smartManage.expectedDomains></properties></profile></profiles></project>"
+    return '<project><profiles><profile><id>current-domains</id><modules><module>orders</module><module>invoices</module></modules></profile><profile><id>platform-only</id></profile></profiles></project>'
 }
 function Invoke-TestNode {
-    $expectedFrontend = if ($testState.scenario -like 'with-domains*') { 'all' } else { 'sys' }
-    $expectedBackend = if ($testState.scenario -eq 'with-domains') { 'sys,orders,invoices' } else { 'sys' }
+    $expectedFrontend = if ($testState.scenario -eq 'platform-only') { 'sys' } else { 'all' }
+    $expectedBackend = if ($testState.scenario -eq 'platform-only') { 'sys' } else { 'sys,orders,invoices' }
     if ($env:SMART_MANAGE_DOMAINS -ne $expectedFrontend -or $args -notcontains "--backend-domains=$expectedBackend") {
         throw '权限校验的前后端选择不正确'
     }
     $global:LASTEXITCODE = 0
 }
 
-foreach ($scenario in @('create-failure', 'migration-failure', 'double-failure', 'cleanup-failure', 'success', 'success', 'with-domains', 'with-domains-empty')) {
+foreach ($scenario in @('create-failure', 'migration-failure', 'double-failure', 'cleanup-failure', 'success', 'success', 'current-domains', 'platform-only')) {
     $testState = @{ createCount = 0; dropCount = 0; scenario = $scenario }
 
     $failure = $null
     try {
         $businessArguments = @{}
-        if ($scenario -like 'with-domains*') {
-            $businessArguments = @{ WithDomains = $true }
+        if ($scenario -eq 'platform-only') {
+            $businessArguments = @{ PlatformOnly = $true }
         }
         & $verifyScript -PsqlPath 'test-psql' -MavenPath 'Invoke-TestMaven' -NodePath 'Invoke-TestNode' -DbPassword 'unused' @businessArguments
     } catch { $failure = $_.Exception.Message }

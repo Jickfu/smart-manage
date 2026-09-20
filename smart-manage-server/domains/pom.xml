@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>top.chekfu</groupId>
+        <artifactId>smart-manage-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>smart-manage-domains</artifactId>
+    <packaging>pom</packaging>
+    <profiles>
+        <!-- 当前检出的业务领域默认参与开发、测试和打包；纯平台验证显式启用 platform-only。 -->
+        <profile>
+            <id>current-domains</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <module>demo</module>
+            </modules>
+            <dependencies>
+                <dependency>
+                    <groupId>top.chekfu</groupId>
+                    <artifactId>smart-manage-domain-demo</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>platform-only</id>
+        </profile>
+    </profiles>
+</project>

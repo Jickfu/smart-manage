@@ -14,6 +14,7 @@
 8. 页面注册文件必须存在，每个注册项必须声明非空 featureKey 和 pageType。
 9. 前端 CSS 禁止重复声明全局 12px 默认字号或 fontSizeSM。
 10. AppModal 页脚禁止 Space、Flex、div 包裹按钮，PermissionActions 必须显式关闭分组。
+11. 后端领域聚合、前端领域目录和迁移身份必须一致。
 
 页脚检查使用前端 TypeScript 依赖；执行前须在 smart-manage-web 中完成 pnpm install --frozen-lockfile。
 
@@ -117,6 +118,7 @@ $requiredFiles = @(
     'docs/development/module-development-guide.md',
     'docs/development/frontend-page-guide.md',
     'docs/development/module-pattern-catalog.md',
+    'scripts/verify-domain-assembly.ps1',
     '.agents/skills/smart-manage-module/SKILL.md',
     '.agents/skills/smart-manage-module/agents/openai.yaml'
 )
@@ -129,6 +131,13 @@ Assert-FileContains 'smart-manage-server/platform/AGENTS.md' 'module-development
 Assert-FileContains 'smart-manage-web/AGENTS.md' 'module-development-guide\.md' 'Frontend AGENTS.md does not route to the module development guide'
 Assert-FileContains 'smart-manage-web/AGENTS.md' '\.\./docs/development/frontend-page-guide\.md' 'Frontend AGENTS.md does not route to the frontend page guide (../docs/development/frontend-page-guide.md)'
 Assert-FileContains '.agents/skills/smart-manage-module/SKILL.md' 'scripts\\verify-module-conventions\.ps1|scripts/verify-module-conventions\.ps1' 'Module skill does not invoke the convention verifier'
+
+# 当前源码树就是默认完整装配，前后端领域及迁移身份必须同步。
+$global:LASTEXITCODE = 0
+& (Resolve-RepositoryPath 'scripts/verify-domain-assembly.ps1') -RepositoryRoot $resolvedRoot
+if ($LASTEXITCODE -ne 0) {
+    Add-Violation 'Backend and frontend domain assembly verification failed'
+}
 
 # 领域页面样式必须通过样式文件和既有设计体系维护，禁止散落内联样式。
 Assert-NoFileMatch `
@@ -222,4 +231,4 @@ if ($violations.Count -gt 0) {
     exit 1
 }
 
-Write-Host "Module convention verification passed for governance routing (including the frontend page guide), $($registrationFiles.Count) page registration file(s), frontend operation interactions, AppModal footers, typography, inline styles, and backend permission constants." -ForegroundColor Green
+Write-Host "Module convention verification passed for domain assembly, governance routing (including the frontend page guide), $($registrationFiles.Count) page registration file(s), frontend operation interactions, AppModal footers, typography, inline styles, and backend permission constants." -ForegroundColor Green

@@ -59,6 +59,7 @@
 以下是按实际能力检查的接入要点，不规定文件修改顺序；不涉及数据库结构或初始化数据变更时无需新增迁移，没有写入能力时无需事务写服务。必需结构及依赖约束仍按后端架构执行。
 
 1. 确认领域文档、安全边界、数据归属和状态机。
+   若创建新的顶层业务领域，同时在 `smart-manage-server/domains/pom.xml` 的 `current-domains` profile 中声明同名 module 与 dependency；既有领域内新增模块不改装配层。
 2. 涉及数据库结构或初始化数据变更时，设计新增 Flyway 迁移；平台能力使用 `smart-manage-server/platform/src/main/resources/db/platform/migration`，可选领域使用各自 `src/main/resources/db/{领域}/migration`，遵守[迁移及升级规则](database.md)。系统内置 Feature、权限、菜单和必要初始化数据一并通过所属链维护。
 3. 定义 Entity、Form、VO 和权限常量，明确 ID、`version`、引用对象及敏感字段的 JSON 边界。
 4. 建立 Mapper 和纯字段 Converter；关联查询应批量加载或由 MyBatis 直接投影。
@@ -81,6 +82,7 @@
 按页面实际具备的查询、编辑和命令能力接入；不为未提供的能力创建空实现。文件组织和必需注册项仍遵守前端架构。
 
 1. 按[页面形态选择](./frontend-page-guide.md#页面形态选择)确定桌面端入口，并从[模块样板目录](./module-pattern-catalog.md)选择最接近的页面。
+   新顶层领域在 `src/domain/{领域}` 建立目录；默认构建会自动发现，跨端门禁要求其名称与后端领域一致。
 2. 定义 `types.ts`、`api.ts`、`permissions.ts`、`queryKeys.ts` 和 `pageRegistration.ts`；前端 ID 一律为 `string`。业务单据 Query Key Factory 至少包含 `all`、`lists`、`list(params)`、`details` 和 `detail(id)`。
 3. 页面注册显式声明稳定 `featureKey`，同一功能的 LIST、EDIT、CUSTOM 页面共享该身份。
 4. 列表优先使用 `ListPage` 和 `useListPageQuery`；编辑按页面形态复用通用组件；实体引用优先复用或新增 `use*RefSelector`。

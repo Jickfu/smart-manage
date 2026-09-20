@@ -39,7 +39,7 @@ export default definePageRegistrations([
 
 ## 生成与校验
 
-- `pnpm gen:registry` 只发现并导入 `SMART_MANAGE_DOMAINS` 所选领域下的 `pageRegistration.ts(x)`，同时生成各领域 `applicationHomes.ts` 的首页注册；默认只选 `sys`。
+- `pnpm gen:registry` 只发现并导入所选领域下的 `pageRegistration.ts(x)`，同时生成各领域 `applicationHomes.ts` 的首页注册；未设置 `SMART_MANAGE_DOMAINS` 时默认选择 `src/domain` 下当前全部领域。
 - 生成器不解析组件文件名，不从文件名推导页面键，也不使用正则读取业务声明。
 - 页面键、基础标题、页面类型和懒加载组件必须在清单中显式声明。
 - 每个页面必须显式声明 `featureKey`；同一功能的多个页面共享稳定功能键。
