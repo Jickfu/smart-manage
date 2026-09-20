@@ -42,9 +42,12 @@ const Workbench = ({ appNumber, appActive, initialEntryNumber, onInitialEntryCon
 
   useEffect(() => {
     if (!capacityNotice || capacityNotice.appNumber !== appNumber) return;
-    feedback.warning(retainedPageWarningMessage(), {
-      key: `workbench-capacity-${capacityNotice.revision}`,
-    });
+    feedback.warning(
+      capacityNotice.type === 'warning' ? retainedPageWarningMessage() : retainedPageLimitMessage(),
+      {
+        key: `workbench-capacity-${capacityNotice.revision}`,
+      },
+    );
     consumeCapacityNotice(capacityNotice.revision);
   }, [appNumber, capacityNotice, consumeCapacityNotice, feedback]);
 
@@ -68,22 +71,13 @@ const Workbench = ({ appNumber, appActive, initialEntryNumber, onInitialEntryCon
           return;
         }
         if (action.type === 'EXTERNAL_IFRAME') {
-          if (
-            openExternalLinkTab(appNumber, action.menuId, action.title, action.externalUrl) ===
-            'capacity-exceeded'
-          ) {
-            feedback.warning(retainedPageLimitMessage());
-          }
+          openExternalLinkTab(appNumber, action.menuId, action.title, action.externalUrl);
           return;
         }
         if (componentRegistry[action.componentKey]?.pageType === 'CUSTOM') {
-          if (openCustomTab(appNumber, action.componentKey) === 'capacity-exceeded') {
-            feedback.warning(retainedPageLimitMessage());
-          }
+          openCustomTab(appNumber, action.componentKey);
         } else {
-          if (openListTab(appNumber, action.componentKey) === 'capacity-exceeded') {
-            feedback.warning(retainedPageLimitMessage());
-          }
+          openListTab(appNumber, action.componentKey);
         }
       } catch (error) {
         feedback.fromError(error, '菜单配置无效');

@@ -416,9 +416,24 @@ describe('workbench store', () => {
     ).toBe(RETAINED_PAGE_LIMIT);
     expect(state.workspaces[APP_NUMBER]!.activeContentTabKey).toBe(activeBeforeRejection);
     expect(state.capacityNotice).toMatchObject({
-      type: 'warning',
-      retainedPageCount: RETAINED_PAGE_WARNING_THRESHOLD,
+      type: 'limit',
+      retainedPageCount: RETAINED_PAGE_LIMIT,
     });
+  });
+
+  it('容量通知按修订号消费，旧消费动作不会清除更新事件', () => {
+    const store = useWorkbenchStore.getState();
+    for (let index = 0; index < RETAINED_PAGE_LIMIT - 1; index += 1) {
+      store.openBillTab(APP_NUMBER, COMPONENT_KEY, String(index), OperationType.VIEW);
+    }
+    const warningRevision = useWorkbenchStore.getState().capacityNotice!.revision;
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, 'rejected', OperationType.VIEW);
+    const limitRevision = useWorkbenchStore.getState().capacityNotice!.revision;
+
+    store.consumeCapacityNotice(warningRevision);
+    expect(useWorkbenchStore.getState().capacityNotice?.revision).toBe(limitRevision);
+    store.consumeCapacityNotice(limitRevision);
+    expect(useWorkbenchStore.getState().capacityNotice).toBeUndefined();
   });
 
   it('达到上限后仍可激活已有页签且临时页签晋升不重复占用容量', () => {

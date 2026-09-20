@@ -26,7 +26,7 @@ export type InitWorkspaceResult = 'initialized' | 'existing' | 'capacity-exceede
 export interface CapacityNotice {
   revision: number;
   appNumber: string;
-  type: 'warning';
+  type: 'warning' | 'limit';
   retainedPageCount: number;
 }
 
@@ -465,6 +465,9 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
 
     const retainedPageCount = countRetainedPages(workspaces);
     if (retainedPageCount >= RETAINED_PAGE_LIMIT) {
+      set({
+        capacityNotice: nextCapacityNotice(capacityNotice, 'limit', appNumber, retainedPageCount),
+      });
       return 'capacity-exceeded';
     }
 
