@@ -14,11 +14,11 @@
 | 场景 | 推荐样板 | 重点观察 | 不可照搬的边界 |
 | --- | --- | --- | --- |
 | 标准主从业务聚合 | 后端 `smart-manage-server/domains/demo/src/main/java/sm/domain/demo/procurement/purchaserequisition`、前端 `smart-manage-web/src/domain/demo/procurement/purchaseRequisition`、`smart-manage-server/domains/demo/docs/procurement/purchase-requisition.md` | 主从保存/提交、乐观锁、编号、附件、LIST/EDIT 页签生命周期 | 采购字段、状态与组织角色规则 |
-| 独立配置 LIST/EDIT | 后端 `smart-manage-server/platform/src/main/java/sm/domain/sys/base/sysparam`、前端 `smart-manage-web/src/domain/sys/base/sysParam`、`docs/domains/sys/base/system-parameter.md` | Feature 归属、标准 `EditPage`、列表树和详情回显 | 系统参数树和配置语义 |
-| 带独立状态命令与敏感配置 | 后端 `smart-manage-server/platform/src/main/java/sm/domain/sys/message/email`、前端 `smart-manage-web/src/domain/sys/message/email`、`docs/domains/sys/message/email.md` | 启停不进保存 Form、凭据安全状态、RefSelector、记录详情和外部副作用 | 凭据与投递状态、外部副作用 |
-| 树形主数据 | 后端 `smart-manage-server/platform/src/main/java/sm/domain/sys/base/org`、前端 `smart-manage-web/src/domain/sys/base/org`、`docs/domains/sys/base/organization.md` | 树语义、父级引用、组织约束；页面形态不能脱离目标模块需求照搬 | 组织树与父子约束 |
+| 独立配置 LIST/EDIT | 后端 `smart-manage-server/platform/src/main/java/sm/domain/sys/base/sysparam`、前端 `smart-manage-web/src/domain/sys/base/sysParam`、`docs/platform/base/system-parameter.md` | Feature 归属、标准 `EditPage`、列表树和详情回显 | 系统参数树和配置语义 |
+| 带独立状态命令与敏感配置 | 后端 `smart-manage-server/platform/src/main/java/sm/domain/sys/message/email`、前端 `smart-manage-web/src/domain/sys/message/email`、`docs/platform/message/email.md` | 启停不进保存 Form、凭据安全状态、RefSelector、记录详情和外部副作用 | 凭据与投递状态、外部副作用 |
+| 树形主数据 | 后端 `smart-manage-server/platform/src/main/java/sm/domain/sys/base/org`、前端 `smart-manage-web/src/domain/sys/base/org`、`docs/platform/base/organization.md` | 树语义、父级引用、组织约束；页面形态不能脱离目标模块需求照搬 | 组织树与父子约束 |
 | 用户列表与组织树 | `smart-manage-web/src/domain/sys/base/user/UserListPage.tsx`、`smart-manage-web/src/domain/sys/base/user/refSelector/useUserRefSelector.ts` | 组织根节点、默认范围、用户引用选择和批量选择 | 组织默认范围和任职关系 |
-| 调度配置与执行记录 | `smart-manage-web/src/domain/sys/scheduler/job`、`smart-manage-web/src/domain/sys/scheduler/execution`、`docs/domains/sys/scheduler/job.md` | 配置 LIST/EDIT、状态命令、只读执行详情和运行态组装 | 调度执行状态与集群机制 |
+| 调度配置与执行记录 | `smart-manage-web/src/domain/sys/scheduler/job`、`smart-manage-web/src/domain/sys/scheduler/execution`、`docs/platform/scheduler/job.md` | 配置 LIST/EDIT、状态命令、只读执行详情和运行态组装 | 调度执行状态与集群机制 |
 
 ## 横切能力样板
 

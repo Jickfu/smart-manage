@@ -127,7 +127,7 @@ TEMP 转 ACTIVE 只更新数据库归属和状态，不移动对象。过期 TEM
 
 正式附件不采用“仅创建人可读”，也不为每个附件维护用户授权表。附件通过业务资源注册表继承业务对象权限：
 
-资源类型由 `BusinessResourceRegistration` 显式注册，授权策略通过 `BusinessResourceAccessPolicy.requireAllowed(resourceId, action)` 校验对象；完整接口以[策略源码](../../../../smart-manage-server/platform/src/main/java/sm/system/resource/BusinessResourceAccessPolicy.java)为准。
+资源类型由 `BusinessResourceRegistration` 显式注册，授权策略通过 `BusinessResourceAccessPolicy.requireAllowed(resourceId, action)` 校验对象；完整接口以[策略源码](../../../smart-manage-server/platform/src/main/java/sm/system/resource/BusinessResourceAccessPolicy.java)为准。
 
 - `READ` 控制预览和下载；业务模块可以综合申请人、审批人、部门负责人、数据范围和审计权限判断。
 - `ATTACH`、`DETACH` 和 `DELETE` 分别控制绑定、解除和删除，禁止用含义宽泛的 `canManage` 合并不同状态规则。

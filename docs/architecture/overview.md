@@ -47,7 +47,7 @@ smart-manage/
 
 浏览器请求由 CORS 和 `SaServletFilter` 处理请求边界：非安全方法校验 Origin，受保护请求依次校验登录、凭据代际和 CSRF。进入 MVC 后，`SaInterceptor` 执行注解鉴权，`TraceIdInterceptor` 建立请求诊断上下文；Controller 调用公开 Service，高风险入口另做管理员身份复核，业务命令由 `BizLogAspect` 审计，事务写入交给 TxService 和 Mapper。具体例外与失败语义见[安全架构](./security.md)。
 
-`/openapi/**` 使用独立安全过滤器验证签名、加密、应用授权与代理身份，再进入业务链路，不复用浏览器 Cookie/CSRF 认证。处理顺序见[OpenAPI 协议](../domains/sys/base/openapi-platform.md#处理顺序)。
+`/openapi/**` 使用独立安全过滤器验证签名、加密、应用授权与代理身份，再进入业务链路，不复用浏览器 Cookie/CSRF 认证。处理顺序见[OpenAPI 协议](../platform/base/openapi-platform.md#处理顺序)。
 
 桌面管理端页面遵循三层边界：
 

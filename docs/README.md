@@ -59,9 +59,9 @@
 - [模块样板目录](./development/module-pattern-catalog.md)
 - [新增业务聚合检查清单](./development/business-aggregate-checklist.md)
 
-## 领域与模块
+## 平台功能与可选领域
 
-领域文档按照 `domains/{领域}/{应用}/{模块}.md` 组织，按业务归属对应代码模块；文件名可以采用可读的连字符形式，不要求与 Java 包名或前端目录逐字相同。
+平台内置功能文档按照 `docs/platform/{应用}/{模块}.md` 组织，涵盖前后端业务语义和交互；可选领域文档随模块放在 `smart-manage-server/domains/{领域}/docs/{应用}/`。平台底层机制及跨领域约束仍归 `docs/architecture/`。文档路径简化不改变代码中的 `sm.domain.sys` 或前端 `domain/sys`；文件名可以采用可读的连字符形式。
 
 领域文档只维护需要跨实现长期保留的业务事实，包括模块职责、聚合边界、状态与不变量、关键交互、事务与并发语义、稳定集成标识以及安全和对象级授权边界。以下内容不在领域文档中重复维护：
 
@@ -72,41 +72,41 @@
 
 领域文档仍应说明“哪些主体在什么业务条件下可以执行什么动作”等稳定授权语义，但不复制具体权限码。模块涉及高风险能力时，还应保留管理员身份复核、对象级授权和默认拒绝等安全边界。
 
-### 系统领域（sys）
+### 平台内置功能（系统领域 sys）
 
 基础应用（base）：
 
-- [附件与对象存储](./domains/sys/base/attachment.md)
-- [基础资料](./domains/sys/base/basic-data.md)
-- [编号规则](./domains/sys/base/numbering.md)
-- [组织管理](./domains/sys/base/organization.md)
-- [首页快速发起](./domains/sys/base/home-quick-launch.md)
-- [OpenAPI 开放平台](./domains/sys/base/openapi-platform.md)
-- [角色管理](./domains/sys/base/role.md)
-- [系统参数](./domains/sys/base/system-parameter.md)
-- [界面配置](./domains/sys/base/ui-config.md)
-- [用户管理](./domains/sys/base/user.md)
-- [弱口令管理与固定密码策略](./domains/sys/base/weak-password.md)
+- [附件与对象存储](./platform/base/attachment.md)
+- [基础资料](./platform/base/basic-data.md)
+- [编号规则](./platform/base/numbering.md)
+- [组织管理](./platform/base/organization.md)
+- [首页快速发起](./platform/base/home-quick-launch.md)
+- [OpenAPI 开放平台](./platform/base/openapi-platform.md)
+- [角色管理](./platform/base/role.md)
+- [系统参数](./platform/base/system-parameter.md)
+- [界面配置](./platform/base/ui-config.md)
+- [用户管理](./platform/base/user.md)
+- [弱口令管理与固定密码策略](./platform/base/weak-password.md)
 
 监控应用（monitor）：
 
-- [缓存监控](./domains/sys/monitor/cache-and-redis.md)
-- [系统监控日志](./domains/sys/monitor/logs.md)
-- [运行监控](./domains/sys/monitor/runtime-monitoring.md)
-- [脚本控制台](./domains/sys/monitor/script-console.md)
-- [慢 SQL 监控](./domains/sys/monitor/slow-sql-monitoring.md)
-- [SQL 控制台](./domains/sys/monitor/sql-console.md)
-- [线程诊断](./domains/sys/monitor/thread-diagnostics.md)
-- [监控告警](./domains/sys/monitor/alerting.md)
+- [缓存监控](./platform/monitor/cache-and-redis.md)
+- [系统监控日志](./platform/monitor/logs.md)
+- [运行监控](./platform/monitor/runtime-monitoring.md)
+- [脚本控制台](./platform/monitor/script-console.md)
+- [慢 SQL 监控](./platform/monitor/slow-sql-monitoring.md)
+- [SQL 控制台](./platform/monitor/sql-console.md)
+- [线程诊断](./platform/monitor/thread-diagnostics.md)
+- [监控告警](./platform/monitor/alerting.md)
 
 调度应用（scheduler）：
 
-- [任务调度](./domains/sys/scheduler/job.md)
+- [任务调度](./platform/scheduler/job.md)
 
 消息应用（message）：
 
-- [邮件](./domains/sys/message/email.md)
-- [站内消息](./domains/sys/message/inbox.md)
+- [邮件](./platform/message/email.md)
+- [站内消息](./platform/message/inbox.md)
 
 ### 演示领域（demo）
 

@@ -14,7 +14,7 @@
 | OpenAPI 签名密钥       | 每份凭据 32 字节，Base64                                      | 管理端创建凭据时生成，用于 HMAC-SHA256             |
 | OpenAPI 请求和响应密钥 | 每份加密凭据各一份；AES 各 32 字节，SM4 各 16 字节，Base64    | 管理端创建凭据时独立生成；选择 `NONE` 时不生成     |
 
-OpenAPI 没有额外的公私钥对。其 `keyId` 是凭据标识，不是密钥。每份凭据增加一份或三份对称密钥，均由部署级 SM4 加密后保存。生成和轮换流程见[OpenAPI 凭据包](../domains/sys/base/openapi-platform.md#凭据包)。
+OpenAPI 没有额外的公私钥对。其 `keyId` 是凭据标识，不是密钥。每份凭据增加一份或三份对称密钥，均由部署级 SM4 加密后保存。生成和轮换流程见[OpenAPI 凭据包](../platform/base/openapi-platform.md#凭据包)。
 
 ## 一条命令生成新环境密钥
 
