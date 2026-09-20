@@ -17,27 +17,38 @@ import { resolveMenuAction } from '@/pages/workbench/menuNavigation';
 /** 请求序号 — 每次 openApp 递增，防止异步竞态导致旧数据覆盖新状态 */
 let requestSeq = 0;
 
+export type OpenAppResult =
+  | { status: 'opened' | 'activated' }
+  | { status: 'capacity-exceeded' }
+  | { status: 'superseded' }
+  | { status: 'failed'; error: unknown };
+
+export type OpenMenuItemResult =
+  | OpenAppResult
+  | { status: 'menu-opened' }
+  | { status: 'external-opened' };
+
 /**
  * 统一的异步应用打开服务。
  *
  * 负责：查询应用信息 → 创建 Workspace → 添加 Header Tab → 激活。
  * 内置请求序号防止快速切换时的异步竞态。
- * 应用不存在或请求失败时自动回退到 apps。
+ * 启动调用方可以要求失败时回退 apps；用户主动导航默认保留当前有效页面。
  */
-export async function openApp(appNumber: string): Promise<void> {
+export async function openApp(appNumber: string, fallbackToApps = false): Promise<OpenAppResult> {
   const seq = ++requestSeq;
 
   if (appNumber === 'builtin:inbox') {
     const store = useHeaderTabsStore.getState();
     if (store.tabs.some((tab) => tab.type === 'inbox' && tab.loaded)) store.activate(appNumber);
     else store.openInbox('messages');
-    return;
+    return { status: 'activated' };
   }
 
   // 内置应用：直接激活
   if (appNumber === 'home' || appNumber === 'apps') {
     useHeaderTabsStore.getState().activate(appNumber);
-    return;
+    return { status: 'activated' };
   }
 
   // 已打开的 Workspace 直接激活，不重复请求
@@ -45,45 +56,58 @@ export async function openApp(appNumber: string): Promise<void> {
   const existingTab = useHeaderTabsStore.getState().tabs.find((t) => t.key === appNumber);
   if (existingWs && existingTab) {
     useHeaderTabsStore.getState().activate(appNumber);
-    return;
+    return { status: 'activated' };
   }
 
   try {
     const appInfo = await openByNumber(appNumber);
-    if (seq !== requestSeq) return;
+    if (seq !== requestSeq) return { status: 'superseded' };
 
     const headerStore = useHeaderTabsStore.getState();
     const workbenchStore = useWorkbenchStore.getState();
 
-    workbenchStore.initWorkspace(appNumber, appInfo);
+    const workspaceResult = workbenchStore.initWorkspace(appNumber, appInfo);
+    if (workspaceResult === 'capacity-exceeded') return { status: 'capacity-exceeded' };
     headerStore.addAppTab(appNumber, appInfo.name);
-  } catch {
-    if (seq !== requestSeq) return;
-    // 应用不存在或无权访问，回退到应用列表
-    useHeaderTabsStore.getState().activate('apps');
+    return { status: 'opened' };
+  } catch (error) {
+    if (seq !== requestSeq) return { status: 'superseded' };
+    if (fallbackToApps) useHeaderTabsStore.getState().activate('apps');
+    return { status: 'failed', error };
   }
 }
 
 /** 从已授权菜单入口打开页面，首页快捷入口与侧边栏共享同一目标解析规则。 */
-export async function openMenuItem(appNumber: string, item: MenuVO): Promise<void> {
-  await openApp(appNumber);
+export async function openMenuItem(appNumber: string, item: MenuVO): Promise<OpenMenuItemResult> {
+  const appResult = await openApp(appNumber);
+  if (appResult.status !== 'opened' && appResult.status !== 'activated') return appResult;
   const action = resolveMenuAction(item);
   if (action.type === 'EXTERNAL_NEW_TAB') {
     window.open(action.externalUrl, '_blank', 'noopener,noreferrer');
-    return;
+    return { status: 'external-opened' };
   }
   const workbenchStore = useWorkbenchStore.getState();
   if (!workbenchStore.workspaces[appNumber]) {
-    throw new Error(`应用“${appNumber}”未能打开`);
+    return { status: 'superseded' };
   }
   if (action.type === 'EXTERNAL_IFRAME') {
-    workbenchStore.openExternalLinkTab(appNumber, action.menuId, action.title, action.externalUrl);
-    return;
+    return workbenchStore.openExternalLinkTab(
+      appNumber,
+      action.menuId,
+      action.title,
+      action.externalUrl,
+    ) === 'capacity-exceeded'
+      ? { status: 'capacity-exceeded' }
+      : { status: 'menu-opened' };
   }
   if (componentRegistry[action.componentKey]?.pageType === 'CUSTOM') {
-    workbenchStore.openCustomTab(appNumber, action.componentKey);
+    return workbenchStore.openCustomTab(appNumber, action.componentKey) === 'capacity-exceeded'
+      ? { status: 'capacity-exceeded' }
+      : { status: 'menu-opened' };
   } else {
-    workbenchStore.openListTab(appNumber, action.componentKey);
+    return workbenchStore.openListTab(appNumber, action.componentKey) === 'capacity-exceeded'
+      ? { status: 'capacity-exceeded' }
+      : { status: 'menu-opened' };
   }
 }
 

@@ -120,7 +120,7 @@ const QuickLaunchCard = ({ scope, appNumber }: QuickLaunchCardProps) => {
 
   const handleLaunch = async (item: QuickLaunchItemVO) => {
     try {
-      await openMenuItem(item.appNumber, {
+      const result = await openMenuItem(item.appNumber, {
         id: item.menuId,
         number: item.menuNumber,
         name: item.name,
@@ -132,6 +132,10 @@ const QuickLaunchCard = ({ scope, appNumber }: QuickLaunchCardProps) => {
         externalUrl: item.externalUrl,
         externalOpenMode: item.externalOpenMode,
       });
+      if (result.status === 'failed') feedback.fromError(result.error, '快捷入口打开失败');
+      if (result.status === 'capacity-exceeded') {
+        feedback.warning('已达到 50 个页面的保留上限，请关闭部分页面后再打开');
+      }
     } catch (error) {
       feedback.fromError(error, '快捷入口打开失败');
     }

@@ -62,8 +62,12 @@ const Header = () => {
     document.title = pageTitle;
   }, [pageTitle]);
 
-  const handleTabClick = (key: string) => {
-    openApp(key);
+  const handleTabClick = async (key: string) => {
+    const result = await openApp(key);
+    if (result.status === 'failed') feedback.fromError(result.error, '应用打开失败');
+    if (result.status === 'capacity-exceeded') {
+      feedback.warning('已达到 50 个页面的保留上限，请关闭部分页面后再打开');
+    }
   };
 
   const handleRemove = async (event: React.MouseEvent, key: string) => {
@@ -228,7 +232,7 @@ const Header = () => {
       <HeaderTabs
         tabs={tabs}
         activeKey={activeKey}
-        onActivate={handleTabClick}
+        onActivate={(key) => void handleTabClick(key)}
         onRemove={(event, key) => void handleRemove(event, key)}
         onPinToggle={(event, tab) => void handlePinToggle(event, tab)}
         pinSavingKeys={pinSavingKeys}

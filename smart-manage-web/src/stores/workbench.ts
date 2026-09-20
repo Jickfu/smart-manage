@@ -12,7 +12,18 @@ import { getRegisteredTabTitle } from '@/domain/common/registry/componentRegistr
 import { pushTabHistory, resolveNextActiveTabKey } from './tabHistory';
 
 /** addContentTab 返回结果 */
-export type AddTabResult = 'opened' | 'activated';
+export const RETAINED_PAGE_WARNING_THRESHOLD = 40;
+export const RETAINED_PAGE_LIMIT = 50;
+
+export type AddTabResult = 'opened' | 'activated' | 'capacity-exceeded';
+export type InitWorkspaceResult = 'initialized' | 'existing' | 'capacity-exceeded';
+
+export interface CapacityNotice {
+  revision: number;
+  appNumber: string;
+  type: 'warning' | 'limit';
+  retainedPageCount: number;
+}
 
 export interface ContentTabItem {
   key: string;
@@ -56,7 +67,10 @@ interface WorkbenchState {
   workspaces: Record<string, WorkspaceState>;
   /** appNumber:tabKey → beforeClose 回调映射 */
   beforeCloseCallbacks: Record<string, BeforeCloseFn>;
-  initWorkspace: (appNumber: string, appInfo: AppVO) => void;
+  /** 页面渲染失败后由页签外壳持有的保守关闭确认，不与子页面守卫共用生命周期。 */
+  failedCloseCallbacks: Record<string, BeforeCloseFn>;
+  capacityNotice?: CapacityNotice;
+  initWorkspace: (appNumber: string, appInfo: AppVO) => InitWorkspaceResult;
   destroyWorkspace: (appNumber: string) => void;
   /** 异步关闭 Workspace — 先顺序检查所有内容页 beforeClose，全部通过后一次性销毁 */
   closeWorkspace: (appNumber: string) => Promise<boolean>;
@@ -68,6 +82,8 @@ interface WorkbenchState {
   registerBeforeClose: (appNumber: string, tabKey: string, fn: BeforeCloseFn) => void;
   /** 页面组件注销关闭前检查回调 */
   unregisterBeforeClose: (appNumber: string, tabKey: string) => void;
+  registerFailedClose: (appNumber: string, tabKey: string, fn: BeforeCloseFn) => void;
+  unregisterFailedClose: (appNumber: string, tabKey: string) => void;
   /** 添加/激活 content tab — 返回操作结果供调用层反馈 */
   addContentTab: (appNumber: string, tab: ContentTabItem) => AddTabResult;
   openListTab: (appNumber: string, componentKey: string) => AddTabResult;
@@ -101,12 +117,22 @@ async function runBeforeCloseGuards(
   appNumber: string,
   tabKeys: string[],
 ): Promise<boolean> {
+  // 正常页面守卫先执行；全部通过后再确认故障页的未知状态。
   for (const tabKey of tabKeys) {
     if (tabKey === '__home__') continue;
     const beforeClose = getState().beforeCloseCallbacks[callbackKey(appNumber, tabKey)];
     if (!beforeClose) continue;
     try {
       if (!(await beforeClose())) return false;
+    } catch {
+      return false;
+    }
+  }
+  for (const tabKey of tabKeys) {
+    const failedClose = getState().failedCloseCallbacks[callbackKey(appNumber, tabKey)];
+    if (!failedClose) continue;
+    try {
+      if (!(await failedClose())) return false;
     } catch {
       return false;
     }
@@ -123,27 +149,72 @@ function defaultWorkspace(appInfo: AppVO): WorkspaceState {
   };
 }
 
+export function countRetainedPages(workspaces: Record<string, WorkspaceState>): number {
+  return Object.values(workspaces).reduce(
+    (count, workspace) => count + workspace.contentTabs.length,
+    0,
+  );
+}
+
+function nextCapacityNotice(
+  current: CapacityNotice | undefined,
+  type: CapacityNotice['type'],
+  appNumber: string,
+  retainedPageCount: number,
+): CapacityNotice {
+  return { revision: (current?.revision ?? 0) + 1, appNumber, type, retainedPageCount };
+}
+
 export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
   workspaces: {},
   beforeCloseCallbacks: {},
+  failedCloseCallbacks: {},
+  capacityNotice: undefined,
 
   initWorkspace: (appNumber, appInfo) => {
-    const { workspaces } = get();
-    if (workspaces[appNumber]) return;
-    set({ workspaces: { ...workspaces, [appNumber]: defaultWorkspace(appInfo) } });
+    const { workspaces, capacityNotice } = get();
+    if (workspaces[appNumber]) return 'existing';
+    const retainedPageCount = countRetainedPages(workspaces);
+    if (retainedPageCount >= RETAINED_PAGE_LIMIT) {
+      set({
+        capacityNotice: nextCapacityNotice(capacityNotice, 'limit', appNumber, retainedPageCount),
+      });
+      return 'capacity-exceeded';
+    }
+    const nextRetainedPageCount = retainedPageCount + 1;
+    set({
+      workspaces: { ...workspaces, [appNumber]: defaultWorkspace(appInfo) },
+      ...(nextRetainedPageCount === RETAINED_PAGE_WARNING_THRESHOLD
+        ? {
+            capacityNotice: nextCapacityNotice(
+              capacityNotice,
+              'warning',
+              appNumber,
+              nextRetainedPageCount,
+            ),
+          }
+        : {}),
+    });
+    return 'initialized';
   },
 
   destroyWorkspace: (appNumber) => {
-    const { workspaces, beforeCloseCallbacks } = get();
+    const { workspaces, beforeCloseCallbacks, failedCloseCallbacks } = get();
     if (!workspaces[appNumber]) return;
     const ws = workspaces[appNumber];
     const nextCallbacks = { ...beforeCloseCallbacks };
+    const nextFailedCallbacks = { ...failedCloseCallbacks };
     for (const tab of ws.contentTabs) {
       delete nextCallbacks[callbackKey(appNumber, tab.key)];
+      delete nextFailedCallbacks[callbackKey(appNumber, tab.key)];
     }
     const next = { ...workspaces };
     delete next[appNumber];
-    set({ workspaces: next, beforeCloseCallbacks: nextCallbacks });
+    set({
+      workspaces: next,
+      beforeCloseCallbacks: nextCallbacks,
+      failedCloseCallbacks: nextFailedCallbacks,
+    });
   },
 
   closeWorkspace: async (appNumber) => {
@@ -167,18 +238,25 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     // 所有页签检查通过，基于最新状态原子移除 Workspace
     set((state) => {
       const nextCallbacks = { ...state.beforeCloseCallbacks };
+      const nextFailedCallbacks = { ...state.failedCloseCallbacks };
       for (const tabKey of checkedKeys) {
         delete nextCallbacks[callbackKey(appNumber, tabKey)];
+        delete nextFailedCallbacks[callbackKey(appNumber, tabKey)];
       }
       const latestWs = state.workspaces[appNumber];
       if (latestWs) {
         for (const tab of latestWs.contentTabs) {
           delete nextCallbacks[callbackKey(appNumber, tab.key)];
+          delete nextFailedCallbacks[callbackKey(appNumber, tab.key)];
         }
       }
       const next = { ...state.workspaces };
       delete next[appNumber];
-      return { workspaces: next, beforeCloseCallbacks: nextCallbacks };
+      return {
+        workspaces: next,
+        beforeCloseCallbacks: nextCallbacks,
+        failedCloseCallbacks: nextFailedCallbacks,
+      };
     });
     return true;
   },
@@ -195,8 +273,10 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
 
       const contentTabs = ws.contentTabs.filter((t) => !tabKeySet.has(t.key));
       const nextCallbacks = { ...state.beforeCloseCallbacks };
+      const nextFailedCallbacks = { ...state.failedCloseCallbacks };
       for (const tabKey of tabKeys) {
         delete nextCallbacks[callbackKey(appNumber, tabKey)];
+        delete nextFailedCallbacks[callbackKey(appNumber, tabKey)];
       }
 
       let activeContentTabKey = ws.activeContentTabKey;
@@ -221,6 +301,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
           [appNumber]: { ...ws, contentTabs, activeContentTabKey, activeContentTabHistory },
         },
         beforeCloseCallbacks: nextCallbacks,
+        failedCloseCallbacks: nextFailedCallbacks,
       };
     });
     return true;
@@ -253,8 +334,25 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
     });
   },
 
+  registerFailedClose: (appNumber, tabKey, fn) => {
+    set((state) => ({
+      failedCloseCallbacks: {
+        ...state.failedCloseCallbacks,
+        [callbackKey(appNumber, tabKey)]: fn,
+      },
+    }));
+  },
+
+  unregisterFailedClose: (appNumber, tabKey) => {
+    set((state) => {
+      const next = { ...state.failedCloseCallbacks };
+      delete next[callbackKey(appNumber, tabKey)];
+      return { failedCloseCallbacks: next };
+    });
+  },
+
   addContentTab: (appNumber, tab) => {
-    const { workspaces } = get();
+    const { workspaces, capacityNotice } = get();
     const ws = workspaces[appNumber];
     // Workspace 未初始化说明调用方逻辑错误，架构阶段直接抛异常暴露问题
     if (!ws) {
@@ -276,6 +374,15 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       return 'activated';
     }
 
+    const retainedPageCount = countRetainedPages(workspaces);
+    if (retainedPageCount >= RETAINED_PAGE_LIMIT) {
+      set({
+        capacityNotice: nextCapacityNotice(capacityNotice, 'limit', appNumber, retainedPageCount),
+      });
+      return 'capacity-exceeded';
+    }
+
+    const nextRetainedPageCount = retainedPageCount + 1;
     set({
       workspaces: {
         ...workspaces,
@@ -286,6 +393,16 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
           activeContentTabHistory: pushTabHistory(ws.activeContentTabHistory, tab.key),
         },
       },
+      ...(nextRetainedPageCount === RETAINED_PAGE_WARNING_THRESHOLD
+        ? {
+            capacityNotice: nextCapacityNotice(
+              capacityNotice,
+              'warning',
+              appNumber,
+              nextRetainedPageCount,
+            ),
+          }
+        : {}),
     });
     return 'opened';
   },

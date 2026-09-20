@@ -7,6 +7,7 @@ import { openApp } from '@/services/navigationService';
 import { parseStartupNavigation } from '@/services/startupNavigation';
 import { fetchPinnedApps } from '@/domain/sys/base/user/appPinApi';
 import './MainLayout.css';
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 
 const { Content } = Layout;
 
@@ -34,6 +35,7 @@ const PersistentView = ({ appKey, children }: { appKey: string; children: ReactN
 };
 
 const MainLayout = () => {
+  const feedback = useOperationFeedback();
   const initialAppOpened = useRef(false);
   const startupTarget = useMemo(() => parseStartupNavigation(window.location.search), []);
   const [pendingEntryNumber, setPendingEntryNumber] = useState(startupTarget.entryNumber);
@@ -52,10 +54,15 @@ const MainLayout = () => {
       } catch {
         // 固定配置加载失败不能阻断 URL 指定应用及基础页面启动。
       }
-      await openApp(startupTarget.appNumber);
+      const result = await openApp(startupTarget.appNumber, true);
+      if (result.status === 'failed') feedback.fromError(result.error, '指定应用打开失败');
+      if (result.status === 'capacity-exceeded') {
+        feedback.warning('已达到 50 个页面的保留上限，已停留在应用列表');
+        useHeaderTabsStore.getState().activate('apps');
+      }
     };
     void initialize();
-  }, [startupTarget.appNumber]);
+  }, [feedback, startupTarget.appNumber]);
 
   const consumeStartupEntry = useCallback(() => setPendingEntryNumber(undefined), []);
 

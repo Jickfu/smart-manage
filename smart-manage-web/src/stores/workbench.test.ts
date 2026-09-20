@@ -5,6 +5,7 @@ import { createEditTabLifecycle } from '@/domain/common/page/edit/useEditTabLife
 import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import type { AppVO } from '@/domain/sys/base/app/types';
 import { useWorkbenchStore } from './workbench';
+import { RETAINED_PAGE_LIMIT, RETAINED_PAGE_WARNING_THRESHOLD } from './workbench';
 import { isContentPageActive } from '@/pages/workbench/pageActivity';
 
 const APP_NUMBER = 'demo';
@@ -35,7 +36,12 @@ describe('workbench store', () => {
       pageType: 'CUSTOM',
       component: () => null,
     };
-    useWorkbenchStore.setState({ workspaces: {}, beforeCloseCallbacks: {} });
+    useWorkbenchStore.setState({
+      workspaces: {},
+      beforeCloseCallbacks: {},
+      failedCloseCallbacks: {},
+      capacityNotice: undefined,
+    });
     useWorkbenchStore.getState().initWorkspace(APP_NUMBER, appInfo);
   });
 
@@ -259,6 +265,29 @@ describe('workbench store', () => {
     expect(secondGuard).not.toHaveBeenCalled();
   });
 
+  it('关闭时先检查正常页面守卫，再确认故障页的未知状态', async () => {
+    const store = useWorkbenchStore.getState();
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, 'failed', OperationType.EDIT);
+    const tabKey = createBillTabKey(COMPONENT_KEY, 'failed');
+    const calls: string[] = [];
+    store.registerBeforeClose(APP_NUMBER, tabKey, async () => {
+      calls.push('normal');
+      return true;
+    });
+    store.registerFailedClose(APP_NUMBER, tabKey, async () => {
+      calls.push('failed');
+      return false;
+    });
+
+    expect(await store.closeContentTabs(APP_NUMBER, [tabKey])).toBe(false);
+    expect(calls).toEqual(['normal', 'failed']);
+    expect(
+      useWorkbenchStore
+        .getState()
+        .workspaces[APP_NUMBER]!.contentTabs.some((tab) => tab.key === tabKey),
+    ).toBe(true);
+  });
+
   it('关闭工作区时会检查守卫等待期间新增的页签', async () => {
     const store = useWorkbenchStore.getState();
     const firstTabKey = createBillTabKey(COMPONENT_KEY, '120');
@@ -301,6 +330,66 @@ describe('workbench store', () => {
       );
     }
     expect(useWorkbenchStore.getState().workspaces[APP_NUMBER]!.contentTabs).toHaveLength(31);
+  });
+
+  it('跨应用累计保活页面并在 40 个时提醒、超过 50 个时拒绝新增', () => {
+    const store = useWorkbenchStore.getState();
+    for (let index = 0; index < RETAINED_PAGE_WARNING_THRESHOLD - 1; index += 1) {
+      expect(store.openBillTab(APP_NUMBER, COMPONENT_KEY, String(index), OperationType.VIEW)).toBe(
+        'opened',
+      );
+    }
+    expect(useWorkbenchStore.getState().capacityNotice).toMatchObject({
+      type: 'warning',
+      retainedPageCount: RETAINED_PAGE_WARNING_THRESHOLD,
+    });
+
+    for (
+      let index = RETAINED_PAGE_WARNING_THRESHOLD - 1;
+      index < RETAINED_PAGE_LIMIT - 1;
+      index += 1
+    ) {
+      expect(store.openBillTab(APP_NUMBER, COMPONENT_KEY, String(index), OperationType.VIEW)).toBe(
+        'opened',
+      );
+    }
+    const activeBeforeRejection =
+      useWorkbenchStore.getState().workspaces[APP_NUMBER]!.activeContentTabKey;
+    expect(store.openBillTab(APP_NUMBER, COMPONENT_KEY, 'rejected', OperationType.VIEW)).toBe(
+      'capacity-exceeded',
+    );
+    const state = useWorkbenchStore.getState();
+    expect(state.workspaces[APP_NUMBER]!.contentTabs).toHaveLength(RETAINED_PAGE_LIMIT);
+    expect(state.workspaces[APP_NUMBER]!.activeContentTabKey).toBe(activeBeforeRejection);
+    expect(state.capacityNotice).toMatchObject({
+      type: 'limit',
+      retainedPageCount: RETAINED_PAGE_LIMIT,
+    });
+  });
+
+  it('达到上限后仍可激活已有页签且临时页签晋升不重复占用容量', () => {
+    const store = useWorkbenchStore.getState();
+    store.openAddNewTab(APP_NUMBER, COMPONENT_KEY);
+    const temporaryTab = useWorkbenchStore
+      .getState()
+      .workspaces[APP_NUMBER]!.contentTabs.find((tab) => tab.temporary)!;
+    for (let index = 0; index < RETAINED_PAGE_LIMIT - 2; index += 1) {
+      store.openBillTab(APP_NUMBER, COMPONENT_KEY, String(index), OperationType.VIEW);
+    }
+
+    expect(store.openAddNewTab(APP_NUMBER, COMPONENT_KEY)).toBe('capacity-exceeded');
+    expect(store.addContentTab(APP_NUMBER, temporaryTab)).toBe('activated');
+    store.replaceContentTab(APP_NUMBER, temporaryTab.key, {
+      key: createBillTabKey(COMPONENT_KEY, 'promoted'),
+      closable: true,
+      componentKey: COMPONENT_KEY,
+      pageType: 'EDIT',
+      operationType: OperationType.EDIT,
+      billId: 'promoted',
+    });
+    expect(useWorkbenchStore.getState().workspaces[APP_NUMBER]!.contentTabs).toHaveLength(
+      RETAINED_PAGE_LIMIT,
+    );
   });
 
   it('自定义配置页按 CUSTOM 协议打开且保持单实例', () => {

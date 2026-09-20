@@ -9,8 +9,10 @@ import type { AppVO } from '@/domain/sys/base/app/types';
 import { openApp } from '@/services/navigationService';
 import AppCardIcon from './AppCardIcon';
 import './AppsView.css';
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 
 const AppsView = () => {
+  const feedback = useOperationFeedback();
   const query = useQuery({
     meta: { errorPresentation: 'local-initial' },
     queryKey: appQueryKeys.domainApps(),
@@ -18,8 +20,12 @@ const AppsView = () => {
   });
   const { data, isLoading } = query;
 
-  const handleAppClick = (app: AppVO) => {
-    openApp(app.number);
+  const handleAppClick = async (app: AppVO) => {
+    const result = await openApp(app.number);
+    if (result.status === 'failed') feedback.fromError(result.error, '应用打开失败');
+    if (result.status === 'capacity-exceeded') {
+      feedback.warning('已达到 50 个页面的保留上限，请关闭部分页面后再打开');
+    }
   };
 
   return (
@@ -39,7 +45,7 @@ const AppsView = () => {
                     <div
                       key={app.number}
                       className="sm-app-card"
-                      onClick={() => handleAppClick(app)}
+                      onClick={() => void handleAppClick(app)}
                     >
                       <AppCardIcon icon={app.icon} iconColor={app.iconColor} />
                       <div className="sm-app-card-text">

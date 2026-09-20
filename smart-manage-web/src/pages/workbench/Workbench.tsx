@@ -15,6 +15,7 @@ import type { MenuVO } from '@/types/api';
 import ExternalLinkFrame from './ExternalLinkFrame';
 import { findMenuEntry, resolveMenuAction } from './menuNavigation';
 import { isContentPageActive } from './pageActivity';
+import ContentTabErrorBoundary from './ContentTabErrorBoundary';
 import './Workbench.css';
 
 interface Props {
@@ -29,9 +30,23 @@ const Workbench = ({ appNumber, appActive, initialEntryNumber, onInitialEntryCon
   const feedback = useOperationFeedback();
   const startupEntryConsumed = useRef(false);
   const ws = useWorkbenchStore((s) => s.workspaces[appNumber]);
+  const capacityNotice = useWorkbenchStore((s) => s.capacityNotice);
   const openListTab = useWorkbenchStore((s) => s.openListTab);
   const openCustomTab = useWorkbenchStore((s) => s.openCustomTab);
   const openExternalLinkTab = useWorkbenchStore((s) => s.openExternalLinkTab);
+
+  useEffect(() => {
+    if (!capacityNotice || capacityNotice.appNumber !== appNumber) return;
+    if (capacityNotice.type === 'warning') {
+      feedback.warning('已保留 40 个页面；达到 50 个后将不再打开新页面', {
+        key: `workbench-capacity-${capacityNotice.revision}`,
+      });
+    } else {
+      feedback.warning('已达到 50 个页面的保留上限，请关闭部分页面后再打开', {
+        key: `workbench-capacity-${capacityNotice.revision}`,
+      });
+    }
+  }, [appNumber, capacityNotice, feedback]);
 
   const menuQuery = useQuery({
     meta: { errorPresentation: 'local-initial' },
@@ -117,24 +132,30 @@ const Workbench = ({ appNumber, appActive, initialEntryNumber, onInitialEntryCon
                   key={tab.key}
                   className={`sm-content-pane ${contentTabActive ? 'sm-content-pane--active' : ''}`}
                 >
-                  {tab.key === '__home__' ? (
-                    <ApplicationHome appNumber={appNumber} />
-                  ) : tab.externalUrl ? (
-                    <ExternalLinkFrame title={tab.label} externalUrl={tab.externalUrl} />
-                  ) : (
-                    <PageRenderer
-                      appNumber={appNumber}
-                      tabKey={tab.key}
-                      title={tab.label}
-                      componentKey={tab.componentKey}
-                      pageType={tab.pageType}
-                      operationType={tab.operationType}
-                      billId={tab.billId}
-                      context={tab.context}
-                      temporary={tab.temporary}
-                      active={effectiveActive}
-                    />
-                  )}
+                  <ContentTabErrorBoundary
+                    appNumber={appNumber}
+                    tabKey={tab.key}
+                    closable={tab.closable}
+                  >
+                    {tab.key === '__home__' ? (
+                      <ApplicationHome appNumber={appNumber} />
+                    ) : tab.externalUrl ? (
+                      <ExternalLinkFrame title={tab.label} externalUrl={tab.externalUrl} />
+                    ) : (
+                      <PageRenderer
+                        appNumber={appNumber}
+                        tabKey={tab.key}
+                        title={tab.label}
+                        componentKey={tab.componentKey}
+                        pageType={tab.pageType}
+                        operationType={tab.operationType}
+                        billId={tab.billId}
+                        context={tab.context}
+                        temporary={tab.temporary}
+                        active={effectiveActive}
+                      />
+                    )}
+                  </ContentTabErrorBoundary>
                 </li>
               );
             })}
