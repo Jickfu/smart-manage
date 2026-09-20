@@ -1,6 +1,12 @@
 import { readdirSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { initializeIconCatalog } from './iconCatalog';
+import generatedCatalog from './iconCatalog.generated.json';
 import { isSelectableIconName, selectableIconNames, resolveIcon } from './iconResolver';
+
+beforeAll(async () => {
+  await initializeIconCatalog(generatedCatalog);
+});
 
 describe('isSelectableIconName', () => {
   it('只接受 Ant Design 图标组件命名', () => {

@@ -97,6 +97,8 @@ pnpm exec tsc -p tsconfig.node.json --noEmit
 pnpm exec prettier --check vite.config.ts "scripts/build-*.ts"
 ```
 
+图标资源生成入口为 `pnpm gen:icons`，输出 `src/domain/common/component/iconCatalog.generated.json`。修改图标依赖、生成器、资源协议或渲染器时，必须审查生成文件中的来源版本和名称全集，并连续生成两次确认 SHA-256 不变；生成文件只能由脚本维护。还需核对生成 JSON 的未压缩体积不超过 2 MiB、gzip 体积不超过 512 KiB，并通过图标目录、TwoTone 实例隔离、初始化零 SVG DOM、非法节点/外部引用拒绝及首次同步渲染测试。
+
 `pnpm test` 包含页面框架的真实仓库扫描与正反例架构测试。门禁与独立命令共用 `scripts/page-framework-boundaries.mjs`，检查 `common/page` 的根文件/能力目录白名单、聚合与旧平铺入口以及页面族直接依赖；规则范围见[前端架构](../architecture/frontend.md)。测试不依赖 Git 历史或固定迁移基线，随现有前端 CI 执行。单独排查时运行：
 
 ```bash

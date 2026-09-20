@@ -38,6 +38,43 @@ body {
   height: 100%;
 }
 
+.sm-app-initializing,
+.sm-app-initialization-error {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sm-app-initialization-error button {
+  min-width: 80px;
+  padding: 4px 12px;
+  color: var(--sm-color-text);
+  background: #fff;
+  border: 1px solid var(--sm-color-border);
+  border-radius: var(--ant-border-radius, 6px);
+  cursor: pointer;
+}
+
+.sm-dynamic-icon {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  line-height: 0;
+  vertical-align: -0.125em;
+}
+
+.sm-dynamic-icon svg {
+  display: inline-block;
+  vertical-align: inherit;
+}
+
+.sm-app-initialization-error {
+  flex-direction: column;
+  gap: var(--ant-padding-xs, 8px);
+  color: var(--ant-color-error, #ff4d4f);
+}
+
 /* Ant Design 默认只绘制表头下边框；表格自身统一负责完整的上下边界。 */
 .ant-table-wrapper .ant-table-thead > tr > th {
   border-top: var(--ant-line-width) var(--ant-line-type) var(--ant-table-border-color);

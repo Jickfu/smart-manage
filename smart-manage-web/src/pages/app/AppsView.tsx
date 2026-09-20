@@ -1,4 +1,3 @@
-import { preloadIcons } from '@/domain/common/component/iconResolver';
 import { memo } from 'react';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
@@ -15,13 +14,7 @@ const AppsView = () => {
   const query = useQuery({
     meta: { errorPresentation: 'local-initial' },
     queryKey: appQueryKeys.domainApps(),
-    queryFn: async () => {
-      const domains = await fetchApps();
-      await preloadIcons(
-        domains.flatMap((domain) => (domain.appList ?? []).map((app) => app.icon?.trim())),
-      );
-      return domains;
-    },
+    queryFn: fetchApps,
   });
   const { data, isLoading } = query;
 

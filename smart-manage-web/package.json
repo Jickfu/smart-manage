@@ -8,13 +8,14 @@
   },
   "packageManager": "pnpm@11.17.0",
   "scripts": {
-    "predev": "pnpm gen:registry && pnpm gen:sm2",
+    "predev": "pnpm gen:registry && pnpm gen:sm2 && pnpm gen:icons",
     "dev": "vite",
     "gen:registry": "node scripts/gen-registry.mjs",
     "gen:sm2": "node scripts/gen-sm2-browser.mjs",
+    "gen:icons": "node scripts/gen-icon-catalog.mjs",
     "verify:permissions": "node scripts/verify-permissions.mjs",
     "verify:page-framework": "node scripts/verify-page-framework.mjs",
-    "prebuild": "pnpm gen:registry && pnpm gen:sm2",
+    "prebuild": "pnpm gen:registry && pnpm gen:sm2 && pnpm gen:icons",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -24,6 +25,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\""
   },
   "dependencies": {
+    "@ant-design/colors": "^8.0.1",
     "@ant-design/icons": "^6.2.5",
     "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/lang-sql": "^6.10.0",

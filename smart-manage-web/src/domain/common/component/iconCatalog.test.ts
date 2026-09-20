@@ -1,48 +1,37 @@
-import { expect, it, vi } from 'vitest';
-import { getIconSnapshot, loadIcon, preloadIcons } from './iconCatalog';
+import { beforeEach, expect, it } from 'vitest';
+import generatedCatalog from './iconCatalog.generated.json';
+import {
+  getIconCatalogMetadata,
+  getIconDefinition,
+  initializeIconCatalog,
+  resetIconCatalogForTests,
+  selectableIconNames,
+} from './iconCatalog';
 
-const pendingModule = vi.hoisted(() => {
-  let finish!: () => void;
-  const promise = new Promise<void>((resolve) => {
-    finish = resolve;
-  });
-  return { promise, finish };
-});
-vi.mock('/node_modules/@ant-design/icons/es/icons/AlertTwoTone.js', async () => {
-  await pendingModule.promise;
-  return { default: () => null };
-});
-vi.mock('/node_modules/@ant-design/icons/es/icons/CrownTwoTone.js', () => {
-  throw new Error('模拟图标资源下载失败');
-});
+beforeEach(() => resetIconCatalogForTests());
 
-it('去重同名请求并同步保留加载完成的组件', async () => {
-  const firstRequest = loadIcon('RadarChartOutlined');
-  expect(loadIcon('RadarChartOutlined')).toBe(firstRequest);
-  await firstRequest;
-  const component = getIconSnapshot('RadarChartOutlined');
-  expect(component).toBeTruthy();
-  await preloadIcons(['RadarChartOutlined', 'RadarChartOutlined', undefined, 'UnknownOutlined']);
-  expect(getIconSnapshot('RadarChartOutlined')).toBe(component);
+it('一次初始化完整名称索引，不创建逐图标加载状态', async () => {
+  await initializeIconCatalog(generatedCatalog);
+
+  expect(selectableIconNames).toHaveLength(831);
+  expect(selectableIconNames).toContain('HomeOutlined');
+  expect(selectableIconNames).toContain('RocketTwoTone');
+  expect(getIconDefinition('RocketTwoTone')?.theme).toBe('twotone');
+  expect(getIconCatalogMetadata()).toEqual({ icons: '6.2.5', iconsSvg: '4.4.2' });
 });
 
-it('慢图标最多等待 150ms，后台完成后仍可复用', async () => {
-  vi.useFakeTimers();
-  try {
-    const preload = preloadIcons(['AlertTwoTone']);
-    await vi.advanceTimersByTimeAsync(150);
-    await preload;
-    expect(getIconSnapshot('AlertTwoTone')).toBeUndefined();
-    pendingModule.finish();
-    await loadIcon('AlertTwoTone');
-    expect(getIconSnapshot('AlertTwoTone')).toBeTruthy();
-  } finally {
-    vi.useRealTimers();
-  }
-});
+it('拒绝未知 SVG 标签和外部引用', async () => {
+  const invalidTag = structuredClone(generatedCatalog);
+  const invalidTagNode = invalidTag.icons.HomeOutlined?.icon.children?.[0];
+  if (!invalidTagNode) throw new Error('测试图标缺少图形节点');
+  invalidTagNode.tag = 'script';
+  expect(() => initializeIconCatalog(invalidTag)).toThrow('未支持的图形节点');
 
-it('图标资源失败不使业务数据预加载失败', async () => {
-  await expect(preloadIcons(['CrownTwoTone'])).resolves.toBeUndefined();
-  await loadIcon('CrownTwoTone');
-  expect(getIconSnapshot('CrownTwoTone')).toBeNull();
+  resetIconCatalogForTests();
+  const externalReference = structuredClone(generatedCatalog);
+  const externalReferenceNode = externalReference.icons.HomeOutlined?.icon.children?.[0];
+  if (!externalReferenceNode) throw new Error('测试图标缺少图形节点');
+  const externalReferenceAttributes = externalReferenceNode.attrs as Record<string, string>;
+  externalReferenceAttributes.fill = 'https://example.com/a.svg';
+  expect(() => initializeIconCatalog(externalReference)).toThrow('外部图形引用');
 });
