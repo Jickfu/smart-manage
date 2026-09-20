@@ -14,15 +14,18 @@ import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import type { MenuVO } from '@/types/api';
 import ExternalLinkFrame from './ExternalLinkFrame';
 import { findMenuEntry, resolveMenuAction } from './menuNavigation';
+import { isContentPageActive } from './pageActivity';
 import './Workbench.css';
 
 interface Props {
   appNumber: string;
+  /** 所属顶部应用当前是否可见。 */
+  appActive: boolean;
   initialEntryNumber?: string;
   onInitialEntryConsumed: () => void;
 }
 
-const Workbench = ({ appNumber, initialEntryNumber, onInitialEntryConsumed }: Props) => {
+const Workbench = ({ appNumber, appActive, initialEntryNumber, onInitialEntryConsumed }: Props) => {
   const feedback = useOperationFeedback();
   const startupEntryConsumed = useRef(false);
   const ws = useWorkbenchStore((s) => s.workspaces[appNumber]);
@@ -107,11 +110,12 @@ const Workbench = ({ appNumber, initialEntryNumber, onInitialEntryConsumed }: Pr
         <Spin spinning={menuQuery.isLoading}>
           <ol className="sm-workspace-content">
             {ws.contentTabs.map((tab) => {
-              const isActive = ws.activeContentTabKey === tab.key;
+              const contentTabActive = ws.activeContentTabKey === tab.key;
+              const effectiveActive = isContentPageActive(appActive, contentTabActive);
               return (
                 <li
                   key={tab.key}
-                  className={`sm-content-pane ${isActive ? 'sm-content-pane--active' : ''}`}
+                  className={`sm-content-pane ${contentTabActive ? 'sm-content-pane--active' : ''}`}
                 >
                   {tab.key === '__home__' ? (
                     <ApplicationHome appNumber={appNumber} />
@@ -128,7 +132,7 @@ const Workbench = ({ appNumber, initialEntryNumber, onInitialEntryConsumed }: Pr
                       billId={tab.billId}
                       context={tab.context}
                       temporary={tab.temporary}
-                      active={isActive}
+                      active={effectiveActive}
                     />
                   )}
                 </li>

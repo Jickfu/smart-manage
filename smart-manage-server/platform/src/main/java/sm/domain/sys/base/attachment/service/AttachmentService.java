@@ -3,6 +3,7 @@ package sm.domain.sys.base.attachment.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import sm.system.aop.log.BizLog;
 import sm.domain.sys.base.attachment.contract.AttachmentGateway;
 import sm.system.exception.BizException;
@@ -101,6 +102,7 @@ public class AttachmentService implements AttachmentGateway {
      */
     @Override
     public void promoteForAggregate(AttachmentPromoteCommand command) throws IOException {
+        requireAggregateTransaction();
         requireTemporaryAttachmentOwnership(command.getAttachmentIds(), command.getUploadSessions());
         resourceRegistry.requireRegistered(command.getBizType());
         txService.promote(command);
@@ -121,8 +123,16 @@ public class AttachmentService implements AttachmentGateway {
     /** 已完成主聚合删除权限校验后，清理其全部正式附件。 */
     @Override
     public void deleteForAggregate(String bizType, String bizId) throws IOException {
+        requireAggregateTransaction();
         for (AttachmentEntity entity : mapper.selectByBiz(bizType, bizId)) {
             deleteStoredObjectAfterCommit(txService.markPendingDelete(entity.getId()));
+        }
+    }
+
+    /** 跨领域聚合写入口只能参与调用方已有事务，禁止脱离主聚合独立提交。 */
+    private void requireAggregateTransaction() {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException("聚合附件写入必须在调用方事务中执行");
         }
     }
 

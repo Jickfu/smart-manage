@@ -404,50 +404,8 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
 
   removeContentTab: async (appNumber, tabKey) => {
     if (tabKey === '__home__') return;
-
-    // 检查关闭前回调
-    const { beforeCloseCallbacks } = get();
-    const beforeClose = beforeCloseCallbacks[callbackKey(appNumber, tabKey)];
-    if (beforeClose) {
-      try {
-        const canClose = await beforeClose();
-        if (!canClose) return;
-      } catch {
-        return;
-      }
-    }
-
-    const { workspaces } = get();
-    const ws = workspaces[appNumber];
-    if (!ws) return;
-    const newTabs = ws.contentTabs.filter((t) => t.key !== tabKey);
-    const remainingKeys = new Set(newTabs.map((tab) => tab.key));
-    const nextHistory = ws.activeContentTabHistory.filter((key) => key !== tabKey);
-    let newActiveKey = ws.activeContentTabKey;
-    if (ws.activeContentTabKey === tabKey) {
-      newActiveKey = resolveNextActiveTabKey(
-        ws.activeContentTabHistory,
-        remainingKeys,
-        '__home__',
-        new Set([tabKey]),
-      );
-    }
-
-    const nextCallbacks = { ...beforeCloseCallbacks };
-    delete nextCallbacks[callbackKey(appNumber, tabKey)];
-
-    set({
-      workspaces: {
-        ...workspaces,
-        [appNumber]: {
-          ...ws,
-          contentTabs: newTabs,
-          activeContentTabKey: newActiveKey,
-          activeContentTabHistory: pushTabHistory(nextHistory, newActiveKey),
-        },
-      },
-      beforeCloseCallbacks: nextCallbacks,
-    });
+    // 单页签与批量关闭共享同一套“等待守卫后基于最新状态提交”语义，避免旧快照覆盖并发注册的守卫。
+    await get().closeContentTabs(appNumber, [tabKey]);
   },
 
   activateContentTab: (appNumber, tabKey) => {

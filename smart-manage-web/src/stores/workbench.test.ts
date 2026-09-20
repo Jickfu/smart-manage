@@ -5,6 +5,7 @@ import { createEditTabLifecycle } from '@/domain/common/page/edit/useEditTabLife
 import { componentRegistry } from '@/domain/common/registry/componentRegistry';
 import type { AppVO } from '@/domain/sys/base/app/types';
 import { useWorkbenchStore } from './workbench';
+import { isContentPageActive } from '@/pages/workbench/pageActivity';
 
 const APP_NUMBER = 'demo';
 const COMPONENT_KEY = 'demo/procurement/purchase-requisition/edit';
@@ -179,6 +180,69 @@ describe('workbench store', () => {
     expect(guard).toHaveBeenCalledOnce();
     expect(state.workspaces[APP_NUMBER]!.contentTabs.some((tab) => tab.key === tabKey)).toBe(false);
     expect(state.beforeCloseCallbacks[`${APP_NUMBER}:${tabKey}`]).toBeUndefined();
+  });
+
+  it('单页签关闭等待期间保留其他页签最新注册的关闭守卫', async () => {
+    const store = useWorkbenchStore.getState();
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, '101-a', OperationType.EDIT);
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, '101-b', OperationType.EDIT);
+    const closingTabKey = createBillTabKey(COMPONENT_KEY, '101-a');
+    const otherTabKey = createBillTabKey(COMPONENT_KEY, '101-b');
+    let allowClose: (() => void) | undefined;
+    const waitingGuard = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          allowClose = () => resolve(true);
+        }),
+    );
+    const latestOtherGuard = vi.fn().mockResolvedValue(false);
+    store.registerBeforeClose(APP_NUMBER, closingTabKey, waitingGuard);
+
+    const closing = store.removeContentTab(APP_NUMBER, closingTabKey);
+    await vi.waitFor(() => expect(waitingGuard).toHaveBeenCalledOnce());
+    store.registerBeforeClose(APP_NUMBER, otherTabKey, latestOtherGuard);
+    allowClose?.();
+    await closing;
+
+    const state = useWorkbenchStore.getState();
+    expect(state.beforeCloseCallbacks[`${APP_NUMBER}:${otherTabKey}`]).toBe(latestOtherGuard);
+    expect(state.beforeCloseCallbacks[`${APP_NUMBER}:${closingTabKey}`]).toBeUndefined();
+  });
+
+  it('单页签关闭等待期间不会复活其他页签已注销的关闭守卫', async () => {
+    const store = useWorkbenchStore.getState();
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, '101-c', OperationType.EDIT);
+    store.openBillTab(APP_NUMBER, COMPONENT_KEY, '101-d', OperationType.EDIT);
+    const closingTabKey = createBillTabKey(COMPONENT_KEY, '101-c');
+    const otherTabKey = createBillTabKey(COMPONENT_KEY, '101-d');
+    let allowClose: (() => void) | undefined;
+    store.registerBeforeClose(
+      APP_NUMBER,
+      closingTabKey,
+      vi.fn(
+        () =>
+          new Promise<boolean>((resolve) => {
+            allowClose = () => resolve(true);
+          }),
+      ),
+    );
+    store.registerBeforeClose(APP_NUMBER, otherTabKey, vi.fn().mockResolvedValue(true));
+
+    const closing = store.removeContentTab(APP_NUMBER, closingTabKey);
+    await vi.waitFor(() => expect(allowClose).toBeTypeOf('function'));
+    store.unregisterBeforeClose(APP_NUMBER, otherTabKey);
+    allowClose?.();
+    await closing;
+
+    expect(
+      useWorkbenchStore.getState().beforeCloseCallbacks[`${APP_NUMBER}:${otherTabKey}`],
+    ).toBeUndefined();
+  });
+
+  it('页面有效激活状态同时受顶部应用和内容页签控制', () => {
+    expect(isContentPageActive(true, true)).toBe(true);
+    expect(isContentPageActive(false, true)).toBe(false);
+    expect(isContentPageActive(true, false)).toBe(false);
   });
 
   it('全局关闭检查尊重页面拒绝结果且不继续检查后续页面', async () => {

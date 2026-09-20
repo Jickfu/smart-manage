@@ -127,6 +127,8 @@ const Header = () => {
       setThemeColor(themeColor);
       setThemeOpen(false);
       feedback.success('个人主题已更新');
+    } catch (error) {
+      feedback.fromError(error, '个人主题更新失败');
     } finally {
       setThemeSaving(false);
     }

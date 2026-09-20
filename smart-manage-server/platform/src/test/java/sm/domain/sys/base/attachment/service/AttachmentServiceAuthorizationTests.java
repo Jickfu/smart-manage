@@ -1,6 +1,8 @@
 package sm.domain.sys.base.attachment.service;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
@@ -16,6 +18,7 @@ import sm.system.storage.FileStorageService;
 import sm.domain.sys.base.attachmentconfig.service.AttachmentConfigService;
 import sm.domain.sys.base.user.mapper.UserMapper;
 
+import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -24,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class AttachmentServiceAuthorizationTests {
@@ -146,6 +150,33 @@ class AttachmentServiceAuthorizationTests {
         assertThrows(
                 BizException.class,
                 () -> service.requireAggregateAttachment(1L, RESOURCE_TYPE, "100"));
+    }
+
+    @Test
+    void aggregateWriteContractsRejectCallsWithoutCallerTransaction() {
+        AttachmentPromoteCommand command = new AttachmentPromoteCommand();
+
+        assertThrows(IllegalStateException.class, () -> service.promoteForAggregate(command));
+        assertThrows(IllegalStateException.class,
+                () -> service.deleteForAggregate(RESOURCE_TYPE, "100"));
+
+        verifyNoInteractions(txService);
+    }
+
+    @Test
+    void aggregatePromoteParticipatesWhenCallerTransactionIsActive() throws IOException {
+        AttachmentPromoteCommand command = new AttachmentPromoteCommand();
+        command.setAttachmentIds(List.of());
+        command.setBizType(RESOURCE_TYPE);
+        command.setBizId("100");
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            service.promoteForAggregate(command);
+        } finally {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+        }
+
+        verify(txService).promote(command);
     }
 
     private AttachmentEntity attachment(boolean temporary, Long creatorId) {

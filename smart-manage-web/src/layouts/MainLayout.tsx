@@ -38,6 +38,7 @@ const MainLayout = () => {
   const startupTarget = useMemo(() => parseStartupNavigation(window.location.search), []);
   const [pendingEntryNumber, setPendingEntryNumber] = useState(startupTarget.entryNumber);
   const tabs = useHeaderTabsStore((s) => s.tabs);
+  const activeHeaderTabKey = useHeaderTabsStore((state) => state.activeKey);
   const loadedAppTabs = tabs.filter((tab) => tab.type === 'app' && tab.loaded);
   const inboxTarget = useHeaderTabsStore((state) => state.inboxTarget);
 
@@ -87,6 +88,7 @@ const MainLayout = () => {
               {renderLazyPage(
                 <Workbench
                   appNumber={tab.key}
+                  appActive={activeHeaderTabKey === tab.key}
                   initialEntryNumber={
                     tab.key === startupTarget.appNumber ? pendingEntryNumber : undefined
                   }
