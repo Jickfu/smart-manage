@@ -6,7 +6,7 @@
 
 后端工程位于 `smart-manage-server`，其父 POM 统一依赖和插件，仓库根不保留 POM；`platform`（`smart-manage-platform`）交付 `sm.infrastructure`、`sm.system` 和 `sm.domain.sys`，为普通 JAR。`bootstrap`（`smart-manage-bootstrap`）只负责启动、配置、领域装配与可执行包。可选 `smart-manage-server/domains/demo`（`smart-manage-domain-demo`）依赖平台，平台不得反向依赖它，也不保留采购专属声明。`domains` 仅为目录容器。
 
-默认装配纯平台，Maven `with-demo` 同时选择 DEMO reactor 模块和启动依赖。架构测试位于 bootstrap，在发行实际 classpath 中检查所有已装配业务；领域专属测试随领域维护。普通 JAR 不包含 Boot 重打包布局，只有 bootstrap 执行 repackage。
+默认装配纯平台，Maven `with-domains` 选择完整业务发行：父 POM 显式维护领域 reactor 模块，bootstrap 同名 profile 显式维护领域依赖和 `smartManage.expectedDomains`（含 `sys` 的逗号分隔清单）。新增或移除领域维护这三处装配声明，CI 不维护领域名称；无可选领域时保留空 profile，期望清单为 `sys`。架构测试位于 bootstrap，在发行实际 classpath 中检查所有已装配业务；领域专属测试随领域维护。普通 JAR 不包含 Boot 重打包布局，只有 bootstrap 执行 repackage。
 
 同一个 Maven 模块不取消逻辑边界：跨领域仍只通过提供方稳定 Contract，不能直接访问其他领域 Mapper、Entity 或 TxService。本次演示领域统一使用 `demo` 标识，包括 Java 包、权限码、Feature、API、表名和迁移历史表，不保留旧 `scm` 兼容入口；平台 Java 包和 HTTP context path 不变。
 

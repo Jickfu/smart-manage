@@ -5,9 +5,16 @@ import { join, resolve } from 'node:path';
 const webRoot = resolve(import.meta.dirname, '..');
 const backendRoot = resolve(webRoot, '..', 'smart-manage-server');
 const domains = selectedDomains();
+// 迁移验证显式传入后端装配清单，前端继续使用自己的发行选择。
+const backendDomainsArgument = process.argv.find((argument) =>
+  argument.startsWith('--backend-domains='),
+);
+const backendDomains = backendDomainsArgument
+  ? selectedDomains(backendDomainsArgument.substring('--backend-domains='.length))
+  : domains;
 const backendRoots = [
   join(backendRoot, 'platform'),
-  ...domains
+  ...backendDomains
     .filter((domain) => domain !== 'sys')
     .map((domain) => join(backendRoot, 'domains', domain)),
 ];

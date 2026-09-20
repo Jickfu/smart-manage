@@ -7,7 +7,7 @@ param(
     [string]$DbPassword = 'postgres',
     [string]$MavenPath = 'mvn',
     [string]$NodePath = 'node',
-    [switch]$WithDemo
+    [switch]$WithDomains
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,6 +39,16 @@ Write-Host "Using PostgreSQL Client: $psqlVersion ($resolvedPsqlPath)"
 if ($psqlVersion -notmatch 'PostgreSQL\)\s+(\d+)' -or [int]$Matches[1] -ne $ExpectedPsqlMajor) {
     throw "PostgreSQL Client 主版本必须为 $ExpectedPsqlMajor，实际版本: $psqlVersion"
 }
+# 后端期望领域由启动模块的显式装配配置维护，与前端清单分开。
+$backendDomains = 'sys'
+if ($WithDomains) {
+    [xml]$bootstrapPom = Get-Content -LiteralPath (Join-Path $backendRoot 'bootstrap/pom.xml') -Raw
+    $assemblyProfile = @($bootstrapPom.project.profiles.profile | Where-Object { $_.id -eq 'with-domains' })
+    if ($assemblyProfile.Count -ne 1) { throw '缺少唯一的 with-domains 装配配置' }
+    $backendDomains = [string]$assemblyProfile[0].properties.'smartManage.expectedDomains'
+    if ([string]::IsNullOrWhiteSpace($backendDomains)) { throw '完整装配必须声明 smartManage.expectedDomains' }
+}
+
 $permissionCatalogFile = [System.IO.Path]::GetTempFileName()
 $menuPermissionCatalogFile = [System.IO.Path]::GetTempFileName()
 $featureCatalogFile = [System.IO.Path]::GetTempFileName()
@@ -50,7 +60,7 @@ function Invoke-Psql([string]$database, [string[]]$arguments) {
     }
 }
 
-$env:SMART_MANAGE_DOMAINS = if ($WithDemo) { 'sys,demo' } else { 'sys' }
+$env:SMART_MANAGE_DOMAINS = if ($WithDomains) { 'all' } else { 'sys' }
 $env:PGPASSWORD = $DbPassword
 $env:PGCLIENTENCODING = 'UTF8'
 
@@ -80,7 +90,7 @@ try {
         "-DsmartManage.testDbPassword=$DbPassword"
         '-Dtest=*PostgresTests', '-Dsurefire.failIfNoSpecifiedTests=false'
     )
-    if ($WithDemo) { $testArguments += '-Pwith-demo' }
+    if ($WithDomains) { $testArguments += '-Pwith-domains' }
     Write-Host "Running Flyway with project: $backendPomPath"
     & $MavenPath @testArguments
     if ($LASTEXITCODE -ne 0) {
@@ -90,16 +100,16 @@ try {
     # OpenAPI 授权实体继承 BaseEntity；最后一项查询防止迁移遗漏实体自动映射的审计列。
     $baselineVerificationArguments = @('-v', 'ON_ERROR_STOP=1', '-c', "SELECT 1 / count(*) AS administrator_ready FROM t_sys_user WHERE username = 'administrator' AND enabled AND password = '' AND password_reset;", '-c', "SELECT 1 / count(*) AS attachment_cleanup_job_ready FROM t_sys_job WHERE number = 'ATTACHMENT_OBJECT_CLEANUP' AND is_system AND status = 'ENABLED' AND job_class_name = 'sm.domain.sys.scheduler.job.CleanTempFileJob';", '-c', "SELECT count(*) AS permission_count FROM t_sys_permission;", '-c', "SELECT count(*) AS menu_count FROM t_sys_menu;", '-c', "SELECT count(*) AS flyway_version_count FROM flyway_schema_history WHERE success;", '-c', "SELECT update_time, update_user FROM t_sys_openapi_grant LIMIT 0;")
     Invoke-Psql $verifyDatabase $baselineVerificationArguments
-    # 默认平台仅一家公司；演示装配额外包含三个部门，不能放宽成只检查总数。
-    $expectedOrganizations = if ($WithDemo) { 4 } else { 1 }
-    $expectedDepartments = if ($WithDemo) { 3 } else { 0 }
-    Invoke-Psql $verifyDatabase @('-v', 'ON_ERROR_STOP=1', '-c', "SELECT 1 / (CASE WHEN count(*) = $expectedOrganizations AND count(*) FILTER (WHERE id = 1 AND org_type = 'COMPANY' AND parent_id IS NULL) = 1 AND count(*) FILTER (WHERE parent_id = 1 AND org_type = 'DEPARTMENT' AND number IN ('101','102','103')) = $expectedDepartments THEN 1 ELSE 0 END) AS assembly_organizations FROM t_sys_org;")
+    # 平台默认数据保持最小集合；业务领域自己的数据断言随领域测试维护。
+    if (!$WithDomains) {
+        Invoke-Psql $verifyDatabase @('-v', 'ON_ERROR_STOP=1', '-c', "SELECT 1 / (CASE WHEN count(*) = 1 AND count(*) FILTER (WHERE id = 1 AND org_type = 'COMPANY' AND parent_id IS NULL) = 1 THEN 1 ELSE 0 END) AS platform_organizations FROM t_sys_org;")
+    }
     $menuFeatureMismatchCount = & $resolvedPsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
         -v ON_ERROR_STOP=1 -A -t -c 'SELECT count(*) FROM t_sys_menu menu JOIN t_sys_permission permission ON permission.id = menu.permission_id WHERE menu.feature_id <> permission.feature_id'
     if ($LASTEXITCODE -ne 0 -or [int]$menuFeatureMismatchCount -ne 0) {
         throw "menu feature consistency verification failed: $menuFeatureMismatchCount mismatches"
     }
-    $featureVerificationArguments = @('-v', 'ON_ERROR_STOP=1', '-c', "SELECT 1 / count(*) AS invalid_feature_keys_removed FROM (SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM t_sys_feature WHERE feature_key IN ('sys/base', 'sys/log', 'sys/scheduler', 'demo/procurement'))) verification;")
+    $featureVerificationArguments = @('-v', 'ON_ERROR_STOP=1', '-c', "SELECT 1 / count(*) AS invalid_feature_keys_removed FROM (SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM t_sys_feature WHERE feature_key IN ('sys/base', 'sys/log', 'sys/scheduler'))) verification;")
     Invoke-Psql $verifyDatabase $featureVerificationArguments
     $permissionNumbers = & $resolvedPsqlPath -h $DbHost -p $DbPort -U $DbUser -d $verifyDatabase `
         -v ON_ERROR_STOP=1 -A -t -c 'SELECT number FROM t_sys_permission ORDER BY number'
@@ -120,7 +130,7 @@ try {
     }
     [System.IO.File]::WriteAllLines($featureCatalogFile, [string[]]$featureKeys)
     $permissionVerifier = Join-Path $PSScriptRoot '..\smart-manage-web\scripts\verify-permissions.mjs'
-    & $NodePath $permissionVerifier "--catalog-file=$permissionCatalogFile" "--menu-catalog-file=$menuPermissionCatalogFile" "--feature-catalog-file=$featureCatalogFile"
+    & $NodePath $permissionVerifier "--catalog-file=$permissionCatalogFile" "--menu-catalog-file=$menuPermissionCatalogFile" "--feature-catalog-file=$featureCatalogFile" "--backend-domains=$backendDomains"
     if ($LASTEXITCODE -ne 0) {
         throw "permission catalog verification failed with exit code $LASTEXITCODE"
     }

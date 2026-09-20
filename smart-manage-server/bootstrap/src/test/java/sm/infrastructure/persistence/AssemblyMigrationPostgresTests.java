@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfSystemProperty(named = "smartManage.postgresIntegration", matches = "true")
 class AssemblyMigrationPostgresTests {
     @Test
-    void selectedAssemblyMigratesAndRestartsWithoutChangingPlatformHistory() {
+    void selectedAssemblyMigratesAndRestartsWithoutChangingPlatformHistory() throws Exception {
         var source = new DriverManagerDataSource(System.getProperty("smartManage.testDbUrl"),
                 System.getProperty("smartManage.testDbUser"), System.getProperty("smartManage.testDbPassword"));
         var jdbc = new JdbcTemplate(source);
@@ -27,15 +27,21 @@ class AssemblyMigrationPostgresTests {
             strategy.migrate(platform);
         }
         assertEquals(history, jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank"));
-        boolean withDemo = "demo".equals(System.getProperty("smartManage.expectedDomain"));
-        assertEquals(withDemo, jdbc.queryForObject("SELECT to_regclass('t_demo_purchase_requisition') IS NOT NULL", Boolean.class));
-        assertEquals(withDemo, jdbc.queryForObject("SELECT to_regclass('flyway_demo_schema_history') IS NOT NULL", Boolean.class));
-        assertEquals(withDemo, jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM t_sys_feature WHERE feature_key LIKE 'demo/%')", Boolean.class));
-        assertEquals(withDemo ? 4 : 1, jdbc.queryForObject("SELECT count(*) FROM t_sys_org", Integer.class));
-        assertEquals(withDemo ? 3 : 0, jdbc.queryForObject("SELECT count(*) FROM t_sys_org WHERE parent_id = 1 AND org_type = 'DEPARTMENT' AND number IN ('101','102','103')", Integer.class));
-        if (withDemo) {
-            assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM flyway_demo_schema_history WHERE version IN ('1','2','3') AND success", Integer.class));
-            assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM t_demo_purchase_requisition", Integer.class));
+        var expectedDomains = new java.util.HashSet<>(java.util.Set.of(
+                System.getProperty("smartManage.expectedDomains", "sys").split(",")));
+        expectedDomains.remove("sys");
+        var actualDomains = new java.util.HashSet<String>();
+        for (var resource : new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
+                .getResources("classpath*:META-INF/smart-manage/migration.properties")) {
+            var declaration = new java.util.Properties();
+            try (var input = resource.getInputStream()) { declaration.load(input); }
+            assertTrue(actualDomains.add(declaration.getProperty("id")), "领域迁移声明不得重复");
+            assertNotNull(jdbc.queryForObject("SELECT to_regclass(?)", String.class, declaration.getProperty("table")),
+                    "已装配领域必须实际建立迁移历史表");
+        }
+        assertEquals(expectedDomains, actualDomains, "完整装配必须包含所有所选领域的迁移声明");
+        if (expectedDomains.isEmpty()) {
+            assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM t_sys_org", Integer.class));
         }
     }
 }

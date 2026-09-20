@@ -54,7 +54,7 @@
     </modules>
     <profiles>
         <profile>
-            <id>with-demo</id>
+            <id>with-domains</id>
             <modules>
                 <module>domains/demo</module>
             </modules>

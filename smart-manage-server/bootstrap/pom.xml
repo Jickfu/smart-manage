@@ -16,11 +16,11 @@
         </dependency>
     </dependencies>
     <properties>
-        <smartManage.expectedDomain>sys</smartManage.expectedDomain>
+        <smartManage.expectedDomains>sys</smartManage.expectedDomains>
     </properties>
     <profiles>
         <profile>
-            <id>with-demo</id>
+            <id>with-domains</id>
             <dependencies>
                 <dependency>
                     <groupId>top.chekfu</groupId>
@@ -29,7 +29,7 @@
                 </dependency>
             </dependencies>
             <properties>
-                <smartManage.expectedDomain>demo</smartManage.expectedDomain>
+                <smartManage.expectedDomains>sys,demo</smartManage.expectedDomains>
             </properties>
         </profile>
     </profiles>
@@ -57,7 +57,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <systemPropertyVariables>
-                        <smartManage.expectedDomain>${smartManage.expectedDomain}</smartManage.expectedDomain>
+                        <smartManage.expectedDomains>${smartManage.expectedDomains}</smartManage.expectedDomains>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

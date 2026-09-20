@@ -71,7 +71,7 @@ pwsh.exe -NoProfile -Command "Get-Help .\scripts\verify-module-conventions.ps1 -
 
 ```bash
 mvn -f smart-manage-server/pom.xml verify
-mvn -f smart-manage-server/pom.xml -Pwith-demo verify
+mvn -f smart-manage-server/pom.xml -Pwith-domains verify
 ```
 
 纯文档修改不要求执行 Maven。确认不影响测试代码的简单后端改动才可以仅执行 `mvn -f smart-manage-server/pom.xml compile`；影响安全、权限、事务或并发语义的改动不属于该例外。实体、Mapper、配置和迁移变更还必须确认相关代码能够正常编译。
@@ -88,7 +88,7 @@ pnpm test
 pnpm build
 ```
 
-`pnpm build` 自动执行 `scripts/build-audit.ts` 的产物检查：验证领域裁剪、页面/首页异步入口及输出目录、JS 依赖完整性，并防止图表与代码编辑器进入初始加载链。修改构建策略时分别以默认 `SMART_MANAGE_DOMAINS=sys` 和 `sys,demo` 构建，对比 `dist/.vite/build-report.json` 与 manifest 中典型页面的静态依赖闭包，不能只比较文件总数。CI 的两个前端领域配置均执行该检查；本地 Demo 构建后恢复默认领域并重新生成注册清单。
+`pnpm build` 自动执行 `scripts/build-audit.ts` 的产物检查：验证领域裁剪、页面/首页异步入口及输出目录、JS 依赖完整性，并防止图表与代码编辑器进入初始加载链。修改构建策略时分别以默认 `SMART_MANAGE_DOMAINS=sys` 和 `all` 构建，对比 `dist/.vite/build-report.json` 与 manifest 中典型页面的静态依赖闭包，不能只比较文件总数。CI 的平台与完整发行两个前端配置均执行该检查；本地 Demo 构建后恢复默认领域并重新生成注册清单。
 
 构建配置及脚本变更还需检查配置类型与脚本格式：
 
@@ -133,7 +133,7 @@ $registrySecondHash = (Get-FileHash -LiteralPath $registryFiles -Algorithm SHA25
 if ($registryFirstHash -ne $registrySecondHash) { throw 'Registry generation is not stable' }
 ```
 
-提交生成文件采用默认 `SMART_MANAGE_DOMAINS=sys`；DEMO 验证时显式设为 `sys,demo`，生成并测试构建后重新生成默认文件。两种选择均比较两个生成文件的连续生成哈希。
+提交生成文件采用默认 `SMART_MANAGE_DOMAINS=sys`；DEMO 验证时显式设为 `all`，生成并测试构建后重新生成默认文件。两种选择均比较两个生成文件的连续生成哈希。
 
 CI 在干净检出上通过 `pnpm build` 的 `prebuild` 生成后，从仓库根目录检查已提交的生成文件是否同步：
 
@@ -151,7 +151,7 @@ Windows 环境可以运行：
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baseline.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baseline.ps1 -WithDemo
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baseline.ps1 -WithDomains
 ```
 
 脚本默认从 PATH 查找 PostgreSQL Client 16，并在迁移前输出和校验 `psql` 版本；特殊本地安装可通过 `-PsqlPath` 显式指定可执行文件。脚本创建临时数据库，通过项目锁定版本的 Flyway 执行全部迁移，校验版本、命名、checksum 和 `flyway_schema_history`，并在验证后清理。数据库结构、初始化数据、迁移顺序或脚本发生变化时必须执行此项验证。
@@ -160,7 +160,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baselin
 
 ## 真实 PostgreSQL 验证
 
-`scripts/verify-baseline.ps1` 默认验证平台，`-WithDemo` 显式选择 DEMO。脚本以临时数据库运行 reactor 的全部 `*PostgresTests`；bootstrap 中的 `AssemblyMigrationPostgresTests` 在真实装配 classpath 发现领域声明、执行对应链并再次迁移，确认平台历史未改写以及未选择的采购对象不存在。`DomainFlywayMigrationPostgresTests` 用独立 schema 验证同号、平台增量、数据保留、启动失败、事务回滚、checksum 和乱序拒绝。管理员并发初始化通过真实 Mapper 和 PostgreSQL 触发器确认只写入一次，重启不覆盖。
+`scripts/verify-baseline.ps1` 默认验证平台，`-WithDomains` 选择完整业务发行（后端 `with-domains`、前端 `all`），两端分别读取各自装配声明。脚本以临时数据库运行 reactor 的全部 `*PostgresTests`；bootstrap 中的 `AssemblyMigrationPostgresTests` 在真实装配 classpath 发现领域声明、执行对应链并再次迁移，确认平台历史未改写、领域迁移声明与装配清单一致、历史表实际创建；Demo 专属数据由 Demo 模块内的 `DemoMigrationPostgresTests` 验证。`DomainFlywayMigrationPostgresTests` 用独立 schema 验证同号、平台增量、数据保留、启动失败、事务回滚、checksum 和乱序拒绝。管理员并发初始化通过真实 Mapper 和 PostgreSQL 触发器确认只写入一次，重启不覆盖。
 
 双链机制测试不替代具体发行版本的带数据升级测试。今后每个数据库变更须按[正式发布与升级规则](./database.md#正式发布与升级规则)，为受支持旧版本准备结构与代表性数据，运行新增迁移，断言数据转换和业务不变量，再次迁移确认稳定；不得修改旧脚本制造测试通过。
 
@@ -181,18 +181,18 @@ PostgreSQL 客户端、数据库服务或必要配置缺失时，此项记为未
 `.github/workflows/quality-gate.yml` 当前执行：
 
 1. 模块约定脚本与空库清理安全替身测试；
-2. 默认平台及 `with-demo` 的后端 `mvn verify`；
+2. 默认平台及 `with-domains` 的后端 `mvn verify`；
 3. 前端依赖锁定安装；
 4. `pnpm lint`；
 5. `pnpm format:check`；
 6. `pnpm test`；
 7. `pnpm build`；
 8. 默认页面与首页注册表无差异检查；
-9. PostgreSQL 16 上默认及包含 DEMO 的 Flyway 空库迁移；
+9. PostgreSQL 16 上平台及完整业务发行的 Flyway 空库迁移；
 10. 使用迁移完成后的真实权限目录执行代码权限一致性校验。
 11. 使用迁移完成后的真实功能目录校验全部页面注册的 `featureKey`，并校验菜单与入口权限属于同一功能。
 
-前端门禁分别在 `SMART_MANAGE_DOMAINS=sys` 和 `sys,demo` 下执行；默认 CI 会实际删除对应 DEMO 源码目录后构建，以保护可裁剪能力。采购源码仍由包含 DEMO 的矩阵持续验证。
+CI 固定验证平台与完整业务发行，不包含具体业务领域名称。前端分别使用 `SMART_MANAGE_DOMAINS=sys` 和 `all`（读取 `smart-manage-web/domains.json`）；后端分别使用默认装配与 `with-domains`。平台构建作业会实际删除全部可选领域目录后验证，完整发行持续覆盖装配清单中的领域。新增或移除领域维护 Maven 和前端装配声明即可，不需要修改工作流；声明了不存在的领域仍应失败，不能静默跳过。无业务领域时两个入口都验证平台。裁剪步骤见[移除 Demo](./remove-demo.md)。
 
 主分支保护属于 GitHub 仓库外部设置，需要由仓库管理员启用并要求质量门禁通过。
 

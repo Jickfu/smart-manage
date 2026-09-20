@@ -1,6 +1,7 @@
 import { gzipSync } from 'node:zlib';
 import type { Plugin } from 'vite';
 import { assetDirectory } from './build-output';
+import { selectedDomains } from './selected-domains.mjs';
 
 interface BuildChunk {
   fileName: string;
@@ -84,9 +85,7 @@ export function buildAudit(): Plugin {
         }
         if (pages.size === 0) throw new Error('未发现页面和首页注册入口');
         const chunks = Object.values(bundle).filter((output) => output.type === 'chunk');
-        const domains = (process.env.SMART_MANAGE_DOMAINS ?? 'sys')
-          .split(',')
-          .map((domain) => domain.trim());
+        const domains = selectedDomains();
         const report = auditChunks(chunks, [...pages], domains);
         this.emitFile({
           type: 'asset',

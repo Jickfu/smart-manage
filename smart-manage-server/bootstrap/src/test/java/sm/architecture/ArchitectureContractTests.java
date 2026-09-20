@@ -43,16 +43,14 @@ class ArchitectureContractTests {
 
     @Test
     void assembledDomainMustActuallyBeIncludedInArchitectureChecks() {
-        String expectedDomain = System.getProperty("smartManage.expectedDomain", "sys");
-        org.junit.jupiter.api.Assertions.assertTrue(productionClasses.stream()
-                .anyMatch(candidate -> candidate.getPackageName().startsWith("sm.domain." + expectedDomain + ".")),
-                "架构门禁必须实际导入本次装配的领域");
-        if ("sys".equals(expectedDomain)) {
-            org.junit.jupiter.api.Assertions.assertFalse(productionClasses.stream()
-                    .anyMatch(candidate -> candidate.getPackageName().startsWith("sm.domain.")
-                            && !candidate.getPackageName().startsWith("sm.domain.sys.")),
-                    "默认装配不得混入可选领域类");
-        }
+        var expectedDomains = java.util.Set.of(System.getProperty("smartManage.expectedDomains", "sys").split(","));
+        var actualDomains = productionClasses.stream()
+                .map(JavaClass::getPackageName)
+                .filter(packageName -> packageName.startsWith("sm.domain."))
+                .map(packageName -> packageName.split("\\.")[2])
+                .collect(java.util.stream.Collectors.toSet());
+        org.junit.jupiter.api.Assertions.assertEquals(expectedDomains, actualDomains,
+                "架构门禁必须实际导入全部所选领域，且不得混入未选领域");
     }
 
     @BeforeAll

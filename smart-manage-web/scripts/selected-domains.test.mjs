@@ -32,6 +32,26 @@ async function generated(root) {
 }
 
 describe('领域构建选择', () => {
+  it('完整发行读取装配清单，新增和移除领域无需修改 CI', async () => {
+    const root = await fixture();
+    const manifest = join(root, 'domains.json');
+    for (const domains of [['sys', 'demo'], ['sys', 'demo', 'orders'], ['sys']]) {
+      await writeFile(manifest, JSON.stringify(domains));
+      expect(selectedDomains('all', manifest)).toEqual(domains);
+    }
+    for (const invalid of [
+      {},
+      ['sys', 'sys'],
+      ['sys', '../orders'],
+      ['sys', 'common'],
+      ['sys', null],
+    ]) {
+      await writeFile(manifest, JSON.stringify(invalid));
+      expect(() => selectedDomains('all', manifest)).toThrow();
+    }
+    await writeFile(manifest, JSON.stringify(['sys', 'missing']));
+    await expect(generateRegistry(root, selectedDomains('all', manifest))).rejects.toThrow();
+  });
   it('要求平台且拒绝空值、重复和路径穿越', () => {
     expect(selectedDomains('sys,demo')).toEqual(['sys', 'demo']);
     for (const value of ['', 'demo', 'sys,sys', 'sys,../demo'])

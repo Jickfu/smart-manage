@@ -4,7 +4,7 @@
 
 ## 领域裁剪与加载
 
-保持一个前端工程、一次构建和统一部署。构建环境变量 `SMART_MANAGE_DOMAINS` 默认 `sys`，采购发行显式设为 `sys,demo`；维护者同时选择后端相应 Maven profile，不建立额外跨端同步协议。
+保持一个前端工程、一次构建和统一部署。构建环境变量 `SMART_MANAGE_DOMAINS` 默认 `sys`，完整发行设为 `all`，读取 `smart-manage-web/domains.json` 中的显式领域清单；仍支持 `sys,demo` 等指定组合。新增或删除领域维护该清单，不修改 CI。维护者同时选择后端相应 Maven profile，不建立额外跨端同步协议。
 
 `gen:registry` 只导入所选领域的页面清单和 `applicationHomes.ts`，分别生成 `registry.gen.ts` 和 `applicationHomes.gen.ts`。未选领域不进入运行依赖图，显式选择不存在的目录直接失败。领域首页注册使用 React lazy，工作台通过 Suspense 加载；业务页面保留各自动态 import 和已有页签生命周期。领域或应用目录不强制合并为一个大 JS，重型能力按现有实际引用拆分，登录页仍是独立入口。
 
