@@ -152,9 +152,11 @@ ESLint 报错不得用注释跳过，也不得修改 `eslint.config.js` 降低�
 Windows 环境可以运行：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baseline.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baseline.ps1 -PlatformOnly
+pwsh.exe -NoProfile -File .\scripts\verify-baseline.ps1
+pwsh.exe -NoProfile -File .\scripts\verify-baseline.ps1 -PlatformOnly
 ```
+
+数据库验证脚本统一要求 PowerShell 7；Windows PowerShell 5.1 无法正确读取现有无 BOM UTF-8 脚本，可能出现乱码或解析失败。Windows 上应使用 `pwsh.exe`，不得使用 `powershell.exe`。
 
 脚本默认从 PATH 查找 PostgreSQL Client 16，并在迁移前输出和校验 `psql` 版本；特殊本地安装可通过 `-PsqlPath` 显式指定可执行文件。脚本创建临时数据库，通过项目锁定版本的 Flyway 执行全部迁移，校验版本、命名、checksum 和 `flyway_schema_history`，并在验证后清理。数据库结构、初始化数据、迁移顺序或脚本发生变化时必须执行此项验证。
 

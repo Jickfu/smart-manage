@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 param(
     [string]$PsqlPath = 'psql',
     [int]$ExpectedPsqlMajor = 16,
