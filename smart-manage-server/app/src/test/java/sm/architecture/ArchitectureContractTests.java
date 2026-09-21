@@ -42,6 +42,22 @@ class ArchitectureContractTests {
     }
 
     @Test
+    void aggregateAttachmentWritesMustOriginateFromTransactionOwners() {
+        for (JavaClass caller : productionClasses) {
+            for (JavaMethodCall call : caller.getMethodCallsFromSelf()) {
+                if (call.getTarget().getName().equals("promoteForAggregate")
+                        || call.getTarget().getName().equals("deleteForAggregate")
+                        && call.getTarget().getRawParameterTypes().stream()
+                                .anyMatch(parameter -> parameter.isEquivalentTo(String.class))) {
+                    org.junit.jupiter.api.Assertions.assertTrue(
+                            caller.getSimpleName().endsWith("TxService"),
+                            "聚合附件写入只能由 TxService 发起: " + call.getDescription());
+                }
+            }
+        }
+    }
+
+    @Test
     void assembledDomainMustActuallyBeIncludedInArchitectureChecks() throws Exception {
         var expectedDomains = new java.util.HashSet<>(java.util.Set.of("sys"));
         for (var resource : new org.springframework.core.io.support.PathMatchingResourcePatternResolver()

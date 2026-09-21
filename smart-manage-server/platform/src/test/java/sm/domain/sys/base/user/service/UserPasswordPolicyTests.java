@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.user.mapper.UserMapper;
+import sm.domain.sys.base.attachment.contract.AttachmentGateway;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.user.model.UserCredentialSnapshot;
@@ -27,7 +28,8 @@ class UserPasswordPolicyTests {
     private final UserWriter writer = new UserWriter(mapper, mock(UserRoleMapper.class),
             mock(UserAssignmentMapper.class), mock(OrgReferenceReader.class), policy);
     private final UserTxService service = new UserTxService(mapper, mock(UserRoleMapper.class),
-            mock(UserAssignmentMapper.class), mock(OrgReferenceReader.class), mock(CurrentUserContext.class), writer, policy);
+            mock(UserAssignmentMapper.class), mock(OrgReferenceReader.class), mock(CurrentUserContext.class), writer, policy,
+            mock(AttachmentGateway.class));
     private UserEntity user;
 
     @BeforeEach

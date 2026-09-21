@@ -7,6 +7,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import sm.domain.sys.base.user.constant.UserThemeColor;
 import sm.domain.sys.base.user.mapper.UserMapper;
+import sm.domain.sys.base.attachment.contract.AttachmentGateway;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.org.mapper.OrgMapper;
@@ -36,6 +38,29 @@ import static org.mockito.Mockito.never;
 class UserTxServiceTests {
 
     @Test
+    void transactionOwnerPromotesAvatarBeforeSavingUser() throws Exception {
+        AttachmentGateway attachmentGateway = mock(AttachmentGateway.class);
+        UserWriter writer = mock(UserWriter.class);
+        UserTxService service = new UserTxService(
+                mock(UserMapper.class), mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
+                mock(sm.domain.sys.base.org.contract.OrgReferenceReader.class), mock(CurrentUserContext.class),
+                writer, mock(PasswordPolicyService.class), attachmentGateway);
+        UserSaveForm form = new UserSaveForm();
+        form.setAvatarAttachmentId(20L);
+        form.setAttachmentUploadSessions(java.util.Map.of(20L, "avatar-session"));
+
+        service.save(form, 100L);
+
+        ArgumentCaptor<AttachmentPromoteCommand> commandCaptor =
+                ArgumentCaptor.forClass(AttachmentPromoteCommand.class);
+        verify(attachmentGateway).promoteForAggregate(commandCaptor.capture());
+        assertEquals(List.of(20L), commandCaptor.getValue().getAttachmentIds());
+        assertEquals("sys.base.user-avatar", commandCaptor.getValue().getBizType());
+        assertEquals("100", commandCaptor.getValue().getBizId());
+        verify(writer).save(form, 100L);
+    }
+
+    @Test
     void delegatedResetCannotChangeAdministratorCredentials() {
         UserMapper mapper = mock(UserMapper.class);
         UserEntity administrator = new UserEntity();
@@ -45,7 +70,7 @@ class UserTxServiceTests {
         when(mapper.updateById(any(UserEntity.class))).thenReturn(1);
         var context = mock(CurrentUserContext.class);
         var service = new UserTxService(mapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-                new OrgReferenceService(mock(OrgMapper.class)), context, mock(UserWriter.class), mock(PasswordPolicyService.class));
+                new OrgReferenceService(mock(OrgMapper.class)), context, mock(UserWriter.class), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
 
         var error = assertThrows(sm.system.exception.BizException.class, () -> service.resetPassword(1L));
         assertEquals(sm.system.response.ResultEnum.PERMISSION_ERROR.getCode(), error.getCode());
@@ -61,7 +86,7 @@ class UserTxServiceTests {
 		when(userMapper.selectById(1L)).thenReturn(existing);
 		UserTxService service = new UserTxService(
 				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class), mock(UserWriter.class), mock(PasswordPolicyService.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class), mock(UserWriter.class), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
 
 		try (MockedStatic<Argon2Helper> argon2Helper = mockStatic(Argon2Helper.class)) {
 			argon2Helper.when(() -> Argon2Helper.verify("encoded-password", "wrong-password"))
@@ -81,7 +106,7 @@ class UserTxServiceTests {
 		when(userMapper.selectById(1L)).thenReturn(existing);
 		UserTxService service = new UserTxService(
 				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class), mock(UserWriter.class), mock(PasswordPolicyService.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class), mock(UserWriter.class), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
 
 		try (MockedStatic<Argon2Helper> argon2Helper = mockStatic(Argon2Helper.class)) {
 			argon2Helper.when(() -> Argon2Helper.verify("encoded-password", "wrong-password"))
@@ -102,9 +127,9 @@ class UserTxServiceTests {
 		when(userMapper.updateById(existing)).thenReturn(1);
 		UserTxService service = new UserTxService(
 				userMapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class), mock(UserWriter.class), mock(PasswordPolicyService.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class), mock(UserWriter.class), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
 
-		service.updateCurrentProfile(1L, " 新姓名 ", null, null, 20L);
+		service.updateCurrentProfile(1L, " 新姓名 ", null, null, 20L, java.util.Map.of());
 
 		assertEquals("新姓名", existing.getName());
 		assertEquals(20L, existing.getAvatarAttachmentId());
@@ -121,7 +146,7 @@ class UserTxServiceTests {
 		when(userMapper.selectCount(any())).thenReturn(0L);
 		UserTxService service = new UserTxService(
 				userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(CurrentUserContext.class),
-				new UserWriter(userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(PasswordPolicyService.class)), mock(PasswordPolicyService.class));
+				new UserWriter(userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(PasswordPolicyService.class)), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
 		UserSaveForm form = newUserForm();
 		form.setAssignments(List.of(assignment(10L, false), assignment(11L, false)));
 
@@ -137,7 +162,7 @@ class UserTxServiceTests {
 		when(userMapper.selectCount(any())).thenReturn(0L);
 		UserTxService service = new UserTxService(
 				userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(CurrentUserContext.class),
-				new UserWriter(userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(PasswordPolicyService.class)), mock(PasswordPolicyService.class));
+				new UserWriter(userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(PasswordPolicyService.class)), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
 		UserSaveForm form = newUserForm();
 		form.setAssignments(List.of(assignment(10L, true), assignment(10L, false)));
 
@@ -158,7 +183,7 @@ class UserTxServiceTests {
 		OrgReferenceService orgReferenceService = new OrgReferenceService(mock(OrgMapper.class));
 		UserTxService service = new UserTxService(
 				userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(CurrentUserContext.class),
-				new UserWriter(userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(PasswordPolicyService.class)), mock(PasswordPolicyService.class));
+				new UserWriter(userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(PasswordPolicyService.class)), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
 		UserSaveForm form = new UserSaveForm();
 		form.setId(1L);
 		form.setVersion(0);
@@ -177,7 +202,7 @@ class UserTxServiceTests {
         OrgReferenceService orgReferenceService = new OrgReferenceService(mock(OrgMapper.class));
         UserTxService service = new UserTxService(
                 userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(CurrentUserContext.class),
-                new UserWriter(userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(PasswordPolicyService.class)), mock(PasswordPolicyService.class));
+                new UserWriter(userMapper, userRoleMapper, userAssignmentMapper, orgReferenceService, mock(PasswordPolicyService.class)), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
         UserSaveForm form = new UserSaveForm();
         form.setUsername("new-user");
         form.setPassword("InitialPassword1!");
@@ -200,7 +225,7 @@ class UserTxServiceTests {
 	void enableRejectsUserWithoutPrimaryOrganization() {
 		UserTxService service = new UserTxService(
 				mock(UserMapper.class), mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class), mock(UserWriter.class), mock(PasswordPolicyService.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class), mock(UserWriter.class), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
 
 		assertThrows(sm.system.exception.BizException.class,
 				() -> service.updateEnabled(List.of(10L), true));
@@ -222,7 +247,7 @@ class UserTxServiceTests {
 		when(userRoleMapper.insert(any(UserRoleEntity.class))).thenReturn(1);
 		UserTxService service = new UserTxService(
 				userMapper, userRoleMapper, userAssignmentMapper,
-				new OrgReferenceService(mock(OrgMapper.class)), currentUserContext, mock(UserWriter.class), mock(PasswordPolicyService.class));
+				new OrgReferenceService(mock(OrgMapper.class)), currentUserContext, mock(UserWriter.class), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
 		UserRoleAssignmentSaveForm form = new UserRoleAssignmentSaveForm();
 		form.setUserId(10L);
 		form.setAssignments(List.of(organizationRoles(20L, 30L, 31L), organizationRoles(21L, 32L)));
@@ -247,7 +272,7 @@ class UserTxServiceTests {
 		when(userAssignmentMapper.selectList(any())).thenReturn(List.of(assignment));
 		UserTxService service = new UserTxService(
 				userMapper, userRoleMapper, userAssignmentMapper,
-				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class), mock(UserWriter.class), mock(PasswordPolicyService.class));
+				new OrgReferenceService(mock(OrgMapper.class)), mock(CurrentUserContext.class), mock(UserWriter.class), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
 		UserRoleAssignmentSaveForm form = new UserRoleAssignmentSaveForm();
 		form.setUserId(10L);
 		form.setAssignments(List.of(organizationRoles(99L, 30L)));
@@ -275,7 +300,7 @@ class UserTxServiceTests {
 		UserTxService service = new UserTxService(
 				userMapper, userRoleMapper, userAssignmentMapper, new OrgReferenceService(orgMapper),
 				mock(CurrentUserContext.class),
-				new UserWriter(userMapper, userRoleMapper, userAssignmentMapper, new OrgReferenceService(orgMapper), mock(PasswordPolicyService.class)), mock(PasswordPolicyService.class));
+				new UserWriter(userMapper, userRoleMapper, userAssignmentMapper, new OrgReferenceService(orgMapper), mock(PasswordPolicyService.class)), mock(PasswordPolicyService.class), mock(AttachmentGateway.class));
 		UserSaveForm form = new UserSaveForm();
 		form.setId(10L);
 		form.setVersion(0);

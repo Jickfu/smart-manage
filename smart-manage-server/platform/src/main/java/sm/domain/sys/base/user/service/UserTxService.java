@@ -3,6 +3,8 @@ package sm.domain.sys.base.user.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import sm.domain.sys.base.weakpassword.service.PasswordPolicyService;
+import sm.domain.sys.base.attachment.contract.AttachmentGateway;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.dao.DuplicateKeyException;
@@ -33,6 +35,8 @@ import java.util.Set;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.Map;
+import java.io.IOException;
 import sm.system.util.EnabledCommandUtil;
 import sm.domain.sys.base.common.constant.UserConstant;
 import sm.domain.sys.base.user.model.UserCredentialSnapshot;
@@ -54,6 +58,7 @@ class UserTxService {
     private final CurrentUserContext currentUserContext;
     private final UserWriter userWriter;
     private final PasswordPolicyService passwordPolicyService;
+    private final AttachmentGateway attachmentGateway;
 
     /** 新增/编辑用户 */
     public Long save(UserSaveForm form) {
@@ -62,6 +67,7 @@ class UserTxService {
 
     /** 新增时允许上层预分配ID，供头像附件绑定使用。 */
     public Long save(UserSaveForm form, Long desiredId) {
+        promoteAvatar(form.getAvatarAttachmentId(), form.getAttachmentUploadSessions(), desiredId);
         return userWriter.save(form, desiredId);
     }
 
@@ -124,7 +130,8 @@ class UserTxService {
 
     /** 只更新当前用户允许自行维护的基础资料。 */
     public void updateCurrentProfile(Long userId, String name, Gender gender, LocalDate birthday,
-            Long avatarAttachmentId) {
+            Long avatarAttachmentId, Map<Long, String> uploadSessions) {
+        promoteAvatar(avatarAttachmentId, uploadSessions, userId);
         UserEntity entity = mapper.selectById(userId);
         if (entity == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");
         entity.setName(name.trim());
@@ -133,6 +140,21 @@ class UserTxService {
         entity.setAvatarAttachmentId(avatarAttachmentId);
         if (mapper.updateById(entity) == 0) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变化，请刷新后重试");
+        }
+    }
+
+    /** 头像确认必须参加用户资料写事务，避免附件与用户记录分别提交。 */
+    private void promoteAvatar(Long attachmentId, Map<Long, String> uploadSessions, Long userId) {
+        if (attachmentId == null || uploadSessions == null || !uploadSessions.containsKey(attachmentId)) return;
+        AttachmentPromoteCommand command = new AttachmentPromoteCommand();
+        command.setAttachmentIds(List.of(attachmentId));
+        command.setBizType(UserResourceRegistration.RESOURCE_TYPE);
+        command.setBizId(String.valueOf(userId));
+        command.setUploadSessions(uploadSessions);
+        try {
+            attachmentGateway.promoteForAggregate(command);
+        } catch (IOException exception) {
+            throw new BizException(ResultEnum.CONFIG_ERROR, "用户头像确认失败: " + exception.getMessage());
         }
     }
 

@@ -22,6 +22,7 @@ import org.springframework.transaction.interceptor.TransactionInterceptor;
 import org.springframework.transaction.support.TransactionTemplate;
 import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.user.mapper.UserMapper;
+import sm.domain.sys.base.attachment.contract.AttachmentGateway;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.user.model.UserCredentialSnapshot;
@@ -66,7 +67,9 @@ class UserCredentialGenerationPostgresTests {
                 new ClassPathResource("mapper/sys/base/user/UserMapper.xml"));
         mapper = new SqlSessionTemplate(factory.getObject()).getMapper(UserMapper.class);
         var target = new UserTxService(mapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
-                mock(OrgReferenceReader.class), mock(CurrentUserContext.class), mock(UserWriter.class), new PasswordPolicyService(new SqlSessionTemplate(factory.getObject()).getMapper(WeakPasswordMapper.class)));
+                mock(OrgReferenceReader.class), mock(CurrentUserContext.class), mock(UserWriter.class),
+                new PasswordPolicyService(new SqlSessionTemplate(factory.getObject()).getMapper(WeakPasswordMapper.class)),
+                mock(AttachmentGateway.class));
         var proxy = new ProxyFactory(target);
         proxy.setProxyTargetClass(true);
         proxy.addAdvice(new TransactionInterceptor(manager, new AnnotationTransactionAttributeSource()));

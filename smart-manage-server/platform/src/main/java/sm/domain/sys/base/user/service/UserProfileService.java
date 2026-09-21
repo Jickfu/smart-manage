@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.domain.sys.base.attachment.contract.AttachmentReference;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.service.AttachmentService;
@@ -108,10 +107,9 @@ public class UserProfileService {
         Long userId = currentUserContext.getUserId();
         UserCacheSnapshot previous = userCacheAccessor.requireUser(userId);
         Long temporaryAvatarId = findTemporaryAvatarId(form.getAvatarAttachmentId());
-        promoteAvatar(form.getAvatarAttachmentId(), form.getAttachmentUploadSessions(), userId);
         try {
             txService.updateCurrentProfile(userId, form.getName(), form.getGender(), form.getBirthday(),
-                    form.getAvatarAttachmentId());
+                    form.getAvatarAttachmentId(), form.getAttachmentUploadSessions());
             deleteReplacedAvatar(previous.getAvatarAttachmentId(), form.getAvatarAttachmentId());
         } catch (RuntimeException exception) {
             deleteAvatarForCompensation(temporaryAvatarId);
@@ -206,20 +204,6 @@ public class UserProfileService {
 
     private String avatarUrl(Long userId, Long attachmentId) {
         return attachmentId == null ? null : "/sys/base/user/avatar/" + userId + "?v=" + attachmentId;
-    }
-
-    private void promoteAvatar(Long attachmentId, Map<Long, String> uploadSessions, Long userId) {
-        if (attachmentId == null || !uploadSessions.containsKey(attachmentId)) return;
-        AttachmentPromoteCommand command = new AttachmentPromoteCommand();
-        command.setAttachmentIds(List.of(attachmentId));
-        command.setBizType(UserResourceRegistration.RESOURCE_TYPE);
-        command.setBizId(String.valueOf(userId));
-        command.setUploadSessions(uploadSessions);
-        try {
-            attachmentService.promoteForAggregate(command);
-        } catch (IOException exception) {
-            throw new BizException(ResultEnum.CONFIG_ERROR, "用户头像确认失败: " + exception.getMessage());
-        }
     }
 
     private Long findTemporaryAvatarId(Long attachmentId) {

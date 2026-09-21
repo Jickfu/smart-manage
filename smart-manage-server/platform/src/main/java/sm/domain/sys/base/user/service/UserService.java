@@ -17,7 +17,6 @@ import sm.domain.sys.base.user.model.form.UserSaveForm;
 import sm.domain.sys.base.user.model.vo.UserCreateNewDataVO;
 import sm.domain.sys.base.user.model.vo.UserDetailVO;
 import sm.domain.sys.base.user.model.vo.UserListVO;
-import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.domain.sys.base.attachment.contract.AttachmentReference;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.user.mapper.UserMapper;
@@ -86,7 +85,6 @@ public class UserService {
 		UserEntity previous = form.getId() == null ? null : mapper.selectById(form.getId());
 		Long userId = previous == null ? IdWorker.getId() : previous.getId();
 		Long temporaryAvatarId = findTemporaryAvatarId(form.getAvatarAttachmentId());
-		promoteAvatar(form, userId);
 		Long savedId;
 		try {
 			savedId = txService.save(form, userId);
@@ -183,24 +181,6 @@ public class UserService {
 
 	private String avatarUrl(Long userId, Long attachmentId) {
 		return attachmentId == null ? null : "/sys/base/user/avatar/" + userId + "?v=" + attachmentId;
-	}
-
-	private void promoteAvatar(UserSaveForm form, Long userId) {
-		promoteAvatar(form.getAvatarAttachmentId(), form.getAttachmentUploadSessions(), userId);
-	}
-
-	private void promoteAvatar(Long avatarAttachmentId, Map<Long, String> uploadSessions, Long userId) {
-		if (avatarAttachmentId == null || !uploadSessions.containsKey(avatarAttachmentId)) return;
-		AttachmentPromoteCommand promoteCommand = new AttachmentPromoteCommand();
-		promoteCommand.setAttachmentIds(List.of(avatarAttachmentId));
-		promoteCommand.setBizType(UserResourceRegistration.RESOURCE_TYPE);
-		promoteCommand.setBizId(String.valueOf(userId));
-		promoteCommand.setUploadSessions(uploadSessions);
-		try {
-			attachmentService.promoteForAggregate(promoteCommand);
-		} catch (IOException exception) {
-			throw new BizException(ResultEnum.CONFIG_ERROR, "用户头像确认失败: " + exception.getMessage());
-		}
 	}
 
 	private Long findTemporaryAvatarId(Long attachmentId) {
