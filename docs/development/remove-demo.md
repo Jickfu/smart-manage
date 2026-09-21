@@ -19,11 +19,11 @@
 
 ```powershell
 pwsh -NoProfile -File scripts/verify-module-conventions.ps1
-pwsh -NoProfile -File scripts/verify-baseline.tests.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/verify-baseline.tests.ps1
 mvn -f smart-manage-server/pom.xml verify
 mvn -f smart-manage-server/pom.xml -Pplatform-only verify
-pwsh -NoProfile -File scripts/verify-baseline.ps1
-pwsh -NoProfile -File scripts/verify-baseline.ps1 -PlatformOnly
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/verify-baseline.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/verify-baseline.ps1 -PlatformOnly
 ```
 
 在 `smart-manage-web` 下分别以未设置 `SMART_MANAGE_DOMAINS`、显式 `SMART_MANAGE_DOMAINS=sys` 执行 `pnpm gen:registry`、`pnpm lint`、`pnpm format:check`、`pnpm test` 和 `pnpm build`。最后清除变量并重新生成两个注册表。数据库连接条件见[质量验证](./verification.md)。
