@@ -152,11 +152,9 @@ ESLint 报错不得用注释跳过，也不得修改 `eslint.config.js` 降低�
 Windows 环境可以运行：
 
 ```powershell
-pwsh.exe -NoProfile -File .\scripts\verify-baseline.ps1
-pwsh.exe -NoProfile -File .\scripts\verify-baseline.ps1 -PlatformOnly
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baseline.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baseline.ps1 -PlatformOnly
 ```
-
-数据库验证脚本统一要求 PowerShell 7；Windows PowerShell 5.1 无法正确读取现有无 BOM UTF-8 脚本，可能出现乱码或解析失败。Windows 上应使用 `pwsh.exe`，不得使用 `powershell.exe`。
 
 脚本默认从 PATH 查找 PostgreSQL Client 16，并在迁移前输出和校验 `psql` 版本；特殊本地安装可通过 `-PsqlPath` 显式指定可执行文件。脚本创建临时数据库，通过项目锁定版本的 Flyway 执行全部迁移，校验版本、命名、checksum 和 `flyway_schema_history`，并在验证后清理。数据库结构、初始化数据、迁移顺序或脚本发生变化时必须执行此项验证。
 
@@ -204,7 +202,7 @@ CI 固定验证当前仓库的默认装配与平台隔离装配，不包含具�
 
 部署密钥生成工具修改时，在仓库根目录执行 `node --test scripts/generate-deployment-keys.test.mjs`，验证生成、权限和拒绝覆盖。公钥发布与登录页加密流程修改时，执行后端安全过滤器测试和前端真实登录脚本测试，并保持 CSP 摘要一致。
 
-修改空库验证脚本的生命周期时，先运行 `pwsh -NoProfile -File scripts/verify-baseline.tests.ps1`，以函数替身验证随机库名、创建失败不清理、后续失败清理、清理失败不覆盖原始异常及成功路径；该测试不连接数据库，不能替代真实 Flyway 空库验证。
+修改空库验证脚本的生命周期时，先运行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/verify-baseline.tests.ps1`，以函数替身验证随机库名、创建失败不清理、后续失败清理、清理失败不覆盖原始异常及成功路径；该测试不连接数据库，不能替代真实 Flyway 空库验证。
 
 - 架构边界：架构测试或静态检查。
 - Java 类型、包、注解、可见性和依赖边界：优先扩展 `ArchitectureContractTests`，不得新增 regex/import 源码扫描与其重复校验。

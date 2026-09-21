@@ -1,6 +1,4 @@
-#Requires -Version 7.0
-
-# 使用当前进程函数替身验证危险清理路径，不连接任何真实数据库。
+﻿# 使用当前进程函数替身验证危险清理路径，不连接任何真实数据库。
 $ErrorActionPreference = 'Stop'
 $createdNames = [System.Collections.Generic.HashSet[string]]::new()
 $verifyScript = Join-Path $PSScriptRoot 'verify-baseline.ps1'

@@ -1,6 +1,4 @@
-#Requires -Version 7.0
-
-param(
+﻿param(
     [string]$PsqlPath = 'psql',
     [int]$ExpectedPsqlMajor = 16,
     [string]$DbHost = 'localhost',
