@@ -10,7 +10,6 @@ import sm.domain.sys.base.uiconfig.model.entity.UiConfigEntity;
 import sm.domain.sys.base.uiconfig.model.form.UiConfigSaveForm;
 import sm.domain.sys.base.uiconfig.model.vo.UiConfigDetailVO;
 import sm.domain.sys.base.uiconfig.mapper.UiConfigMapper;
-import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.domain.sys.base.attachment.model.entity.AttachmentEntity;
 import sm.domain.sys.base.attachment.contract.AttachmentReference;
 import sm.domain.sys.base.attachment.service.AttachmentService;
@@ -18,8 +17,8 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.ResultEnum;
 
-import java.util.List;
 import java.io.IOException;
+import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.function.Function;
@@ -83,7 +82,6 @@ public class UiConfigService {
         UiConfigEntity previous = form.getId() == null ? null : mapper.selectById(form.getId());
         Long configId = previous == null ? IdWorker.getId() : previous.getId();
         List<Long> temporaryImageIds = findTemporaryImageIds(form);
-        promoteImages(form, configId);
         try {
             txService.save(form, configId);
         } catch (RuntimeException exception) {
@@ -92,36 +90,6 @@ public class UiConfigService {
         }
         deleteReplacedImages(previous, form);
         return configId;
-    }
-
-    /**
-     * 图片上传先进入临时目录，配置保存取得真实 ID 后再提升为正式附件。
-     * 外部存储与数据库无法原子提交；附件模块负责提升失败时的文件反向移动补偿。
-     */
-    private void promoteImages(UiConfigSaveForm form, Long configId) {
-        LinkedHashSet<Long> attachmentIds = new LinkedHashSet<>();
-        if (form.getLoginBannerAttachmentId() != null) {
-            attachmentIds.add(form.getLoginBannerAttachmentId());
-        }
-        if (form.getLoginLogoAttachmentId() != null) {
-            attachmentIds.add(form.getLoginLogoAttachmentId());
-        }
-        if (form.getHeaderLogoAttachmentId() != null) {
-            attachmentIds.add(form.getHeaderLogoAttachmentId());
-        }
-        if (attachmentIds.isEmpty()) {
-            return;
-        }
-        AttachmentPromoteCommand promoteCommand = new AttachmentPromoteCommand();
-        promoteCommand.setAttachmentIds(List.copyOf(attachmentIds));
-        promoteCommand.setBizType(UiConfigResourceRegistration.RESOURCE_TYPE);
-        promoteCommand.setBizId(String.valueOf(configId));
-        promoteCommand.setUploadSessions(form.getAttachmentUploadSessions());
-        try {
-            attachmentService.promoteForAggregate(promoteCommand);
-        } catch (IOException exception) {
-            throw new BizException(ResultEnum.CONFIG_ERROR, "界面图片确认失败: " + exception.getMessage());
-        }
     }
 
     private List<Long> findTemporaryImageIds(UiConfigSaveForm form) {

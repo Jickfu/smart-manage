@@ -4,12 +4,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sm.domain.sys.base.attachment.contract.AttachmentGateway;
+import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.domain.sys.base.uiconfig.model.entity.UiConfigEntity;
 import sm.domain.sys.base.uiconfig.model.form.UiConfigSaveForm;
 import sm.domain.sys.base.uiconfig.mapper.UiConfigMapper;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
+import java.io.IOException;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -23,9 +28,11 @@ import java.util.Objects;
 @Transactional(rollbackFor = Exception.class)
 class UiConfigTxService {
     private final UiConfigMapper mapper;
+    private final AttachmentGateway attachmentGateway;
 
     /** 新增/编辑，清除缓存 */
     public Long save(UiConfigSaveForm form, Long reservedId) {
+        promoteImages(form, reservedId);
         UiConfigEntity entity;
         if (form.getId() != null) {
             entity = mapper.selectById(form.getId());
@@ -70,6 +77,33 @@ class UiConfigTxService {
             }
         }
         return entity.getId();
+    }
+
+    /** 临时图片确认必须参与界面配置写事务，任一数据库写入失败时整体回滚。 */
+    private void promoteImages(UiConfigSaveForm form, Long configId) {
+        LinkedHashSet<Long> attachmentIds = new LinkedHashSet<>();
+        if (form.getLoginBannerAttachmentId() != null) {
+            attachmentIds.add(form.getLoginBannerAttachmentId());
+        }
+        if (form.getLoginLogoAttachmentId() != null) {
+            attachmentIds.add(form.getLoginLogoAttachmentId());
+        }
+        if (form.getHeaderLogoAttachmentId() != null) {
+            attachmentIds.add(form.getHeaderLogoAttachmentId());
+        }
+        if (attachmentIds.isEmpty()) {
+            return;
+        }
+        AttachmentPromoteCommand promoteCommand = new AttachmentPromoteCommand();
+        promoteCommand.setAttachmentIds(List.copyOf(attachmentIds));
+        promoteCommand.setBizType(UiConfigResourceRegistration.RESOURCE_TYPE);
+        promoteCommand.setBizId(String.valueOf(configId));
+        promoteCommand.setUploadSessions(form.getAttachmentUploadSessions());
+        try {
+            attachmentGateway.promoteForAggregate(promoteCommand);
+        } catch (IOException exception) {
+            throw new BizException(ResultEnum.CONFIG_ERROR, "界面图片确认失败: " + exception.getMessage());
+        }
     }
 
     private String normalizeWatermarkContent(String content) {
