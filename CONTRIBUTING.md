@@ -11,6 +11,14 @@ Smart Manage 是可二次开发的企业中后台底座。贡献范围与阶段�
 
 使用 AI 编码代理时，还必须遵循根目录和对应子项目中的 `AGENTS.md`。
 
+## 分支协作
+
+仓库采用以 `main` 为唯一长期分支的主干开发模式，不设置长期 `develop` 分支。`main` 应始终满足质量门禁，并作为正式发布标签的来源。
+
+普通改动从最新 `main` 创建单一主题的短期分支，推荐使用 `feat/`、`fix/`、`refactor/`、`docs/` 等前缀；Codex 创建的分支使用 `codex/` 前缀。改动通过 Pull Request 合入 `main`，合并前必须与最新主分支同步、解决评审对话并通过全部必需检查。仓库只使用 squash merge，合并后删除源分支。
+
+只有在正式发布后确实需要并行维护旧版本时，才从对应版本基线建立 `release/<版本>` 维护分支；不为尚未发生的多版本维护预建 `release` 或 `hotfix` 分支。
+
 ## 开发与验证
 
 保持单一主题和最小充分范围，不夹带无关重构。按[文档导航](./docs/README.md#按任务阅读)读取涉及的架构和领域规则；新增或显著扩展模块执行[模块开发指南](./docs/development/module-development-guide.md)，普通页面调整按[前端页面指南](./docs/development/frontend-page-guide.md)。

@@ -4,7 +4,7 @@
 
 ## 当前定位
 
-本模块作为标准业务聚合样板，展示主从单据、事务、数据权限和桌面页签生命周期；验收缺口与业务扩展门槛统一由[项目路线图](../../../../../docs/roadmap.md)跟踪。
+本模块作为可替换的标准业务聚合样板，展示主从单据、事务、数据权限和桌面页签生命周期，不代表实际采购业务规划。实现与验证应遵守[模块开发指南](../../../../../docs/development/module-development-guide.md)、[业务聚合检查清单](../../../../../docs/development/business-aggregate-checklist.md)和[质量验证](../../../../../docs/development/verification.md)。
 
 ## 模块边界
 
