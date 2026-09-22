@@ -1,47 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" role="img" aria-labelledby="logoTitle logoDesc">
-  <title id="logoTitle">Smart Manage</title>
-  <desc id="logoDesc">以 SM 字母几何变形构成的平面智能管理系统标识。</desc>
-
-  <g>
-    <rect x="12" y="12" width="72" height="72" rx="18" fill="#123b7a"/>
-    <path
-      fill="none"
-      stroke="#ffffff"
-      stroke-width="7.5"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      d="M43.5 30H31c-5.8 0-9 3.2-9 8s3.2 8 9 8h6.5c5.8 0 9 3.2 9 8s-3.2 8-9 8H24"
-    />
-    <path
-      fill="none"
-      stroke="#ffffff"
-      stroke-width="7"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      d="M54 66V30l10.5 17.5L75 30v36"
-    />
-  </g>
-
-  <g fill="none" transform="translate(112 24)">
-    <text
-      x="0"
-      y="30"
-      fill="#152238"
-      font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif"
-      font-size="30"
-      font-weight="760"
-      letter-spacing="0"
-    >Smart Manage</text>
-    <rect x="2" y="42" width="54" height="4" rx="2" fill="#123b7a"/>
-    <rect x="64" y="42" width="22" height="4" rx="2" fill="#123b7a"/>
-    <text
-      x="0"
-      y="61"
-      fill="#65758f"
-      font-family="Inter, Segoe UI, Arial, Microsoft YaHei, sans-serif"
-      font-size="13"
-      font-weight="500"
-      letter-spacing="0"
-    >Enterprise Operations Platform</text>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" role="img" aria-labelledby="title">
+  <title id="title">Smart Manage</title>
+  <rect x="8" y="8" width="80" height="80" rx="20" fill="#123B7A"/>
+  <path d="M43 30H32c-6 0-9 4-9 9s3 8 9 8h4c6 0 9 4 9 9s-4 10-10 10H23" fill="none" stroke="#FFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M55 66V30l11 19 11-19v36" fill="none" stroke="#FFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="110" y="60" fill="#152238" font-family="Arial, Helvetica, sans-serif" font-size="35" font-weight="700" letter-spacing="-0.7">Smart Manage</text>
 </svg>
