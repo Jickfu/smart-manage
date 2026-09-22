@@ -62,6 +62,12 @@ export function updateCurrentUserPassword(currentPassword: string, newPassword: 
     .then((response) => response.data);
 }
 
+export function verifyCurrentUserPassword(currentPassword: string) {
+  return request
+    .post<Result<void>>('/sys/base/user/current/password/verify', { currentPassword })
+    .then((response) => response.data);
+}
+
 export function requestCurrentPasswordEmailCode() {
   return request
     .post<Result<string>>('/sys/base/user/current/password/email/code')

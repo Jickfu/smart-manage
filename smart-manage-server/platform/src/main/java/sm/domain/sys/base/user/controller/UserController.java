@@ -19,6 +19,7 @@ import sm.domain.sys.base.user.model.form.UserRoleAssignmentSaveForm;
 import sm.domain.sys.base.user.model.form.CurrentUserThemeForm;
 import sm.domain.sys.base.user.model.form.CurrentOrganizationForm;
 import sm.domain.sys.base.user.model.form.CurrentUserPasswordForm;
+import sm.domain.sys.base.user.model.form.CurrentUserPasswordVerifyForm;
 import sm.domain.sys.base.user.model.form.CurrentUserProfileForm;
 import sm.domain.sys.base.user.model.form.CurrentUserContactForm;
 import sm.domain.sys.base.user.model.form.CurrentUserEmailPasswordForm;
@@ -225,6 +226,13 @@ public class UserController {
 	@Operation(summary = "个人改密公钥")
 	public Result<String> currentPasswordPublicKey() {
 		return Result.success(browserPasswordCipher.publicKey());
+	}
+
+	@PostMapping("/sys/base/user/current/password/verify")
+	@Operation(summary = "校验个人原密码", description = "当前用户进入修改密码下一步前校验原密码")
+	public Result<String> verifyCurrentPassword(@RequestBody @Valid CurrentUserPasswordVerifyForm form) {
+		userProfileService.verifyCurrentPassword(form.getCurrentPassword());
+		return Result.success();
 	}
 
 	@PostMapping("/sys/base/user/current/password")

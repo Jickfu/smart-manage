@@ -129,7 +129,8 @@ class UserProfileServiceTests {
         UserProfileService service = new UserProfileService(userMapper, assignmentMapper,
                 new OrgReferenceService(orgMapper),
                 mock(AttachmentService.class), mock(UserTxService.class), mock(UserCacheInvalidator.class),
-                mock(UserCacheAccessor.class), converter, context, mock(BrowserPasswordCipher.class));
+                mock(UserCacheAccessor.class), converter, context, mock(BrowserPasswordCipher.class),
+                mock(UserAuthenticationService.class));
 
         UserInfoVO result = service.current();
 
@@ -139,6 +140,35 @@ class UserProfileServiceTests {
         // 身份取自安全上下文，而不是展示用户名；组织切换不重定义管理员。
         when(context.isAdministrator()).thenReturn(true);
         assertEquals(true, service.current().isAdministrator());
+    }
+
+    @Test
+    void verifyCurrentPasswordDecryptsAndChecksCurrentUser() {
+        CurrentUserContext context = mock(CurrentUserContext.class);
+        when(context.getUserId()).thenReturn(10L);
+        BrowserPasswordCipher cipher = mock(BrowserPasswordCipher.class);
+        when(cipher.decrypt("encrypted-password")).thenReturn("plain-password");
+        UserAuthenticationService authenticationService = mock(UserAuthenticationService.class);
+        when(authenticationService.verifyCurrentPassword(10L, "plain-password")).thenReturn(true);
+        UserProfileService service = service(context, cipher, authenticationService);
+
+        service.verifyCurrentPassword("encrypted-password");
+
+        verify(authenticationService).verifyCurrentPassword(10L, "plain-password");
+    }
+
+    @Test
+    void verifyCurrentPasswordReportsOriginalPasswordError() {
+        CurrentUserContext context = mock(CurrentUserContext.class);
+        when(context.getUserId()).thenReturn(10L);
+        BrowserPasswordCipher cipher = mock(BrowserPasswordCipher.class);
+        when(cipher.decrypt("encrypted-password")).thenReturn("wrong-password");
+        UserProfileService service = service(context, cipher, mock(UserAuthenticationService.class));
+
+        BizException exception = assertThrows(BizException.class,
+                () -> service.verifyCurrentPassword("encrypted-password"));
+
+        assertEquals("参数异常：原密码不正确", exception.getMsg());
     }
 
     private OrgEntity organization(Long id, Long parentId, String name, OrgType orgType) {
@@ -157,6 +187,15 @@ class UserProfileServiceTests {
         return new UserProfileService(mapper, assignmentMapper, new OrgReferenceService(orgMapper),
                 mock(AttachmentService.class),
                 mock(UserTxService.class), stateHelper, mock(UserCacheAccessor.class),
-                mock(UserConverter.class), context, mock(BrowserPasswordCipher.class));
+                mock(UserConverter.class), context, mock(BrowserPasswordCipher.class),
+                mock(UserAuthenticationService.class));
+    }
+
+    private UserProfileService service(CurrentUserContext context, BrowserPasswordCipher cipher,
+            UserAuthenticationService authenticationService) {
+        return new UserProfileService(mock(UserMapper.class), mock(UserAssignmentMapper.class),
+                new OrgReferenceService(mock(OrgMapper.class)), mock(AttachmentService.class),
+                mock(UserTxService.class), mock(UserCacheInvalidator.class), mock(UserCacheAccessor.class),
+                mock(UserConverter.class), context, cipher, authenticationService);
     }
 }

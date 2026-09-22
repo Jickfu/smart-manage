@@ -56,6 +56,20 @@ public class UserProfileService {
     private final UserConverter converter;
     private final CurrentUserContext currentUserContext;
     private final BrowserPasswordCipher browserPasswordCipher;
+    private final UserAuthenticationService userAuthenticationService;
+
+    /** 进入改密第二步前只校验凭据，不产生密码或用户资料变更。 */
+    public void verifyCurrentPassword(String encryptedPassword) {
+        String password;
+        try {
+            password = browserPasswordCipher.decrypt(encryptedPassword);
+        } catch (Sm2CiphertextException exception) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "密码加密数据无效");
+        }
+        if (!userAuthenticationService.verifyCurrentPassword(currentUserContext.getUserId(), password)) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "原密码不正确");
+        }
+    }
 
     public AttachmentEntity requireAvatar(Long userId) {
         UserEntity user = userMapper.selectById(userId);

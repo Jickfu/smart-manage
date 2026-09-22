@@ -10,6 +10,7 @@ import {
   getCurrentPasswordPublicKey,
   updateCurrentUserContact,
   updateCurrentUserPassword,
+  verifyCurrentUserPassword,
   requestCurrentPasswordEmailCode,
   updateCurrentUserPasswordByEmail,
   requestCurrentEmailCode,
@@ -59,9 +60,40 @@ export default function PersonalCredentialModal({
   const [emailCodeSent, setEmailCodeSent] = useState(false);
   const verificationMethod = Form.useWatch('verificationMethod', verifyForm);
 
+  const next = async () => {
+    let values: VerifyValues;
+    try {
+      values = await verifyForm.validateFields();
+    } catch {
+      return;
+    }
+    setSaving(true);
+    try {
+      if (type === 'PASSWORD' && values.verificationMethod === 'EMAIL') {
+        await requestCurrentPasswordEmailCode();
+        feedback.success('验证码已发送到当前已验证邮箱');
+      } else if (type === 'PASSWORD') {
+        const publicKey = await getCurrentPasswordPublicKey();
+        const encryptedPassword = sm2.doEncrypt(values.password ?? '', publicKey, 1);
+        await verifyCurrentUserPassword(encryptedPassword);
+      }
+      setStep('change');
+    } catch (error) {
+      feedback.fromError(error, '验证失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const submit = async () => {
-    const verification = await verifyForm.validateFields();
-    const change = await changeForm.validateFields();
+    let verification: VerifyValues;
+    let change: ChangeValues;
+    try {
+      verification = await verifyForm.validateFields();
+      change = await changeForm.validateFields();
+    } catch {
+      return;
+    }
     setSaving(true);
     try {
       const publicKey = await getCurrentPasswordPublicKey();
@@ -99,6 +131,8 @@ export default function PersonalCredentialModal({
         feedback.success(type === 'PHONE' ? '手机号已修改' : '邮箱已修改');
         onClose();
       }
+    } catch (error) {
+      feedback.fromError(error, '操作失败');
     } finally {
       setSaving(false);
     }
@@ -180,24 +214,7 @@ export default function PersonalCredentialModal({
           </FormFieldGrid>
           <div className="sm-personal-credential-actions">
             <Button onClick={onClose}>取消</Button>
-            <Button
-              type="primary"
-              onClick={() =>
-                void verifyForm.validateFields().then(async (values) => {
-                  if (type === 'PASSWORD' && values.verificationMethod === 'EMAIL') {
-                    setSaving(true);
-                    try {
-                      await requestCurrentPasswordEmailCode();
-                      feedback.success('验证码已发送到当前已验证邮箱');
-                    } finally {
-                      setSaving(false);
-                    }
-                  }
-                  setStep('change');
-                })
-              }
-              loading={saving}
-            >
+            <Button type="primary" onClick={() => void next()} loading={saving}>
               下一步
             </Button>
           </div>
