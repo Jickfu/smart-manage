@@ -1,6 +1,6 @@
 # 新增业务聚合检查清单
 
-本清单只将聚合特有风险转换为验收项，不作为独立规则来源。模块分类和接入步骤见[模块开发指南](./module-development-guide.md)，事务与数据契约见[后端架构](../architecture/backend.md)，访问边界见[安全架构](../architecture/security.md)及[数据权限](../architecture/data-permission.md)，页面职责和生命周期见[前端架构](../architecture/frontend.md)。是否启动新聚合仍遵守[项目路线图](../roadmap.md)的阶段门槛。
+本清单只将聚合特有风险转换为验收项，不作为独立规则来源。模块分类和接入步骤见[模块开发指南](./module-development-guide.md)，事务与数据契约见[后端架构](../architecture/backend.md)，访问边界见[安全架构](../architecture/security.md)及[数据权限](../architecture/data-permission.md)，页面职责和生命周期见[前端架构](../architecture/frontend.md)。
 
 ## 聚合模型与命令
 
