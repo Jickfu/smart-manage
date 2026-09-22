@@ -1,4 +1,4 @@
-import { ListFilterFields, ListFilterField } from '@/domain/common/page/list/ListFilterFields';
+import { ListFilterField, ListFilterFields } from '@/domain/common/page/list/ListFilterFields';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';

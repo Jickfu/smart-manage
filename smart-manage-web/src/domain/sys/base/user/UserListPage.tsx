@@ -564,26 +564,25 @@ const UserListPage = (props: PageComponentProps) => {
         open={Boolean(temporaryLoginCredential)}
         mask={{ closable: false }}
         onCancel={() => setTemporaryLoginCredential(undefined)}
-        footer={
-          <Button
-            type="primary"
-            onClick={async () => {
-              if (temporaryLoginCredential) {
-                await navigator.clipboard.writeText(temporaryLoginCredential);
-                feedback.success('代登录密码已复制');
-              }
-            }}
-          >
-            复制代登录密码
-          </Button>
-        }
+        footer={null}
       >
         <Space orientation="vertical" className="sm-user-reset-password-content">
           <Typography.Text>
             请在 {temporaryLoginExpiresAt}{' '}
             前，于无痕窗口使用目标用户名和下方密码登录。密码仅展示一次且成功登录后立即失效。
           </Typography.Text>
-          <Input value={temporaryLoginCredential} readOnly />
+          <Input
+            value={temporaryLoginCredential}
+            readOnly
+            suffix={
+              <Typography.Text
+                copyable={{
+                  text: temporaryLoginCredential ?? '',
+                  tooltips: ['复制', '复制成功'],
+                }}
+              />
+            }
+          />
         </Space>
       </Modal>
     </>

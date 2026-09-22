@@ -1,6 +1,11 @@
-import { Button, Result, Typography } from 'antd';
+import { Button, ConfigProvider, Result, Typography } from 'antd';
 import { getErrorPresentation } from '@/api/errorPresentation';
 import './RequestErrorState.css';
+
+function getCopyTooltipContainer(triggerNode?: HTMLElement): HTMLElement {
+  // 操作提示自身位于独立高层级容器中，复制浮层必须留在同一层叠上下文内。
+  return triggerNode?.closest<HTMLElement>('.sm-operation-feedback-message-root') ?? document.body;
+}
 
 /** 页面与顶部反馈共享安全说明/诊断展示，不自动展开附加数据或异常堆栈。 */
 export function RequestErrorDescription({
@@ -15,13 +20,15 @@ export function RequestErrorDescription({
     <>
       {presentation.message}
       {presentation.traceId && (
-        <Typography.Text
-          className="sm-request-error-trace"
-          type="secondary"
-          copyable={{ text: presentation.traceId }}
-        >
-          诊断 ID：{presentation.traceId}
-        </Typography.Text>
+        <ConfigProvider getPopupContainer={getCopyTooltipContainer}>
+          <Typography.Text
+            className="sm-request-error-trace"
+            type="secondary"
+            copyable={{ text: presentation.traceId }}
+          >
+            诊断 ID：{presentation.traceId}
+          </Typography.Text>
+        </ConfigProvider>
       )}
     </>
   );
