@@ -5,6 +5,22 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 describe('login CSP', () => {
+  it('declares the anti-framing policy in the deployment header rather than HTML meta', () => {
+    const indexHtml = readFileSync('index.html', 'utf8');
+    const loginHtml = readFileSync('login.html', 'utf8');
+    const nginxExample = readFileSync('../deploy/nginx/smart-manage.conf.example', 'utf8');
+
+    // CSP 规范要求忽略 meta 中的 frame-ancestors；这里只验证仓库模板契约，实际响应仍需部署验收。
+    expect(indexHtml).not.toContain('frame-ancestors');
+    expect(loginHtml).not.toContain('frame-ancestors');
+    expect(nginxExample).toMatch(
+      /add_header Content-Security-Policy "frame-ancestors 'none'" always;/,
+    );
+    expect(nginxExample).toMatch(/add_header X-Frame-Options "DENY" always;/);
+    expect(nginxExample).toMatch(/root \/opt\/smart-manage\/dist;/);
+    expect(nginxExample).toMatch(/location \/ \{\s+try_files \$uri \$uri\/ \/index\.html;/);
+  });
+
   it('only authorizes the current inline login script by hash', () => {
     const html = readFileSync('login.html', 'utf8');
     const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];

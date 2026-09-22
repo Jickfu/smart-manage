@@ -1,4 +1,4 @@
-# 示例仅展示应用代理边界；证书路径和域名由部署环境提供。
+# 示例同时提供前端静态文件和应用代理；证书、域名及前端目录由部署环境提供。
 limit_req_zone $binary_remote_addr zone=smart_manage_api:10m rate=20r/s;
 
 upstream smart_manage_api {
@@ -14,7 +14,15 @@ server {
 
     ssl_certificate /etc/nginx/tls/fullchain.pem;
     ssl_certificate_key /etc/nginx/tls/private.key;
+    root /opt/smart-manage/dist;
+    index index.html;
     client_max_body_size 100m;
+
+    # frame-ancestors 只能通过 HTTP 响应头生效；HTML meta 中的同名指令会被浏览器忽略。
+    # 若前端由另一个 server 提供，该 server 也必须配置这两个响应头。
+    # 子 location 若自行设置 add_header，须同时重复这两个值，避免覆盖继承。
+    add_header Content-Security-Policy "frame-ancestors 'none'" always;
+    add_header X-Frame-Options "DENY" always;
 
     location /smart-manage-api/ {
         limit_req zone=smart_manage_api burst=40 nodelay;
@@ -29,5 +37,9 @@ server {
         proxy_connect_timeout 5s;
         proxy_read_timeout 60s;
         proxy_send_timeout 60s;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
     }
 }

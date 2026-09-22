@@ -26,6 +26,7 @@ Smart Manage 保持模块化单体，不拆分微服务。生产目标部署方�
 ## 反向代理和请求边界
 
 - Nginx 负责 TLS 终止、负载均衡、上传大小限制、基础限流和转发头覆盖。
+- 提供前端 HTML 的入口必须发送 `Content-Security-Policy: frame-ancestors 'none'` 和 `X-Frame-Options: DENY`；前端与 API 分别由不同虚拟主机提供时，在前端虚拟主机设置。HTML `meta` CSP 无法执行 `frame-ancestors`。Nginx 子 `location` 自行声明 `add_header` 时须重复这些响应头，避免丢失继承值；包含前端静态文件与 API 代理的示例见 [`deploy/nginx/smart-manage.conf.example`](../../deploy/nginx/smart-manage.conf.example)，部署时需替换示例中的前端 `root`、域名和证书路径。
 - 应用只信任配置的代理网段和转发层数；客户端直接提交的 `X-Forwarded-For`、`X-Real-IP` 等头不得成为审计依据。
 - 登录态、验证码、一次性票据和 Sa-Token 会话使用共享 Redis，不使用节点粘性作为正确性前提。
 - 普通 HTTP 请求不得要求固定路由到原实例。确有节点本地会话的管理能力必须显式声明节点 ID、路由方式和失效语义。
