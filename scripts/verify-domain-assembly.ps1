@@ -86,9 +86,6 @@ if ('bootstrap' -in $rootModules) { Add-Violation '后端父 POM 不得保留旧
 [xml]$appPom = Get-Content -LiteralPath (Join-Path $resolvedRoot 'smart-manage-server/app/pom.xml') -Raw
 $appArtifactId = [string]$appPom.project.artifactId
 if ($appArtifactId -ne 'smart-manage-app') { Add-Violation 'app artifactId 必须为 smart-manage-app' }
-if ([string]$appPom.project.build.finalName -ne 'smart-manage-server') {
-    Add-Violation 'app 最终可执行 JAR 必须固定命名为 smart-manage-server.jar'
-}
 $appArtifacts = @($appPom.project.dependencies.dependency | ForEach-Object { [string]$_.artifactId })
 if ('smart-manage-domains' -notin $appArtifacts) {
     Add-Violation 'app 必须依赖 smart-manage-domains 聚合模块'

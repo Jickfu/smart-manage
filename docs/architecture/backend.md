@@ -4,7 +4,7 @@
 
 ## Maven 交付边界
 
-后端工程位于 `smart-manage-server`，其父 POM（`smart-manage-parent`）只负责统一依赖、插件和 reactor 构建，本身不可运行；`platform`（`smart-manage-platform`）交付 `sm.infrastructure`、`sm.system` 和 `sm.domain.sys`，为普通 JAR。`domains`（`smart-manage-domains`）聚合当前业务领域并作为唯一业务装配入口。`app`（`smart-manage-app`）是唯一可运行的组合根，只依赖平台与领域聚合模块，持有启动类、运行配置并产出 `smart-manage-server.jar`。`smart-manage-server/domains/demo`（`smart-manage-domain-demo`）依赖平台，平台不得反向依赖它，也不保留采购专属声明。
+后端工程位于 `smart-manage-server`，其父 POM（`smart-manage-parent`）只负责统一依赖、插件和 reactor 构建，本身不可运行；`platform`（`smart-manage-platform`）交付 `sm.infrastructure`、`sm.system` 和 `sm.domain.sys`，为普通 JAR。`domains`（`smart-manage-domains`）聚合当前业务领域并作为唯一业务装配入口。`app`（`smart-manage-app`）是唯一可运行的组合根，只依赖平台与领域聚合模块，持有启动类、运行配置并产出可执行 JAR；上游默认名称为 `smart-manage-server.jar`，衍生项目可以直接修改 `app/pom.xml` 的 `finalName`。`smart-manage-server/domains/demo`（`smart-manage-domain-demo`）依赖平台，平台不得反向依赖它，也不保留采购专属声明。
 
 默认启用 `domains/pom.xml` 的 `current-domains` profile，装配仓库当前全部业务领域；Maven `-Pplatform-only` 显式关闭该默认 profile，只保留平台。新增或移除领域只维护聚合模块中的 module 与 dependency，根 reactor 和 app 不感知具体领域。CI 不维护领域名称，并会分别验证默认装配和实际删除领域目录后的平台隔离装配。架构测试从发行 classpath 的迁移声明发现已装配领域并与代码包核对；领域专属测试随领域维护。普通 JAR 不包含 Boot 重打包布局，只有 app 执行 repackage；app 中禁止放置业务实现。
 
