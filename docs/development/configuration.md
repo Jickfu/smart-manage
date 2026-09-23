@@ -8,7 +8,7 @@
 
 后端 `GET /sys/base/product/version` 沿用全局登录校验、返回 `no-store`，仅提供当前响应实例的版本。版本资源缺失或未正确处理时显示“版本不可用”。
 
-后端构建产物固定为 `smart-manage-server/app/target/smart-manage-server.jar`，版本变化不改变文件名，systemd 可以保持固定启动路径。根 `pom.xml` 只负责父配置和 reactor 构建，`app` 才是唯一可运行模块。
+上游默认构建产物为 `smart-manage-server/app/target/smart-manage-server.jar`，版本变化不改变文件名，systemd 可以保持固定启动路径。衍生项目需要使用自己的 JAR 名称时，直接修改 `smart-manage-server/app/pom.xml` 的 `finalName`，并同步部署脚本和服务配置中的启动路径；产物名称不属于架构门禁。根 `pom.xml` 只负责父配置和 reactor 构建，`app` 才是唯一可运行模块。
 
 ## 项目配置命名空间
 
