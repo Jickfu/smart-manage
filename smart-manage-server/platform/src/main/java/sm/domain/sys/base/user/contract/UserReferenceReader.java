@@ -5,6 +5,8 @@ import java.util.Map;
 
 /** 供其他业务领域读取和校验系统用户引用的稳定契约。 */
 public interface UserReferenceReader {
+    /** 人员选择所需的有界启用用户检索，调用方负责自己的功能授权。 */
+    sm.system.response.PageData<UserReference> searchEnabled(String keyword, int pageNum, int pageSize);
 
     /** 返回仍然存在的用户；用户已禁用时仍可用于历史引用读取。 */
     UserReference require(Long userId);

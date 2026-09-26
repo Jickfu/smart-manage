@@ -17,9 +17,15 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <modules>
+                <module>workflow</module>
                 <module>demo</module>
             </modules>
             <dependencies>
+                <dependency>
+                    <groupId>top.chekfu</groupId>
+                    <artifactId>smart-manage-domain-workflow</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
                 <dependency>
                     <groupId>top.chekfu</groupId>
                     <artifactId>smart-manage-domain-demo</artifactId>

@@ -164,6 +164,17 @@ public class AttachmentService implements AttachmentGateway {
     @Override
     public List<AttachmentReference> listByBiz(String bizType, String bizId) {
         resourceRegistry.requireAllowed(bizType, bizId, BusinessResourceAction.READ);
+        return aggregateReferences(bizType, bizId);
+    }
+
+    @Override
+    public List<AttachmentReference> listForAggregate(String bizType, String bizId) {
+        requireAggregateTransaction();
+        resourceRegistry.requireRegistered(bizType);
+        return aggregateReferences(bizType, bizId);
+    }
+
+    private List<AttachmentReference> aggregateReferences(String bizType, String bizId) {
         List<AttachmentEntity> entities = mapper.selectByBiz(bizType, bizId);
         List<BizAttachmentEntity> mappings = bizMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BizAttachmentEntity>()
@@ -279,7 +290,7 @@ public class AttachmentService implements AttachmentGateway {
         if (mapping == null) {
             throw new BizException(ResultEnum.PERMISSION_ERROR, "附件缺少业务资源归属");
         }
-        resourceRegistry.requireAllowed(mapping.getBizType(), mapping.getBizId(), action);
+        resourceRegistry.requireAttachmentAllowed(mapping.getBizType(), mapping.getBizId(), entity.getId(), action);
     }
 
     private void requireCreator(AttachmentEntity entity) {

@@ -18,6 +18,8 @@ interface ModalEditPageProps {
   initialValues?: Record<string, unknown>;
   /** 保存回调，接收 Form 校验通过后的字段值 */
   onSave: (values: Record<string, unknown>) => Promise<void>;
+  /** 业务页可将字段变更接入统一的未保存关闭保护。 */
+  onValuesChange?: () => void;
   loading?: boolean;
   saving?: boolean;
   error?: Error | null;
@@ -34,6 +36,7 @@ const ModalEditPage = ({
   fields,
   initialValues,
   onSave,
+  onValuesChange,
   loading = false,
   saving = false,
   error = null,
@@ -118,7 +121,12 @@ const ModalEditPage = ({
       {error && <RequestErrorState error={error} onRetry={onRetry} />}
       <div className="sm-modal-edit-content" hidden={Boolean(error)} inert={Boolean(error)}>
         <Spin spinning={loading}>
-          <Form form={form} layout="vertical" className="sm-edit-form">
+          <Form
+            form={form}
+            layout="vertical"
+            className="sm-edit-form"
+            onValuesChange={onValuesChange}
+          >
             <EditFormFields fields={fields} maxColumns={2} />
           </Form>
         </Spin>

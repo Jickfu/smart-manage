@@ -68,6 +68,15 @@ public class BusinessResourceRegistry {
         policy(resourceType).requireAllowed(resourceId, action);
     }
 
+    public void requireAttachmentAllowed(String resourceType, String resourceId, Long attachmentId, BusinessResourceAction action) {
+        if (resourceId == null || resourceId.isBlank()) throw new BizException(ResultEnum.PERMISSION_ERROR, "附件缺少业务资源归属");
+        policy(resourceType).requireAttachmentAllowed(resourceId, attachmentId, action);
+    }
+
+    public void beforeAttachmentMutation(String resourceType, String resourceId, Long attachmentId, BusinessResourceAction action) {
+        if (resourceId != null && !resourceId.isBlank()) policy(resourceType).beforeAttachmentMutation(resourceId, attachmentId, action);
+    }
+
     public void validateUpload(String resourceType, MultipartFile file) {
         BusinessResourceRegistration registration = registrationByType.get(resourceType);
         if (registration == null) {

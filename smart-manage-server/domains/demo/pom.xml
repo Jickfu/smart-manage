@@ -11,6 +11,11 @@
     <dependencies>
         <dependency>
             <groupId>top.chekfu</groupId>
+            <artifactId>smart-manage-domain-workflow</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>top.chekfu</groupId>
             <artifactId>smart-manage-platform</artifactId>
             <version>${project.version}</version>
         </dependency>

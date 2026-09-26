@@ -29,6 +29,39 @@
 
 /* === 主体 === */
 
+.sm-edit-body.sm-edit-body--split {
+  overflow: hidden;
+}
+
+.sm-edit-body.sm-edit-body--split > .ant-spin,
+.sm-edit-body.sm-edit-body--split > .ant-spin > .ant-spin-container {
+  height: 100%;
+  min-height: 0;
+}
+
+.sm-edit-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+}
+
+.sm-edit-main {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sm-edit-side-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--ant-color-bg-container);
+}
+
 .sm-edit-body {
   flex: 1;
   min-height: 0;

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DomainView } from '@/domain/common/registry/DomainView';
 import { Button, Drawer, Empty, Spin, Tabs } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
@@ -61,11 +62,12 @@ export default function InboxPreviewDrawer({
       </div>
       <div className="sm-inbox-preview-content">
         {section === 'tasks' ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="工作流任务暂未开放">
+          <>
+            <DomainView viewKey="inbox.tasks.preview" active={open && section === 'tasks'} />
             <Button type="link" onClick={() => navigate()}>
               查看任务中心
             </Button>
-          </Empty>
+          </>
         ) : error ? (
           <RequestErrorState error={error} onRetry={() => void previewQuery.refetch()} />
         ) : (

@@ -47,6 +47,25 @@ class JobDefinitionValidator {
                 .orElseThrow(() -> new BizException(ResultEnum.CONFIG_ERROR, "任务类未在系统中注册: " + className));
     }
 
+    /** 裁剪领域后保留其数据库定义，但不得执行该领域的遗留任务；已安装领域中的拼写错误仍然报错。 */
+    boolean isFromUnavailableDomain(String className) {
+        if (className == null || !className.startsWith("sm.domain.")) return false;
+        String[] parts = className.split("\\.");
+        if (parts.length < 4 || "sys".equals(parts[2])) return false;
+        try {
+            var resources = new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
+                    .getResources("classpath*:META-INF/smart-manage/migration.properties");
+            for (var resource : resources) {
+                var properties = new java.util.Properties();
+                try (var stream = resource.getInputStream()) { properties.load(stream); }
+                if (parts[2].equals(properties.getProperty("id"))) return false;
+            }
+            return true;
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("无法核实任务所属领域是否装配", exception);
+        }
+    }
+
     public List<Map<String, String>> availableJobClasses() {
         return jobClasses().stream()
                 .sorted(Comparator.comparing(Class::getName))

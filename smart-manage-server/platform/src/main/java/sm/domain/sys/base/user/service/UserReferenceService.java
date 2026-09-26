@@ -24,6 +24,19 @@ public class UserReferenceService implements UserReferenceReader {
     private final UserMapper mapper;
 
     @Override
+    public sm.system.response.PageData<UserReference> searchEnabled(String keyword, int pageNum, int pageSize) {
+        if (pageNum < 1 || pageSize < 1 || pageSize > 100 || keyword != null && keyword.length() > 100) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "人员查询参数无效");
+        }
+        var query = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserEntity>()
+                .eq(UserEntity::getEnabled, true).orderByAsc(UserEntity::getNumber).orderByAsc(UserEntity::getId);
+        if (keyword != null && !keyword.isBlank()) query.and(condition -> condition.like(UserEntity::getName, keyword.trim())
+                .or().like(UserEntity::getNumber, keyword.trim()).or().like(UserEntity::getUsername, keyword.trim()));
+        var page = mapper.selectPage(com.baomidou.mybatisplus.extension.plugins.pagination.Page.of(pageNum, pageSize), query);
+        return sm.system.response.PageData.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords().stream().map(this::toReference).toList());
+    }
+
+    @Override
     public UserReference require(Long userId) {
         requireUserId(userId);
         UserEntity user = mapper.selectById(userId);

@@ -16,6 +16,8 @@ import sm.domain.sys.base.user.model.UserCredentialSnapshot;
  */
 @Mapper
 public interface UserMapper extends BaseMapper<UserEntity> {
+    List<Long> selectEnabledOrgLeaders(@Param("orgId") Long orgId);
+    List<Long> selectEnabledRoleMembers(@Param("orgId") Long orgId, @Param("roleId") Long roleId);
 	UserEntity selectSecurityState(@Param("id") Long id);
 	int updatePasswordByVerifiedEmail(@Param("snapshot") UserCredentialSnapshot snapshot, @Param("password") String password);
 	int bindVerifiedEmail(@Param("snapshot") UserCredentialSnapshot snapshot, @Param("email") String email);

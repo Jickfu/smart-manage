@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="sm.domain.sys.base.feature.mapper.FeatureMapper">
+    <select id="selectDirectoryByFeatureKeys" resultType="sm.domain.sys.base.feature.contract.FeatureDirectoryReference">
+        SELECT feature.feature_key, domain.id AS domain_id, domain.name AS domain_name,
+               application.id AS app_id, application.name AS app_name
+        FROM t_sys_feature feature
+        INNER JOIN t_sys_app application ON application.id = feature.app_id
+        INNER JOIN t_sys_domain domain ON domain.id = application.domain_id
+        WHERE feature.feature_key IN
+        <foreach collection="featureKeys" item="featureKey" open="(" separator="," close=")">#{featureKey}</foreach>
+        ORDER BY domain.seq, domain.id, application.seq, application.id,
+                 COALESCE(feature.custom_seq, feature.default_seq), feature.id
+    </select>
     <sql id="featureColumns">
         a.id, a.version, a.feature_key, a.app_id, b.name AS app_name,
         b.domain_id, c.name AS domain_name, a.default_name, a.custom_name,

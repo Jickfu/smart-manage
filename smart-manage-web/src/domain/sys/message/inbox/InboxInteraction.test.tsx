@@ -21,13 +21,22 @@ const mocks = vi.hoisted(() => ({
   markRead: vi.fn(),
   markUnread: vi.fn(),
   feedback: { fromError: vi.fn(), warning: vi.fn() },
+  confirm: vi.fn(),
 }));
 vi.mock('./api', () => ({ inboxApi: mocks }));
 vi.mock('@/domain/common/component/useOperationFeedback', () => ({
   useOperationFeedback: () => mocks.feedback,
 }));
 vi.mock('@/domain/common/component/useOperationConfirm', () => ({
-  useOperationConfirm: () => vi.fn(),
+  useOperationConfirm: () => mocks.confirm,
+}));
+// 平台容器测试只依赖扩展契约，可选业务页面在所属领域单独验收。
+vi.mock('@/domain/common/registry/DomainView', () => ({
+  DomainView: ({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) => (
+    <button type="button" onClick={() => onDirtyChange?.(true)}>
+      编辑扩展内容
+    </button>
+  ),
 }));
 vi.mock('@/services/navigationService', () => ({ openInboxCenter: vi.fn() }));
 
@@ -247,8 +256,50 @@ it('中心平铺分类显示独立未读数，切换任务隐藏消息分类并�
     )!;
     await act(async () => tasks.click());
     expect(container.querySelector('nav')?.textContent).toBe('待处理已处理我发起的');
-    expect(container.textContent).toContain('工作流任务暂未开放');
+    expect(container.textContent).toContain('编辑扩展内容');
     expect(mocks.list).toHaveBeenCalledTimes(calls);
+  } finally {
+    await act(async () => root.unmount());
+    client.clear();
+    useHeaderTabsStore.setState({ activeKey: 'home' });
+  }
+});
+
+it('扩展视图有未提交内容时，分类和外部导航都尊重取消决定', async () => {
+  useHeaderTabsStore.setState({ activeKey: 'builtin:inbox' });
+  mocks.unreadSummary.mockResolvedValue({ unreadCount: 0, pollingIntervalSeconds: 0 });
+  mocks.list.mockResolvedValue({ records: [], hasMore: false });
+  mocks.confirm.mockResolvedValue(false);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  const render = (revision: number, initialSection: 'messages' | 'tasks') =>
+    root.render(
+      <QueryClientProvider client={client}>
+        <ConfigProvider theme={{ zeroRuntime: true }}>
+          <InboxCenter initialSection={initialSection} navigationRevision={revision} />
+        </ConfigProvider>
+      </QueryClientProvider>,
+    );
+  const click = async (text: string) => {
+    const button = Array.from(container.querySelectorAll('button')).find(
+      (item) => item.textContent === text,
+    );
+    expect(button).toBeDefined();
+    await act(async () => button!.click());
+  };
+  try {
+    await act(async () => render(0, 'tasks'));
+    await click('编辑扩展内容');
+    await click('消息');
+    expect(container.querySelector('nav')?.getAttribute('aria-label')).toBe('任务分类');
+    expect(mocks.confirm).toHaveBeenCalledTimes(1);
+    await act(async () => render(1, 'messages'));
+    expect(container.querySelector('nav')?.getAttribute('aria-label')).toBe('任务分类');
+    expect(mocks.confirm).toHaveBeenCalledTimes(2);
+    mocks.confirm.mockResolvedValue(true);
+    await click('消息');
+    expect(container.querySelector('nav')?.getAttribute('aria-label')).toBe('消息分类');
   } finally {
     await act(async () => root.unmount());
     client.clear();

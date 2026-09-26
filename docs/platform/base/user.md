@@ -17,6 +17,8 @@
 
 用户领域发布 `UserReferenceReader` 和 `UserReference` 作为最小只读 Contract。`UserReference` 只包含 `id`、`number`、`name` 和 `enabled`，不暴露用户名、联系方式、密码状态、任职、角色、权限或用户 Entity。
 
+`UserReferenceReader.searchEnabled` 提供有界启用用户检索；`UserAssignmentReader` 提供指定组织的启用角色成员与负责人解析。调用领域负责自身能力授权及对象访问，用户 Contract 不包含工作流概念，不替代调用方的业务授权。解析只返回人员标识，禁用或无有效任职的用户不进入新候选集合。
+
 - `require` 要求用户存在，但允许返回已禁用用户，用于仍然有效的历史引用读取。
 - `requireEnabled` 要求用户存在且启用，用于新增或修改单个业务引用。
 - `findByIds` 批量返回仍然存在的用户，允许缺失，用于查询组装；结果按去重后的输入顺序排列。

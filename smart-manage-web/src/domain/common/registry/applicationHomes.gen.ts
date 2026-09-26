@@ -5,7 +5,9 @@
 import type { ApplicationHomeRegistration } from './applicationHomeRegistry';
 import domainHomes1 from '../../sys/applicationHomes';
 import domainHomes2 from '../../demo/applicationHomes';
+import domainHomes3 from '../../workflow/applicationHomes';
 export const applicationHomes: readonly ApplicationHomeRegistration[] = [
   ...domainHomes1,
   ...domainHomes2,
+  ...domainHomes3,
 ];

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.workflow.process.engine.warmflow.mapper.WarmFlowTaskQueryMapper">
+    <sql id="qualification">
+        <!-- 自定义 SQL 不经过引擎的逻辑删除包装，任务及人员资格必须显式排除已删除记录。 -->
+        a.del_flag = '0' AND
+        <choose>
+            <when test="box.name() == 'STARTED'">a.create_by = #{actor}</when>
+            <when test="box.name() == 'COMPLETED'">
+                EXISTS (SELECT 1 FROM flow_his_task b WHERE b.instance_id = a.id
+                    AND b.del_flag = '0' AND b.approver = #{actor} AND b.node_type = 1 AND b.flow_status != 'WITHDRAWN')
+            </when>
+            <otherwise>
+                EXISTS (SELECT 1 FROM flow_task b JOIN flow_user c ON c.associated = b.id
+                    WHERE b.instance_id = a.id AND b.del_flag = '0' AND c.del_flag = '0'
+                        AND c.type = '1' AND c.processed_by = #{actor})
+            </otherwise>
+        </choose>
+    </sql>
+    <select id="selectInstances" resultType="java.lang.Long">
+        SELECT a.id FROM flow_instance a WHERE <include refid="qualification"/>
+        ORDER BY a.id DESC LIMIT #{limit} OFFSET #{offset}
+    </select>
+    <select id="countInstances" resultType="java.lang.Long">
+        SELECT count(*) FROM flow_instance a WHERE <include refid="qualification"/>
+    </select>
+</mapper>

@@ -90,6 +90,31 @@ async function clickButton(label: string) {
 }
 
 describe('edit error ownership and state preservation', () => {
+  it('只读主单与侧栏的表单、禁用状态相互独立', async () => {
+    await renderEdit({
+      operationType: OperationType.VIEW,
+      sidePanelLabel: '任务处理',
+      sidePanel: (
+        <Form name="approval-test">
+          <Form.Item name="opinion">
+            <Input aria-label="审批意见" />
+          </Form.Item>
+        </Form>
+      ),
+    });
+    expect(container.querySelector<HTMLInputElement>('input[aria-label="名称"]')!.disabled).toBe(
+      true,
+    );
+    const opinion = container.querySelector<HTMLInputElement>('input[aria-label="审批意见"]')!;
+    expect(opinion.disabled).toBe(false);
+    expect(opinion.closest('form')).not.toBe(
+      container.querySelector('input[aria-label="名称"]')!.closest('form'),
+    );
+    expect(container.querySelectorAll('form form')).toHaveLength(0);
+    expect(container.querySelectorAll('.sm-edit-header')).toHaveLength(1);
+    expect(container.querySelector('aside[aria-label="任务处理"]')).not.toBeNull();
+  });
+
   it('显式混排保持危险按钮位置，内置保存仍校验并冻结所有操作', async () => {
     let completeSave!: () => void;
     const onSave = vi.fn(

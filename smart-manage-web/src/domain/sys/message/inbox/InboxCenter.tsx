@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { Empty } from 'antd';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { DomainView } from '@/domain/common/registry/DomainView';
 import { useQuery } from '@tanstack/react-query';
 import { useHeaderTabsStore } from '@/stores/headerTabs';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
@@ -35,6 +35,24 @@ export default function InboxCenter({
   const active = useHeaderTabsStore((state) => state.activeKey === 'builtin:inbox');
   const feedback = useOperationFeedback();
   const confirmOperation = useOperationConfirm();
+  const dirtyTabs = useRef(new Set<string>());
+  const markDirty = (key: string, dirty: boolean) => {
+    if (dirty) dirtyTabs.current.add(key);
+    else dirtyTabs.current.delete(key);
+  };
+  const allowDiscard = useCallback(
+    async (keys: string[]) => {
+      if (!keys.some((key) => dirtyTabs.current.has(key))) return true;
+      return confirmOperation({
+        type: 'warning',
+        title: '存在未提交的内容',
+        description: '继续会丢失当前填写的内容。',
+        confirmText: '继续',
+        cancelText: '留在页面',
+      });
+    },
+    [confirmOperation],
+  );
   const [state, setState] = useState<InboxTabsState>(() =>
     navigateInbox(
       {
@@ -48,18 +66,30 @@ export default function InboxCenter({
     ),
   );
   // 同一Header入口的新导航只调整目标；不能通过组件key销毁整个消息中心。
-  if (state.revision !== navigationRevision) {
+  useEffect(() => {
+    if (state.revision === navigationRevision) return;
+    let cancelled = false;
     const targetKey = initialReceipt ? inboxDetailTabKey(initialReceipt) : undefined;
     const atCapacity =
       initialReceipt &&
       !state.tabs.some((tab) => tab.key === targetKey) &&
       state.tabs.filter((tab) => tab.receipt).length >= MAX_DETAIL_TABS;
-    setState(
-      atCapacity
-        ? { ...state, revision: navigationRevision, blockedNavigation: true }
-        : navigateInbox(state, initialSection, initialReceipt, navigationRevision),
-    );
-  }
+    void (async () => {
+      const allowed = initialReceipt || atCapacity || (await allowDiscard(['__home__']));
+      if (cancelled) return;
+      if (allowed && !initialReceipt && !atCapacity) dirtyTabs.current.delete('__home__');
+      setState((previous) =>
+        !allowed
+          ? { ...previous, revision: navigationRevision }
+          : atCapacity
+            ? { ...previous, revision: navigationRevision, blockedNavigation: true }
+            : navigateInbox(previous, initialSection, initialReceipt, navigationRevision),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [state, navigationRevision, initialReceipt, initialSection, allowDiscard]);
   const category = state.tabs.find((tab) => tab.key === '__home__')!.category;
   const tasks = category.startsWith('task-');
   const unreadQuery = useQuery({
@@ -82,8 +112,11 @@ export default function InboxCenter({
         { key: 'messages-announcement', count: summary?.announcementUnreadCount },
         { key: 'messages-business', count: summary?.businessUnreadCount },
       ];
-  const openList = (key: string) =>
+  const openList = async (key: string) => {
+    if (key !== category && !(await allowDiscard(['__home__']))) return;
+    if (key !== category) dirtyTabs.current.delete('__home__');
     setState((previous) => openInboxTab(previous, inboxListTab(key)));
+  };
   const updateTitle = useCallback((key: string, title: string) => {
     setState((previous) =>
       previous.tabs.some((tab) => tab.key === key && tab.label !== title)
@@ -94,7 +127,11 @@ export default function InboxCenter({
         : previous,
     );
   }, []);
-  const closeTabs = (keys: string[]) => setState((previous) => closeInboxTabs(previous, keys));
+  const closeTabs = async (keys: string[]) => {
+    if (!(await allowDiscard(keys))) return;
+    keys.forEach((key) => dirtyTabs.current.delete(key));
+    setState((previous) => closeInboxTabs(previous, keys));
+  };
   return (
     <div className="sm-inbox-center">
       <aside className="sm-inbox-navigation">
@@ -166,11 +203,16 @@ export default function InboxCenter({
                 onBack={() => setState((previous) => ({ ...previous, activeKey: '__home__' }))}
                 tabKey={tab.key}
                 onTitleChange={updateTitle}
+                onDirtyChange={(dirty) => markDirty(tab.key, dirty)}
               />
             ) : tab.category.startsWith('task-') ? (
-              <div className="sm-inbox-empty">
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="工作流任务暂未开放" />
-              </div>
+              <DomainView
+                key={tab.category}
+                viewKey="inbox.tasks"
+                context={{ category: tab.category }}
+                active={active && state.activeKey === tab.key}
+                onDirtyChange={(dirty) => markDirty(tab.key, dirty)}
+              />
             ) : (
               <InboxMessageList
                 key={tab.category}

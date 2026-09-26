@@ -68,6 +68,21 @@ export async function generateRegistry(rootDir = defaultRoot, domains = selected
     lines.push(`  ${moduleName},`);
   }
   lines.push(']);');
+  const extensionNames = [];
+  for (const [index, domain] of domains.entries()) {
+    const extensionPath = join(sourceDir, 'domain', domain, 'extensions.ts');
+    try {
+      await access(extensionPath);
+    } catch (error) {
+      if (error.code === 'ENOENT') continue;
+      throw error;
+    }
+    const name = `domainExtensions${index + 1}`;
+    lines.push(`import ${name} from '../../${domain}/extensions';`);
+    extensionNames.push(name);
+  }
+  lines.push("import { registerDomainExtensions } from './domainExtensions';");
+  lines.push(`registerDomainExtensions([${extensionNames.join(', ')}]);`);
   writeFileSync(outputFile, `${lines.join('\n')}\n`, 'utf-8');
 
   const homeLines = [

@@ -14,12 +14,15 @@ import sm.domain.sys.base.attachment.mapper.AttachmentMapper;
 import sm.domain.sys.base.attachment.mapper.BizAttachmentMapper;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
+import sm.system.resource.BusinessResourceRegistry;
+import sm.system.resource.BusinessResourceAction;
 
 import java.time.format.DateTimeFormatter;
 import java.io.IOException;
 import java.util.List;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.Objects;
 
 /**
  * 附件事务服务 —— 所有写操作在类级别事务中执行
@@ -33,6 +36,7 @@ import java.util.UUID;
 class AttachmentTxService {
     private final AttachmentMapper mapper;
     private final BizAttachmentMapper bizMapper;
+    private final BusinessResourceRegistry resourceRegistry;
 
     /** 在对象已经写入后，以短事务保存附件元数据和临时业务映射。 */
     public AttachmentReference persistUpload(String originalName, String objectKey, long fileSize, String mimeType,
@@ -71,8 +75,16 @@ class AttachmentTxService {
     /** 提升附件：关联业务单据 + 移出临时目录 */
     public void promote(AttachmentPromoteCommand command) throws IOException {
         try {
-            for (Long attachmentId : command.getAttachmentIds()) {
+            var attachmentIds = command.getAttachmentIds().stream().distinct().sorted().toList();
+            // 批量提升也先完成业务加锁，不能锁住一个正式附件后再为另一个临时附件反向锁主单。
+            for (Long attachmentId : attachmentIds) {
                 AttachmentEntity entity = mapper.selectById(attachmentId);
+                if (entity != null && "TEMP".equals(entity.getStatus())) {
+                    resourceRegistry.beforeAttachmentMutation(command.getBizType(), command.getBizId(), attachmentId, BusinessResourceAction.ATTACH);
+                }
+            }
+            for (Long attachmentId : attachmentIds) {
+                AttachmentEntity entity = mapper.selectForUpdate(attachmentId);
                 if (entity == null) {
                     throw new BizException(ResultEnum.NOT_FOUND, "附件不存在: " + attachmentId);
                 }
@@ -80,7 +92,7 @@ class AttachmentTxService {
                     throw new BizException(ResultEnum.NOT_FOUND, "附件不可用: " + attachmentId);
                 }
                 boolean temporary = "TEMP".equals(entity.getStatus());
-                BizAttachmentEntity bizEntity = selectBizByAttachmentId(attachmentId);
+                BizAttachmentEntity bizEntity = selectLockedBizByAttachmentId(attachmentId);
                 if (bizEntity == null) {
                     throw new BizException(ResultEnum.PERMISSION_ERROR, "附件缺少业务资源归属");
                 }
@@ -120,7 +132,8 @@ class AttachmentTxService {
         if (id == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "附件 id 不能为空");
         }
-        AttachmentEntity entity = mapper.selectById(id);
+        var locked = lockMutation(id, BusinessResourceAction.DELETE);
+        AttachmentEntity entity = locked.attachment();
         if (entity == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "附件不存在：" + id);
         }
@@ -142,7 +155,7 @@ class AttachmentTxService {
     /** 对象已确认删除后，以独立短事务推进最终状态，避免复用已经提交的外层事务资源。 */
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void markDeleted(Long id) {
-        AttachmentEntity entity = mapper.selectById(id);
+        AttachmentEntity entity = mapper.selectForUpdate(id);
         if (entity == null || "DELETED".equals(entity.getStatus())) return;
         if (!"PENDING_DELETE".equals(entity.getStatus())) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "附件删除状态已变化");
@@ -155,8 +168,10 @@ class AttachmentTxService {
 
     /** 更新附件在当前业务资源中的备注。 */
     public void updateRemark(Long businessAttachmentId, Long attachmentId, String remark) {
-        BizAttachmentEntity mapping = bizMapper.selectById(businessAttachmentId);
-        if (mapping == null || !attachmentId.equals(mapping.getAttachmentId())) {
+        var locked = lockMutation(attachmentId, BusinessResourceAction.ATTACH);
+        BizAttachmentEntity mapping = locked.mapping();
+        if (mapping == null || !businessAttachmentId.equals(mapping.getId()) || !attachmentId.equals(mapping.getAttachmentId())
+                || !("TEMP".equals(locked.attachment().getStatus()) || "ACTIVE".equals(locked.attachment().getStatus()))) {
             throw new BizException(ResultEnum.NOT_FOUND, "附件缺少业务资源归属");
         }
         mapping.setRemark(remark == null || remark.isBlank() ? null : remark.trim());
@@ -170,6 +185,29 @@ class AttachmentTxService {
         return bizMapper.selectOne(new LambdaQueryWrapper<BizAttachmentEntity>()
                 .eq(BizAttachmentEntity::getAttachmentId, attachmentId));
     }
+
+    private BizAttachmentEntity selectLockedBizByAttachmentId(Long attachmentId) {
+        return bizMapper.selectOne(new LambdaQueryWrapper<BizAttachmentEntity>()
+                .eq(BizAttachmentEntity::getAttachmentId, attachmentId).last("FOR UPDATE"));
+    }
+
+    private LockedAttachment lockMutation(Long attachmentId, BusinessResourceAction action) {
+        var observed = selectBizByAttachmentId(attachmentId);
+        if (observed != null) resourceRegistry.beforeAttachmentMutation(observed.getBizType(), observed.getBizId(), attachmentId, action);
+        var attachment = mapper.selectForUpdate(attachmentId);
+        if (attachment == null) throw new BizException(ResultEnum.NOT_FOUND, "附件不存在");
+        var current = selectLockedBizByAttachmentId(attachmentId);
+        // 临时附件没有主单可锁。等待附件锁期间若已提升，必须回滚重试，不能沿用空归属绕过冻结校验。
+        if (observed == null ? current != null : current == null
+                || !Objects.equals(observed.getId(), current.getId())
+                || !Objects.equals(observed.getBizType(), current.getBizType())
+                || !Objects.equals(observed.getBizId(), current.getBizId())) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "附件归属已变化，请刷新后重试");
+        }
+        return new LockedAttachment(attachment, current);
+    }
+
+    private record LockedAttachment(AttachmentEntity attachment, BizAttachmentEntity mapping) { }
 
     private AttachmentReference assembleAttachmentReference(AttachmentEntity entity) {
         AttachmentReference vo = new AttachmentReference();

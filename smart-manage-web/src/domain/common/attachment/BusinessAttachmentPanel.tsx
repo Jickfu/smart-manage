@@ -15,9 +15,11 @@ interface BusinessAttachmentPanelProps {
   resourceType: string;
   attachments: BusinessAttachment[];
   editable: boolean;
+  /** 已被历史版本引用的附件只允许从当前表单移除，禁止物理删除和修改元数据。 */
+  retainedAttachmentIds?: readonly string[];
   onChange: (
     attachments: BusinessAttachment[],
-    changeType: 'upload' | 'delete' | 'metadata',
+    changeType: 'upload' | 'delete' | 'metadata' | 'detach',
   ) => void;
 }
 
@@ -63,6 +65,7 @@ export function BusinessAttachmentPanel({
   resourceType,
   attachments,
   editable,
+  retainedAttachmentIds = [],
   onChange,
 }: BusinessAttachmentPanelProps) {
   const feedback = useOperationFeedback();
@@ -133,6 +136,12 @@ export function BusinessAttachmentPanel({
   };
 
   const deleteAttachment = (attachment: BusinessAttachment) => {
+    if (retainedAttachmentIds.includes(attachment.id)) {
+      const nextAttachments = attachmentsRef.current.filter((item) => item.id !== attachment.id);
+      attachmentsRef.current = nextAttachments;
+      onChange(nextAttachments, 'detach');
+      return;
+    }
     void confirmOperation({
       type: 'delete',
       title: '确认删除附件？',
@@ -256,7 +265,7 @@ export function BusinessAttachmentPanel({
                   </Button>
                   {editable && (
                     <Button type="link" danger onClick={() => deleteAttachment(attachment)}>
-                      删除
+                      {retainedAttachmentIds.includes(attachment.id) ? '从本单移除' : '删除'}
                     </Button>
                   )}
                 </span>
@@ -266,7 +275,7 @@ export function BusinessAttachmentPanel({
               </span>
               <span className="sm-business-attachment-time">{attachment.createTime || '-'}</span>
               <div className="sm-business-attachment-remark">
-                {editable ? (
+                {editable && !retainedAttachmentIds.includes(attachment.id) ? (
                   <AttachmentRemarkEditor attachment={attachment} onUpdated={replaceAttachment} />
                 ) : (
                   <Tooltip title={attachment.remark}>

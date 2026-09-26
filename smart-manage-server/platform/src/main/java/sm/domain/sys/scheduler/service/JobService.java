@@ -179,6 +179,7 @@ public class JobService implements SmartInitializingSingleton {
     @AdministratorOnly
     public void trigger(Long id) {
         JobEntity entity = requireEntity(id);
+        definitionValidator.resolveJobClass(entity.getJobClassName());
         try {
             JobKey jobKey = ManagedJobIdentity.jobKey(entity.getId());
             scheduler.triggerJob(jobKey);
@@ -242,6 +243,11 @@ public class JobService implements SmartInitializingSingleton {
     }
 
     private void synchronize(JobEntity entity) {
+        if (definitionValidator.isFromUnavailableDomain(entity.getJobClassName())) {
+            removeQuartzJob(entity.getId());
+            log.warn("任务所属领域未装配，已停止调度并保留定义: id={}, class={}", entity.getId(), entity.getJobClassName());
+            return;
+        }
         definitionValidator.resolveJobClass(entity.getJobClassName());
         JobDataMap dataMap = parseJobData(entity.getJobData());
         dataMap.put(ManagedJobIdentity.JOB_ID_KEY, entity.getId().toString());

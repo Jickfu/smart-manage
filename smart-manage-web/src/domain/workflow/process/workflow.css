@@ -1,0 +1,95 @@
+.sm-workflow-view {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sm-workflow-view > .sm-common-page {
+  flex: 1;
+  min-height: 0;
+}
+.sm-workflow-designer {
+  display: block;
+  width: 100%;
+  height: 72vh;
+  border: 0;
+}
+.sm-workflow-designer-page {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+.sm-workflow-designer-page .sm-edit-body {
+  overflow: hidden;
+}
+.sm-workflow-designer-page .sm-edit-body > .ant-spin,
+.sm-workflow-designer-page .sm-edit-body > .ant-spin > .ant-spin-container,
+.sm-workflow-designer-page .sm-workflow-designer {
+  height: 100%;
+  min-height: 0;
+}
+.sm-workflow-designer-caption {
+  color: var(--ant-color-text-secondary);
+}
+.sm-workflow-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  padding: 12px;
+}
+.sm-workflow-panel > .ant-tabs {
+  flex: 1;
+  min-height: 0;
+}
+.sm-workflow-panel .ant-tabs-content-holder {
+  min-height: 0;
+  overflow: hidden;
+}
+.sm-workflow-panel .ant-tabs-content {
+  height: 100%;
+}
+.sm-workflow-panel .ant-tabs-tabpane-active {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.sm-workflow-panel .ant-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.sm-workflow-form-scroll,
+.sm-workflow-history-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-inline-end: 8px;
+}
+.sm-workflow-panel .sm-workflow-submit {
+  margin-top: 12px;
+  width: 100%;
+  flex-shrink: 0;
+}
+.sm-workflow-history {
+  padding-inline-start: 20px;
+}
+.sm-workflow-history li {
+  padding-bottom: 16px;
+  overflow-wrap: anywhere;
+}
+.sm-workflow-history p {
+  white-space: pre-wrap;
+  margin: 4px 0;
+}
+.sm-workflow-status {
+  padding: 12px;
+  color: var(--ant-color-text-secondary);
+}
+.sm-workflow-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}

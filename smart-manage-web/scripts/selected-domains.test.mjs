@@ -43,9 +43,19 @@ describe('领域构建选择', () => {
     expect(selectedDomains(undefined, domainRoot)).toEqual(['sys', 'orders']);
   });
   it('要求平台且拒绝空值、重复和路径穿越', () => {
-    expect(selectedDomains('sys,demo')).toEqual(['sys', 'demo']);
+    expect(selectedDomains('sys')).toEqual(['sys']);
     for (const value of ['', 'demo', 'sys,sys', 'sys,../demo'])
       expect(() => selectedDomains(value)).toThrow();
+  });
+  it('显式声明的领域依赖不可被单独裁剪，平台选择不受可选依赖影响', async () => {
+    const root = await fixture();
+    const domainRoot = join(root, 'src/domain');
+    await writeFile(join(domainRoot, 'demo/dependencies.json'), '["workflow"]');
+    expect(() => selectedDomains('all', domainRoot)).toThrow('workflow');
+    expect(selectedDomains('sys', domainRoot)).toEqual(['sys']);
+    await mkdir(join(domainRoot, 'workflow'));
+    expect(selectedDomains('all', domainRoot)).toEqual(['sys', 'demo', 'workflow']);
+    expect(() => selectedDomains('sys,demo', domainRoot)).toThrow('workflow');
   });
   it('仅生成选中领域，两次生成稳定，删除可选领域后默认自动收敛', async () => {
     const root = await fixture();

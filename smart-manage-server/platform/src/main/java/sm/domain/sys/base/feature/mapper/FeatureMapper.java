@@ -10,6 +10,7 @@ import sm.domain.sys.base.feature.model.vo.FeatureVO;
 
 import java.util.List;
 import sm.system.query.ListSqlQuery;
+import sm.domain.sys.base.feature.contract.FeatureDirectoryReference;
 
 @Mapper
 public interface FeatureMapper extends BaseMapper<FeatureEntity> {
@@ -17,4 +18,5 @@ public interface FeatureMapper extends BaseMapper<FeatureEntity> {
                                    @Param("listQuery") ListSqlQuery listQuery);
     FeatureVO selectDetailById(@Param("id") Long id);
     List<FeatureVO> selectAllVisible();
+    List<FeatureDirectoryReference> selectDirectoryByFeatureKeys(@Param("featureKeys") List<String> featureKeys);
 }

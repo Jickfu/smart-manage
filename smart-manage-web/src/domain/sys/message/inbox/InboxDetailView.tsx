@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { DomainView } from '@/domain/common/registry/DomainView';
 import { Button, Tag } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
@@ -15,14 +16,17 @@ export default function InboxDetailView({
   onBack,
   tabKey,
   onTitleChange,
+  onDirtyChange,
 }: {
   receipt: InboxReceiptKey;
   active: boolean;
   onBack: () => void;
   tabKey?: string;
   onTitleChange?: (key: string, title: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const [showBusiness, setShowBusiness] = useState(false);
   const autoReadKey = useRef<string | undefined>(undefined);
   const detailQuery = useQuery({
     queryKey: inboxQueryKeys.detail(receipt.messageId, receipt.receivedTime),
@@ -58,6 +62,19 @@ export default function InboxDetailView({
       markRead(true);
     }
   }, [active, detailQuery.isSuccess, detailQuery.isFetching, detail, error, markRead, receipt]);
+  if (showBusiness && detail?.resourceType && detail.resourceId && detail.actionCode)
+    return (
+      <DomainView
+        viewKey={`message:${detail.resourceType}:${detail.actionCode}`}
+        resourceId={detail.resourceId}
+        active={active}
+        onDirtyChange={onDirtyChange}
+        onBack={() => {
+          onDirtyChange?.(false);
+          setShowBusiness(false);
+        }}
+      />
+    );
   return (
     <div className="sm-inbox-detail-page">
       <EditPageShell
@@ -72,6 +89,9 @@ export default function InboxDetailView({
             <Button type="primary" onClick={onBack}>
               返回列表
             </Button>
+            {detail?.resourceType && detail.actionCode && (
+              <Button onClick={() => setShowBusiness(true)}>查看业务</Button>
+            )}
             <Button
               type="primary"
               disabled={!detail || Boolean(error)}

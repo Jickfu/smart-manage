@@ -38,7 +38,7 @@ class AttachmentServiceAuthorizationTests {
     private final FileStorageServiceFactory storageFactory = mock(FileStorageServiceFactory.class);
     private final AttachmentTxService txService = mock(AttachmentTxService.class);
     private final CurrentOperatorProvider currentOperatorProvider = mock(CurrentOperatorProvider.class);
-    private final BusinessResourceAccessPolicy policy = mock(BusinessResourceAccessPolicy.class);
+    private final BusinessResourceAccessPolicy policy = mock(BusinessResourceAccessPolicy.class, org.mockito.Mockito.CALLS_REAL_METHODS);
     private final AttachmentConfigService attachmentConfigService = mock(AttachmentConfigService.class);
     private final UserMapper userMapper = mock(UserMapper.class);
     private final BusinessResourceRegistry registry = new BusinessResourceRegistry(List.of(registration()), attachmentConfigService);

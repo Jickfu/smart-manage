@@ -61,7 +61,7 @@ SQL、脚本、线程诊断、定时任务命令等高风险能力必须同时�
 
 ## 浏览器与生产边界
 
-- 登录页和 React 应用使用 HTML `meta` CSP 限制脚本、连接、图片、字体和对象来源。`frame-ancestors` 不能通过 `meta` 生效，生产入口必须在首页和登录页的 HTTP 响应中设置 `Content-Security-Policy: frame-ancestors 'none'`，并提供 `X-Frame-Options: DENY` 作为兼容保护；部署参考见[反向代理和请求边界](./deployment.md#反向代理和请求边界)。
+- 登录页和 React 应用使用 HTML `meta` CSP 限制脚本、连接、图片、字体和对象来源。`frame-ancestors` 不能通过 `meta` 生效，生产入口必须在首页和登录页的 HTTP 响应中设置 `Content-Security-Policy: frame-ancestors 'none'`，并提供 `X-Frame-Options: DENY` 作为兼容保护；部署参考见[反向代理和请求边界](./deployment.md#反向代理和请求边界)。只有工作流官方设计器的独立静态路径允许 `frame-ancestors 'self'` / `SAMEORIGIN`，不能将此例外扩大到首页、登录页或其他接口。设计器数据请求仍执行会话、CSRF、功能与对象权限校验。
 - 登录脚本内容和 CSP SHA-256 摘要必须保持一致，并由自动化测试防止漂移。
 - 生产环境关闭 Swagger、Scalar 和 Druid 监控页。线程诊断只使用 JDK 原生管理接口，不开放 Agent、Telnet、任意命令或 OGNL；跨实例调用必须从 Redis 注册表解析内部地址，并在目标节点重新执行登录、权限和真实 `administrator` 身份复核。
 - 所有环境均不通过 Web 暴露 Actuator 端点；内建监控只在进程内调用 Actuator Bean 获取健康状态。

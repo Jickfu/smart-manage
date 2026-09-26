@@ -4,11 +4,15 @@
 
 ## Maven 交付边界
 
-后端工程位于 `smart-manage-server`，其父 POM（`smart-manage-parent`）只负责统一依赖、插件和 reactor 构建，本身不可运行；`platform`（`smart-manage-platform`）交付 `sm.infrastructure`、`sm.system` 和 `sm.domain.sys`，为普通 JAR。`domains`（`smart-manage-domains`）聚合当前业务领域并作为唯一业务装配入口。`app`（`smart-manage-app`）是唯一可运行的组合根，只依赖平台与领域聚合模块，持有启动类、运行配置并产出可执行 JAR；上游默认名称为 `smart-manage-server.jar`，衍生项目可以直接修改 `app/pom.xml` 的 `finalName`。`smart-manage-server/domains/demo`（`smart-manage-domain-demo`）依赖平台，平台不得反向依赖它，也不保留采购专属声明。
+后端工程位于 `smart-manage-server`，其父 POM（`smart-manage-parent`）只负责统一依赖、插件和 reactor 构建，本身不可运行；`platform`（`smart-manage-platform`）交付 `sm.infrastructure`、`sm.system` 和 `sm.domain.sys`，为普通 JAR。`domains`（`smart-manage-domains`）聚合当前业务领域并作为唯一业务装配入口。`app`（`smart-manage-app`）是唯一可运行的组合根，只依赖平台与领域聚合模块，持有启动类、运行配置并产出可执行 JAR；上游默认名称为 `smart-manage-server.jar`，衍生项目可以直接修改 `app/pom.xml` 的 `finalName`。`smart-manage-server/domains/demo`（`smart-manage-domain-demo`）依赖平台与工作流领域，平台不得反向依赖它，也不保留采购专属声明。
 
 默认启用 `domains/pom.xml` 的 `current-domains` profile，装配仓库当前全部业务领域；Maven `-Pplatform-only` 显式关闭该默认 profile，只保留平台。新增或移除领域只维护聚合模块中的 module 与 dependency，根 reactor 和 app 不感知具体领域。CI 不维护领域名称，并会分别验证默认装配和实际删除领域目录后的平台隔离装配。架构测试从发行 classpath 的迁移声明发现已装配领域并与代码包核对；领域专属测试随领域维护。普通 JAR 不包含 Boot 重打包布局，只有 app 执行 repackage；app 中禁止放置业务实现。
 
 同一个 Maven 模块不取消逻辑边界：跨领域仍只通过提供方稳定 Contract，不能直接访问其他领域 Mapper、Entity 或 TxService。本次演示领域统一使用 `demo` 标识，包括 Java 包、权限码、Feature、API、表名和迁移历史表，不保留旧 `scm` 兼容入口；平台 Java 包和 HTTP context path 不变。
+
+工作流为独立可选领域 `workflow`；请假样板使 `demo -> workflow -> platform` 成为明确的编译依赖，采购行为不变。裁剪 workflow 时须一并裁剪或先改造依赖它的业务。platform-only 同时排除全部可选领域，平台不得反向引用工作流类型。业务流程规则见[工作流领域](../../smart-manage-server/domains/workflow/docs/process/workflow.md)与[请假样板](../../smart-manage-server/domains/demo/docs/office/leave.md)。
+
+平台为真实业务接入提供通用资源策略：附件可以按具体附件授权，实际写事务中的 `beforeAttachmentMutation` 钩子可锁定业务聚合并复查状态。附件写入统一遵循业务聚合、附件行、业务映射行的锁序；批量提升先完成业务加锁，临时归属在等待附件锁后发生变化时必须回滚，不能沿用空归属跳过业务冻结检查。聚合已完成自身授权后，可在事务中通过附件 Contract 读取所需附件，不能借此开放无权限的 HTTP 查询。平台人员 Contract 提供有界启用用户检索、组织角色成员和负责人解析；这些接口不认识审批或引擎。
 
 ## 分层边界
 
@@ -38,6 +42,8 @@ Domain A
 Smart Manage 遵循：**先实现领域，后发现协作，再提取 Contract。** Contract 由真实消费者和真实用例塑造，而不是由对未来需求的猜测产生。真实消费者可以位于当前仓库，也可以位于已经存在且用例可核实的独立扩展项目；不得仅因某能力未来可能复用而提前建设 Contract。没有真实跨领域消费者的 Domain 不需要 `contract` 包；同一顶级 Domain 内的应用和模块也不因潜在复用而提前升级为独立边界。
 
 当前附件和编号规则存在采购领域这一真实消费者，用户引用与状态校验也存在已核实的独立业务领域消费者，因此其最小跨领域接口和边界模型位于 `sm.domain.sys` 对应模块的 `contract` 包。消费者项目只用于证明用例，不反向成为 Smart Manage 的架构或业务事实来源。
+
+工作流业务参照需要按真实功能目录归属分组，因此平台功能模块提供只读 `FeatureDirectoryReader`，仅按调用方明确给出的功能键返回领域、应用身份和当前名称。该契约不依赖工作流，不提供审批接入资格或授权判断；移除可选领域不影响平台自身运行。
 
 已核实的独立业务项目需要发布业务定时任务，因此任务展示元数据注解 `SchedulerJobDefinition` 位于 `sm.domain.sys.scheduler.contract`。业务 Job 仅依赖该注解及 Quartz API，不依赖调度模块的内部 Job、Service 或 Mapper；任务发现和执行管理仍由调度领域拥有。
 

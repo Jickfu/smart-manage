@@ -29,6 +29,10 @@ React 和数据请求库保持独立公共分组。其余第三方依赖仅对 `
 
 ## 技术基线与目录
 
+可选领域通过 `extensions.ts` 声明固定键的懒加载视图，由注册生成器按实际装配统一注册。平台消息中心使用这些扩展呈现任务、预览和通知关联业务，不直接 import workflow/demo。扩展容器通过 `onDirtyChange` 保护关闭或替换时的未提交内容。领域间的编译依赖在该领域 `dependencies.json` 显式列出；选择了依赖方却未选择被依赖方时构建失败，不自动忽略页面。
+
+公共 EditPage 的可选 sidePanel 位于主单 Form 和 disabled 上下文之外，拥有独立滚动与表单；具体审批动作仍由业务及工作流组合。Warm-Flow 的官方 Vue 资源只存在于独立 iframe 包，日常业务审批保持 React，不加入主应用初始依赖链。
+
 - 使用 pnpm、React、TypeScript 和 Ant Design，不引入其他 UI 组件库。
 - 使用 `@/` 别名引用 `src`。
 - 业务页面按 `src/domain/{领域}/{应用}/{模块}` 组织。

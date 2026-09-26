@@ -5,6 +5,10 @@ PostgreSQL 完全不可用的告警必须由数据库平台或外部监控承担
 
 ## 目标拓扑
 
+装配工作流时，官方设计器随后端 JAR 发布到 `{API context path}/workflow/designer/`。前端与该路径必须同源；代理只对此路径允许 `frame-ancestors 'self'` 和 `X-Frame-Options: SAMEORIGIN`，其余路径继续禁止嵌入。示例 Nginx 已包含该限定例外，修改 API 前缀时同步修改这两个 location。
+
+包含工作流的后端打包需要 Node.js 22+、pnpm 11.17.0 和 Git，以构建锁定提交的官方组件；纯平台打包不执行此步骤。构建阶段需要访问依赖源与官方 Git 仓库，运行阶段不动态拉取设计器代码。引擎与 UI 升级须一起验证定义往返、人员选择、历史轨迹及认证契约。
+
 Smart Manage 保持模块化单体，不拆分微服务。生产目标部署方式为：
 
 ```text

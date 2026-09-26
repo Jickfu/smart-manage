@@ -11,4 +11,7 @@ public interface AttachmentGateway {
     void deleteForAggregate(String bizType, String bizId) throws IOException;
 
     List<AttachmentReference> listByBiz(String bizType, String bizId);
+
+    /** 已校验业务写权限的聚合在同一事务冻结自身附件快照，不额外要求页面详情权限。 */
+    List<AttachmentReference> listForAggregate(String bizType, String bizId);
 }

@@ -34,7 +34,7 @@ public class FlywayMigrationConfig {
             }
             declarations.add(declaration);
         }
-        // 当前可选领域仅依赖平台；按标识稳定排序，不表达可选领域之间的依赖关系。
+        // 迁移链须能在平台之后独立执行；代码领域依赖不隐式决定数据库迁移顺序。
         declarations.sort(Comparator.comparing(DomainMigration::id));
         return platform -> {
             if (declarations.isEmpty()) { platform.migrate(); return; }

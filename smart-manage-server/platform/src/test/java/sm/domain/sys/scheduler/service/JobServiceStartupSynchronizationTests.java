@@ -97,4 +97,23 @@ class JobServiceStartupSynchronizationTests {
         entity.setIsSystem(system);
         return entity;
     }
+
+    @Test
+    void removedDomainTaskIsUnscheduleableWithoutPreventingPlatformStartup() throws Exception {
+        var mapper = mock(JobMapper.class);
+        var scheduler = mock(Scheduler.class);
+        var validator = mock(JobDefinitionValidator.class);
+        var domainJob = task(10L, "已移除领域任务", "ENABLED", true);
+        domainJob.setJobClassName("sm.domain.removed.app.job.ExampleJob");
+        when(mapper.selectList(any(Wrapper.class))).thenReturn(List.of(domainJob));
+        when(validator.isFromUnavailableDomain(domainJob.getJobClassName())).thenReturn(true);
+        when(scheduler.getJobKeys(any(GroupMatcher.class))).thenReturn(Set.of());
+        var service = new JobService(mapper, mock(JobLogMapper.class), scheduler, mock(JobTxService.class), mock(JobConverter.class), validator, mock(AppReferenceService.class));
+        service.afterSingletonsInstantiated();
+        verify(scheduler).deleteJob(ManagedJobIdentity.jobKey(10L));
+        verify(scheduler).start();
+        verify(validator, never()).resolveJobClass(any());
+        verify(scheduler, never()).scheduleJob(any(JobDetail.class), any(Trigger.class));
+        verify(mapper, never()).deleteById(any(java.io.Serializable.class));
+    }
 }

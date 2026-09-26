@@ -47,6 +47,7 @@
         <fesod.version>2.0.2-incubating</fesod.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <commonmark.version>0.29.0</commonmark.version>
+        <warm-flow.version>1.8.9</warm-flow.version>
     </properties>
     <modules>
         <module>platform</module>

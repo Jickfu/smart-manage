@@ -41,8 +41,11 @@ export function useEditAttachments(
     attachments,
     withValues: (values: Record<string, unknown>) =>
       resource ? buildAttachmentFormValues(values, attachments) : values,
-    update: (values: BusinessAttachment[], changeType: 'upload' | 'delete' | 'metadata') => {
-      if (changeType === 'upload') markDirty();
+    update: (
+      values: BusinessAttachment[],
+      changeType: 'upload' | 'delete' | 'metadata' | 'detach',
+    ) => {
+      if (changeType === 'upload' || changeType === 'detach') markDirty();
       setState({ source: resource?.initialAttachments, values });
     },
   };

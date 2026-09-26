@@ -140,6 +140,9 @@ interface EditPageProps {
   transformValues?: (values: Record<string, unknown>) => Record<string, unknown>;
   /** Form 外部卡片内容的用户编辑修订号，用于统一脏数据关闭保护。 */
   dirtyRevision?: number;
+  /** 放在主单 Form 和禁用上下文之外，由调用方拥有自己的表单与命令。 */
+  sidePanel?: ReactNode;
+  sidePanelLabel?: string;
 }
 
 /** 是否可编辑：暂存或新增时允许编辑 */
@@ -151,6 +154,8 @@ function isEditable(opType: OperationType, status?: BillStatus): boolean {
 
 /** 通用编辑页 — 使用 antd Form 驱动校验与字段状态 */
 const EditPage = ({
+  sidePanel,
+  sidePanelLabel,
   title,
   sections,
   initialValues,
@@ -293,6 +298,8 @@ const EditPage = ({
 
   return (
     <EditPageShell
+      sidePanel={sidePanel}
+      sidePanelLabel={sidePanelLabel}
       title={title}
       loading={loading}
       error={error}

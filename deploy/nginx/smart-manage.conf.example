@@ -24,6 +24,23 @@ server {
     add_header Content-Security-Policy "frame-ancestors 'none'" always;
     add_header X-Frame-Options "DENY" always;
 
+    # 仅官方工作流设计器允许同源嵌入；主站及其余接口仍禁止嵌入。
+    location ^~ /smart-manage-api/workflow/designer/ {
+        add_header Content-Security-Policy "frame-ancestors 'self'" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        limit_req zone=smart_manage_api burst=40 nodelay;
+        proxy_pass http://smart_manage_api;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+    }
+
     location /smart-manage-api/ {
         limit_req zone=smart_manage_api burst=40 nodelay;
         proxy_pass http://smart_manage_api;

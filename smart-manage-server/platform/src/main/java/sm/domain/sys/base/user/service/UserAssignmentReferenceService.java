@@ -22,6 +22,23 @@ public class UserAssignmentReferenceService implements UserAssignmentReader {
     private final UserMapper userMapper;
 
     @Override
+    public List<Long> findEnabledOrgLeaders(Long orgId) {
+        requireOrganization(orgId);
+        return List.copyOf(userMapper.selectEnabledOrgLeaders(orgId));
+    }
+
+    @Override
+    public List<Long> findEnabledRoleMembers(Long orgId, Long roleId) {
+        requireOrganization(orgId);
+        if (roleId == null || roleId <= 0) throw new BizException(ResultEnum.PARAM_ERROR, "角色不能为空");
+        return List.copyOf(userMapper.selectEnabledRoleMembers(orgId, roleId));
+    }
+
+    private void requireOrganization(Long orgId) {
+        if (orgId == null || orgId <= 0) throw new BizException(ResultEnum.PARAM_ERROR, "组织不能为空");
+    }
+
+    @Override
     public void requireAssignment(Long userId, Long orgId) {
         if (userId == null || orgId == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "用户和组织不能为空");
