@@ -20,7 +20,7 @@ export function useUserRefSelector(options?: {
   multiple?: boolean;
   title?: string;
 }): RefSelectorFieldConfig {
-  const [includeDescendants, setIncludeDescendants] = useState(false);
+  const [includeDescendants, setIncludeDescendants] = useState(true);
   const treeQuery = useQuery({
     queryKey: orgQueryKeys.tree(false),
     queryFn: () => orgApi.tree(false),

@@ -92,12 +92,13 @@ const OrgEditModal = ({ open, orgId, defaultParent, onClose, onSaved }: Props) =
     return {
       number: detail?.number ?? '',
       name: detail?.name ?? '',
-      parentOrg: detail?.parent ?? defaultParent ?? null,
+      // 编辑时保留根组织的空上级，只有新增才使用树节点作为默认上级。
+      parentOrg: orgId ? (detail?.parent ?? null) : (defaultParent ?? null),
       orgType: detail?.orgType ?? ('DEPARTMENT' as OrgType),
       sort: detail?.sort ?? 99,
       description: detail?.description ?? '',
     };
-  }, [defaultParent, detail]);
+  }, [defaultParent, detail, orgId]);
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
       const form: OrgSaveForm = {

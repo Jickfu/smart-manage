@@ -102,7 +102,7 @@ const UserListPage = (props: PageComponentProps) => {
   const confirmOperation = useOperationConfirm();
   const [selectedTreeKey, setSelectedTreeKey] = useState<string>();
   const [treeKeyword, setTreeKeyword] = useState('');
-  const [includeDescendants, setIncludeDescendants] = useState(false);
+  const [includeDescendants, setIncludeDescendants] = useState(true);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [resetPassword, setResetPassword] = useState<string>();
   const [resetUsername, setResetUsername] = useState('');
