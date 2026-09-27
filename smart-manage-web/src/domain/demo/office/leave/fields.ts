@@ -52,14 +52,8 @@ export const leaveFields: EditField[] = [
   },
   {
     label: '单据状态',
-    dataIndex: 'billStatus',
-    type: 'select',
-    disabled: true,
-    options: [
-      { value: 'A', label: '草稿' },
-      { value: 'B', label: '审批中' },
-      { value: 'C', label: '审批通过' },
-    ],
+    dataIndex: 'billStatusName',
+    type: 'readonly',
   },
   {
     label: '请假事由',
@@ -70,3 +64,8 @@ export const leaveFields: EditField[] = [
     rules: [{ required: true, whitespace: true, max: 2000 }],
   },
 ];
+
+/** 新增单据尚未持久化，因此不展示单据状态。 */
+export const leaveCreateFields = leaveFields.filter(
+  (field) => field.dataIndex !== 'billStatusName',
+);

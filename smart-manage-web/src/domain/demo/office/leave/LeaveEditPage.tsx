@@ -8,14 +8,15 @@ import { BusinessAttachmentPanel } from '@/domain/common/attachment/BusinessAtta
 import { useEditAttachments } from '@/domain/common/page/edit/useEditAttachments';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
-import { BillStatus, OperationType } from '@/domain/common/page/types';
+import { OperationType } from '@/domain/common/page/types';
+import { isStandardBillEditable, standardBillStatusCatalog } from '@/domain/common/bill/billStatus';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { createBillTabKey } from '@/domain/common/page/tab/tabKeys';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { generateUUID } from '@/utils';
 import { componentKeys } from '../../componentKeys';
 import { leaveApi } from './api';
-import { leaveFields } from './fields';
+import { leaveCreateFields, leaveFields } from './fields';
 import { leaveAccess } from './permissions';
 import LeaveApprovalView from './LeaveApprovalView';
 
@@ -61,13 +62,18 @@ export default function LeaveEditPage(props: PageComponentProps) {
   const initialValues = useMemo(
     () =>
       detail
-        ? { ...detail }
-        : { clientKey, bizDate: today, leaveType: 'PERSONAL', billStatus: 'A', days: 1 },
+        ? {
+            ...detail,
+            billStatusName: standardBillStatusCatalog.require(detail.billStatus).label,
+          }
+        : { clientKey, bizDate: today, leaveType: 'PERSONAL', days: 1 },
     [detail, clientKey, today],
   );
   const persist = async (values: Record<string, unknown>, submit: boolean) => {
+    const editableValues = { ...values };
+    delete editableValues.billStatusName;
     const command = {
-      ...values,
+      ...editableValues,
       id: props.billId,
       version: detail?.version,
       clientKey: detail?.clientKey ?? clientKey,
@@ -121,12 +127,12 @@ export default function LeaveEditPage(props: PageComponentProps) {
       access={leaveAccess}
       operationType={
         props.operationType === OperationType.VIEW &&
-        detail?.billStatus === 'A' &&
-        (detail.lastOutcome === 'WITHDRAWN' || detail.lastOutcome === 'REJECTED')
+        isStandardBillEditable(detail?.billStatus) &&
+        (detail?.lastOutcome === 'WITHDRAWN' || detail?.lastOutcome === 'REJECTED')
           ? OperationType.EDIT
           : (props.operationType ?? OperationType.EDIT)
       }
-      billStatus={(detail?.billStatus ?? 'A') as BillStatus}
+      editable={adding || isStandardBillEditable(detail?.billStatus)}
       initialValues={initialValues}
       loading={!adding && query.isLoading}
       error={adding ? null : getBlockingQueryError(query)}
@@ -162,7 +168,9 @@ export default function LeaveEditPage(props: PageComponentProps) {
         {
           key: 'basic',
           label: '基本信息',
-          content: (editable) => <EditFormFields fields={leaveFields} editable={editable} />,
+          content: (editable) => (
+            <EditFormFields fields={adding ? leaveCreateFields : leaveFields} editable={editable} />
+          ),
         },
         {
           key: 'attachments',

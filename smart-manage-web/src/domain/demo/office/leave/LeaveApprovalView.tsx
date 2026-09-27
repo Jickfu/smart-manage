@@ -5,7 +5,8 @@ import type { DomainViewProps } from '@/domain/common/registry/domainExtensions'
 import EditPage from '@/domain/common/page/edit/EditPage';
 import { EditFormFields } from '@/domain/common/page/edit/EditFormFields';
 import { BusinessAttachmentPanel } from '@/domain/common/attachment/BusinessAttachmentPanel';
-import { OperationType, BillStatus } from '@/domain/common/page/types';
+import { OperationType } from '@/domain/common/page/types';
+import { standardBillStatusCatalog } from '@/domain/common/bill/billStatus';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
@@ -45,7 +46,16 @@ export default function LeaveApprovalView({
     enabled: active && Boolean(businessId && resourceId),
     meta: { errorPresentation: 'local-initial' },
   });
-  const initialValues = useMemo(() => (snapshot.data ? { ...snapshot.data } : {}), [snapshot.data]);
+  const initialValues = useMemo(
+    () =>
+      snapshot.data
+        ? {
+            ...snapshot.data,
+            billStatusName: standardBillStatusCatalog.require(snapshot.data.billStatus).label,
+          }
+        : {},
+    [snapshot.data],
+  );
   useBeforeCloseGuard(context?.appNumber, context?.tabKey, dirty);
   const withdraw = useCommandMutation({
     mutationFn: () => workflowApi.withdraw(resourceId!, withdrawRequestId),
@@ -75,7 +85,6 @@ export default function LeaveApprovalView({
       <EditPage
         title="请假审批"
         operationType={OperationType.VIEW}
-        billStatus={BillStatus.SUBMITTED}
         initialValues={initialValues}
         loading={run.isLoading || snapshot.isLoading}
         error={getBlockingQueryError(run) ?? getBlockingQueryError(snapshot)}

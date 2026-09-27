@@ -75,7 +75,10 @@ async function settle() {
     await new Promise((resolve) => setTimeout(resolve, 50));
   });
 }
-async function render() {
+async function render(
+  operationType: OperationType = OperationType.VIEW,
+  billId: string | undefined = '10',
+) {
   await act(async () =>
     root.render(
       <QueryClientProvider client={client}>
@@ -85,8 +88,8 @@ async function render() {
             tabKey="leave-10"
             componentKey="demo/office/leave/edit"
             title="请假申请"
-            billId="10"
-            operationType={OperationType.VIEW}
+            billId={billId}
+            operationType={operationType}
             active
           />
         </ConfigProvider>
@@ -107,6 +110,10 @@ async function refresh(value: Partial<LeaveDetail>) {
   });
   await settle();
 }
+it('新增页不展示尚未产生的单据状态', async () => {
+  await render(OperationType.ADDNEW, undefined);
+  expect(container.textContent).not.toContain('单据状态');
+});
 it.each(['WITHDRAWN', 'REJECTED'])(
   '原查看页签在 %s 后恢复编辑与提交，审批通过仍只读',
   async (outcome) => {
@@ -132,6 +139,7 @@ it('同一命令失败重试复用 requestId，撤回后重新提交使用新 re
   await submit();
   expect(mocks.submit).toHaveBeenCalledTimes(2);
   const first = mocks.submit.mock.calls[0]![0];
+  expect(first).not.toHaveProperty('billStatusName');
   expect(first.requestId).toBeTruthy();
   expect(mocks.submit.mock.calls[1]![0].requestId).toBe(first.requestId);
   await refresh({ version: 2, billStatus: 'B', lastOutcome: undefined });

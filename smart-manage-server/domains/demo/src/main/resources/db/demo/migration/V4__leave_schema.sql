@@ -3,13 +3,13 @@ CREATE TABLE t_demo_leave (
     org_id bigint NOT NULL, applicant_id bigint NOT NULL, biz_date date NOT NULL,
     leave_type varchar(20) NOT NULL, start_time timestamp NOT NULL, end_time timestamp NOT NULL,
     days numeric(6,2) NOT NULL CHECK (days > 0), reason varchar(2000) NOT NULL,
-    bill_status char(1) NOT NULL DEFAULT 'A' CHECK (bill_status IN ('A','B','C')),
+    bill_status char(1) NOT NULL DEFAULT 'A' CHECK (bill_status IN ('A','B','C','D')),
     current_instance_id bigint, last_outcome varchar(20), version integer NOT NULL DEFAULT 0,
     create_time timestamp, update_time timestamp, create_user bigint, update_user bigint,
     CHECK (end_time > start_time), UNIQUE(org_id, number)
 );
 COMMENT ON TABLE t_demo_leave IS '独立请假样板，不改变采购审批行为';
-COMMENT ON COLUMN t_demo_leave.bill_status IS 'A可编辑，B审批中，C通过；拒绝或撤回回到A，结果记录在last_outcome';
+COMMENT ON COLUMN t_demo_leave.bill_status IS '单据状态：A暂存，B已提交，C已审核，D已关闭；拒绝或撤回回到A，结果记录在last_outcome';
 COMMENT ON COLUMN t_demo_leave.days IS '人工填写天数，不计算工作日或考勤余额';
 COMMENT ON COLUMN t_demo_leave.current_instance_id IS '最近轮次；不建立跨领域外键';
 CREATE INDEX idx_demo_leave_owner ON t_demo_leave(applicant_id, id DESC);

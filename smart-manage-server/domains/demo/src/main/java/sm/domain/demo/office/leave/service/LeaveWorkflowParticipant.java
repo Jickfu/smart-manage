@@ -6,6 +6,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import sm.domain.demo.office.leave.mapper.LeaveMapper;
 import sm.domain.demo.office.leave.model.entity.LeaveEntity;
 import sm.domain.workflow.process.runtime.contract.WorkflowBusiness;
+import sm.system.bill.BillStatusPolicy;
+import sm.system.bill.StandardBillStatus;
+import sm.system.bill.StandardBillStatusAction;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import java.util.Objects;
@@ -14,6 +17,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class LeaveWorkflowParticipant implements WorkflowBusiness {
+    private static final BillStatusPolicy BILL_STATUS_POLICY = BillStatusPolicy.standard();
     private final LeaveMapper mapper;
     @Override public String key() { return LeaveResourceRegistration.BUSINESS_TYPE; }
     @Override public String featureKey() { return "demo/office/leave"; }
@@ -24,14 +28,18 @@ public class LeaveWorkflowParticipant implements WorkflowBusiness {
     @Override
     public void completed(Long businessId, Long instanceId, Outcome outcome) {
         var entity = requireActive(businessId, instanceId);
-        entity.setBillStatus(outcome == Outcome.APPROVED ? "C" : "A");
+        // 工作流只给出本轮结果；如何回到可编辑态或进入已审核态由请假聚合负责。
+        entity.setBillStatus(outcome == Outcome.APPROVED
+                ? BILL_STATUS_POLICY.transition(StandardBillStatusAction.AUDIT, entity.getBillStatus())
+                : BILL_STATUS_POLICY.initialStatus());
         entity.setLastOutcome(outcome.name());
         if (mapper.updateById(entity) != 1) throw new BizException(ResultEnum.DATA_CONFLICT, "请假状态已变化");
     }
     private LeaveEntity requireActive(Long id, Long instanceId) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) throw new IllegalStateException("请假审批回写必须参与工作流事务");
         var entity = mapper.selectOne(new LambdaQueryWrapper<LeaveEntity>().eq(LeaveEntity::getId, id).last("FOR UPDATE"));
-        if (entity == null || !"B".equals(entity.getBillStatus()) || !Objects.equals(instanceId, entity.getCurrentInstanceId())) {
+        if (entity == null || !StandardBillStatus.SUBMITTED.getValue().equals(entity.getBillStatus())
+                || !Objects.equals(instanceId, entity.getCurrentInstanceId())) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "该轮次已不是请假单的当前审批");
         }
         return entity;

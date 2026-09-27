@@ -12,6 +12,8 @@ import sm.domain.sys.base.attachment.contract.*;
 import sm.domain.sys.base.numberrule.contract.NumberGenerator;
 import sm.domain.sys.base.numberrule.contract.model.NumberGenerationContext;
 import sm.domain.workflow.process.runtime.contract.WorkflowSubmission;
+import sm.system.bill.BillStatusPolicy;
+import sm.system.bill.StandardBillStatusAction;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.security.context.CurrentUserContext;
@@ -22,6 +24,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
 class LeaveTxService {
+    private static final BillStatusPolicy BILL_STATUS_POLICY = BillStatusPolicy.standard();
     private final LeaveMapper mapper;
     private final LeaveAttachmentEntryMapper entries;
     private final LeaveAttachmentSnapshotMapper snapshots;
@@ -49,11 +52,13 @@ class LeaveTxService {
             return original.getId();
         }
         var entity = saveAggregate(form, "SUBMIT");
+        String submittedStatus = BILL_STATUS_POLICY.transition(StandardBillStatusAction.SUBMIT,
+                entity.getBillStatus());
         var snapshot = converter.toDetailVO(entity);
         var selected = Set.copyOf(form.getAttachmentIds());
         snapshot.setAttachments(attachments.listForAggregate(LeaveResourceRegistration.RESOURCE_TYPE, entity.getId().toString())
                 .stream().filter(attachment -> selected.contains(attachment.getId())).toList());
-        snapshot.setBillStatus("B");
+        snapshot.setBillStatus(submittedStatus);
         snapshot.setCurrentInstanceId(null);
         Long instanceId = workflow.submit(new WorkflowSubmission.Command(LeaveResourceRegistration.BUSINESS_TYPE, entity.getId(),
                 entity.getNumber(), entity.getOrgId(), entity.getApplicantId(), form.getRequestId(), requestDigest, json.writeValueAsString(snapshot),
@@ -65,7 +70,7 @@ class LeaveTxService {
             retained.setAttachmentId(attachmentId);
             snapshots.insert(retained);
         }
-        entity.setBillStatus("B");
+        entity.setBillStatus(submittedStatus);
         entity.setCurrentInstanceId(instanceId);
         entity.setLastOutcome(null);
         if (mapper.updateById(entity) != 1) throw new BizException(ResultEnum.DATA_CONFLICT, "请假提交状态冲突");
@@ -77,8 +82,8 @@ class LeaveTxService {
         requireOwner(entity);
         dataScope.requireAllowed(entity, "DELETE");
         requireVersion(entity, form.version());
-        if (!"A".equals(entity.getBillStatus()) || entity.getCurrentInstanceId() != null) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "只能删除从未提交过的草稿");
+        if (!BILL_STATUS_POLICY.isEditable(entity.getBillStatus()) || entity.getCurrentInstanceId() != null) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "只能删除从未提交过的暂存单");
         }
         try { attachments.deleteForAggregate(LeaveResourceRegistration.RESOURCE_TYPE, entity.getId().toString()); }
         catch (IOException failure) { throw new BizException(ResultEnum.PERSISTENCE_ERROR, "清理请假附件失败"); }
@@ -96,13 +101,13 @@ class LeaveTxService {
             entity.setApplicantId(currentUser.getUserId());
             entity.setNumber(numbers.nextNumber(LeaveNumberReferenceProvider.REFERENCE,
                     NumberGenerationContext.forOrganization(entity.getOrgId(), form.getBizDate())));
-            entity.setBillStatus("A");
+            entity.setBillStatus(BILL_STATUS_POLICY.initialStatus());
             entity.setVersion(0);
         } else {
             entity = lock(form.getId());
             requireOwner(entity);
             requireVersion(entity, form.getVersion());
-            if (!"A".equals(entity.getBillStatus())) throw new BizException(ResultEnum.PARAM_ERROR, "当前请假单不可编辑");
+            BILL_STATUS_POLICY.requireEditable(entity.getBillStatus());
             if (!Objects.equals(entity.getClientKey(), form.getClientKey())) throw new BizException(ResultEnum.PARAM_ERROR, "单据编辑标识不匹配");
         }
         entity.setBizDate(form.getBizDate());

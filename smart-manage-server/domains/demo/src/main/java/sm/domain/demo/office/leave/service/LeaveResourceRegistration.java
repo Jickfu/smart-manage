@@ -8,6 +8,7 @@ import sm.domain.demo.office.leave.constant.LeavePermission;
 import sm.domain.demo.office.leave.mapper.*;
 import sm.domain.demo.office.leave.model.entity.*;
 import sm.domain.workflow.process.instance.contract.WorkflowHistoryReader;
+import sm.system.bill.BillStatusPolicy;
 import sm.system.exception.BizException;
 import sm.system.resource.*;
 import sm.system.response.ResultEnum;
@@ -18,6 +19,7 @@ import java.util.Set;
 @Component
 @RequiredArgsConstructor
 final class LeaveResourceRegistration implements BusinessResourceRegistration, BusinessResourceAccessPolicy {
+    private static final BillStatusPolicy BILL_STATUS_POLICY = BillStatusPolicy.standard();
     static final String RESOURCE_TYPE = "demo.office.leave";
     static final String BUSINESS_TYPE = "demo/office/leave";
     private final LeaveMapper mapper;
@@ -87,8 +89,9 @@ final class LeaveResourceRegistration implements BusinessResourceRegistration, B
     }
 
     private void requireMutableState(LeaveEntity entity) {
-        if (!Objects.equals(entity.getApplicantId(), currentUser.getUserId()) || !"A".equals(entity.getBillStatus())) {
-            throw new BizException(ResultEnum.PERMISSION_ERROR, "只有申请人可以维护草稿附件");
+        if (!Objects.equals(entity.getApplicantId(), currentUser.getUserId())
+                || !BILL_STATUS_POLICY.isEditable(entity.getBillStatus())) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "只有申请人可以维护暂存单附件");
         }
     }
 

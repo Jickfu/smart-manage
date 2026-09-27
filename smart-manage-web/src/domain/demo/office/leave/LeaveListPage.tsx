@@ -6,6 +6,7 @@ import { useCommandMutation } from '@/domain/common/page/command/useCommandMutat
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { OperationType } from '@/domain/common/page/types';
+import { isStandardBillEditable, standardBillStatusCatalog } from '@/domain/common/bill/billStatus';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { componentKeys } from '../../componentKeys';
@@ -29,7 +30,7 @@ export default function LeaveListPage(props: PageComponentProps) {
       for (const row of query.data?.records ?? [])
         if (selection.includes(row.id)) await leaveApi.delete(row.id, row.version);
     },
-    successMessage: '草稿已删除',
+    successMessage: '暂存单已删除',
     onSuccess: async () => {
       setSelection([]);
       await query.refetch();
@@ -63,8 +64,8 @@ export default function LeaveListPage(props: PageComponentProps) {
         if (selection.length)
           void confirm({
             type: 'delete',
-            title: '删除请假草稿',
-            description: '仅可删除从未提交过的草稿。',
+            title: '删除请假暂存单',
+            description: '仅可删除从未提交过的暂存单。',
             confirmText: '删除',
             onConfirm: () => remove.mutateAsync(),
           });
@@ -72,7 +73,7 @@ export default function LeaveListPage(props: PageComponentProps) {
       selectMode="checkbox"
       selectedRowKeys={selection}
       onSelectChange={setSelection}
-      isRowSelectable={(row) => row.billStatus === 'A' && !row.currentInstanceId}
+      isRowSelectable={(row) => isStandardBillEditable(row.billStatus) && !row.currentInstanceId}
       columns={[
         {
           title: '单据编号',
@@ -88,7 +89,9 @@ export default function LeaveListPage(props: PageComponentProps) {
                     props.appNumber,
                     componentKeys.leaveEdit,
                     row.id,
-                    row.billStatus === 'A' ? OperationType.EDIT : OperationType.VIEW,
+                    isStandardBillEditable(row.billStatus)
+                      ? OperationType.EDIT
+                      : OperationType.VIEW,
                   )
               }
             >
@@ -105,7 +108,7 @@ export default function LeaveListPage(props: PageComponentProps) {
           dataIndex: 'billStatus',
           width: 100,
           render: (value: LeaveDetail['billStatus']) =>
-            ({ A: '草稿', B: '审批中', C: '审批通过' })[value],
+            standardBillStatusCatalog.get(value)?.label ?? value,
         },
       ]}
     />

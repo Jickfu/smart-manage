@@ -14,7 +14,7 @@ export interface LeaveDetail {
   endTime: string;
   days: number;
   reason: string;
-  billStatus: 'A' | 'B' | 'C';
+  billStatus: string;
   currentInstanceId?: string;
   lastOutcome?: string;
   attachments: BusinessAttachment[];
