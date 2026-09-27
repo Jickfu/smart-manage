@@ -88,7 +88,7 @@ COMMENT ON COLUMN public.t_demo_purchase_requisition.reason IS '申请原因';
 -- Name: COLUMN t_demo_purchase_requisition.bill_status; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.t_demo_purchase_requisition.bill_status IS '单据状态：A暂存，B已提交，C审核通过，D已关闭';
+COMMENT ON COLUMN public.t_demo_purchase_requisition.bill_status IS '单据状态：A暂存，B已提交，C已审核，D已关闭';
 
 
 --

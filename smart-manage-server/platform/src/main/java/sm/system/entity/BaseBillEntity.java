@@ -26,7 +26,7 @@ public class BaseBillEntity extends BaseEntity {
 	private LocalDate bizDate;
 
 	/**
-	 * 单据状态：A 暂存，B 已提交，C 审核通过，D 已关闭
+	 * 单据状态：A 暂存，B 已提交，C 已审核，D 已关闭；E-Z 由具体业务聚合解释。
 	 */
 	private String billStatus;
 }

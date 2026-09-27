@@ -16,6 +16,8 @@
 
 采购申请使用标准单据字段 `biz_date` 记录业务日期；需求日期仍作为采购申请的领域专属日期保留。
 
+采购申请只使用[标准单据状态](../../../../../docs/architecture/bill-status.md) A-D，不增加业务扩展状态。A 为暂存并允许普通保存，提交在同一事务中执行 A → B；C 表示已审核，D 表示已关闭。新增页尚未持久化，不显示单据状态；保存或直接提交成功后才展示服务端真实状态。状态不进入普通保存 Form。
+
 采购申请编号在首次保存或直接提交的业务事务中由公共编号生成器产生，前端不预取、不占号，也不能修改。
 编号引用键为 `demo/procurement/purchase-requisition.number`，内置规则键为
 `demo/procurement/purchase-requisition`，默认按 `org_id` 和业务日期每天独立流水，格式为

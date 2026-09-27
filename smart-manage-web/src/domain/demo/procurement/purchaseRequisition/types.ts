@@ -54,7 +54,6 @@ export interface PurchaseRequisitionCreateNewDataVO {
   orgId: string;
   applicantId: string;
   bizDate: string;
-  billStatus: string;
   entries: PurchaseRequisitionEntry[];
   attachments: BusinessAttachment[];
 }

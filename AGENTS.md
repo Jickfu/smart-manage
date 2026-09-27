@@ -45,6 +45,7 @@
 | 数据权限、组织范围或对象级访问 | `docs/architecture/data-permission.md` |
 | 配置、部署或多实例 | `docs/development/configuration.md`、`docs/architecture/deployment.md` |
 | 数据库或迁移 | `docs/development/database.md` |
+| 业务单据状态 | `docs/architecture/bill-status.md`、所属业务领域文档 |
 | 构建、测试或 CI | `docs/development/verification.md` |
 | 新增或显著扩展业务模块 | `docs/development/module-development-guide.md`、`docs/development/module-pattern-catalog.md`、平台 `docs/platform/{应用}/` 或可选领域 `smart-manage-server/domains/{领域}/docs/{应用}/` 下对应模块文档 |
 | 新增业务聚合 | 上述模块文档及 `docs/development/business-aggregate-checklist.md` |

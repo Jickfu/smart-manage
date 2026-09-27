@@ -10,18 +10,6 @@ export enum OperationType {
   VIEW = 'VIEW',
 }
 
-/** 单据状态 */
-export enum BillStatus {
-  /** 暂存 */
-  SAVED = 'A',
-  /** 已提交 */
-  SUBMITTED = 'B',
-  /** 审核通过 */
-  AUDITED = 'C',
-  /** 已关闭 */
-  CLOSED = 'D',
-}
-
 /** 页面组件统一 Props */
 export interface PageComponentProps {
   appNumber: string;

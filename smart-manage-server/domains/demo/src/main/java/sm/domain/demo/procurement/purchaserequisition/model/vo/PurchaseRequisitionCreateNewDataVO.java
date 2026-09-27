@@ -12,7 +12,6 @@ public class PurchaseRequisitionCreateNewDataVO {
     private Long orgId;
     private Long applicantId;
     private LocalDate bizDate;
-    private String billStatus;
     private List<PurchaseRequisitionEntryVO> entries = new ArrayList<>();
     private List<AttachmentReference> attachments = new ArrayList<>();
 }
