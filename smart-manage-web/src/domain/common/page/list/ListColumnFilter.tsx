@@ -140,12 +140,8 @@ const ListColumnFilter = ({
               className={
                 operator === item.value ? 'sm-list-column-filter-operator-active' : undefined
               }
-              onClick={() => {
-                setOperator(item.value);
-                setSingleValue(undefined);
-                setDateRange(null);
-                setEqualDate(null);
-              }}
+              // 操作符只改变条件含义；各输入草稿由用户显式修改或重置，切换后仍可继续使用。
+              onClick={() => setOperator(item.value)}
             >
               <span>{item.label}</span>
               {operator === item.value && <span>✓</span>}

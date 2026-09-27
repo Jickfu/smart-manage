@@ -27,7 +27,7 @@ import sm.domain.demo.procurement.purchaserequisition.model.vo.PurchaseRequisiti
 import sm.domain.demo.procurement.purchaserequisition.model.vo.PurchaseRequisitionHomeSummaryVO;
 import sm.system.security.context.CurrentUserContext;
 import sm.system.aop.log.BizLog;
-import sm.system.enums.BillStatusEnum;
+import sm.system.bill.BillStatusPolicy;
 import sm.system.exception.BizException;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
@@ -48,6 +48,7 @@ import sm.system.datascope.DataScope;
 @Service
 @RequiredArgsConstructor
 public class PurchaseRequisitionService {
+	private static final BillStatusPolicy BILL_STATUS_POLICY = BillStatusPolicy.standard();
 	private static final Map<String, ListQueryUtil.Field<PurchaseRequisitionEntity>> LIST_FIELDS = Map.of(
 			"number", ListQueryUtil.string(PurchaseRequisitionEntity::getNumber, true),
 			"subject", ListQueryUtil.string(PurchaseRequisitionEntity::getSubject, true),
@@ -192,7 +193,6 @@ public class PurchaseRequisitionService {
         createNewDataVO.setOrgId(currentUserContext.getOrgId());
         createNewDataVO.setApplicantId(currentUserContext.getUserId());
         createNewDataVO.setBizDate(LocalDate.now());
-        createNewDataVO.setBillStatus(BillStatusEnum.SAVED.getValue());
         return createNewDataVO;
     }
 
@@ -200,13 +200,12 @@ public class PurchaseRequisitionService {
     public PurchaseRequisitionHomeSummaryVO homeSummary() {
         DataScope viewScope = dataScope.resolve(PurchaseRequisitionResourceRegistration.ACTION_VIEW);
         Map<String, Long> statusCounts = new LinkedHashMap<>();
-        for (BillStatusEnum status : BillStatusEnum.values()) {
-            String statusValue = status.getValue();
-            statusCounts.put(statusValue, 0L);
+        for (var status : BILL_STATUS_POLICY.definitions()) {
+            statusCounts.put(status.value(), 0L);
         }
         for (Map<String, Object> row : mapper.selectStatusCounts(viewScope)) {
             String statusValue = (String) row.get("billStatus");
-            BillStatusEnum.fromValue(statusValue);
+            BILL_STATUS_POLICY.requireKnown(statusValue);
             statusCounts.put(statusValue, ((Number) row.get("total")).longValue());
         }
         LambdaQueryWrapper<PurchaseRequisitionEntity> recentQuery = new LambdaQueryWrapper<>();

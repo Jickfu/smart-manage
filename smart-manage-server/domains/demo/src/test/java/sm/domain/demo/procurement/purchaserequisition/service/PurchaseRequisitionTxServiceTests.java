@@ -11,7 +11,7 @@ import sm.domain.demo.procurement.purchaserequisition.model.form.PurchaseRequisi
 import sm.system.security.context.CurrentUserContext;
 import sm.domain.sys.base.attachment.service.AttachmentService;
 import sm.domain.sys.base.numberrule.service.NumberGeneratorAccessor;
-import sm.system.enums.BillStatusEnum;
+import sm.system.bill.StandardBillStatus;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -45,7 +45,7 @@ class PurchaseRequisitionTxServiceTests {
         PurchaseRequisitionEntity savedEntity = new PurchaseRequisitionEntity();
         savedEntity.setId(1L);
         savedEntity.setVersion(0);
-        savedEntity.setBillStatus(BillStatusEnum.SAVED.getValue());
+        savedEntity.setBillStatus(StandardBillStatus.SAVED.getValue());
         when(mapper.selectById(1L)).thenReturn(savedEntity);
         when(mapper.update(any(PurchaseRequisitionEntity.class), any())).thenReturn(1);
 
@@ -100,7 +100,7 @@ class PurchaseRequisitionTxServiceTests {
         PurchaseRequisitionEntity entity = new PurchaseRequisitionEntity();
         entity.setId(1L);
         entity.setVersion(2);
-        entity.setBillStatus(BillStatusEnum.SAVED.getValue());
+        entity.setBillStatus(StandardBillStatus.SAVED.getValue());
         when(mapper.selectById(1L)).thenReturn(entity);
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
@@ -119,7 +119,7 @@ class PurchaseRequisitionTxServiceTests {
         PurchaseRequisitionEntity entity = new PurchaseRequisitionEntity();
         entity.setId(1L);
         entity.setVersion(2);
-        entity.setBillStatus(BillStatusEnum.SAVED.getValue());
+        entity.setBillStatus(StandardBillStatus.SAVED.getValue());
         when(mapper.selectById(1L)).thenReturn(entity);
         when(mapper.delete(any())).thenReturn(1);
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
@@ -140,7 +140,7 @@ class PurchaseRequisitionTxServiceTests {
         PurchaseRequisitionEntity entity = new PurchaseRequisitionEntity();
         entity.setId(1L);
         entity.setVersion(2);
-        entity.setBillStatus(BillStatusEnum.SAVED.getValue());
+        entity.setBillStatus(StandardBillStatus.SAVED.getValue());
         when(mapper.selectById(1L)).thenReturn(entity);
         when(mapper.delete(any())).thenReturn(0);
 
@@ -159,7 +159,7 @@ class PurchaseRequisitionTxServiceTests {
         PurchaseRequisitionEntity entity = new PurchaseRequisitionEntity();
         entity.setId(1L);
         entity.setVersion(2);
-        entity.setBillStatus(BillStatusEnum.SUBMITTED.getValue());
+        entity.setBillStatus(StandardBillStatus.SUBMITTED.getValue());
         when(mapper.selectById(1L)).thenReturn(entity);
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
@@ -178,7 +178,7 @@ class PurchaseRequisitionTxServiceTests {
         PurchaseRequisitionEntity entity = new PurchaseRequisitionEntity();
         entity.setId(1L);
         entity.setVersion(2);
-        entity.setBillStatus(BillStatusEnum.SAVED.getValue());
+        entity.setBillStatus(StandardBillStatus.SAVED.getValue());
         when(mapper.selectById(1L)).thenReturn(entity);
 
         PurchaseRequisitionTxService service = new PurchaseRequisitionTxService(
@@ -197,11 +197,11 @@ class PurchaseRequisitionTxServiceTests {
         PurchaseRequisitionEntity entity = new PurchaseRequisitionEntity();
         entity.setId(1L);
         entity.setVersion(2);
-        entity.setBillStatus(BillStatusEnum.SAVED.getValue());
+        entity.setBillStatus(StandardBillStatus.SAVED.getValue());
         PurchaseRequisitionEntity savedEntity = new PurchaseRequisitionEntity();
         savedEntity.setId(1L);
         savedEntity.setVersion(3);
-        savedEntity.setBillStatus(BillStatusEnum.SAVED.getValue());
+        savedEntity.setBillStatus(StandardBillStatus.SAVED.getValue());
         when(mapper.selectById(1L)).thenReturn(entity, savedEntity);
         when(mapper.updateById(entity)).thenReturn(1);
         when(entryMapper.insert(any(PurchaseRequisitionEntryEntity.class))).thenReturn(1);
@@ -223,7 +223,7 @@ class PurchaseRequisitionTxServiceTests {
         PurchaseRequisitionEntity entity = new PurchaseRequisitionEntity();
         entity.setId(1L);
         entity.setVersion(2);
-        entity.setBillStatus(BillStatusEnum.SAVED.getValue());
+        entity.setBillStatus(StandardBillStatus.SAVED.getValue());
         when(mapper.selectById(1L)).thenReturn(entity);
         when(mapper.updateById(entity)).thenReturn(1);
         when(entryMapper.insert(any(PurchaseRequisitionEntryEntity.class))).thenReturn(0);

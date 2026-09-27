@@ -3,7 +3,7 @@ import { ConfigProvider, Form } from 'antd';
 import type { FormInstance, FormItemProps } from 'antd';
 import type { Rule } from 'antd/es/form';
 import type { ReactNode } from 'react';
-import { OperationType, BillStatus } from '../types';
+import { OperationType } from '../types';
 import type { AccessResource } from '../access/access';
 import { PageActionBar } from '../command/PageActionBar';
 import { type PageAction } from '../command/pageActions';
@@ -110,8 +110,8 @@ interface EditPageProps {
   sections: EditPageSection[];
   /** 从服务端数据稳定派生的初始值；引用变化代表新快照，不得内联构造等价对象。 */
   initialValues?: Record<string, unknown>;
-  /** 单据状态（无状态的基础数据不传） */
-  billStatus?: BillStatus;
+  /** 领域根据数据库当前状态与业务规则给出的编辑能力；页面壳层不解释具体状态码。 */
+  editable?: boolean;
   operationType: OperationType;
   loading?: boolean;
   saving?: boolean;
@@ -145,11 +145,11 @@ interface EditPageProps {
   sidePanelLabel?: string;
 }
 
-/** 是否可编辑：暂存或新增时允许编辑 */
-function isEditable(opType: OperationType, status?: BillStatus): boolean {
+/** 页面形态决定新增和查看语义，已有数据是否可编辑由领域显式提供。 */
+function isEditable(opType: OperationType, domainEditable: boolean): boolean {
   if (opType === OperationType.VIEW) return false;
   if (opType === OperationType.ADDNEW) return true;
-  return status === BillStatus.SAVED || status === undefined;
+  return domainEditable;
 }
 
 /** 通用编辑页 — 使用 antd Form 驱动校验与字段状态 */
@@ -159,7 +159,7 @@ const EditPage = ({
   title,
   sections,
   initialValues,
-  billStatus,
+  editable: domainEditable = true,
   operationType,
   loading = false,
   saving = false,
@@ -191,7 +191,7 @@ const EditPage = ({
   const [activeCollapseKeys, setActiveCollapseKeys] = useState<string[]>(
     sections.map((section) => section.key),
   );
-  const editable = isEditable(operationType, billStatus);
+  const editable = isEditable(operationType, domainEditable);
   const busy = saving || pending;
   const fieldsEditable = editable && !busy;
 

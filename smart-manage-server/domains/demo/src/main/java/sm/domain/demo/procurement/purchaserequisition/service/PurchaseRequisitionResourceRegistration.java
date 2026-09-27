@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import sm.domain.demo.procurement.purchaserequisition.constant.PurchaseRequisitionPermission;
 import sm.domain.demo.procurement.purchaserequisition.mapper.PurchaseRequisitionMapper;
 import sm.domain.demo.procurement.purchaserequisition.model.entity.PurchaseRequisitionEntity;
-import sm.system.enums.BillStatusEnum;
+import sm.system.bill.BillStatusPolicy;
 import sm.system.exception.BizException;
 import sm.system.resource.BusinessResourceAccessPolicy;
 import sm.system.resource.BusinessResourceAction;
@@ -18,6 +18,7 @@ import java.util.Set;
 @Component
 @RequiredArgsConstructor
 final class PurchaseRequisitionResourceRegistration implements BusinessResourceRegistration, BusinessResourceAccessPolicy {
+    private static final BillStatusPolicy BILL_STATUS_POLICY = BillStatusPolicy.standard();
     static final String RESOURCE_TYPE = "demo.procurement.purchase-requisition";
     static final String ACTION_VIEW = "VIEW";
     static final String ACTION_SAVE = "SAVE";
@@ -70,7 +71,7 @@ final class PurchaseRequisitionResourceRegistration implements BusinessResourceR
         }
         StpUtil.checkPermission(PurchaseRequisitionPermission.SAVE);
         dataScope.requireAllowed(entity, ACTION_SAVE);
-        if (!BillStatusEnum.SAVED.getValue().equals(entity.getBillStatus())) {
+        if (!BILL_STATUS_POLICY.isEditable(entity.getBillStatus())) {
             throw new BizException(ResultEnum.BILL_STATUS_ERROR, "非暂存采购申请不允许维护附件");
         }
     }

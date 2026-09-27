@@ -161,6 +161,17 @@ describe('edit error ownership and state preservation', () => {
     expect(container.textContent).not.toContain('保存');
   });
 
+  it('由领域显式决定已有数据是否可编辑，新增页不受已有状态限制', async () => {
+    const onSave = vi.fn();
+    await renderEdit({ onSave, editable: false });
+    expect(container.textContent).not.toContain('保存');
+    expect(container.querySelector('input')?.disabled).toBe(true);
+
+    await renderEdit({ onSave, editable: false, operationType: OperationType.ADDNEW });
+    expect(container.textContent?.replace(/\s/g, '')).toContain('保存');
+    expect(container.querySelector('input')?.disabled).toBe(false);
+  });
+
   it('focuses the current form error only after the validation freeze is released', async () => {
     const onSave = vi.fn();
     await renderEdit({

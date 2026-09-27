@@ -6,7 +6,8 @@ import ListPage from '@/domain/common/page/list/ListPage';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { componentKeys } from '@/domain/demo/componentKeys';
 import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
-import { BillStatus, OperationType } from '@/domain/common/page/types';
+import { OperationType } from '@/domain/common/page/types';
+import { isStandardBillEditable, standardBillStatusCatalog } from '@/domain/common/bill/billStatus';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useWorkbenchStore } from '@/stores/workbench';
 import { purchaseRequisitionApi } from './api';
@@ -21,13 +22,6 @@ import { DataExchangeActions } from '@/domain/common/dataExchange/DataExchangeAc
 
 const EDIT_COMPONENT_KEY = componentKeys.purchaseRequisitionEdit;
 
-const statusView = {
-  [BillStatus.SAVED]: { label: '暂存', color: 'default' },
-  [BillStatus.SUBMITTED]: { label: '已提交', color: 'blue' },
-  [BillStatus.AUDITED]: { label: '审核通过', color: 'green' },
-  [BillStatus.CLOSED]: { label: '已关闭', color: 'default' },
-} as const;
-
 const columnFeatures: ListColumnFeatures = {
   number: { label: '编码', filter: { type: 'string' }, sorter: true },
   subject: { label: '主题', filter: { type: 'string' } },
@@ -37,7 +31,7 @@ const columnFeatures: ListColumnFeatures = {
     label: '单据状态',
     filter: {
       type: 'enum',
-      options: Object.entries(statusView).map(([value, view]) => ({ value, label: view.label })),
+      options: [...standardBillStatusCatalog.options],
     },
   },
   createTime: { label: '创建时间', filter: { type: 'date' }, sorter: true },
@@ -68,8 +62,9 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
   const exportMutation = useArtifactExport(purchaseRequisitionApi.export, '采购申请导出完成');
 
   const openDetail = (record: PurchaseRequisitionListVO) => {
-    const operationType =
-      record.billStatus === BillStatus.SAVED ? OperationType.EDIT : OperationType.VIEW;
+    const operationType = isStandardBillEditable(record.billStatus)
+      ? OperationType.EDIT
+      : OperationType.VIEW;
     openBillTab(props.appNumber, EDIT_COMPONENT_KEY, record.id, operationType);
   };
 
@@ -91,8 +86,8 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
       title: '单据状态',
       dataIndex: 'billStatus',
       width: 100,
-      render: (value: BillStatus) => {
-        const view = statusView[value];
+      render: (value: string) => {
+        const view = standardBillStatusCatalog.get(value);
         return view ? <Tag color={view.color}>{view.label}</Tag> : value;
       },
     },
