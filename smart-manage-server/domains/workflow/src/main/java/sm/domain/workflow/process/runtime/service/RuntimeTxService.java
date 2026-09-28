@@ -56,6 +56,38 @@ class RuntimeTxService {
         return result;
     }
 
+    WorkflowEngine.Run cooperate(sm.domain.workflow.process.runtime.model.form.TaskCooperationForm form, Long actorId) {
+        users.requireEnabled(actorId);
+        if (!"REDUCE_SIGN".equals(form.action())) {
+            users.requireEnabledByIds(form.targetUserIds().stream().distinct().toList());
+        }
+        String digest = commands.digest(form);
+        var receipt = commands.replay(form.requestId(), actorId, digest);
+        if (receipt != null) return receipt;
+        var reference = instances.reference(form.instanceId());
+        var business = businesses.require(reference.businessType());
+        business.lock(reference.businessId(), reference.id());
+        var result = engine.cooperate(reference.id(), form.taskId(), actorId,
+                WorkflowEngine.Cooperation.valueOf(form.action()), form.targetUserIds(), form.reason().trim());
+        notifications.record(reference, result);
+        commands.save(form.requestId(), actorId, digest, result);
+        return result;
+    }
+
+    WorkflowEngine.Run takeBack(sm.domain.workflow.process.runtime.model.form.InstanceCommandForm form, Long actorId) {
+        users.requireEnabled(actorId);
+        String digest = commands.digest(java.util.List.of("TAKE_BACK", form));
+        var receipt = commands.replay(form.requestId(), actorId, digest);
+        if (receipt != null) return receipt;
+        var reference = instances.reference(form.instanceId());
+        var business = businesses.require(reference.businessType());
+        business.lock(reference.businessId(), reference.id());
+        var result = engine.takeBack(reference.id(), actorId, form.reason().trim());
+        notifications.record(reference, result);
+        commands.save(form.requestId(), actorId, digest, result);
+        return result;
+    }
+
     private void complete(InstanceService.Reference reference, WorkflowBusiness business, WorkflowEngine.Run run) {
         notifications.record(reference, run);
         if (run.state() != WorkflowEngine.State.APPROVING) {

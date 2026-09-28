@@ -98,8 +98,14 @@ import pageRegistrationModule31 from '../../sys/scheduler/job/pageRegistration';
 // src/domain/workflow/process/definition/pageRegistration.ts
 import pageRegistrationModule32 from '../../workflow/process/definition/pageRegistration';
 
+// src/domain/workflow/process/instance/pageRegistration.ts
+import pageRegistrationModule33 from '../../workflow/process/instance/pageRegistration';
+
+// src/domain/workflow/process/log/pageRegistration.ts
+import pageRegistrationModule34 from '../../workflow/process/log/pageRegistration';
+
 // src/domain/workflow/process/task/pageRegistration.ts
-import pageRegistrationModule33 from '../../workflow/process/task/pageRegistration';
+import pageRegistrationModule35 from '../../workflow/process/task/pageRegistration';
 
 import { registerPageRegistrationModules } from './componentRegistry';
 
@@ -137,6 +143,8 @@ registerPageRegistrationModules([
   pageRegistrationModule31,
   pageRegistrationModule32,
   pageRegistrationModule33,
+  pageRegistrationModule34,
+  pageRegistrationModule35,
 ]);
 import domainExtensions2 from '../../demo/extensions';
 import domainExtensions3 from '../../workflow/extensions';

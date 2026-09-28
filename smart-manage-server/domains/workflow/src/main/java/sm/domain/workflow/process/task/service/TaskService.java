@@ -21,7 +21,6 @@ public class TaskService {
     private final CurrentUserContext currentUser;
     private final ObjectMapper json;
     private final sm.domain.sys.base.user.contract.UserReferenceReader users;
-    private final sm.domain.workflow.process.task.mapper.TaskCandidateChangeMapper changes;
 
     public PageData<TaskListVO> listPage(TaskListForm form) {
         var selected = engine.select(currentUser.getUserId(), form.getBox(), Math.multiplyExact(form.getPageNum() - 1, form.getPageSize()), form.getPageSize());
@@ -36,27 +35,28 @@ public class TaskService {
     }
 
     public ApprovalDetailVO detail(Long id) {
-        var run = instances.readable(id);
+        var completeRun = instances.readable(id);
         var reference = instances.reference(id);
         Long actor = currentUser.getUserId();
-        Long taskId = run.tasks().stream().filter(task -> task.candidates().contains(actor)).map(WorkflowEngine.Task::id).findFirst().orElse(null);
-        boolean canWithdraw = Objects.equals(reference.applicantId(), actor) && run.state() == WorkflowEngine.State.APPROVING && !run.approvalStarted();
+        Long taskId = completeRun.tasks().stream().filter(task -> task.candidates().contains(actor)).map(WorkflowEngine.Task::id).findFirst().orElse(null);
+        boolean canWithdraw = Objects.equals(reference.applicantId(), actor) && completeRun.state() == WorkflowEngine.State.APPROVING && !completeRun.approvalStarted();
+        boolean canTakeBack = taskId == null && completeRun.state() == WorkflowEngine.State.APPROVING && completeRun.active()
+                && completeRun.history().stream().anyMatch(history -> Objects.equals(history.actorId(), actor)
+                && "APPROVED".equals(history.action()));
+        // 普通用户的审批详情只返回审批历史；协作、管理和脚本轨迹由工作流管理端查看。
+        var approvalHistory = completeRun.history().stream()
+                .filter(history -> history.category() == WorkflowEngine.HistoryCategory.APPROVAL)
+                .toList();
+        var run = new WorkflowEngine.Run(completeRun.id(), completeRun.definitionId(), completeRun.applicantId(),
+                completeRun.state(), completeRun.tasks(), approvalHistory, completeRun.nodeTargets(),
+                completeRun.approvalStarted(), completeRun.active(), completeRun.variables());
         var actorIds = new java.util.HashSet<Long>();
         actorIds.add(reference.applicantId());
         run.tasks().forEach(task -> actorIds.addAll(task.candidates()));
         run.history().forEach(history -> { if (history.actorId() != null) actorIds.add(history.actorId()); });
-        var audits = changes.selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<sm.domain.workflow.process.task.model.entity.TaskCandidateChangeEntity>()
-                .eq(sm.domain.workflow.process.task.model.entity.TaskCandidateChangeEntity::getInstanceId, id)
-                .orderByAsc(sm.domain.workflow.process.task.model.entity.TaskCandidateChangeEntity::getCreateTime));
-        var history = audits.stream().map(audit -> new CandidateChangeVO(audit.getId(), audit.getTaskId(), audit.getOperatorId(),
-                candidateIds(audit.getBeforeCandidates()), candidateIds(audit.getAfterCandidates()), audit.getReason(), audit.getCreateTime())).toList();
-        history.forEach(audit -> {
-            actorIds.add(audit.operatorId());
-            actorIds.addAll(audit.beforeCandidates());
-            actorIds.addAll(audit.afterCandidates());
-        });
         var names = users.findByIds(actorIds).values().stream().collect(Collectors.toMap(sm.domain.sys.base.user.contract.UserReference::id, sm.domain.sys.base.user.contract.UserReference::name));
-        return new ApprovalDetailVO(id, reference.businessType(), reference.businessId(), reference.number(), run, canWithdraw, taskId, names, history);
+        return new ApprovalDetailVO(id, reference.businessType(), reference.businessId(), reference.number(), run,
+                canWithdraw, taskId, canTakeBack, names);
     }
 
     public JsonNode chart(Long id) {
@@ -66,7 +66,4 @@ public class TaskService {
 
     public long pendingCount() { return engine.select(currentUser.getUserId(), WorkflowEngine.Box.PENDING, 0, 1).total(); }
 
-    private java.util.List<Long> candidateIds(String value) {
-        return json.readValue(value, json.getTypeFactory().constructCollectionType(java.util.List.class, Long.class));
-    }
 }

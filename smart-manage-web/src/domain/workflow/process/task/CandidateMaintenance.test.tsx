@@ -75,29 +75,18 @@ async function load() {
     root.render(
       <QueryClientProvider client={client}>
         <ConfigProvider theme={{ zeroRuntime: true }}>
-          <CandidateMaintenance />
+          <CandidateMaintenance instanceId="10" taskId="20" />
         </ConfigProvider>
       </QueryClientProvider>,
     ),
   );
   await act(async () => button('维护候选人').click());
-  const input = document.querySelector<HTMLInputElement>('input[placeholder="流程实例 ID"]')!;
-  await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '10');
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-  await act(async () => button('读取任务').click());
   await settle();
 }
 it('超过 100 名候选人按接口上限分批回显，选中任务仍保留全部候选人姓名', async () => {
   await load();
   const requests = mocks.post.mock.calls.filter(([path]) => path === 'assignment/feedback');
   expect(requests.map(([, data]) => data.storageIds.split(',').length)).toEqual([100, 100, 1]);
-  const selector = document.querySelector('[role="combobox"]')!;
-  await act(async () => selector.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
-  await settle();
-  const option = document.querySelector<HTMLElement>('.ant-select-item-option')!;
-  await act(async () => option.click());
   const names = document.querySelector('[data-testid="candidates"]')!.textContent!.split(',');
   expect(names).toHaveLength(201);
   expect(names[200]).toBe('姓名201');
@@ -110,6 +99,6 @@ it('任一回显批次失败不会开放保存不完整的候选集合', async (
     return implementation(path, data);
   });
   await load();
-  expect(button('保存变更')).toHaveProperty('disabled', true);
-  expect(document.querySelector('[data-testid="candidates"]')).toBeNull();
+  expect(button('保存')).toHaveProperty('disabled', true);
+  expect(document.querySelector('[data-testid="candidates"]')?.textContent).toBe('');
 });

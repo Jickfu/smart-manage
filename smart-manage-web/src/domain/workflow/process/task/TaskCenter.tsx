@@ -7,7 +7,6 @@ import type { DomainViewProps } from '@/domain/common/registry/domainExtensions'
 import { workflowApi, stateLabels } from '../api';
 import type { TaskBox, TaskRow } from '../api';
 import ApprovalView from './ApprovalView';
-import CandidateMaintenance from './CandidateMaintenance';
 import '../workflow.css';
 
 const boxes = [
@@ -82,7 +81,6 @@ export default function TaskCenter({ active, context, onDirtyChange }: DomainVie
                 setPageNum(1);
               }}
             />
-            <CandidateMaintenance />
           </>
         }
         columns={[

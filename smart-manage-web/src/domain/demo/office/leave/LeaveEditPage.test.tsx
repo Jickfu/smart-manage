@@ -30,6 +30,11 @@ vi.mock('@/domain/common/component/useOperationConfirm', () => ({
 vi.mock('@/domain/common/component/useOperationFeedback', () => ({
   useOperationFeedback: () => ({ fromError: vi.fn(), success: vi.fn() }),
 }));
+vi.mock('./LeaveApprovalView', () => ({
+  default: ({ context }: { context?: Record<string, string> }) => (
+    <output data-testid="approval-mode">{context?.initialMode}</output>
+  ),
+}));
 
 let root: Root;
 let container: HTMLDivElement;
@@ -147,4 +152,13 @@ it('同一命令失败重试复用 requestId，撤回后重新提交使用新 re
   await submit();
   expect(mocks.submit).toHaveBeenCalledTimes(3);
   expect(mocks.submit.mock.calls[2]![0].requestId).not.toBe(first.requestId);
+});
+it.each([
+  ['查看工作流', 'workflow'],
+  ['审批意见', 'opinions'],
+])('业务单据通过“%s”进入带历史轮次授权的对应视图', async (label, mode) => {
+  await render();
+  await act(async () => button(label)!.click());
+  await settle();
+  expect(container.querySelector('[data-testid="approval-mode"]')?.textContent).toBe(mode);
 });

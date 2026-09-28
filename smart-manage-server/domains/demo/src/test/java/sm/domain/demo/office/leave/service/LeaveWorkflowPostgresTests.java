@@ -97,7 +97,11 @@ class LeaveWorkflowPostgresTests {
                 sm.domain.workflow.process.engine.warmflow.mapper.WarmFlowCoordinationMapper.class,
                 sm.domain.workflow.process.engine.warmflow.mapper.WarmFlowTaskQueryMapper.class,
                 sm.domain.workflow.process.task.mapper.TaskCandidateChangeMapper.class,
+                sm.domain.workflow.process.task.mapper.TaskMonitorMapper.class,
                 sm.domain.workflow.process.runtime.mapper.RuntimeCommandMapper.class,
+                sm.domain.workflow.process.runtime.mapper.WorkflowOperationMapper.class,
+                sm.domain.workflow.process.script.mapper.WorkflowScriptExecutionMapper.class,
+                sm.domain.workflow.process.log.mapper.FlowLogMapper.class,
                 sm.domain.workflow.process.notification.mapper.WorkflowOutboxMapper.class);
         mapperClasses.forEach(configuration::addMapper);
         var factory = new MybatisSqlSessionFactoryBean();
@@ -119,7 +123,10 @@ class LeaveWorkflowPostgresTests {
         context.registerBean("sqlSessionFactory", org.apache.ibatis.session.SqlSessionFactory.class, () -> sessionFactory);
         for (var mapperClass : mapperClasses) registerMapper(mapperClass, session);
         context.registerBean("transactionManager", org.springframework.transaction.PlatformTransactionManager.class, () -> new DataSourceTransactionManager(source));
-        context.registerBean(ObjectMapper.class, () -> JsonMapper.builder().findAndAddModules().build());
+        var json = JsonMapper.builder().findAndAddModules().build();
+        context.registerBean(ObjectMapper.class, () -> json);
+        context.registerBean(sm.system.script.RestrictedScriptExecutor.class,
+                () -> new sm.system.script.RestrictedScriptExecutor(json));
         var current = mock(CurrentUserContext.class);
         when(current.getUserId()).thenAnswer(invocation -> actor.get());
         when(current.getOrgId()).thenReturn(100L);

@@ -8,12 +8,14 @@
             <when test="box.name() == 'STARTED'">a.create_by = #{actor}</when>
             <when test="box.name() == 'COMPLETED'">
                 EXISTS (SELECT 1 FROM flow_his_task b WHERE b.instance_id = a.id
-                    AND b.del_flag = '0' AND b.approver = #{actor} AND b.node_type = 1 AND b.flow_status != 'WITHDRAWN')
+                    AND b.del_flag = '0' AND b.approver = #{actor} AND b.node_type = 1
+                    AND COALESCE(b.flow_status, '') NOT IN
+                        ('WITHDRAWN', 'TERMINATED', 'SCRIPT', 'ADMIN_JUMP', 'ADMIN_RETURN'))
             </when>
             <otherwise>
                 EXISTS (SELECT 1 FROM flow_task b JOIN flow_user c ON c.associated = b.id
                     WHERE b.instance_id = a.id AND b.del_flag = '0' AND c.del_flag = '0'
-                        AND c.type = '1' AND c.processed_by = #{actor})
+                        AND c.type IN ('1', '2', '3') AND c.processed_by = #{actor})
             </otherwise>
         </choose>
     </sql>

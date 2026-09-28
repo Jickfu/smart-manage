@@ -88,6 +88,49 @@
   padding: 12px;
   color: var(--ant-color-text-secondary);
 }
+.sm-workflow-instance-detail {
+  height: 100%;
+  min-height: 0;
+}
+.sm-workflow-instance-detail > .sm-edit-page {
+  height: 100%;
+}
+.sm-workflow-instance-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(360px, 2fr);
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+}
+.sm-workflow-instance-main,
+.sm-workflow-instance-side {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.sm-workflow-instance-main > .ant-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sm-workflow-instance-side > .ant-card-body,
+.sm-workflow-instance-side .ant-tabs {
+  height: 100%;
+  min-height: 0;
+}
+.sm-workflow-instance-side .ant-tabs-content-holder {
+  min-height: 0;
+  overflow: auto;
+}
+.sm-workflow-variable-json {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sm-leave-workflow-round-selector {
+  width: 100%;
+}
 .sm-workflow-actions {
   display: flex;
   gap: 12px;

@@ -307,7 +307,7 @@ export default function DefinitionListPage(props: PageComponentProps) {
       />
       <ModalEditPage
         open={creating}
-        title="新增流程定义"
+        title="流程定义"
         access={definitionAccess}
         fields={createFields}
         initialValues={createInitialValues}

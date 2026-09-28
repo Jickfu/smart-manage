@@ -25,6 +25,15 @@ public class LeaveController {
     /** 审批详情按对应轮次参与资格授权，不扩大普通业务列表的组织范围。 */
     @PostMapping("/approval-detail")
     public Result<LeaveDetailVO> approvalDetail(@RequestBody @Valid LeaveApprovalDetailForm form) { return Result.success(service.approvalDetail(form)); }
+    @PostMapping("/workflow-rounds")
+    @SaCheckPermission(LeavePermission.DETAIL)
+    public Result<java.util.List<sm.domain.workflow.process.instance.contract.WorkflowHistoryReader.Round>> workflowRounds(
+            @RequestBody @Valid IdForm form) { return Result.success(service.workflowRounds(form.getId())); }
+    @PostMapping("/business-approval-detail")
+    @SaCheckPermission(LeavePermission.DETAIL)
+    public Result<LeaveDetailVO> businessApprovalDetail(@RequestBody @Valid LeaveApprovalDetailForm form) {
+        return Result.success(service.businessApprovalDetail(form));
+    }
     @PostMapping("/save")
     @SaCheckPermission(LeavePermission.SAVE)
     public Result<Long> save(@RequestBody @Valid LeaveSaveForm form) { return Result.success(service.save(form)); }

@@ -27,7 +27,7 @@ public class NotificationService {
         requireTransaction();
         for (var task : run.tasks()) {
             for (var candidate : task.candidates()) {
-                enqueue(reference, "task:" + task.id(), candidate, "审批待办", "您有一项待处理的审批任务，请进入任务中心查看。");
+                enqueue(reference, "task:" + task.id(), candidate, "审批待办", "您有一项待处理的审批任务，请从消息中心打开。");
             }
         }
         if (run.state() != WorkflowEngine.State.APPROVING) {
@@ -35,16 +35,17 @@ public class NotificationService {
                 case APPROVED -> "已通过";
                 case REJECTED -> "已拒绝";
                 case WITHDRAWN -> "已撤回";
+                case TERMINATED -> "已终止";
                 default -> throw new IllegalStateException("未知审批结果");
             };
-            enqueue(reference, "result", reference.applicantId(), "审批结果", "您发起的审批" + outcome + "，请进入任务中心查看。");
+            enqueue(reference, "result", reference.applicantId(), "审批结果", "您发起的审批" + outcome + "，请从消息中心打开。");
         }
     }
 
     public void candidatesChanged(InstanceService.Reference reference, WorkflowEngine.Task task, Long changeId) {
         requireTransaction();
         for (var candidate : task.candidates()) enqueue(reference, "change:" + changeId, candidate,
-                "审批待办已调整", "您被指定为当前任务的候选人，请进入任务中心查看。");
+                "审批待办已调整", "您被指定为当前任务的候选人，请从消息中心打开。");
     }
 
     private void enqueue(InstanceService.Reference reference, String event, Long recipient, String title, String content) {

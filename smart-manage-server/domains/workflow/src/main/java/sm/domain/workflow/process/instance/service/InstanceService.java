@@ -14,6 +14,8 @@ import sm.system.response.ResultEnum;
 import sm.system.security.context.CurrentUserContext;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service("workflowInstanceService")
 @RequiredArgsConstructor
@@ -72,7 +74,8 @@ public class InstanceService implements WorkflowHistoryReader {
     private boolean participant(Reference reference, WorkflowEngine.Run run, Long actor) {
         return Objects.equals(reference.applicantId(), actor)
                 || run.tasks().stream().anyMatch(task -> task.candidates().contains(actor))
-                || run.history().stream().anyMatch(history -> Objects.equals(history.actorId(), actor));
+                || run.history().stream().anyMatch(history -> history.category().grantsParticipation()
+                && Objects.equals(history.actorId(), actor));
     }
 
     @Override
@@ -85,6 +88,29 @@ public class InstanceService implements WorkflowHistoryReader {
     @Override
     public String requireSnapshot(String businessType, Long businessId, Long instanceId) {
         readable(instanceId);
+        var reference = reference(instanceId);
+        if (!Objects.equals(reference.businessType(), businessType) || !Objects.equals(reference.businessId(), businessId)) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "审批轮次与单据不匹配");
+        }
+        return reference.snapshot();
+    }
+
+    @Override
+    public List<Round> listBusinessRounds(String businessType, Long businessId) {
+        return mapper.selectList(new LambdaQueryWrapper<WorkflowInstanceEntity>()
+                        .eq(WorkflowInstanceEntity::getBusinessType, businessType)
+                        .eq(WorkflowInstanceEntity::getBusinessId, businessId)
+                        .orderByDesc(WorkflowInstanceEntity::getId))
+                .stream().map(instance -> {
+                    var run = engine.inspect(instance.getId());
+                    return new Round(instance.getId(), run.definitionId(), run.state(), run.active(),
+                            run.tasks().stream().map(WorkflowEngine.Task::name).collect(Collectors.joining("、")),
+                            instance.getCreateTime());
+                }).toList();
+    }
+
+    @Override
+    public String requireBusinessSnapshot(String businessType, Long businessId, Long instanceId) {
         var reference = reference(instanceId);
         if (!Objects.equals(reference.businessType(), businessType) || !Objects.equals(reference.businessId(), businessId)) {
             throw new BizException(ResultEnum.PERMISSION_ERROR, "审批轮次与单据不匹配");

@@ -10,6 +10,15 @@ public interface WorkflowEngine {
     Run approve(Long instanceId, Long taskId, Long actorId, String opinion);
     Run reject(Long instanceId, Long taskId, Long actorId, String opinion);
     Run withdraw(Long instanceId, Long actorId);
+    Run suspend(Long instanceId, Long actorId);
+    Run resume(Long instanceId, Long actorId);
+    Run terminate(Long instanceId, Long actorId, String reason);
+    Run jump(Long instanceId, Long taskId, Long actorId, String targetNodeCode, boolean backward, String reason);
+    Run updateVariables(Long instanceId, Long actorId, Map<String, Object> changes, List<String> removals);
+    Run cooperate(Long instanceId, Long taskId, Long actorId, Cooperation action,
+                  List<Long> targetUserIds, String reason);
+    Run takeBack(Long instanceId, Long actorId, String reason);
+    Run retryScript(Long instanceId, Long taskId, Long actorId);
     Run inspect(Long instanceId);
     Selection select(Long actorId, Box box, int offset, int limit);
     String chart(Long instanceId);
@@ -19,9 +28,24 @@ public interface WorkflowEngine {
     enum Box { PENDING, COMPLETED, STARTED }
     record Selection(List<Long> instanceIds, long total) { }
 
-    enum State { APPROVING, APPROVED, REJECTED, WITHDRAWN }
-    record Task(Long id, String nodeCode, String name, List<Long> candidates) {}
-    record History(Long id, String nodeName, Long actorId, String action, String opinion, Instant time) {}
+    enum State { APPROVING, APPROVED, REJECTED, WITHDRAWN, TERMINATED }
+    enum Cooperation { TRANSFER, DELEGATE, ADD_SIGN, REDUCE_SIGN }
+    enum HistoryCategory {
+        APPROVAL,
+        COOPERATION,
+        MANAGEMENT,
+        SCRIPT;
+
+        /** 只有真实参与过业务审批或任务协作的人，才能据此取得业务单据读取资格。 */
+        public boolean grantsParticipation() {
+            return this == APPROVAL || this == COOPERATION;
+        }
+    }
+    record Task(Long id, String nodeCode, String name, List<Long> candidates, boolean script) {}
+    record NodeTarget(String code, String name, boolean script) {}
+    record History(Long id, String nodeCode, String nodeName, Long actorId, String action,
+                   String opinion, Instant time, HistoryCategory category) {}
     record Run(Long id, Long definitionId, Long applicantId, State state, List<Task> tasks,
-               List<History> history, boolean approvalStarted) {}
+               List<History> history, List<NodeTarget> nodeTargets, boolean approvalStarted,
+               boolean active, Map<String, Object> variables) {}
 }

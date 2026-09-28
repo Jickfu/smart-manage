@@ -32,9 +32,12 @@ class RuntimeCommandWriter {
         mapper.insert(receipt);
     }
     String digest(String action, Long instanceId, Long taskId, String opinion) {
+        return digest(Arrays.asList(action, instanceId, taskId, opinion));
+    }
+    String digest(Object value) {
         try {
             return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
-                    .digest(json.writeValueAsBytes(Arrays.asList(action, instanceId, taskId, opinion))));
+                    .digest(json.writeValueAsBytes(value)));
         } catch (java.security.NoSuchAlgorithmException failure) { throw new IllegalStateException(failure); }
     }
 }

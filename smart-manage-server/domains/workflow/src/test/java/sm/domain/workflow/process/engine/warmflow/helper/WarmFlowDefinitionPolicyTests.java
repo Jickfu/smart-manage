@@ -42,6 +42,21 @@ class WarmFlowDefinitionPolicyTests {
         loop.getNodeList().get(2).getSkipList().getFirst().setNextNodeCode("gate");
         assertThrows(BizException.class, () -> WarmFlowDefinitionPolicy.validate(loop, FIELDS, true));
     }
+    @Test
+    void acceptsRestrictedScriptNodeAndRejectsMissingSourceOrMultipleOutputs() {
+        var definition = graph("gt@@days|3", null);
+        var script = definition.getNodeList().stream().filter(node -> "review".equals(node.getNodeCode())).findFirst().orElseThrow();
+        script.setPermissionFlag(null);
+        script.setExt("[{\"code\":\"smNodeType\",\"value\":\"SCRIPT\"},{\"code\":\"script\",\"value\":\"return { variables: { score: 1 }, participants: [20] };\"}]");
+        assertDoesNotThrow(() -> WarmFlowDefinitionPolicy.validate(definition, FIELDS, true));
+
+        script.setExt("[{\"code\":\"smNodeType\",\"value\":\"SCRIPT\"}]");
+        assertThrows(BizException.class, () -> WarmFlowDefinitionPolicy.validate(definition, FIELDS, true));
+
+        script.setExt("[{\"code\":\"smNodeType\",\"value\":\"SCRIPT\"},{\"code\":\"script\",\"value\":\"return {};\"}]");
+        script.setSkipList(List.of(edge("review", "end", null), edge("review", "fallback", null)));
+        assertThrows(BizException.class, () -> WarmFlowDefinitionPolicy.validate(definition, FIELDS, true));
+    }
     private void validate(String left, String right) { WarmFlowDefinitionPolicy.validate(graph(left, right), FIELDS, true); }
     private DefJson graph(String left, String right) {
         var branches = new ArrayList<SkipJson>();

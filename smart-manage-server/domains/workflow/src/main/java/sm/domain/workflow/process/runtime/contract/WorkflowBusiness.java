@@ -13,6 +13,6 @@ public interface WorkflowBusiness {
     void lock(Long businessId, Long instanceId);
     /** 当前轮次结束时回写业务状态，失败必须使引擎推进一同回滚。 */
     void completed(Long businessId, Long instanceId, Outcome outcome);
-    enum Outcome { APPROVED, REJECTED, WITHDRAWN }
+    enum Outcome { APPROVED, REJECTED, WITHDRAWN, TERMINATED }
     enum FieldType { NUMBER, TEXT }
 }

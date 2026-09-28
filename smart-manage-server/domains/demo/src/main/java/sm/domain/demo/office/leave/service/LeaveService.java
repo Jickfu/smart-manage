@@ -57,6 +57,18 @@ public class LeaveService {
         return json.readValue(history.requireSnapshot(LeaveResourceRegistration.BUSINESS_TYPE, form.id(), form.instanceId()), LeaveDetailVO.class);
     }
 
+    public java.util.List<WorkflowHistoryReader.Round> workflowRounds(Long id) {
+        // 业务入口先执行单据权限和 DataScope，再读取不含正文的工作流轮次。
+        detail(id);
+        return history.listBusinessRounds(LeaveResourceRegistration.BUSINESS_TYPE, id);
+    }
+
+    public LeaveDetailVO businessApprovalDetail(LeaveApprovalDetailForm form) {
+        detail(form.id());
+        return json.readValue(history.requireBusinessSnapshot(LeaveResourceRegistration.BUSINESS_TYPE,
+                form.id(), form.instanceId()), LeaveDetailVO.class);
+    }
+
     @BizLog(value = "保存请假申请", recordRequest = false)
     public Long save(LeaveSaveForm form) { return transactions.save(form); }
     @BizLog(value = "提交请假申请", recordRequest = false)

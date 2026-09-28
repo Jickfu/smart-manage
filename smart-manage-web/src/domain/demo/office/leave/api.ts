@@ -20,6 +20,14 @@ export interface LeaveDetail {
   attachments: BusinessAttachment[];
   retainedAttachmentIds: string[];
 }
+export interface LeaveWorkflowRound {
+  instanceId: string;
+  definitionId: string;
+  state: 'APPROVING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN' | 'TERMINATED';
+  active: boolean;
+  currentNode: string;
+  createTime: string;
+}
 const post = <T>(path: string, data: unknown) =>
   request
     .post<Result<T>>(`/demo/office/leave/${path}`, data)
@@ -29,6 +37,9 @@ export const leaveApi = {
   detail: (id: string) => post<LeaveDetail>('detail', { id }),
   approval: (id: string, instanceId: string) =>
     post<LeaveDetail>('approval-detail', { id, instanceId }),
+  businessApproval: (id: string, instanceId: string) =>
+    post<LeaveDetail>('business-approval-detail', { id, instanceId }),
+  workflowRounds: (id: string) => post<LeaveWorkflowRound[]>('workflow-rounds', { id }),
   save: (form: Record<string, unknown>) => post<string>('save', form),
   submit: (form: Record<string, unknown>) => post<string>('submit', form),
   delete: (id: string, version: number) => post('delete', { id, version }),

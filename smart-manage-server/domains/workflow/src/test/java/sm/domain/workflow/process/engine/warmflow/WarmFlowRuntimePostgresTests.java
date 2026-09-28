@@ -55,10 +55,18 @@ class WarmFlowRuntimePostgresTests {
         var source = new DriverManagerDataSource(url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema, user, password);
         jdbc = new JdbcTemplate(source);
         new ResourceDatabasePopulator(new ClassPathResource("db/workflow/migration/V1__warm_flow_schema.sql")).execute(source);
+        jdbc.execute("""
+                CREATE TABLE t_workflow_script_execution (
+                    id bigint PRIMARY KEY, instance_id bigint NOT NULL, task_id bigint NOT NULL,
+                    node_code varchar(100) NOT NULL, status varchar(20) NOT NULL, duration_ms integer NOT NULL,
+                    error_message varchar(500), result_data text, operator_id bigint NOT NULL,
+                    create_time timestamp, update_time timestamp, create_user bigint, update_user bigint)
+                """);
         transaction = new TransactionTemplate(new DataSourceTransactionManager(source));
         var configuration = new MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
         configuration.addMapper(sm.domain.workflow.process.engine.warmflow.mapper.WarmFlowTaskQueryMapper.class);
+        configuration.addMapper(sm.domain.workflow.process.script.mapper.WorkflowScriptExecutionMapper.class);
         var factory = new MybatisSqlSessionFactoryBean();
         factory.setDataSource(source);
         factory.setConfiguration(configuration);
@@ -67,13 +75,22 @@ class WarmFlowRuntimePostgresTests {
         mapperResources.addAll(List.of(resolver.getResources("classpath*:warm/flow/*.xml")));
         mapperResources.addAll(List.of(resolver.getResources("classpath*:mapper/workflow/engine/WarmFlowTaskQueryMapper.xml")));
         factory.setMapperLocations(mapperResources.toArray(org.springframework.core.io.Resource[]::new));
-        context = new AnnotationConfigApplicationContext();
         var sessionFactory = factory.getObject();
+        var session = new org.mybatis.spring.SqlSessionTemplate(sessionFactory);
+        var scriptExecutor = new sm.system.script.RestrictedScriptExecutor(tools.jackson.databind.json.JsonMapper.builder().build());
+        var scriptListener = new sm.domain.workflow.process.script.service.WorkflowScriptListener(scriptExecutor,
+                session.getMapper(sm.domain.workflow.process.script.mapper.WorkflowScriptExecutionMapper.class),
+                org.mockito.Mockito.mock(sm.domain.sys.base.user.contract.UserReferenceReader.class),
+                tools.jackson.databind.json.JsonMapper.builder().build());
+        context = new AnnotationConfigApplicationContext();
+        context.registerBean("workflowScriptExecutor", sm.system.script.RestrictedScriptExecutor.class, () -> scriptExecutor);
+        context.registerBean("workflowScriptListener", sm.domain.workflow.process.script.service.WorkflowScriptListener.class,
+                () -> scriptListener);
         context.registerBean("sqlSessionFactory", org.apache.ibatis.session.SqlSessionFactory.class, () -> sessionFactory);
         context.register(FlowAutoConfig.class);
         context.refresh();
         engine = new WarmFlowRuntimeAdapter(context.getBean(FlowInstanceMapper.class),
-                new org.mybatis.spring.SqlSessionTemplate(sessionFactory).getMapper(sm.domain.workflow.process.engine.warmflow.mapper.WarmFlowTaskQueryMapper.class));
+                session.getMapper(sm.domain.workflow.process.engine.warmflow.mapper.WarmFlowTaskQueryMapper.class), scriptListener);
         transaction.executeWithoutResult(status -> {
             var definition = new DefJson().setFlowCode("leave").setFlowName("请假验证").setVersion("1").setModelValue("CLASSICS")
                     .setNodeList(List.of(node("start", 0, null, "first"), node("first", 1, "20@@21", "second"),
@@ -86,7 +103,7 @@ class WarmFlowRuntimePostgresTests {
     @BeforeEach
     void clearRuns() {
         // 上游持有进程级静态上下文，整套真实引擎测试共享一个 Spring 生命周期。
-        jdbc.execute("TRUNCATE flow_instance, flow_task, flow_his_task, flow_user");
+        jdbc.execute("TRUNCATE flow_instance, flow_task, flow_his_task, flow_user, t_workflow_script_execution");
     }
 
     @AfterAll
@@ -247,6 +264,132 @@ class WarmFlowRuntimePostgresTests {
         }));
         assertEquals(List.of(40L, 41L), engine.inspect(run.id()).tasks().getFirst().candidates());
         assertEquals(WorkflowEngine.State.WITHDRAWN, transaction.execute(status -> engine.withdraw(run.id(), 10L)).state());
+    }
+
+    @Test
+    void administratorCanSuspendEditVariablesResumeAndTerminateWithoutDeletingInstance() {
+        var run = start();
+        var suspended = transaction.execute(status -> engine.suspend(run.id(), 99L));
+        assertFalse(suspended.active());
+        assertThrows(BizException.class, () -> transaction.execute(status ->
+                engine.approve(run.id(), run.tasks().getFirst().id(), 20L, "挂起期间审批")));
+
+        var changed = transaction.execute(status -> engine.updateVariables(run.id(), 99L,
+                Map.of("riskLevel", "HIGH", "days", 5), List.of("obsolete")));
+        assertEquals("HIGH", changed.variables().get("riskLevel"));
+        assertEquals(5, changed.variables().get("days"));
+
+        var resumed = transaction.execute(status -> engine.resume(run.id(), 99L));
+        assertTrue(resumed.active());
+        var terminated = transaction.execute(status -> engine.terminate(run.id(), 99L, "管理员终止"));
+        assertEquals(WorkflowEngine.State.TERMINATED, terminated.state());
+        assertTrue(terminated.tasks().isEmpty());
+        assertEquals("TERMINATED", terminated.history().getLast().action());
+        assertEquals(WorkflowEngine.HistoryCategory.MANAGEMENT, terminated.history().getLast().category());
+        assertEquals(0, engine.select(99L, WorkflowEngine.Box.COMPLETED, 0, 20).total(),
+                "管理操作不能进入管理员的个人已办");
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM flow_instance WHERE id = ?", Integer.class, run.id()));
+    }
+
+    @Test
+    void administratorCanJumpForwardAndReturnOnlyAccordingToVisitedTrajectory() {
+        var run = start();
+        assertThrows(BizException.class, () -> transaction.execute(status ->
+                engine.jump(run.id(), run.tasks().getFirst().id(), 99L, "first", false, "方向错误")));
+        var jumped = transaction.execute(status -> engine.jump(run.id(), run.tasks().getFirst().id(), 99L,
+                "second", false, "跳过第一节点"));
+        assertEquals("second", jumped.tasks().getFirst().nodeCode());
+        assertEquals("ADMIN_JUMP", jumped.history().getLast().action());
+        assertEquals(WorkflowEngine.HistoryCategory.MANAGEMENT, jumped.history().getLast().category());
+        assertEquals(0, engine.select(99L, WorkflowEngine.Box.COMPLETED, 0, 20).total(),
+                "节点调整不能伪造管理员的个人已办");
+        assertFalse(jumped.approvalStarted(), "管理员跳转不能伪造人工审批记录");
+
+        var returned = transaction.execute(status -> engine.jump(run.id(), jumped.tasks().getFirst().id(), 99L,
+                "first", true, "退回第一节点"));
+        assertEquals("first", returned.tasks().getFirst().nodeCode());
+        assertEquals("ADMIN_RETURN", returned.history().getLast().action());
+    }
+
+    @Test
+    void transferAndTakeBackKeepParticipantHistoryAndCurrentTaskConsistent() {
+        var run = start();
+        var transferred = transaction.execute(status -> engine.cooperate(run.id(), run.tasks().getFirst().id(), 20L,
+                WorkflowEngine.Cooperation.TRANSFER, List.of(40L), "转给专员"));
+        assertTrue(transferred.tasks().stream().anyMatch(task -> task.candidates().contains(40L)));
+        assertEquals("TRANSFER", transferred.history().getLast().action());
+        assertEquals(WorkflowEngine.HistoryCategory.COOPERATION, transferred.history().getLast().category());
+
+        var next = transaction.execute(status -> engine.approve(run.id(),
+                transferred.tasks().stream().filter(task -> task.candidates().contains(40L)).findFirst().orElseThrow().id(),
+                40L, "同意"));
+        assertEquals("second", next.tasks().getFirst().nodeCode());
+        var takenBack = transaction.execute(status -> engine.takeBack(run.id(), 40L, "补充审批意见"));
+        assertEquals("first", takenBack.tasks().getFirst().nodeCode());
+        assertTrue(takenBack.tasks().getFirst().candidates().contains(40L));
+        assertEquals("TASK_BACK", takenBack.history().getLast().action());
+    }
+
+    @Test
+    void delegateAddSignAndReduceSignUseRealTaskCandidatesWithoutFabricatingApproval() {
+        var delegatedRun = start();
+        var delegated = transaction.execute(status -> engine.cooperate(delegatedRun.id(),
+                delegatedRun.tasks().getFirst().id(), 20L, WorkflowEngine.Cooperation.DELEGATE,
+                List.of(40L), "委派专员"));
+        assertTrue(delegated.tasks().getFirst().candidates().contains(40L));
+        assertEquals("DELEGATE", delegated.history().getLast().action());
+        assertFalse(delegated.approvalStarted());
+
+        var signedRun = start();
+        var added = transaction.execute(status -> engine.cooperate(signedRun.id(), signedRun.tasks().getFirst().id(),
+                20L, WorkflowEngine.Cooperation.ADD_SIGN, List.of(40L), "增加会办人"));
+        assertTrue(added.tasks().getFirst().candidates().containsAll(List.of(20L, 21L, 40L)));
+        assertEquals("ADD_SIGN", added.history().getLast().action());
+        assertFalse(added.approvalStarted());
+
+        var reduced = transaction.execute(status -> engine.cooperate(signedRun.id(), signedRun.tasks().getFirst().id(),
+                20L, WorkflowEngine.Cooperation.REDUCE_SIGN, List.of(40L), "取消新增人员"));
+        assertFalse(reduced.tasks().getFirst().candidates().contains(40L));
+        assertTrue(reduced.tasks().getFirst().candidates().containsAll(List.of(20L, 21L)));
+        assertEquals("REDUCE_SIGN", reduced.history().getLast().action());
+        assertFalse(reduced.approvalStarted());
+    }
+
+    @Test
+    void scriptNodeCanSetVariablesAndNextParticipantsWhileFailureSuspendsTheInstance() {
+        transaction.executeWithoutResult(status -> {
+            var script = node("script", 1, null, "approval").setExt("""
+                    {"smNodeType":"SCRIPT","script":"return { variables: { riskLevel: 'HIGH' }, participants: [40] };"}
+                    """);
+            var definition = new DefJson().setFlowCode("script-success").setFlowName("脚本成功").setVersion("1")
+                    .setModelValue("CLASSICS").setNodeList(List.of(node("start-script", 0, null, "script"), script,
+                            node("approval", 1, "20", "end-script"), node("end-script", 2, null, null)));
+            var imported = FlowEngine.defService().importDef(definition);
+            FlowEngine.defService().publish(imported.getId());
+
+            var failedScript = node("failed-script", 1, null, "failed-approval").setExt("""
+                    {"smNodeType":"SCRIPT","script":"throw new Error('boom');"}
+                    """);
+            var failedDefinition = new DefJson().setFlowCode("script-failure").setFlowName("脚本失败").setVersion("1")
+                    .setModelValue("CLASSICS").setNodeList(List.of(node("failed-start", 0, null, "failed-script"),
+                            failedScript, node("failed-approval", 1, "20", "failed-end"),
+                            node("failed-end", 2, null, null)));
+            var failedImported = FlowEngine.defService().importDef(failedDefinition);
+            FlowEngine.defService().publish(failedImported.getId());
+        });
+
+        var succeeded = transaction.execute(status -> engine.start("script-success", "SCRIPT-1", 10L, Map.of()));
+        assertEquals("HIGH", succeeded.variables().get("riskLevel"));
+        assertEquals(List.of(40L), succeeded.tasks().getFirst().candidates());
+        assertTrue(succeeded.history().stream().anyMatch(history -> "SCRIPT".equals(history.action())));
+        assertEquals("SUCCESS", jdbc.queryForObject(
+                "SELECT status FROM t_workflow_script_execution WHERE instance_id = ?", String.class, succeeded.id()));
+
+        var failed = transaction.execute(status -> engine.start("script-failure", "SCRIPT-2", 10L, Map.of()));
+        assertFalse(failed.active());
+        assertTrue(failed.tasks().getFirst().script());
+        assertEquals("ERROR", jdbc.queryForObject(
+                "SELECT status FROM t_workflow_script_execution WHERE instance_id = ?", String.class, failed.id()));
     }
 
     private static NodeJson node(String code, int type, String users, String next) {

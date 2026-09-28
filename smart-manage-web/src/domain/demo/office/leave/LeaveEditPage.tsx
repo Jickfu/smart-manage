@@ -26,7 +26,7 @@ export default function LeaveEditPage(props: PageComponentProps) {
   const submitIntent = useRef({ content: '', requestId: '' });
   const [today] = useState(() => dayjs().format('YYYY-MM-DD'));
   const [revision, setRevision] = useState(0);
-  const [approval, setApproval] = useState(false);
+  const [approvalMode, setApprovalMode] = useState<'workflow' | 'opinions'>();
   const client = useQueryClient();
   const dirty = useRef(false);
   const confirm = useOperationConfirm();
@@ -43,7 +43,7 @@ export default function LeaveEditPage(props: PageComponentProps) {
     )
       return;
     dirty.current = false;
-    setApproval(true);
+    setApprovalMode('opinions');
   };
   const query = useQuery({
     queryKey: ['demo', 'leave', props.billId],
@@ -106,14 +106,21 @@ export default function LeaveEditPage(props: PageComponentProps) {
     mutationFn: (values: Record<string, unknown>) => persist(values, true),
     successMessage: '请假申请已提交',
   });
-  if (approval && detail?.currentInstanceId)
+  if (approvalMode && detail?.currentInstanceId)
     return (
       <LeaveApprovalView
+        key={approvalMode}
         resourceId={detail.currentInstanceId}
-        context={{ businessId: detail.id, appNumber: props.appNumber, tabKey: props.tabKey }}
+        context={{
+          businessId: detail.id,
+          appNumber: props.appNumber,
+          tabKey: props.tabKey,
+          businessAuthorized: 'true',
+          initialMode: approvalMode,
+        }}
         active={props.active}
         onBack={() => {
-          setApproval(false);
+          setApprovalMode(undefined);
           void query.refetch();
         }}
       />
@@ -154,11 +161,30 @@ export default function LeaveEditPage(props: PageComponentProps) {
         ...(detail?.currentInstanceId
           ? [
               {
-                key: 'approval',
-                label: '查看本轮审批',
+                key: 'workflow',
+                label: '查看工作流',
                 onClick: () => {
-                  void openApproval();
+                  void (async () => {
+                    if (
+                      dirty.current &&
+                      !(await confirm({
+                        type: 'warning',
+                        title: '单据尚未保存',
+                        description: '进入工作流详情会丢失当前修改。',
+                        confirmText: '继续',
+                        cancelText: '留在页面',
+                      }))
+                    )
+                      return;
+                    dirty.current = false;
+                    setApprovalMode('workflow');
+                  })();
                 },
+              },
+              {
+                key: 'approval-opinions',
+                label: '审批意见',
+                onClick: () => void openApproval(),
               },
             ]
           : []),

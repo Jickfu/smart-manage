@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Button } from 'antd';
+import { useMemo, useRef, useState } from 'react';
+import { Button, Select } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { DomainViewProps } from '@/domain/common/registry/domainExtensions';
 import EditPage from '@/domain/common/page/edit/EditPage';
@@ -12,7 +12,12 @@ import { useCommandMutation } from '@/domain/common/page/command/useCommandMutat
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 import { useBeforeCloseGuard } from '@/domain/common/page/tab/useBeforeCloseGuard';
 import AppModal from '@/domain/common/component/AppModal';
-import { ApprovalPanel, DesignerFrame, workflowApi } from '@/domain/workflow/contract/approval';
+import {
+  ApprovalPanel,
+  DesignerFrame,
+  stateLabels,
+  workflowApi,
+} from '@/domain/workflow/contract/approval';
 import { leaveApi } from './api';
 import { leaveFields } from './fields';
 import { generateUUID } from '@/utils';
@@ -24,26 +29,39 @@ export default function LeaveApprovalView({
   onBack,
   onDirtyChange,
 }: DomainViewProps) {
-  const [chart, setChart] = useState(false);
+  const businessAuthorized = context?.businessAuthorized === 'true';
+  const initialMode = context?.initialMode === 'workflow' ? 'workflow' : 'opinions';
+  const [selectedInstanceId, setSelectedInstanceId] = useState(resourceId);
+  const [chart, setChart] = useState(initialMode === 'workflow');
+  const [roundSelector, setRoundSelector] = useState(false);
   const [dirty, setDirty] = useState(false);
   const changeDirty = (value: boolean) => {
     setDirty(value);
     onDirtyChange?.(value);
   };
-  const [withdrawRequestId] = useState(generateUUID);
+  const withdrawIntent = useRef({ instanceId: '', requestId: '' });
   const confirm = useOperationConfirm();
   const client = useQueryClient();
   const run = useQuery({
-    queryKey: ['workflow', 'instance', resourceId],
-    queryFn: () => workflowApi.detail(resourceId!),
-    enabled: active && Boolean(resourceId),
+    queryKey: ['workflow', 'instance', selectedInstanceId],
+    queryFn: () => workflowApi.detail(selectedInstanceId!),
+    enabled: active && Boolean(selectedInstanceId),
     meta: { errorPresentation: 'local-initial' },
   });
   const businessId = context?.businessId ?? run.data?.businessId;
+  const rounds = useQuery({
+    queryKey: ['demo', 'leave', 'workflow-rounds', businessId],
+    queryFn: () => leaveApi.workflowRounds(businessId!),
+    enabled: active && businessAuthorized && Boolean(businessId),
+    meta: { errorPresentation: 'local-initial' },
+  });
   const snapshot = useQuery({
-    queryKey: ['demo', 'leave', 'snapshot', businessId, resourceId],
-    queryFn: () => leaveApi.approval(businessId!, resourceId!),
-    enabled: active && Boolean(businessId && resourceId),
+    queryKey: ['demo', 'leave', 'snapshot', businessId, selectedInstanceId, businessAuthorized],
+    queryFn: () =>
+      businessAuthorized
+        ? leaveApi.businessApproval(businessId!, selectedInstanceId!)
+        : leaveApi.approval(businessId!, selectedInstanceId!),
+    enabled: active && Boolean(businessId && selectedInstanceId),
     meta: { errorPresentation: 'local-initial' },
   });
   const initialValues = useMemo(
@@ -58,9 +76,15 @@ export default function LeaveApprovalView({
   );
   useBeforeCloseGuard(context?.appNumber, context?.tabKey, dirty);
   const withdraw = useCommandMutation({
-    mutationFn: () => workflowApi.withdraw(resourceId!, withdrawRequestId),
+    mutationFn: () => {
+      if (withdrawIntent.current.instanceId !== selectedInstanceId) {
+        withdrawIntent.current = { instanceId: selectedInstanceId!, requestId: generateUUID() };
+      }
+      return workflowApi.withdraw(selectedInstanceId!, withdrawIntent.current.requestId);
+    },
     successMessage: '本轮流程已撤回',
     onSuccess: async () => {
+      withdrawIntent.current = { instanceId: '', requestId: '' };
       changeDirty(false);
       await client.invalidateQueries({ queryKey: ['workflow'] });
       await client.invalidateQueries({ queryKey: ['demo', 'leave'] });
@@ -103,6 +127,15 @@ export default function LeaveApprovalView({
             },
           },
           { key: 'chart', label: '流程图', disabled: !run.data, onClick: () => setChart(true) },
+          ...(businessAuthorized && (rounds.data?.length ?? 0) > 1
+            ? [
+                {
+                  key: 'rounds',
+                  label: `审批轮次（${rounds.data?.length ?? 0}）`,
+                  onClick: () => setRoundSelector(true),
+                },
+              ]
+            : []),
           ...(run.data?.canWithdraw
             ? [
                 {
@@ -145,7 +178,9 @@ export default function LeaveApprovalView({
         sidePanel={
           run.data ? (
             <ApprovalPanel
+              key={selectedInstanceId}
               detail={run.data}
+              initialTab={initialMode === 'opinions' ? 'history' : 'task'}
               onDirty={changeDirty}
               onCompleted={() => client.invalidateQueries({ queryKey: ['demo', 'leave'] })}
             />
@@ -161,7 +196,26 @@ export default function LeaveApprovalView({
         onCancel={() => setChart(false)}
         footer={<Button onClick={() => setChart(false)}>关闭</Button>}
       >
-        {chart && <DesignerFrame instanceId={resourceId} readOnly />}
+        {chart && <DesignerFrame instanceId={selectedInstanceId} readOnly />}
+      </AppModal>
+      <AppModal
+        open={roundSelector}
+        title="选择审批轮次"
+        onCancel={() => setRoundSelector(false)}
+        footer={<Button onClick={() => setRoundSelector(false)}>关闭</Button>}
+      >
+        <Select
+          className="sm-leave-workflow-round-selector"
+          value={selectedInstanceId}
+          options={(rounds.data ?? []).map((round, index, values) => ({
+            value: round.instanceId,
+            label: `第 ${values.length - index} 轮 · ${stateLabels[round.state]} · ${round.createTime}`,
+          }))}
+          onChange={(value) => {
+            setSelectedInstanceId(value);
+            setRoundSelector(false);
+          }}
+        />
       </AppModal>
     </>
   );

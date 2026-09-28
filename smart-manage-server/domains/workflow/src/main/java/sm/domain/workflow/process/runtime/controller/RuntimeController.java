@@ -18,4 +18,12 @@ public class RuntimeController {
     public Result<WorkflowEngine.Run> approve(@RequestBody @Valid ApprovalForm form) { return Result.success(service.approve(form)); }
     @PostMapping("/withdraw")
     public Result<WorkflowEngine.Run> withdraw(@RequestBody @Valid sm.domain.workflow.process.runtime.model.form.WithdrawForm form) { return Result.success(service.withdraw(form)); }
+    @PostMapping("/cooperate")
+    public Result<WorkflowEngine.Run> cooperate(@RequestBody @Valid sm.domain.workflow.process.runtime.model.form.TaskCooperationForm form) {
+        return Result.success(service.cooperate(form));
+    }
+    @PostMapping("/take-back")
+    public Result<WorkflowEngine.Run> takeBack(@RequestBody @Valid sm.domain.workflow.process.runtime.model.form.InstanceCommandForm form) {
+        return Result.success(service.takeBack(form));
+    }
 }

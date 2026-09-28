@@ -55,4 +55,12 @@ public class RuntimeService implements WorkflowSubmission {
     public WorkflowEngine.Run approve(ApprovalForm form) { return transactions.approve(form, currentUser.getUserId()); }
     @BizLog("撤回审批流程")
     public WorkflowEngine.Run withdraw(sm.domain.workflow.process.runtime.model.form.WithdrawForm form) { return transactions.withdraw(form, currentUser.getUserId()); }
+    @BizLog(value = "协作处理审批任务", recordRequest = false)
+    public WorkflowEngine.Run cooperate(sm.domain.workflow.process.runtime.model.form.TaskCooperationForm form) {
+        return transactions.cooperate(form, currentUser.getUserId());
+    }
+    @BizLog("拿回审批任务")
+    public WorkflowEngine.Run takeBack(sm.domain.workflow.process.runtime.model.form.InstanceCommandForm form) {
+        return transactions.takeBack(form, currentUser.getUserId());
+    }
 }

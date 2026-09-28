@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.workflow.process.log.mapper.FlowLogMapper">
+    <select id="listPage" resultType="sm.domain.workflow.process.log.model.vo.FlowLogRow">
+        SELECT event_id AS id, instance_id, task_id, number, business_type, node_name, action,
+               operator_id, opinion, event_time, source
+        FROM (
+            SELECT CONCAT('H:', history.id) AS event_id,
+                   history.instance_id,
+                   history.task_id,
+                   workflow.number,
+                   workflow.business_type,
+                   history.node_name,
+                   CASE
+                       WHEN history.cooperate_type = 2 THEN 'TRANSFER'
+                       WHEN history.cooperate_type = 3 THEN 'DELEGATE'
+                       WHEN history.cooperate_type = 6 THEN 'ADD_SIGN'
+                       WHEN history.cooperate_type = 7 THEN 'REDUCE_SIGN'
+                       WHEN history.flow_status = 'WITHDRAWN' THEN 'WITHDRAWN'
+                       WHEN history.flow_status = 'REJECTED' THEN 'REJECTED'
+                       WHEN history.flow_status = 'TERMINATED' THEN 'TERMINATED'
+                       WHEN history.flow_status = 'SCRIPT' THEN 'SCRIPT'
+                       WHEN history.flow_status = 'TASK_BACK' THEN 'TASK_BACK'
+                       WHEN history.flow_status = 'ADMIN_JUMP' THEN 'ADMIN_JUMP'
+                       WHEN history.flow_status = 'ADMIN_RETURN' THEN 'ADMIN_RETURN'
+                       WHEN history.node_type = 0 THEN 'SUBMITTED'
+                       WHEN history.skip_type = 'REJECT' THEN 'RETURNED'
+                       ELSE 'APPROVED'
+                   END AS action,
+                   CASE WHEN history.approver ~ '^[0-9]+$' THEN history.approver::bigint END AS operator_id,
+                   NULL::text AS opinion,
+                   COALESCE(history.update_time, history.create_time) AS event_time,
+                   'ENGINE' AS source
+            FROM flow_his_task history
+            JOIN t_workflow_instance workflow ON workflow.id = history.instance_id
+            WHERE history.del_flag = '0'
+            UNION ALL
+            SELECT CONCAT('O:', operation.id),
+                   operation.instance_id,
+                   operation.task_id,
+                   workflow.number,
+                   workflow.business_type,
+                   NULL,
+                   operation.action,
+                   operation.operator_id,
+                   operation.reason,
+                   operation.create_time,
+                   'MANAGEMENT'
+            FROM t_workflow_operation operation
+            JOIN t_workflow_instance workflow ON workflow.id = operation.instance_id
+            UNION ALL
+            SELECT CONCAT('S:', execution.id),
+                   execution.instance_id,
+                   execution.task_id,
+                   workflow.number,
+                   workflow.business_type,
+                   COALESCE(script_task.node_name, execution.node_code),
+                   CONCAT('SCRIPT_', execution.status),
+                   execution.operator_id,
+                   execution.error_message,
+                   execution.create_time,
+                   'SCRIPT'
+            FROM t_workflow_script_execution execution
+            JOIN t_workflow_instance workflow ON workflow.id = execution.instance_id
+            LEFT JOIN flow_task script_task ON script_task.id = execution.task_id
+        ) log
+        WHERE 1 = 1
+        <if test="keyword != null and keyword != ''">
+            AND (number ILIKE CONCAT('%', #{keyword}, '%')
+                OR business_type ILIKE CONCAT('%', #{keyword}, '%')
+                OR node_name ILIKE CONCAT('%', #{keyword}, '%')
+                OR action ILIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY event_time DESC NULLS LAST, event_id DESC
+    </select>
+</mapper>

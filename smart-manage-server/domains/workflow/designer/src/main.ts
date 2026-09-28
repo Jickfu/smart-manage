@@ -71,7 +71,34 @@ setDataProvider({
   handlerFeedback: (parameters: unknown) => request('assignment/feedback', feedbackPayload(parameters)),
   handlerDict: () => request('assignment/rules'),
   publishedList: emptyResult,
-  nodeExt: emptyResult,
+  nodeExt: () => Promise.resolve({
+    code: 200,
+    data: [{
+      type: 1,
+      name: 'Smart Manage 节点能力',
+      code: 'smartManageNode',
+      childs: [
+        {
+          label: '节点类型',
+          code: 'smNodeType',
+          type: 4,
+          must: true,
+          desc: '审批节点由人员办理；脚本节点自动执行后进入下一节点',
+          dict: [
+            { label: '人工审批', value: 'APPROVAL', selected: true },
+            { label: '脚本', value: 'SCRIPT' },
+          ],
+        },
+        {
+          label: '脚本内容',
+          code: 'script',
+          type: 2,
+          must: false,
+          desc: '仅脚本节点使用。读取 workflow，返回 { variables, participants }',
+        },
+      ],
+    }],
+  }),
   listenerList: emptyResult,
   config: () => Promise.resolve({ code: 200, data: { tokenNameList: [], framework: 'springboot' } }),
 });

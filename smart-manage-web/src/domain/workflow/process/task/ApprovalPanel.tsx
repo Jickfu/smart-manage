@@ -3,27 +3,24 @@ import { generateUUID } from '@/utils';
 import { Button, Form, Input, Select, Tabs } from 'antd';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
-import { workflowApi, stateLabels } from '../api';
+import { workflowActionLabels, workflowApi, stateLabels } from '../api';
 import type { ApprovalDetail } from '../api';
 import '../workflow.css';
+import TaskCooperationActions from './TaskCooperationActions';
 
-const actionLabels: Record<string, string> = {
-  SUBMITTED: '提交',
-  APPROVED: '同意',
-  REJECTED: '拒绝',
-  WITHDRAWN: '撤回',
-};
 export default function ApprovalPanel({
   detail,
   onDirty,
   onCompleted,
+  initialTab = 'task',
 }: {
   detail: ApprovalDetail;
   onDirty?: (dirty: boolean) => void;
   onCompleted?: () => Promise<void>;
+  initialTab?: 'task' | 'history';
 }) {
   const [form] = Form.useForm();
-  const [tab, setTab] = useState('task');
+  const [tab, setTab] = useState(initialTab);
   const client = useQueryClient();
   const intent = useRef({ content: '', requestId: '' });
   const mutation = useCommandMutation({
@@ -46,7 +43,7 @@ export default function ApprovalPanel({
     <div className="sm-workflow-panel">
       <Tabs
         activeKey={tab}
-        onChange={setTab}
+        onChange={(value) => setTab(value === 'history' ? 'history' : 'task')}
         items={[
           {
             key: 'task',
@@ -105,6 +102,7 @@ export default function ApprovalPanel({
                 ) : (
                   <p>当前没有需要您处理的任务。</p>
                 )}
+                <TaskCooperationActions detail={detail} onCompleted={onCompleted} />
               </>
             ),
           },
@@ -117,7 +115,7 @@ export default function ApprovalPanel({
                   {detail.run.history.map((item) => (
                     <li key={item.id}>
                       <strong>
-                        {item.nodeName} · {actionLabels[item.action] ?? item.action}
+                        {item.nodeName} · {workflowActionLabels[item.action] ?? item.action}
                       </strong>
                       <p>
                         {item.actorId ? (detail.actorNames[item.actorId] ?? item.actorId) : '系统'}{' '}
@@ -127,30 +125,6 @@ export default function ApprovalPanel({
                     </li>
                   ))}
                 </ol>
-                {detail.candidateChanges.length > 0 && (
-                  <>
-                    <h4>候选人维护记录</h4>
-                    <ol className="sm-workflow-history">
-                      {detail.candidateChanges.map((item) => (
-                        <li key={item.id}>
-                          <p>
-                            {detail.actorNames[item.operatorId] ?? item.operatorId} · {item.time}
-                          </p>
-                          <p>
-                            {item.beforeCandidates
-                              .map((id) => detail.actorNames[id] ?? id)
-                              .join('、')}
-                            {' → '}
-                            {item.afterCandidates
-                              .map((id) => detail.actorNames[id] ?? id)
-                              .join('、')}
-                          </p>
-                          <p>{item.reason}</p>
-                        </li>
-                      ))}
-                    </ol>
-                  </>
-                )}
               </div>
             ),
           },
