@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import sm.infrastructure.persistence.FlywayMigrationConfig;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -37,11 +38,22 @@ class DemoMigrationPostgresTests {
             var strategy = context.getBean(FlywayMigrationStrategy.class);
             strategy.migrate(platform);
             strategy.migrate(platform);
-            assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM flyway_demo_schema_history WHERE version IN ('1','2','3') AND success", Integer.class));
+            assertEquals(List.of("1", "2"), jdbc.queryForList("""
+                    SELECT version FROM flyway_demo_schema_history
+                    WHERE success AND version IS NOT NULL AND version <> '0'
+                    ORDER BY installed_rank
+                    """, String.class));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM t_demo_purchase_requisition", Integer.class));
             assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM t_sys_feature WHERE feature_key = 'demo/procurement'", Integer.class));
             assertEquals(4, jdbc.queryForObject("SELECT count(*) FROM t_sys_org", Integer.class));
             assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM t_sys_org WHERE parent_id = 1 AND org_type = 'DEPARTMENT' AND number IN ('101','102','103')", Integer.class));
+            assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM t_sys_feature WHERE feature_key = 'demo/office/leave'", Integer.class));
+            String leaveStatusConstraint = jdbc.queryForObject("""
+                    SELECT pg_get_constraintdef(oid) FROM pg_constraint
+                    WHERE conrelid = 't_demo_leave'::regclass AND conname = 'ck_demo_leave_status'
+                    """, String.class);
+            assertNotNull(leaveStatusConstraint);
+            assertTrue(leaveStatusConstraint.contains("'D'::bpchar"));
             assertEquals(Boolean.TRUE, jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM t_sys_feature WHERE feature_key LIKE 'demo/%')", Boolean.class));
         } finally {
             verification.execute("DROP DATABASE " + database + " WITH (FORCE)");
