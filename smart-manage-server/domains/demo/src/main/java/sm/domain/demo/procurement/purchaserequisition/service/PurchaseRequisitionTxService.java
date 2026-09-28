@@ -13,10 +13,11 @@ import sm.domain.demo.procurement.purchaserequisition.model.form.PurchaseRequisi
 import sm.domain.demo.procurement.purchaserequisition.model.form.PurchaseRequisitionSaveForm;
 import sm.domain.demo.procurement.purchaserequisition.model.form.PurchaseRequisitionSubmitForm;
 import sm.system.security.context.CurrentUserContext;
-import sm.system.enums.BillStatusEnum;
+import sm.system.bill.BillStatusPolicy;
+import sm.system.bill.StandardBillStatus;
+import sm.system.bill.StandardBillStatusAction;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
-import sm.system.util.BillStatusUtil;
 import sm.domain.sys.base.attachment.contract.AttachmentPromoteCommand;
 import sm.domain.sys.base.attachment.contract.AttachmentGateway;
 import sm.domain.demo.procurement.purchaserequisition.constant.PurchaseRequisitionNumberKeys;
@@ -30,6 +31,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
 class PurchaseRequisitionTxService {
+	private static final BillStatusPolicy BILL_STATUS_POLICY = BillStatusPolicy.standard();
 	private final CurrentUserContext currentUserContext;
     private final PurchaseRequisitionMapper mapper;
     private final PurchaseRequisitionEntryMapper entryMapper;
@@ -48,12 +50,12 @@ class PurchaseRequisitionTxService {
             Long orgId = currentUserContext.getOrgId();
             entity.setOrgId(orgId);
             entity.setApplicantId(currentUserContext.getUserId());
-            entity.setBillStatus(BillStatusEnum.SAVED.getValue());
+            entity.setBillStatus(BILL_STATUS_POLICY.initialStatus());
             entity.setNumber(numberGenerator.nextNumber(PurchaseRequisitionNumberKeys.PURCHASE_REQUISITION_REFERENCE,
                     NumberGenerationContext.forOrganization(orgId, form.getBizDate())));
         } else {
             entity = requireEntity(form.getId());
-            BillStatusUtil.requireCanSave(entity.getBillStatus());
+            BILL_STATUS_POLICY.requireEditable(entity.getBillStatus());
             requireVersion(entity, form.getVersion());
         }
         entity.setSubject(form.getSubject().trim());
@@ -100,12 +102,13 @@ class PurchaseRequisitionTxService {
         Long id = save(form, PurchaseRequisitionResourceRegistration.ACTION_SUBMIT);
         PurchaseRequisitionEntity entity = requireEntity(id);
         Integer version = entity.getVersion();
-        String nextStatus = BillStatusUtil.submit(entity.getBillStatus());
+        String nextStatus = BILL_STATUS_POLICY.transition(StandardBillStatusAction.SUBMIT,
+                entity.getBillStatus());
         entity.setBillStatus(nextStatus);
         // version 递增交给 MyBatis-Plus 乐观锁插件，Wrapper 额外保证状态与版本原子匹配。
         int updated = mapper.update(entity, new LambdaUpdateWrapper<PurchaseRequisitionEntity>()
                 .eq(PurchaseRequisitionEntity::getId, id)
-                .eq(PurchaseRequisitionEntity::getBillStatus, BillStatusEnum.SAVED.getValue())
+                .eq(PurchaseRequisitionEntity::getBillStatus, StandardBillStatus.SAVED.getValue())
                 .eq(PurchaseRequisitionEntity::getVersion, version));
         if (updated != 1) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "采购申请状态或版本已变化，请刷新后重试");
@@ -115,7 +118,7 @@ class PurchaseRequisitionTxService {
 
     public void deleteById(Long id, Integer version) {
         PurchaseRequisitionEntity entity = requireEntity(id);
-        BillStatusUtil.requireCanSave(entity.getBillStatus());
+        BILL_STATUS_POLICY.requireEditable(entity.getBillStatus());
         requireVersion(entity, version);
         try {
             attachmentGateway.deleteForAggregate(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE,
@@ -128,7 +131,7 @@ class PurchaseRequisitionTxService {
         int deleted = mapper.delete(new LambdaQueryWrapper<PurchaseRequisitionEntity>()
                 .eq(PurchaseRequisitionEntity::getId, id)
                 .eq(PurchaseRequisitionEntity::getVersion, version)
-                .eq(PurchaseRequisitionEntity::getBillStatus, BillStatusEnum.SAVED.getValue()));
+                .eq(PurchaseRequisitionEntity::getBillStatus, StandardBillStatus.SAVED.getValue()));
         if (deleted != 1) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "采购申请状态或版本已变化，请刷新后重试");
         }

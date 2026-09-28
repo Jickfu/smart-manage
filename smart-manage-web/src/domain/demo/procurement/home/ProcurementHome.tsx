@@ -2,19 +2,16 @@ import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { Card, Empty, Statistic, Table } from 'antd';
 import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
 import { useQuery } from '@tanstack/react-query';
-import { BillStatus } from '@/domain/common/page/types';
+import { standardBillStatusCatalog } from '@/domain/common/bill/billStatus';
 import QuickLaunchCard from '@/domain/common/home/QuickLaunchCard';
 import HomeCardGrid from '@/domain/common/home/HomeCardGrid';
 import { purchaseRequisitionApi } from '../purchaseRequisition/api';
 import type { PurchaseRequisitionListVO } from '../purchaseRequisition/types';
 import './ProcurementHome.css';
 
-const statusLabels: Record<string, string> = {
-  [BillStatus.SAVED]: '暂存',
-  [BillStatus.SUBMITTED]: '已提交',
-  [BillStatus.AUDITED]: '审核通过',
-  [BillStatus.CLOSED]: '已关闭',
-};
+const statusLabels = Object.fromEntries(
+  standardBillStatusCatalog.definitions.map(({ value, label }) => [value, label]),
+);
 
 const ProcurementHome = () => {
   const summaryQuery = useQuery({

@@ -14,7 +14,8 @@ import {
   getDatePickerValueProps,
   normalizeDatePickerValue,
 } from '@/domain/common/page/edit/dateFormValue';
-import { BillStatus, OperationType } from '@/domain/common/page/types';
+import { OperationType } from '@/domain/common/page/types';
+import { isStandardBillEditable, standardBillStatusCatalog } from '@/domain/common/bill/billStatus';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { EditSectionActionButton } from '@/domain/common/page/edit/EditSectionActionButton';
@@ -62,15 +63,8 @@ const fields: EditField[] = [
   { label: '需求日期', dataIndex: 'requiredDate', type: 'date', placeholder: 'YYYY-MM-DD' },
   {
     label: '单据状态',
-    dataIndex: 'billStatus',
-    type: 'select',
-    disabled: true,
-    options: [
-      { label: '暂存', value: BillStatus.SAVED },
-      { label: '已提交', value: BillStatus.SUBMITTED },
-      { label: '审核通过', value: BillStatus.AUDITED },
-      { label: '已关闭', value: BillStatus.CLOSED },
-    ],
+    dataIndex: 'billStatusName',
+    type: 'readonly',
   },
   { label: '申请原因', dataIndex: 'reason', type: 'textarea', fullWidth: true },
 ];
@@ -102,6 +96,10 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
   });
   const source = sourceQuery.data;
   const detail = source && isDetail(source) ? source : undefined;
+  const displayedFields = useMemo(
+    () => (isAddNew ? fields.filter((field) => field.dataIndex !== 'billStatusName') : fields),
+    [isAddNew],
+  );
   const attachmentController = useEditAttachments(
     {
       resourceType: ATTACHMENT_RESOURCE_TYPE,
@@ -118,7 +116,9 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
             bizDate: source.bizDate,
             requiredDate: detail?.requiredDate ?? '',
             reason: detail?.reason ?? '',
-            billStatus: source.billStatus,
+            billStatusName: detail
+              ? standardBillStatusCatalog.require(detail.billStatus).label
+              : undefined,
             entries: source.entries ?? [],
           }
         : {},
@@ -313,7 +313,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
         {
           key: 'basic',
           label: '基本信息',
-          content: (editable) => <EditFormFields fields={fields} editable={editable} />,
+          content: (editable) => <EditFormFields fields={displayedFields} editable={editable} />,
         },
         {
           key: 'entries',
@@ -335,7 +335,7 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
         },
       ]}
       initialValues={initialValues}
-      billStatus={source?.billStatus as BillStatus | undefined}
+      editable={isAddNew || isStandardBillEditable(detail?.billStatus)}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
       dirtyRevision={attachmentRevision}
