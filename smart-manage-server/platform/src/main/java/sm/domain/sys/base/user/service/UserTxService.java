@@ -62,11 +62,15 @@ class UserTxService {
 
     /** 新增/编辑用户 */
     public Long save(UserSaveForm form) {
+        UserLifecyclePolicy.checkSave(form,
+                form.getId() == null ? null : mapper.selectById(form.getId()));
         return userWriter.save(form, form.getId());
     }
 
     /** 新增时允许上层预分配ID，供头像附件绑定使用。 */
     public Long save(UserSaveForm form, Long desiredId) {
+        UserLifecyclePolicy.checkSave(form,
+                form.getId() == null ? null : mapper.selectById(form.getId()));
         promoteAvatar(form.getAvatarAttachmentId(), form.getAttachmentUploadSessions(), desiredId);
         return userWriter.save(form, desiredId);
     }
@@ -259,6 +263,9 @@ class UserTxService {
     }
 
     public void updateEnabled(List<Long> ids, boolean enabled) {
+        for (UserEntity target : mapper.selectByIds(ids)) {
+            UserLifecyclePolicy.checkTarget(target);
+        }
         if (!enabled && ids.contains(currentUserContext.getUserId())) {
             throw new BizException(ResultEnum.BILL_STATUS_ERROR, "不能禁用当前登录用户");
         }
@@ -293,6 +300,7 @@ class UserTxService {
         if (id == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "用户ID不能为空");
         }
+        UserLifecyclePolicy.checkTarget(mapper.selectById(id));
         // 不能删除自己
         if (id.equals(currentUserContext.getUserId())) {
             throw new BizException(ResultEnum.BILL_STATUS_ERROR, "不能删除当前登录用户");
