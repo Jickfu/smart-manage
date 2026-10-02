@@ -34,10 +34,12 @@ public class OpenApiSignatureVerifier {
             new ComponentIdentifier("content-digest"),
             new ComponentIdentifier("x-sm-key-id"),
             new ComponentIdentifier("x-sm-timestamp"),
-            new ComponentIdentifier("x-sm-nonce"));
+            new ComponentIdentifier("x-sm-nonce"),
+            // 关联标识必须在所有报文模式下认证，不能仅依赖加密模式的 GCM AAD。
+            new ComponentIdentifier("x-sm-request-id"));
 
     public void verify(byte[] rawBody, String method, String path, String query, String contentType,
-                       String keyId, long created, String nonce, String contentDigest, String signatureInput,
+                       String keyId, long created, String nonce, String requestId, String contentDigest, String signatureInput,
                        String signature, byte[] secret) {
         String expectedDigest = "sha-256=:" + Base64.getEncoder().encodeToString(sha256(rawBody)) + ":";
         if (!MessageDigest.isEqual(expectedDigest.getBytes(StandardCharsets.US_ASCII),
@@ -61,6 +63,7 @@ public class OpenApiSignatureVerifier {
                 case "x-sm-key-id" -> keyId;
                 case "x-sm-timestamp" -> Long.toString(created);
                 case "x-sm-nonce" -> nonce;
+                case "x-sm-request-id" -> requestId;
                 default -> null;
             }).build(entry.getMetadata());
             boolean valid = signatureBase.verify((base, actual) ->

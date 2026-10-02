@@ -21,6 +21,7 @@ class OpenApiSignatureVerifierTests {
         byte[] secret = "01234567890123456789012345678901".getBytes(StandardCharsets.UTF_8);
         String keyId = "sm_test_key";
         String nonce = "nonce-123456";
+        String requestId = "request-123456";
         long created = 1788163200L;
         String path = "/openapi/sys/base/basic-data/v1/items/query";
         String query = "?status=ENABLED&page=1";
@@ -28,7 +29,7 @@ class OpenApiSignatureVerifierTests {
         String digest = "sha-256=:" + Base64.getEncoder().encodeToString(
                 MessageDigest.getInstance("SHA-256").digest(body)) + ":";
         String input = "sm1=(\"@method\" \"@path\" \"@query\" \"content-type\" \"content-digest\" \"x-sm-key-id\" "
-                + "\"x-sm-timestamp\" \"x-sm-nonce\");created=" + created + ";keyid=\"" + keyId
+                + "\"x-sm-timestamp\" \"x-sm-nonce\" \"x-sm-request-id\");created=" + created + ";keyid=\"" + keyId
                 + "\";nonce=\"" + nonce + "\";alg=\"hmac-sha256\"";
         String base = "\"@method\": POST\n\"@path\": " + path
                 + "\n\"@query\": " + query
@@ -37,6 +38,7 @@ class OpenApiSignatureVerifierTests {
                 + "\n\"x-sm-key-id\": " + keyId
                 + "\n\"x-sm-timestamp\": " + created
                 + "\n\"x-sm-nonce\": " + nonce
+                + "\n\"x-sm-request-id\": " + requestId
                 + "\n\"@signature-params\": " + input.substring("sm1=".length());
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(secret, "HmacSHA256"));
@@ -44,16 +46,27 @@ class OpenApiSignatureVerifierTests {
                 mac.doFinal(base.getBytes(StandardCharsets.UTF_8))) + ":";
 
         assertDoesNotThrow(() -> verifier.verify(body, "POST", path, query, contentType, keyId, created, nonce,
-                digest, input, signature, secret));
+                requestId, digest, input, signature, secret));
         assertThrows(BizException.class, () -> verifier.verify(
                 "tampered".getBytes(StandardCharsets.UTF_8), "POST", path, query, contentType, keyId, created,
-                nonce, digest, input, signature, secret));
+                nonce, requestId, digest, input, signature, secret));
         assertThrows(BizException.class, () -> verifier.verify(body, "POST", path,
                 "?status=DISABLED&page=1", contentType, keyId, created, nonce,
-                digest, input, signature, secret));
+                requestId, digest, input, signature, secret));
         assertThrows(BizException.class, () -> verifier.verify(body, "POST", path, query,
                 "application/json;charset=UTF-8", keyId, created, nonce,
-                digest, input, signature, secret));
+                requestId, digest, input, signature, secret));
+        assertThrows(BizException.class, () -> verifier.verify(body, "POST", path, query, contentType,
+                keyId, created, nonce, "request-tampered", digest, input, signature, secret));
+
+        // 即使旧签名的 HMAC 计算正确，也不能接受遗漏 requestId 的覆盖列表。
+        String unsignedRequestIdInput = input.replace(" \"x-sm-request-id\"", "");
+        String unsignedRequestIdBase = base.replace("\n\"x-sm-request-id\": " + requestId, "")
+                .replace(input.substring("sm1=".length()), unsignedRequestIdInput.substring("sm1=".length()));
+        String unsignedRequestIdSignature = "sm1=:" + Base64.getEncoder().encodeToString(
+                mac.doFinal(unsignedRequestIdBase.getBytes(StandardCharsets.UTF_8))) + ":";
+        assertThrows(BizException.class, () -> verifier.verify(body, "POST", path, query, contentType,
+                keyId, created, nonce, requestId, digest, unsignedRequestIdInput, unsignedRequestIdSignature, secret));
     }
 
     @Test
@@ -81,6 +94,6 @@ class OpenApiSignatureVerifierTests {
                 mac.doFinal(legacyBase.getBytes(StandardCharsets.UTF_8))) + ":";
 
         assertThrows(BizException.class, () -> verifier.verify(body, "POST", path, "?",
-                "application/json", keyId, created, nonce, digest, legacyInput, legacySignature, secret));
+                "application/json", keyId, created, nonce, "request-123456", digest, legacyInput, legacySignature, secret));
     }
 }
