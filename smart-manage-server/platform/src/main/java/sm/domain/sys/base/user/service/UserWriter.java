@@ -42,6 +42,8 @@ class UserWriter {
     }
 
     Long save(UserSaveForm form, Long desiredId) {
+        UserLifecyclePolicy.checkSave(form,
+                form.getId() == null ? null : mapper.selectById(form.getId()));
         LambdaQueryWrapper<UserEntity> usernameCheck = new LambdaQueryWrapper<UserEntity>()
                 .eq(UserEntity::getUsername, form.getUsername())
                 .ne(form.getId() != null, UserEntity::getId, form.getId());
