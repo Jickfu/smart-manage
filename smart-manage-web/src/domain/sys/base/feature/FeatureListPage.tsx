@@ -97,6 +97,7 @@ const FeatureListPage = (props: PageComponentProps) => {
   );
   const columns: ColumnsType<FeatureVO> = [
     {
+      ellipsis: true,
       title: '功能键',
       dataIndex: 'featureKey',
       width: 260,
@@ -106,11 +107,12 @@ const FeatureListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name' },
-    { title: '所属应用', dataIndex: 'appName', width: 140 },
-    { title: '来源', dataIndex: 'source', width: 90 },
-    { title: '排序', dataIndex: 'seq', width: 70 },
+    { ellipsis: true, title: '名称', dataIndex: 'name' },
+    { ellipsis: true, title: '所属应用', dataIndex: 'appName', width: 140 },
+    { ellipsis: true, title: '来源', dataIndex: 'source', width: 90 },
+    { ellipsis: true, title: '排序', dataIndex: 'seq', width: 70 },
     {
+      ellipsis: true,
       title: '目录状态',
       dataIndex: 'visible',
       width: 90,

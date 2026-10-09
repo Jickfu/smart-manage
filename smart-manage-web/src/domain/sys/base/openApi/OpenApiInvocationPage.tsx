@@ -35,22 +35,25 @@ const OpenApiInvocationPage = (props: PageComponentProps) => {
   });
   const summary = stats.data?.summary ?? {};
   const columns: ColumnsType<OpenApiInvocation> = [
-    { title: '请求时间', dataIndex: 'requestTime', width: 180 },
+    { ellipsis: true, title: '请求时间', dataIndex: 'requestTime', width: 180 },
     {
+      ellipsis: true,
       title: '第三方系统',
       dataIndex: 'applicationNumber',
       width: 170,
       render: (value) => value ?? '未知',
     },
     {
+      ellipsis: true,
       title: '操作标识',
       dataIndex: 'operationKey',
       width: 280,
       render: (value) => value ?? '未知',
     },
-    { title: 'Request ID', dataIndex: 'requestId', width: 230 },
-    { title: '客户端 IP', dataIndex: 'clientIp', width: 150 },
+    { ellipsis: true, title: 'Request ID', dataIndex: 'requestId', width: 230 },
+    { ellipsis: true, title: '客户端 IP', dataIndex: 'clientIp', width: 150 },
     {
+      ellipsis: true,
       title: '结果',
       dataIndex: 'resultType',
       width: 120,
@@ -64,10 +67,16 @@ const OpenApiInvocationPage = (props: PageComponentProps) => {
         </Tag>
       ),
     },
-    { title: '结果码', dataIndex: 'resultCode', width: 100 },
-    { title: '耗时', dataIndex: 'durationMs', width: 100, render: (value) => `${value} ms` },
-    { title: '请求字节', dataIndex: 'requestBytes', width: 110 },
-    { title: '响应字节', dataIndex: 'responseBytes', width: 110 },
+    { ellipsis: true, title: '结果码', dataIndex: 'resultCode', width: 100 },
+    {
+      ellipsis: true,
+      title: '耗时',
+      dataIndex: 'durationMs',
+      width: 100,
+      render: (value) => `${value} ms`,
+    },
+    { ellipsis: true, title: '请求字节', dataIndex: 'requestBytes', width: 110 },
+    { ellipsis: true, title: '响应字节', dataIndex: 'responseBytes', width: 110 },
     { title: '错误信息', dataIndex: 'errorMessage', ellipsis: true },
   ];
   return (

@@ -155,6 +155,7 @@ const OrgListPage = (props: PageComponentProps) => {
   };
   const columns: ColumnsType<OrgListVO> = [
     {
+      ellipsis: true,
       title: '编码',
       dataIndex: 'number',
       width: 160,
@@ -169,28 +170,32 @@ const OrgListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name', width: 180 },
+    { ellipsis: true, title: '名称', dataIndex: 'name', width: 180 },
     { title: '长名称', dataIndex: 'namePath', ellipsis: true },
     {
+      ellipsis: true,
       title: '组织类型',
       dataIndex: 'orgType',
       width: 100,
       render: (value: OrgType) => ORG_TYPE_LABELS[value],
     },
-    { title: '排序', dataIndex: 'sort', width: 80 },
+    { ellipsis: true, title: '排序', dataIndex: 'sort', width: 80 },
     {
+      ellipsis: true,
       title: '使用状态',
       dataIndex: 'enabled',
       width: 100,
       render: (value: boolean) => (value ? <Tag color="green">启用</Tag> : <Tag>禁用</Tag>),
     },
     {
+      ellipsis: true,
       title: '封存状态',
       dataIndex: 'archived',
       width: 100,
       render: (value: boolean) => (value ? <Tag color="orange">已封存</Tag> : <Tag>未封存</Tag>),
     },
     {
+      ellipsis: true,
       title: '封存日期',
       dataIndex: 'archivedAt',
       width: 120,

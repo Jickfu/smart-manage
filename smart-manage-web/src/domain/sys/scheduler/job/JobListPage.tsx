@@ -95,6 +95,7 @@ const JobListPage = (props: PageComponentProps) => {
   });
   const columns: ColumnsType<JobVO> = [
     {
+      ellipsis: true,
       title: '任务编码',
       dataIndex: 'number',
       width: 180,
@@ -109,18 +110,19 @@ const JobListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '任务名称', dataIndex: 'jobName', width: 180 },
-    { title: '所属应用', dataIndex: 'appName', width: 160 },
-    { title: 'Cron 表达式', dataIndex: 'cronExpression', width: 180 },
+    { ellipsis: true, title: '任务名称', dataIndex: 'jobName', width: 180 },
+    { ellipsis: true, title: '所属应用', dataIndex: 'appName', width: 160 },
+    { ellipsis: true, title: 'Cron 表达式', dataIndex: 'cronExpression', width: 180 },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'status',
       width: 100,
       render: (value: JobStatus) =>
         value === 'ENABLED' ? <Tag color="success">已启用</Tag> : <Tag>已暂停</Tag>,
     },
-    { title: '上次执行时间', dataIndex: 'lastExecuteTime', width: 180 },
-    { title: '上次执行结果', dataIndex: 'lastExecuteStatus', width: 120 },
+    { ellipsis: true, title: '上次执行时间', dataIndex: 'lastExecuteTime', width: 180 },
+    { ellipsis: true, title: '上次执行结果', dataIndex: 'lastExecuteStatus', width: 120 },
     { title: '执行类', dataIndex: 'jobClassName', ellipsis: true },
   ];
 

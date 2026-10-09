@@ -63,6 +63,7 @@ export default function ScriptListPage(props: PageComponentProps) {
   });
   const columns: ColumnsType<ScriptListItem> = [
     {
+      ellipsis: true,
       title: '编码',
       dataIndex: 'number',
       width: 180,
@@ -76,10 +77,10 @@ export default function ScriptListPage(props: PageComponentProps) {
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name', width: 220 },
+    { ellipsis: true, title: '名称', dataIndex: 'name', width: 220 },
     { title: '描述', dataIndex: 'description', ellipsis: true },
-    { title: '更新时间', dataIndex: 'updateTime', width: 180 },
-    { title: '创建时间', dataIndex: 'createTime', width: 180 },
+    { ellipsis: true, title: '更新时间', dataIndex: 'updateTime', width: 180 },
+    { ellipsis: true, title: '创建时间', dataIndex: 'createTime', width: 180 },
   ];
   return (
     <ListPage<ScriptListItem>

@@ -104,6 +104,7 @@ export default function InboxMessageList({
     .map(({ messageId, receivedTime }) => ({ messageId, receivedTime }));
   const columns: ColumnsType<InboxItem> = [
     {
+      ellipsis: true,
       title: '#',
       key: 'sequence',
       width: 44,
@@ -113,6 +114,7 @@ export default function InboxMessageList({
       render: (_value: unknown, _record, index) => index + 1,
     },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'readStatus',
       // 首列表头弹层向表格内部展开，避免覆盖左侧分类栏。
@@ -138,6 +140,7 @@ export default function InboxMessageList({
     },
     { title: '内容', dataIndex: 'summary', ellipsis: true },
     {
+      ellipsis: true,
       title: '级别',
       dataIndex: 'level',
       width: 80,
@@ -150,7 +153,13 @@ export default function InboxMessageList({
       ellipsis: true,
       render: (name?: string) => name ?? '系统通知',
     },
-    { title: '接收时间', dataIndex: 'receivedTime', width: 150, render: formatInboxTime },
+    {
+      ellipsis: true,
+      title: '接收时间',
+      dataIndex: 'receivedTime',
+      width: 150,
+      render: formatInboxTime,
+    },
   ];
   const updateFilters = (filters: ListFilterCondition[]) => {
     setColumnFilters(filters);

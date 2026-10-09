@@ -70,6 +70,7 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
 
   const columns: ColumnsType<PurchaseRequisitionListVO> = [
     {
+      ellipsis: true,
       title: '编码',
       dataIndex: 'number',
       width: 180,
@@ -79,10 +80,11 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '主题', dataIndex: 'subject' },
-    { title: '业务日期', dataIndex: 'bizDate', width: 120 },
-    { title: '需求日期', dataIndex: 'requiredDate', width: 120 },
+    { ellipsis: true, title: '主题', dataIndex: 'subject' },
+    { ellipsis: true, title: '业务日期', dataIndex: 'bizDate', width: 120 },
+    { ellipsis: true, title: '需求日期', dataIndex: 'requiredDate', width: 120 },
     {
+      ellipsis: true,
       title: '单据状态',
       dataIndex: 'billStatus',
       width: 100,
@@ -91,7 +93,7 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
         return view ? <Tag color={view.color}>{view.label}</Tag> : value;
       },
     },
-    { title: '创建时间', dataIndex: 'createTime', width: 180 },
+    { ellipsis: true, title: '创建时间', dataIndex: 'createTime', width: 180 },
   ];
 
   const confirmDelete = () => {

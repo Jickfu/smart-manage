@@ -248,9 +248,10 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
               dataSource={pagedThreads}
               onRow={(thread) => ({ onClick: () => setSelectedThreadId(thread.id) })}
               columns={[
-                { title: 'ID', dataIndex: 'id', width: 90 },
+                { ellipsis: true, title: 'ID', dataIndex: 'id', width: 90 },
                 { title: '线程名称', dataIndex: 'name', ellipsis: true },
                 {
+                  ellipsis: true,
                   title: '状态',
                   dataIndex: 'state',
                   width: 130,
@@ -259,6 +260,7 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
                   ),
                 },
                 {
+                  ellipsis: true,
                   title: 'CPU',
                   dataIndex: 'cpuUsage',
                   width: 90,

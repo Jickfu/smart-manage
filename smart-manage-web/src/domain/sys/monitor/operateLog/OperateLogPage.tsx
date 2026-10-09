@@ -51,6 +51,7 @@ const OperateLogPage = (props: PageComponentProps) => {
 
   const columns: ColumnsType<OperateLogListVO> = [
     {
+      ellipsis: true,
       title: '日志 ID',
       dataIndex: 'id',
       width: 210,
@@ -67,11 +68,12 @@ const OperateLogPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '业务名称', dataIndex: 'bizName' },
-    { title: '操作人', dataIndex: 'username', width: 140 },
-    { title: '请求方式', dataIndex: 'requestMethod', width: 90 },
-    { title: '请求 URI', dataIndex: 'requestUri', width: 260 },
+    { ellipsis: true, title: '业务名称', dataIndex: 'bizName' },
+    { ellipsis: true, title: '操作人', dataIndex: 'username', width: 140 },
+    { ellipsis: true, title: '请求方式', dataIndex: 'requestMethod', width: 90 },
+    { ellipsis: true, title: '请求 URI', dataIndex: 'requestUri', width: 260 },
     {
+      ellipsis: true,
       title: '结果',
       dataIndex: 'success',
       width: 80,
@@ -79,13 +81,14 @@ const OperateLogPage = (props: PageComponentProps) => {
         value ? <Tag color="success">成功</Tag> : <Tag color="error">失败</Tag>,
     },
     {
+      ellipsis: true,
       title: '耗时',
       dataIndex: 'durationMs',
       width: 100,
       render: (value?: number) => (value === undefined ? '-' : `${value} ms`),
     },
-    { title: '发生时间', dataIndex: 'createTime', width: 180 },
-    { title: 'Trace ID', dataIndex: 'traceId', width: 260 },
+    { ellipsis: true, title: '发生时间', dataIndex: 'createTime', width: 180 },
+    { ellipsis: true, title: 'Trace ID', dataIndex: 'traceId', width: 260 },
   ];
 
   return (

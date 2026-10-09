@@ -216,8 +216,9 @@ const MenuListPage = (props: PageComponentProps) => {
       ),
     },
     { title: '名称', dataIndex: 'name', ellipsis: true },
-    { title: '所属应用', dataIndex: 'appName', width: 100 },
+    { ellipsis: true, title: '所属应用', dataIndex: 'appName', width: 100 },
     {
+      ellipsis: true,
       title: '层级',
       dataIndex: 'level',
       width: 80,
@@ -226,6 +227,7 @@ const MenuListPage = (props: PageComponentProps) => {
     },
     { title: '路径', dataIndex: 'path', width: 180, ellipsis: true },
     {
+      ellipsis: true,
       title: '页面目标',
       dataIndex: 'targetType',
       width: 100,
@@ -240,6 +242,7 @@ const MenuListPage = (props: PageComponentProps) => {
     },
     { title: '外部链接', dataIndex: 'externalUrl', width: 220, ellipsis: true },
     {
+      ellipsis: true,
       title: '打开方式',
       dataIndex: 'externalOpenMode',
       width: 130,
@@ -247,8 +250,9 @@ const MenuListPage = (props: PageComponentProps) => {
         value === 'NEW_TAB' ? '新浏览器标签页' : value === 'IFRAME' ? '工作台内嵌页' : '-',
     },
     { title: '组件', dataIndex: 'component', ellipsis: true },
-    { title: '排序', dataIndex: 'sort', width: 60 },
+    { ellipsis: true, title: '排序', dataIndex: 'sort', width: 60 },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'enabled',
       width: 80,

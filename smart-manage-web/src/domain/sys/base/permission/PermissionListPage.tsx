@@ -85,6 +85,7 @@ const PermissionListPage = (props: PageComponentProps) => {
   }, []);
   const columns: ColumnsType<PermissionListVO> = [
     {
+      ellipsis: true,
       title: '编码',
       dataIndex: 'number',
       width: 240,
@@ -97,14 +98,15 @@ const PermissionListPage = (props: PageComponentProps) => {
           text
         ),
     },
-    { title: '名称', dataIndex: 'name' },
+    { ellipsis: true, title: '名称', dataIndex: 'name' },
     {
+      ellipsis: true,
       title: '所属功能',
       dataIndex: 'featureName',
       width: 160,
       render: (value) => value ?? '应用级权限',
     },
-    { title: '所属应用', dataIndex: 'appName', width: 160 },
+    { ellipsis: true, title: '所属应用', dataIndex: 'appName', width: 160 },
   ];
   const treeData = useMemo<DataNode[]>(() => {
     const featuresByApp = new Map<string, FeatureVO[]>();

@@ -173,27 +173,31 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
                 setSelectedRuleId(keys.length === 1 ? String(keys[0]) : undefined),
             }}
             columns={[
-              { title: '规则', dataIndex: 'name' },
-              { title: '对象', dataIndex: 'scopeType', width: 100 },
+              { ellipsis: true, title: '规则', dataIndex: 'name' },
+              { ellipsis: true, title: '对象', dataIndex: 'scopeType', width: 100 },
               {
+                ellipsis: true,
                 title: '级别',
                 dataIndex: 'severity',
                 width: 110,
                 render: (value: string) => <Tag color={severityColor[value]}>{value}</Tag>,
               },
               {
+                ellipsis: true,
                 title: '触发 / 恢复阈值',
                 width: 180,
                 render: (_, rule) =>
                   `${displayValue(rule, rule.threshold)} / ${displayValue(rule, rule.recoveryThreshold) ?? '-'} ${rule.displayUnit}`,
               },
               {
+                ellipsis: true,
                 title: '持续时间',
                 dataIndex: 'durationSeconds',
                 width: 120,
                 render: (value: number) => `${value}s`,
               },
               {
+                ellipsis: true,
                 title: '邮件',
                 dataIndex: 'emailEnabled',
                 width: 100,
@@ -202,11 +206,13 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
                 ),
               },
               {
+                ellipsis: true,
                 title: '接收人数',
                 width: 100,
                 render: (_, rule) => rule.recipientUsers?.length ?? 0,
               },
               {
+                ellipsis: true,
                 title: '状态',
                 dataIndex: 'enabled',
                 width: 100,
@@ -239,16 +245,22 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
               },
             }}
             columns={[
-              { title: '开始时间', dataIndex: 'startedAt', width: 180 },
-              { title: '规则', dataIndex: 'ruleName', width: 180 },
-              { title: '对象', render: (_, item) => `${item.scopeType} / ${item.scopeId}` },
+              { ellipsis: true, title: '开始时间', dataIndex: 'startedAt', width: 180 },
+              { ellipsis: true, title: '规则', dataIndex: 'ruleName', width: 180 },
               {
+                ellipsis: true,
+                title: '对象',
+                render: (_, item) => `${item.scopeType} / ${item.scopeId}`,
+              },
+              {
+                ellipsis: true,
                 title: '级别',
                 dataIndex: 'severity',
                 width: 110,
                 render: (value: string) => <Tag color={severityColor[value]}>{value}</Tag>,
               },
               {
+                ellipsis: true,
                 title: '状态',
                 dataIndex: 'status',
                 width: 120,
@@ -263,11 +275,12 @@ export default function MonitorAlertPage({ active }: PageComponentProps) {
                 ),
               },
               {
+                ellipsis: true,
                 title: '最新 / 峰值',
                 width: 150,
                 render: (_, item) => `${item.lastValueDisplay} / ${item.peakValueDisplay}`,
               },
-              { title: '摘要', dataIndex: 'summary' },
+              { ellipsis: true, title: '摘要', dataIndex: 'summary' },
             ]}
           />
         </section>

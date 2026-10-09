@@ -368,9 +368,15 @@ const Header = () => {
                 onChange: (keys) => setSelectedOrgId(keys[0] ? String(keys[0]) : undefined),
               }}
               columns={[
-                { title: '组织名称', render: (_, record) => record.org.name, width: 180 },
-                { title: '组织长名称', dataIndex: 'orgNamePath' },
                 {
+                  ellipsis: true,
+                  title: '组织名称',
+                  render: (_, record) => record.org.name,
+                  width: 180,
+                },
+                { ellipsis: true, title: '组织长名称', dataIndex: 'orgNamePath' },
+                {
+                  ellipsis: true,
                   title: '岗位',
                   dataIndex: 'position',
                   width: 120,

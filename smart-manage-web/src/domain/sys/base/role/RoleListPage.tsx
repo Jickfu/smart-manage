@@ -109,6 +109,7 @@ const RoleListPage = (props: PageComponentProps) => {
 
   const columns: ColumnsType<RoleListVO> = [
     {
+      ellipsis: true,
       title: '编码',
       dataIndex: 'number',
       width: 180,
@@ -118,7 +119,7 @@ const RoleListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name', width: 220 },
+    { ellipsis: true, title: '名称', dataIndex: 'name', width: 220 },
     { title: '描述', dataIndex: 'description', ellipsis: true },
   ];
 
