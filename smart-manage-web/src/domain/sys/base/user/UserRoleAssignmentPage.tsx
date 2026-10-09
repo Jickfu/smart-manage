@@ -21,15 +21,21 @@ type RolesByOrgId = Record<string, RoleSelectVO[]>;
 
 const roleColumns: ColumnsType<RoleSelectVO> = [
   {
+    ellipsis: true,
     title: '#',
     width: 44,
     align: 'center',
     className: 'sm-assignment-sequence-column',
     render: (_value, _record, index) => index + 1,
   },
-  { title: '编码', dataIndex: 'number', width: 160 },
-  { title: '名称', dataIndex: 'name', width: 180 },
-  { title: '描述', dataIndex: 'description', render: (description) => description || '—' },
+  { ellipsis: true, title: '编码', dataIndex: 'number', width: 160 },
+  { ellipsis: true, title: '名称', dataIndex: 'name', width: 180 },
+  {
+    ellipsis: true,
+    title: '描述',
+    dataIndex: 'description',
+    render: (description) => description || '—',
+  },
 ];
 
 const buildRolesByOrgId = (organizations: UserRoleOrganizationVO[]): RolesByOrgId =>
@@ -153,8 +159,9 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId, context }: PageComp
   };
 
   const organizationColumns: ColumnsType<UserRoleOrganizationVO> = [
-    { title: '编码', dataIndex: ['org', 'number'], width: 130 },
+    { ellipsis: true, title: '编码', dataIndex: ['org', 'number'], width: 130 },
     {
+      ellipsis: true,
       title: '组织',
       dataIndex: ['org', 'name'],
       render: (name, organization) => (
@@ -164,8 +171,15 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId, context }: PageComp
         </span>
       ),
     },
-    { title: '职位', dataIndex: 'position', width: 150, render: (position) => position || '—' },
     {
+      ellipsis: true,
+      title: '职位',
+      dataIndex: 'position',
+      width: 150,
+      render: (position) => position || '—',
+    },
+    {
+      ellipsis: true,
       title: '角色数',
       width: 72,
       align: 'right',

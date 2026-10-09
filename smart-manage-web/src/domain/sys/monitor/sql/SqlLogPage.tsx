@@ -65,6 +65,7 @@ export default function SqlLogPage(props: PageComponentProps) {
   });
   const columns: ColumnsType<SqlLogListItem> = [
     {
+      ellipsis: true,
       title: '日志 ID',
       dataIndex: 'id',
       width: 210,
@@ -86,16 +87,23 @@ export default function SqlLogPage(props: PageComponentProps) {
       render: (value: string) => <Typography.Text code>{value}</Typography.Text>,
     },
     {
+      ellipsis: true,
       title: '结果',
       dataIndex: 'resultType',
       width: 100,
       render: (value) => <Tag color={value === 'ERROR' ? 'error' : 'success'}>{value}</Tag>,
     },
-    { title: '行数', dataIndex: 'rowCount', width: 90 },
-    { title: '耗时', dataIndex: 'executeDuration', width: 100, render: (value) => `${value} ms` },
-    { title: '执行人', dataIndex: 'createName', width: 130 },
-    { title: 'IP', dataIndex: 'createIp', width: 140 },
-    { title: '执行时间', dataIndex: 'createTime', width: 180 },
+    { ellipsis: true, title: '行数', dataIndex: 'rowCount', width: 90 },
+    {
+      ellipsis: true,
+      title: '耗时',
+      dataIndex: 'executeDuration',
+      width: 100,
+      render: (value) => `${value} ms`,
+    },
+    { ellipsis: true, title: '执行人', dataIndex: 'createName', width: 130 },
+    { ellipsis: true, title: 'IP', dataIndex: 'createIp', width: 140 },
+    { ellipsis: true, title: '执行时间', dataIndex: 'createTime', width: 180 },
   ];
   return (
     <ListPage<SqlLogListItem>

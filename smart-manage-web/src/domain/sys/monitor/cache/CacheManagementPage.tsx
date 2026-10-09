@@ -105,15 +105,17 @@ export default function CacheManagementPage(props: PageComponentProps) {
         );
       },
     },
-    { title: '缓存', dataIndex: 'cacheDisplayName', width: 140 },
+    { ellipsis: true, title: '缓存', dataIndex: 'cacheDisplayName', width: 140 },
     {
+      ellipsis: true,
       title: '存储位置',
       dataIndex: 'storage',
       width: 110,
       render: (value) => <Tag color={value === 'LOCAL' ? 'blue' : 'purple'}>{value}</Tag>,
     },
-    { title: '类型', dataIndex: 'type', width: 100 },
+    { ellipsis: true, title: '类型', dataIndex: 'type', width: 100 },
     {
+      ellipsis: true,
       title: 'TTL',
       dataIndex: 'ttl',
       width: 110,
@@ -121,12 +123,14 @@ export default function CacheManagementPage(props: PageComponentProps) {
         value == null ? '-' : value === -1 ? '永久' : value === -2 ? '不存在' : `${value} 秒`,
     },
     {
+      ellipsis: true,
       title: '内存',
       dataIndex: 'memoryBytes',
       width: 110,
       render: (value) => (value == null ? '-' : `${value} B`),
     },
     {
+      ellipsis: true,
       title: 'Value',
       dataIndex: 'valueReadable',
       width: 100,

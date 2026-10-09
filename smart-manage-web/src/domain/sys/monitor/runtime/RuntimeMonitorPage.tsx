@@ -256,11 +256,12 @@ function TopologyCard({
                   onSelectInstance(keys.length === 1 ? String(keys[0]) : undefined),
               }}
               columns={[
-                { title: '实例 ID', dataIndex: 'instanceId' },
-                { title: '应用', dataIndex: 'applicationName', width: 180 },
-                { title: '版本', dataIndex: 'applicationVersion', width: 140 },
-                { title: '生命周期', dataIndex: 'lifecycle', width: 110 },
+                { ellipsis: true, title: '实例 ID', dataIndex: 'instanceId' },
+                { ellipsis: true, title: '应用', dataIndex: 'applicationName', width: 180 },
+                { ellipsis: true, title: '版本', dataIndex: 'applicationVersion', width: 140 },
+                { ellipsis: true, title: '生命周期', dataIndex: 'lifecycle', width: 110 },
                 {
+                  ellipsis: true,
                   title: '状态',
                   dataIndex: 'online',
                   width: 120,
@@ -268,19 +269,21 @@ function TopologyCard({
                     <Tag color={online ? 'success' : 'default'}>{online ? '在线' : '离线'}</Tag>
                   ),
                 },
-                { title: '最后发现', dataIndex: 'lastSeenTime', width: 180 },
+                { ellipsis: true, title: '最后发现', dataIndex: 'lastSeenTime', width: 180 },
               ]}
             />
           ),
         }}
         columns={[
-          { title: '主机', dataIndex: 'hostName' },
-          { title: 'Host ID', dataIndex: 'hostId', width: 200 },
+          { ellipsis: true, title: '主机', dataIndex: 'hostName' },
+          { ellipsis: true, title: 'Host ID', dataIndex: 'hostId', width: 200 },
           {
+            ellipsis: true,
             title: '操作系统',
             render: (_, host) => `${host.osName ?? '-'} ${host.osVersion ?? ''}`,
           },
           {
+            ellipsis: true,
             title: '遥测状态',
             dataIndex: 'telemetryStatus',
             width: 180,
@@ -290,7 +293,12 @@ function TopologyCard({
               </Tag>
             ),
           },
-          { title: '实例数', width: 100, render: (_, host) => host.instances.length },
+          {
+            ellipsis: true,
+            title: '实例数',
+            width: 100,
+            render: (_, host) => host.instances.length,
+          },
         ]}
       />
     </Card>
@@ -403,12 +411,13 @@ function FilesystemCard({ snapshot }: { snapshot: HostSnapshot }) {
         rowKey={(item) => `${item.name}:${item.mount}`}
         dataSource={snapshot.filesystems}
         columns={[
-          { title: '挂载点', dataIndex: 'mount' },
-          { title: '名称', dataIndex: 'name' },
-          { title: '类型', dataIndex: 'type', width: 120 },
-          { title: '已用', width: 140, render: (_, item) => bytes(item.used) },
-          { title: '可用', width: 140, render: (_, item) => bytes(item.available) },
+          { ellipsis: true, title: '挂载点', dataIndex: 'mount' },
+          { ellipsis: true, title: '名称', dataIndex: 'name' },
+          { ellipsis: true, title: '类型', dataIndex: 'type', width: 120 },
+          { ellipsis: true, title: '已用', width: 140, render: (_, item) => bytes(item.used) },
+          { ellipsis: true, title: '可用', width: 140, render: (_, item) => bytes(item.available) },
           {
+            ellipsis: true,
             title: '使用率',
             width: 200,
             render: (_, item) => {

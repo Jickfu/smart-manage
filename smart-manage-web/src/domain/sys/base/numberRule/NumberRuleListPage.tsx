@@ -150,6 +150,7 @@ const NumberRuleListPage = (props: PageComponentProps) => {
   });
   const columns: ColumnsType<NumberRuleVO> = [
     {
+      ellipsis: true,
       title: '规则键',
       dataIndex: 'ruleKey',
       width: 260,
@@ -170,18 +171,20 @@ const NumberRuleListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name', width: 150 },
-    { title: '功能', dataIndex: 'featureName', width: 150 },
-    { title: '编号格式', dataIndex: 'pattern' },
-    { title: '作用域', dataIndex: 'scopeType', width: 90 },
-    { title: '引用数', dataIndex: 'usageCount', width: 80 },
+    { ellipsis: true, title: '名称', dataIndex: 'name', width: 150 },
+    { ellipsis: true, title: '功能', dataIndex: 'featureName', width: 150 },
+    { ellipsis: true, title: '编号格式', dataIndex: 'pattern' },
+    { ellipsis: true, title: '作用域', dataIndex: 'scopeType', width: 90 },
+    { ellipsis: true, title: '引用数', dataIndex: 'usageCount', width: 80 },
     {
+      ellipsis: true,
       title: '默认规则',
       dataIndex: 'defaultRule',
       width: 90,
       render: (value) => (value ? <Tag color="blue">默认</Tag> : '-'),
     },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'enabled',
       width: 80,

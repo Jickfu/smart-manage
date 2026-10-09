@@ -92,17 +92,19 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
   const columns = useMemo<ColumnsType<PermissionListAllVO>>(() => {
     const result: ColumnsType<PermissionListAllVO> = [
       {
+        ellipsis: true,
         title: '#',
         width: 44,
         align: 'center',
         className: 'sm-assignment-sequence-column',
         render: (_value, _record, index) => index + 1,
       },
-      { title: '权限编码', dataIndex: 'number', width: 280 },
-      { title: '权限名称', dataIndex: 'name' },
+      { ellipsis: true, title: '权限编码', dataIndex: 'number', width: 280 },
+      { ellipsis: true, title: '权限名称', dataIndex: 'name' },
     ];
     if (scope.type === 'all' || scope.type === 'domain' || scope.type === 'app') {
       result.push({
+        ellipsis: true,
         title: '所属功能',
         dataIndex: 'featureName',
         width: 180,
@@ -110,7 +112,7 @@ const RolePermissionAssignmentPage = ({ appNumber, tabKey, billId }: PageCompone
       });
     }
     if (scope.type === 'all' || scope.type === 'domain') {
-      result.push({ title: '所属应用', dataIndex: 'appName', width: 160 });
+      result.push({ ellipsis: true, title: '所属应用', dataIndex: 'appName', width: 160 });
     }
     return result;
   }, [scope.type]);

@@ -47,6 +47,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-
 | 操作反馈 | 除统一封装自身外，前端不得直接调用 Ant Design `message` 的操作反馈方法 | 改用 `useOperationFeedback` |
 | 操作确认 | 前端不得直接调用 `Modal.confirm` 或使用 `Popconfirm` | 改用 `useOperationConfirm` |
 | 弹框页脚 | `AppModal.footer` 渲染树中的按钮不得被 `Space`、`Flex` 或 `div` 包裹，`PermissionActions` 必须在属性展开后显式传 `grouped={false}` | 使用 Fragment 或按钮数组，由 `AppModal` 统一控制 `12px` 间隔；特殊布局先评审公共契约 |
+| 列表省略声明 | `ListPage` 每个叶子列必须显式声明 `ellipsis`；`false` 必须有紧邻属性的中文业务原因注释 | 文本列使用标准 `ellipsis: true` 或配置对象，特殊业务显式声明例外，不用运行时默认值或固定行高掩盖遗漏 |
 | 后端权限 | Controller 的 `@SaCheckPermission` 不得直接填写权限编码字符串 | 引用对应模块的权限常量 |
 | 页面注册 | 至少存在一个 `pageRegistration.ts` 或 `pageRegistration.tsx`，每个注册项都必须声明 `componentKey`、`featureKey` 和 `pageType`，且 `featureKey` 不得为空 | 补全显式注册字段，使页面与稳定功能身份建立关联 |
 
@@ -104,6 +105,8 @@ pnpm exec prettier --check vite.config.ts "scripts/build-*.ts"
 ```bash
 pnpm verify:page-framework
 ```
+
+`scripts/list-column-conventions.mjs` 使用 TypeScript AST 检查 `ListPage` 调用方的叶子列是否显式声明标准 `ellipsis`，并要求 `false` 属性前有中文业务原因注释。支持模板导入别名、同文件变量、数组展开、分组列、条件数组及 `useMemo`；不可解析的外部列变量或调用不当作通过。它不修改运行时列属性、不限制行高，也不判断自定义组件是否真正单行。真实仓库扫描与正反例随 `pnpm test` 执行，模块约定脚本复用同一检查；CUSTOM 和其他只读表格的接入及特殊渲染由代码审查与浏览器验收核对。单独排查运行 `node scripts/list-column-conventions.mjs`，脚本格式检查运行 `pnpm exec prettier --check "scripts/list-column-conventions*.mjs"`。
 
 新增门禁脚本和测试的格式检查：
 

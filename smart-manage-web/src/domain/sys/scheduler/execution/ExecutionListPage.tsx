@@ -58,6 +58,7 @@ const ExecutionListPage = (props: PageComponentProps) => {
   });
   const columns: ColumnsType<ExecutionVO> = [
     {
+      ellipsis: true,
       title: '实例 ID',
       dataIndex: 'id',
       width: 210,
@@ -72,9 +73,10 @@ const ExecutionListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '任务名称', dataIndex: 'jobName', width: 180 },
-    { title: '所属应用', dataIndex: 'appName', width: 160 },
+    { ellipsis: true, title: '任务名称', dataIndex: 'jobName', width: 180 },
+    { ellipsis: true, title: '所属应用', dataIndex: 'appName', width: 160 },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'status',
       width: 100,
@@ -85,15 +87,16 @@ const ExecutionListPage = (props: PageComponentProps) => {
         return <Tag color="processing">运行中</Tag>;
       },
     },
-    { title: '开始时间', dataIndex: 'startTime', width: 180 },
-    { title: '结束时间', dataIndex: 'endTime', width: 180 },
+    { ellipsis: true, title: '开始时间', dataIndex: 'startTime', width: 180 },
+    { ellipsis: true, title: '结束时间', dataIndex: 'endTime', width: 180 },
     {
+      ellipsis: true,
       title: '耗时',
       dataIndex: 'durationMs',
       width: 110,
       render: (value?: number | null) => (value == null ? '-' : `${value} ms`),
     },
-    { title: 'Trace ID', dataIndex: 'traceId', width: 300 },
+    { ellipsis: true, title: 'Trace ID', dataIndex: 'traceId', width: 300 },
     { title: '错误信息', dataIndex: 'errorMessage', ellipsis: true },
   ];
 

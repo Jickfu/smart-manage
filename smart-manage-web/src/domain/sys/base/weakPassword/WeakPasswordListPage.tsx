@@ -52,6 +52,7 @@ export default function WeakPasswordListPage(props: PageComponentProps) {
   });
   const columns: ColumnsType<WeakPasswordVO> = [
     {
+      ellipsis: true,
       title: '弱口令',
       dataIndex: 'word',
       width: 320,
@@ -69,7 +70,7 @@ export default function WeakPasswordListPage(props: PageComponentProps) {
       ),
     },
     { title: '描述', dataIndex: 'description', ellipsis: true },
-    { title: '更新时间', dataIndex: 'updateTime', width: 180 },
+    { ellipsis: true, title: '更新时间', dataIndex: 'updateTime', width: 180 },
   ];
   return (
     <>

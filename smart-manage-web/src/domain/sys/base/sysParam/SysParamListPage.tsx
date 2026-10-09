@@ -136,6 +136,7 @@ const SysParamListPage = (props: PageComponentProps) => {
   }, [featuresQuery.data, treeQuery.data]);
   const columns: ColumnsType<SysParamVO> = [
     {
+      ellipsis: true,
       title: '编码',
       dataIndex: 'number',
       width: 180,
@@ -149,12 +150,25 @@ const SysParamListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name', width: 180 },
-    { title: '所属应用', dataIndex: 'appName', width: 160, render: (value) => value ?? '全局参数' },
-    { title: '所属功能', dataIndex: 'featureName', width: 160, render: (value) => value ?? '—' },
+    { ellipsis: true, title: '名称', dataIndex: 'name', width: 180 },
+    {
+      ellipsis: true,
+      title: '所属应用',
+      dataIndex: 'appName',
+      width: 160,
+      render: (value) => value ?? '全局参数',
+    },
+    {
+      ellipsis: true,
+      title: '所属功能',
+      dataIndex: 'featureName',
+      width: 160,
+      render: (value) => value ?? '—',
+    },
     { title: '参数值', dataIndex: 'value', ellipsis: true },
     { title: '描述', dataIndex: 'description', ellipsis: true },
     {
+      ellipsis: true,
       title: '类型',
       dataIndex: 'isSystem',
       width: 100,

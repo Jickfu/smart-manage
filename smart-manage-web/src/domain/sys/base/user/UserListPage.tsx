@@ -181,6 +181,8 @@ const UserListPage = (props: PageComponentProps) => {
   const columns = useMemo<ColumnsType<UserListVO>>(
     () => [
       {
+        // 头像为非文本控件，保留其完整展示。
+        ellipsis: false,
         key: 'avatar',
         title: '头像',
         dataIndex: 'avatar',
@@ -195,6 +197,7 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        ellipsis: true,
         key: 'name',
         title: '姓名',
         dataIndex: 'name',
@@ -205,14 +208,17 @@ const UserListPage = (props: PageComponentProps) => {
           </button>
         ),
       },
-      { key: 'number', title: '工号', dataIndex: 'number', width: 120 },
+      { ellipsis: true, key: 'number', title: '工号', dataIndex: 'number', width: 120 },
       {
+        ellipsis: true,
         key: 'username',
         title: '用户名',
         dataIndex: 'username',
         width: 140,
       },
       {
+        // 多岗位需要逐项对应展示，保留业务分行，不对整列截断。
+        ellipsis: false,
         title: '部门',
         key: 'orgName',
         width: 150,
@@ -224,6 +230,8 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        // 多岗位需要逐项对应展示，保留业务分行，不对整列截断。
+        ellipsis: false,
         title: '部门长名称',
         key: 'orgNamePath',
         render: (_, record) => (
@@ -234,6 +242,8 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        // 多岗位需要逐项对应展示，保留业务分行，不对整列截断。
+        ellipsis: false,
         title: '职位',
         key: 'position',
         width: 140,
@@ -245,6 +255,8 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        // 多岗位需要逐项对应展示，保留业务分行，不对整列截断。
+        ellipsis: false,
         title: '负责人',
         key: 'isOrgLeader',
         width: 76,
@@ -261,6 +273,8 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        // 多岗位需要逐项对应展示，保留业务分行，不对整列截断。
+        ellipsis: false,
         title: '主职',
         key: 'isPrimary',
         width: 64,
@@ -277,6 +291,7 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        ellipsis: true,
         key: 'enabled',
         title: '账号状态',
         dataIndex: 'enabled',

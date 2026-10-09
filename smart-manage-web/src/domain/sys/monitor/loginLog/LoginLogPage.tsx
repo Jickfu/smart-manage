@@ -67,6 +67,7 @@ const LoginLogPage = (props: PageComponentProps) => {
 
   const columns: ColumnsType<LoginLogListVO> = [
     {
+      ellipsis: true,
       title: '日志 ID',
       dataIndex: 'id',
       width: 210,
@@ -83,24 +84,26 @@ const LoginLogPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '用户名', dataIndex: 'username', width: 150 },
-    { title: '昵称', dataIndex: 'nickname' },
+    { ellipsis: true, title: '用户名', dataIndex: 'username', width: 150 },
+    { ellipsis: true, title: '昵称', dataIndex: 'nickname' },
     {
+      ellipsis: true,
       title: '事件',
       dataIndex: 'eventType',
       width: 90,
       render: (value: LoginEventType) => eventTypeLabels[value] ?? value,
     },
     {
+      ellipsis: true,
       title: '结果',
       dataIndex: 'success',
       width: 80,
       render: (value: boolean) =>
         value ? <Tag color="success">成功</Tag> : <Tag color="error">失败</Tag>,
     },
-    { title: 'IP 地址', dataIndex: 'ip', width: 150 },
-    { title: '发生时间', dataIndex: 'createTime', width: 180 },
-    { title: 'Trace ID', dataIndex: 'traceId', width: 260 },
+    { ellipsis: true, title: 'IP 地址', dataIndex: 'ip', width: 150 },
+    { ellipsis: true, title: '发生时间', dataIndex: 'createTime', width: 180 },
+    { ellipsis: true, title: 'Trace ID', dataIndex: 'traceId', width: 260 },
   ];
 
   return (

@@ -116,12 +116,14 @@ const InboxMessageListPage = (props: PageComponentProps) => {
       ),
     },
     {
+      ellipsis: true,
       title: '级别',
       dataIndex: 'level',
       width: 90,
       render: (value: InboxLevel) => levelLabels[value],
     },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'status',
       width: 110,
@@ -129,10 +131,16 @@ const InboxMessageListPage = (props: PageComponentProps) => {
         <Tag color={statusColors[value]}>{statusLabels[value]}</Tag>
       ),
     },
-    { title: '发布人', dataIndex: 'senderName', width: 120 },
-    { title: '收件人数', dataIndex: 'recipientCount', width: 110 },
-    { title: '发布时间', dataIndex: 'publishTime', width: 170, render: (value) => value ?? '—' },
-    { title: '失效时间', dataIndex: 'expireTime', width: 170 },
+    { ellipsis: true, title: '发布人', dataIndex: 'senderName', width: 120 },
+    { ellipsis: true, title: '收件人数', dataIndex: 'recipientCount', width: 110 },
+    {
+      ellipsis: true,
+      title: '发布时间',
+      dataIndex: 'publishTime',
+      width: 170,
+      render: (value) => value ?? '—',
+    },
+    { ellipsis: true, title: '失效时间', dataIndex: 'expireTime', width: 170 },
   ];
   const canPublish = selected?.status === 'DRAFT' || selected?.status === 'FAILED';
   return (

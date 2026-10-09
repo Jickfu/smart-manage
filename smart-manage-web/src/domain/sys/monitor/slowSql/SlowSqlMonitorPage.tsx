@@ -184,6 +184,8 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
             extra={
               <Pagination
                 size="small"
+                showQuickJumper
+                showLessItems
                 current={effectivePageNum}
                 pageSize={PAGE_SIZE}
                 total={filteredRecords.length}
@@ -210,12 +212,14 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
               columns={[
                 { title: 'SQL 模板', dataIndex: 'sql', ellipsis: true },
                 {
+                  ellipsis: true,
                   title: '最大耗时（ms）',
                   dataIndex: 'executeMillisMax',
                   width: 150,
                   sorter: (left, right) => left.executeMillisMax - right.executeMillisMax,
                 },
                 {
+                  ellipsis: true,
                   title: '平均耗时（ms）',
                   dataIndex: 'executeMillisAverage',
                   width: 150,
@@ -223,21 +227,24 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
                   sorter: (left, right) => left.executeMillisAverage - right.executeMillisAverage,
                 },
                 {
+                  ellipsis: true,
                   title: '执行次数',
                   dataIndex: 'executeCount',
                   width: 110,
                   sorter: (left, right) => left.executeCount - right.executeCount,
                 },
                 {
+                  ellipsis: true,
                   title: '错误次数',
                   dataIndex: 'errorCount',
                   width: 110,
                   sorter: (left, right) => left.errorCount - right.errorCount,
                 },
-                { title: '最大并发', dataIndex: 'concurrentMax', width: 110 },
-                { title: '读取行数', dataIndex: 'fetchRowCount', width: 120 },
-                { title: '更新行数', dataIndex: 'updateCount', width: 120 },
+                { ellipsis: true, title: '最大并发', dataIndex: 'concurrentMax', width: 110 },
+                { ellipsis: true, title: '读取行数', dataIndex: 'fetchRowCount', width: 120 },
+                { ellipsis: true, title: '更新行数', dataIndex: 'updateCount', width: 120 },
                 {
+                  ellipsis: true,
                   title: '最近执行时间',
                   dataIndex: 'lastExecuteTime',
                   width: 150,

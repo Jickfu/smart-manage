@@ -15,8 +15,9 @@
 9. 前端 CSS 禁止重复声明全局 12px 默认字号或 fontSizeSM。
 10. AppModal 页脚禁止 Space、Flex、div 包裹按钮，PermissionActions 必须显式关闭分组。
 11. 后端领域聚合、前端领域目录和迁移身份必须一致。
+12. 标准列表叶子列必须显式声明 ellipsis，关闭时必须用中文注释说明业务原因。
 
-页脚检查使用前端 TypeScript 依赖；执行前须在 smart-manage-web 中完成 pnpm install --frozen-lockfile。
+页脚和列表列检查使用前端 TypeScript 依赖；执行前须在 smart-manage-web 中完成 pnpm install --frozen-lockfile。
 
 本脚本只负责适合源码静态扫描的确定性约束。Java 架构边界由 ArchUnit 测试校验；
 业务状态、数据安全和交互语义仍需通过代码评审及风险驱动测试验证。
@@ -181,6 +182,13 @@ if ($LASTEXITCODE -ne 0) {
     Add-Violation 'AppModal footer convention verification failed; install frontend dependencies and fix the reported footer violations'
 }
 
+# 列表截断由列声明负责；检查规范，不为运行时表格强制行高或增加隐式默认值。
+$listColumnVerifier = Resolve-RepositoryPath 'smart-manage-web/scripts/list-column-conventions.mjs'
+& node $listColumnVerifier $frontendSourceRoot
+if ($LASTEXITCODE -ne 0) {
+    Add-Violation 'List column ellipsis convention verification failed; explicitly declare ellipsis and explain business exceptions'
+}
+
 # Controller 权限声明必须引用模块权限常量，禁止散落权限编码字面量。
 $backendSourceDirectories = @('smart-manage-server/platform/src/main/java')
 $backendSourceDirectories += @(Get-ChildItem -LiteralPath (Join-Path $resolvedRoot 'smart-manage-server/domains') -Directory -ErrorAction SilentlyContinue | ForEach-Object { "smart-manage-server/domains/$($_.Name)/src/main/java" })
@@ -231,4 +239,4 @@ if ($violations.Count -gt 0) {
     exit 1
 }
 
-Write-Host "Module convention verification passed for domain assembly, governance routing (including the frontend page guide), $($registrationFiles.Count) page registration file(s), frontend operation interactions, AppModal footers, typography, inline styles, and backend permission constants." -ForegroundColor Green
+Write-Host "Module convention verification passed for domain assembly, governance routing (including the frontend page guide), $($registrationFiles.Count) page registration file(s), frontend operation interactions, AppModal footers, list column ellipsis, typography, inline styles, and backend permission constants." -ForegroundColor Green
