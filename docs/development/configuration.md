@@ -72,7 +72,7 @@ Axios 请求、界面配置图片、独立登录页与 Vite 开发代理均读�
 | --- | --- | --- |
 | `dev` | IDEA 和个人电脑开发运行 | 内置 `application-dev.yml` 加本机外部覆盖 |
 | `test` | 共享测试服务器 | 内置 `application-test.yml` 加服务器外部覆盖 |
-| `prod` | 生产部署 | Jar 同级 `config/application.yml` 和 `config/application-prod.yml` |
+| `prod` | 生产部署 | 内置公共与生产模板，加服务器外部覆盖；外部两个文件均非必须同时存在 |
 
 ## 本机开发
 
@@ -121,6 +121,40 @@ Flyway 只创建账号 `administrator` 和不可登录的空密码标记。首�
 
 ## 生产环境
 
+### Profile 选择与配置叠加
+
+仓库内 `application.yml` 默认选择 `dev`，保留开发启动体验；生产选择属于部署配置，不修改 JAR 内的默认 Profile。推荐在固定工作目录启动：
+
+```bash
+java -jar smart-manage-server.jar --spring.profiles.active=prod
+```
+
+此时默认配置按以下顺序叠加，后者覆盖同名属性，未覆盖属性仍保留：
+
+1. JAR 内 `application.yml`：公共协议与架构配置；
+2. JAR 内 `application-prod.yml`：生产策略与环境模板；
+3. 工作目录下外部 `application.yml` 或 `config/application.yml`；
+4. 工作目录下外部 `application-prod.yml` 或 `config/application-prod.yml`；
+5. 操作系统环境变量、JVM 系统属性和命令行参数等更高优先级来源。
+
+因此仅提供外部 `config/application-prod.yml`，仍然会加载 JAR 内的两个文件，不是只加载生产文件，也无需复制公共模板到服务器。外部文件只填写实际覆盖项；未覆盖的必填占位符必须通过其他部署来源提供。
+
+若希望通过两个外部文件管理部署，也可以在 `config/application.yml` 中只声明：
+
+```yaml
+spring:
+  profiles:
+    active: prod
+```
+
+再把生产连接信息、实例配置等放入 `config/application-prod.yml`，直接执行 `java -jar smart-manage-server.jar`。`SPRING_PROFILES_ACTIVE=prod` 也是等效选择。`spring.profiles.active` 不能放入 `application-prod.yml` 等 Profile 专属文件。两种部署方式共享相同的配置叠加机制，区别只是 Profile 的选择入口；不要在多个入口维护相互矛盾的值。
+
+默认外部查找位置基于**进程工作目录**，不会自动追随 JAR 路径；systemd 的 `WorkingDirectory` 应固定为对应实例目录。从其他目录启动时，可通过 `--spring.config.additional-location=file:/opt/smart-manage/node-a/config/` 添加配置目录。目录路径以 `/` 结尾；不要仅用 `spring.config.location` 指向外部目录，因为它会替换默认搜索位置，可能遗漏 JAR 内的公共与生产策略。更复杂的位置组合以 [Spring Boot 外部配置规则](https://docs.spring.io/spring-boot/reference/features/external-config.html)为准。
+
+同机多实例各自使用独立目录与外部配置，选择同一 `prod` Profile；实例身份、端口、日志路径及共享设施要求见[支持的部署组合](../architecture/deployment.md#支持的部署组合)。
+
+### 部署材料与必要配置
+
 首次部署先按[生产密钥生成与部署](./production-keys.md)生成 SM2 密钥对和部署级 SM4 密钥。该指南包含 OpenAPI 凭据区别、配置接入、替换清单、备份及存量轮换边界。
 
 推荐部署目录：
@@ -136,7 +170,7 @@ smart-manage/
 ```
 
 以仓库中的 `smart-manage-server/app/src/main/resources/application-prod.yml` 为配置项参考，在部署目录创建不纳入版本控制的
-`config/application.yml` 或 `config/application-prod.yml` 并填写真实配置。启动进程的工作目录必须是 Jar 所在目录。
+`config/application.yml` 或 `config/application-prod.yml` 并填写真实配置。默认部署固定工作目录为 JAR 所在目录；使用其他工作目录时，按上节显式提供外部配置位置，并明确日志等相对路径的解析位置。
 外部 YAML 优先于 Jar 内配置，因此生产部署可以使用外部 YAML、环境变量或外部密钥管理设施提供配置；
 Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
 

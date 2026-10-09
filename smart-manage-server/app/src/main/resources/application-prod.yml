@@ -97,6 +97,11 @@ jetcache:
       password: ${SMART_MANAGE_REDIS_PASSWORD}
       database: ${SMART_MANAGE_REDIS_DATABASE:1}
       timeout: 1000
+      # JetCache 初始化要求连接池存在可绑定属性，不能依赖空配置的默认值。
+      poolConfig:
+        maxTotal: 20
+        maxIdle: 10
+        minIdle: 2
 
 springdoc:
   api-docs:
