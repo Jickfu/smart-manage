@@ -184,6 +184,8 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
             extra={
               <Pagination
                 size="small"
+                showQuickJumper
+                showLessItems
                 current={effectivePageNum}
                 pageSize={PAGE_SIZE}
                 total={filteredRecords.length}

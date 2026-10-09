@@ -44,11 +44,12 @@ const ListTableShell = ({
           <Pagination
             size="small"
             showSizeChanger
+            showQuickJumper
+            showLessItems
             pageSizeOptions={['10', '20', '50', '100']}
             current={pageNum}
             pageSize={pageSize}
             total={total}
-            showTotal={(t) => `共 ${t} 条`}
             onChange={(nextPage, nextSize) => onPageChange?.(nextPage, nextSize)}
           />
         )}

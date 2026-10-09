@@ -230,6 +230,8 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
                 <Typography.Text type="secondary">{displayedResult?.sampleTime}</Typography.Text>
                 <Pagination
                   size="small"
+                  showQuickJumper
+                  showLessItems
                   current={effectivePageNum}
                   pageSize={pageSize}
                   total={filteredThreads.length}
