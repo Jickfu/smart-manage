@@ -3,6 +3,9 @@
 import { createHash } from 'node:crypto';
 import { createServer as createHttpServer } from 'node:http';
 import { once } from 'node:events';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createServer } from 'vite';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -21,10 +24,15 @@ describe('API 路径配置', () => {
       await once(backend, 'listening');
       const backendAddress = backend.address();
       if (!backendAddress || typeof backendAddress === 'string') throw new Error('测试后端未监听');
-      const server = await createServer({
-        server: { port: 0, host: '127.0.0.1', open: false },
-      });
+      // 临时服务不能复用正在运行的开发服务缓存，否则依赖重优化会导致页面 504。
+      const cacheDirectory = await mkdtemp(join(tmpdir(), 'smart-manage-api-path-vite-'));
+      let server: Awaited<ReturnType<typeof createServer>> | undefined;
       try {
+        server = await createServer({
+          cacheDir: cacheDirectory,
+          server: { port: 0, host: '127.0.0.1', open: false },
+        });
+        expect(server.config.cacheDir).toBe(cacheDirectory.replace(/\\/g, '/'));
         const proxy = server.config.server.proxy?.[apiBasePath];
         expect(proxy).toBeDefined();
         if (!proxy || typeof proxy === 'string') throw new Error('缺少 API 代理配置');
@@ -51,11 +59,12 @@ describe('API 路径配置', () => {
           expect(moduleResult?.code).toContain(`"VITE_API_BASE_PATH": "${apiBasePath}"`);
         }
       } finally {
-        await server.close();
+        await server?.close();
         backend.closeAllConnections();
         await new Promise<void>((resolve, reject) => {
           backend.close((error) => (error ? reject(error) : resolve()));
         });
+        await rm(cacheDirectory, { recursive: true, force: true });
       }
     },
     20000,
