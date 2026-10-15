@@ -167,7 +167,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baselin
 
 `scripts/verify-baseline.ps1` 默认验证当前全部领域，`-PlatformOnly` 选择平台隔离装配（后端 `platform-only`、前端 `sys`）。脚本以临时数据库运行 reactor 的全部 `*PostgresTests`；app 中的 `AssemblyMigrationPostgresTests` 在真实装配 classpath 发现领域声明、执行对应链并再次迁移，确认平台历史未改写、领域迁移声明与实际装配一致、历史表实际创建；Demo 专属数据由 Demo 模块内的 `DemoMigrationPostgresTests` 验证。`DomainFlywayMigrationPostgresTests` 用独立 schema 验证同号、平台增量、数据保留、启动失败、事务回滚、checksum 和乱序拒绝。管理员并发初始化通过真实 Mapper 和 PostgreSQL 触发器确认只写入一次，重启不覆盖。
 
-双链机制测试不替代具体发行版本的带数据升级测试。今后每个数据库变更须按[正式发布与升级规则](./database.md#正式发布与升级规则)，为发行兼容策略明确声明的受支持旧版本准备结构与代表性数据，运行新增迁移，断言数据转换和业务不变量，再次迁移确认稳定。Flyway 迁移号不自动等同于发行版本或受支持升级起点，不要求把每个历史迁移截点都纳入通用基线门禁；不得修改旧脚本制造测试通过。
+双链机制测试不替代具体发行版本的带数据升级测试。今后每个数据库变更须按[正式发布与升级规则](./database.md#正式发布与升级规则)，为发行兼容策略明确声明的受支持旧版本准备结构与代表性数据，运行新增迁移，断言数据转换和业务不变量，再次迁移确认稳定。不维护或验证仅由 Flyway 迁移号推导、没有对应实际发布版本、长期支持版本或经确认真实环境基线的假定升级起点；不得修改旧脚本制造测试通过。
 
 修改真实数据库测试保护的权限、凭据代际、事务、锁或并发行为时，即使没有迁移变更，也必须执行上节的 `scripts/verify-baseline.ps1`。脚本迁移临时数据库后，以实际测试数据库参数运行全部 `*PostgresTests`；配置入口以脚本为准，凭据不得写入文档或提交。
 
