@@ -159,7 +159,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baselin
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baseline.ps1 -PlatformOnly
 ```
 
-脚本默认从 PATH 查找 PostgreSQL Client 16，并在迁移前输出和校验 `psql` 版本；特殊本地安装可通过 `-PsqlPath` 显式指定可执行文件。脚本创建临时数据库，通过项目锁定版本的 Flyway 执行全部迁移，校验版本、命名、checksum 和 `flyway_schema_history`，并在验证后清理。数据库结构、初始化数据、迁移顺序或脚本发生变化时必须执行此项验证。
+脚本默认从 PATH 查找 PostgreSQL Client 16，并在迁移前输出和校验 `psql` 版本；特殊本地安装可通过 `-PsqlPath` 显式指定可执行文件。脚本创建一个临时空数据库，通过项目锁定版本的 Flyway 从头到尾顺序执行一次当前全部迁移，校验版本、命名、checksum 和 `flyway_schema_history`，并在验证后清理。例如当前最新版本为 V30 时，此项验证执行的是一次 V1→V30 空库安装，不会把 V1～V29 分别作为起点重复执行 V1→V30、V2→V30 等升级组合。数据库结构、初始化数据、迁移顺序或脚本发生变化时必须执行此项验证。
 
 临时库名使用随机 UUID，只在本次 CREATE 明确成功后清理；创建失败或结果不确定时不得执行 DROP。迁移失败与清理失败同时发生时保留原始验证异常并单独警告清理失败；仅清理失败时也以失败退出。
 
@@ -167,7 +167,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baselin
 
 `scripts/verify-baseline.ps1` 默认验证当前全部领域，`-PlatformOnly` 选择平台隔离装配（后端 `platform-only`、前端 `sys`）。脚本以临时数据库运行 reactor 的全部 `*PostgresTests`；app 中的 `AssemblyMigrationPostgresTests` 在真实装配 classpath 发现领域声明、执行对应链并再次迁移，确认平台历史未改写、领域迁移声明与实际装配一致、历史表实际创建；Demo 专属数据由 Demo 模块内的 `DemoMigrationPostgresTests` 验证。`DomainFlywayMigrationPostgresTests` 用独立 schema 验证同号、平台增量、数据保留、启动失败、事务回滚、checksum 和乱序拒绝。管理员并发初始化通过真实 Mapper 和 PostgreSQL 触发器确认只写入一次，重启不覆盖。
 
-双链机制测试不替代具体发行版本的带数据升级测试。今后每个数据库变更须按[正式发布与升级规则](./database.md#正式发布与升级规则)，为受支持旧版本准备结构与代表性数据，运行新增迁移，断言数据转换和业务不变量，再次迁移确认稳定；不得修改旧脚本制造测试通过。
+双链机制测试不替代具体发行版本的带数据升级测试。今后每个数据库变更须按[正式发布与升级规则](./database.md#正式发布与升级规则)，为发行兼容策略明确声明的受支持旧版本准备结构与代表性数据，运行新增迁移，断言数据转换和业务不变量，再次迁移确认稳定。不维护或验证仅由 Flyway 迁移号推导、没有对应实际发布版本、长期支持版本或经确认真实环境基线的假定升级起点；不得修改旧脚本制造测试通过。
 
 修改真实数据库测试保护的权限、凭据代际、事务、锁或并发行为时，即使没有迁移变更，也必须执行上节的 `scripts/verify-baseline.ps1`。脚本迁移临时数据库后，以实际测试数据库参数运行全部 `*PostgresTests`；配置入口以脚本为准，凭据不得写入文档或提交。
 
