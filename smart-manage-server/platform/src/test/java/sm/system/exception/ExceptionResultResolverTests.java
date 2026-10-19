@@ -10,6 +10,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ExceptionResultResolverTests {
 
     @Test
+    void queryTimeoutHasSafeDistinctFeedbackWithoutImplyingWriteRollback() {
+        var result = ExceptionResultResolver.resolve(
+                new org.springframework.dao.QueryTimeoutException("private query text"));
+        assertEquals(ResultEnum.QUERY_TIMEOUT.getCode(), result.getCode());
+        assertEquals(ResultEnum.QUERY_TIMEOUT.getMsg(), result.getMsg());
+        assertEquals(sm.system.response.FeedbackLevel.ERROR, result.getFeedbackLevel());
+    }
+
+    @Test
     void redisConnectionFailureUsesConfigurationErrorInsteadOfGenericPersistenceError() {
         var result = ExceptionResultResolver.resolve(new RedisConnectionFailureException("offline"));
 

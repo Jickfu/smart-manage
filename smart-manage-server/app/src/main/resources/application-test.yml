@@ -156,6 +156,7 @@ smart-manage:
     http:
       connect-timeout: 3s
       request-timeout: 10s
+      max-response-bytes: 8388608
     cors:
       allowed-origins:
         - "http://localhost:*"

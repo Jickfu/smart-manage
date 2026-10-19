@@ -26,6 +26,7 @@ public enum ResultEnum {
     CONFIG_ERROR(100502, "系统配置异常，请联系管理员处理", FeedbackLevel.ERROR),
     PERSISTENCE_ERROR(100503, "数据持久化失败，请联系管理员处理", FeedbackLevel.ERROR),
     EXTERNAL_SERVICE_ERROR(100504, "外部服务调用失败，请稍后重试", FeedbackLevel.ERROR),
+    QUERY_TIMEOUT(100505, "查询超时，请缩小查询范围后重试", FeedbackLevel.ERROR),
     CAPTCHA_ERROR(101600, "验证码错误", FeedbackLevel.WARNING),
     CAPTCHA_EXPIRE(101601, "验证码已过期", FeedbackLevel.WARNING),
     BILL_STATUS_ERROR(200001, "单据状态不允许当前操作", FeedbackLevel.WARNING),

@@ -6,6 +6,7 @@ import sm.system.form.PageForm;
 import sm.system.response.ResultEnum;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -58,8 +59,13 @@ public record ListSqlQuery(List<Condition> conditions, String sortColumn, String
     }
 
     public static ListSqlQuery of(PageForm form, Map<String, Field> fields) {
+        return of(form, fields, Clock.systemUTC());
+    }
+
+    static ListSqlQuery of(PageForm form, Map<String, Field> fields, Clock clock) {
+        LocalDate today = ListQueryUtil.businessToday(clock);
         List<Condition> conditions = ListQueryUtil.parseFilters(form.getFilters()).stream()
-                .map(condition -> normalize(condition, requireField(condition, fields)))
+                .map(condition -> normalize(condition, requireField(condition, fields), today))
                 .toList();
         if (!StringUtils.hasText(form.getSortField())) {
             return new ListSqlQuery(conditions, null, null);
@@ -87,7 +93,7 @@ public record ListSqlQuery(List<Condition> conditions, String sortColumn, String
         return field;
     }
 
-    private static Condition normalize(ListQueryUtil.Condition condition, Field field) {
+    private static Condition normalize(ListQueryUtil.Condition condition, Field field, LocalDate today) {
         if (condition.operator() == ListQueryUtil.Operator.IN) {
             if (condition.values() == null || condition.values().isEmpty()) throw error("多选筛选值不能为空");
             return new Condition(field.column(), condition.operator(), null,
@@ -95,7 +101,7 @@ public record ListSqlQuery(List<Condition> conditions, String sortColumn, String
         }
         if (field.valueType() == ListQueryUtil.ValueType.DATE
                 || field.valueType() == ListQueryUtil.ValueType.DATE_TIME) {
-            return normalizeDate(condition, field);
+            return normalizeDate(condition, field, today);
         }
         if (condition.operator() == ListQueryUtil.Operator.EMPTY
                 || condition.operator() == ListQueryUtil.Operator.NOT_EMPTY) {
@@ -105,8 +111,7 @@ public record ListSqlQuery(List<Condition> conditions, String sortColumn, String
                 List.of(), null, null);
     }
 
-    private static Condition normalizeDate(ListQueryUtil.Condition condition, Field field) {
-        LocalDate today = LocalDate.now();
+    private static Condition normalizeDate(ListQueryUtil.Condition condition, Field field, LocalDate today) {
         LocalDate begin;
         LocalDate end;
         switch (condition.operator()) {
