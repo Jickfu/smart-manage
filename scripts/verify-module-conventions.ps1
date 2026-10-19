@@ -16,8 +16,11 @@
 10. AppModal 页脚禁止 Space、Flex、div 包裹按钮，PermissionActions 必须显式关闭分组。
 11. 后端领域聚合、前端领域目录和迁移身份必须一致。
 12. 标准列表叶子列必须显式声明 ellipsis，关闭时必须用中文注释说明业务原因。
+13. ModalEditPage 使用基础名称；带标签普通字段使用标准字段容器与内容类。
+14. 仓库 Markdown 本地链接和章节锚点必须有效。
 
-页脚和列表列检查使用前端 TypeScript 依赖；执行前须在 smart-manage-web 中完成 pnpm install --frozen-lockfile。
+页脚和列表列检查使用前端 TypeScript 依赖，文档链接检查使用前端锁定的 CommonMark/GFM 解析器；
+执行前须在 smart-manage-web 中完成 pnpm install --frozen-lockfile。
 
 本脚本只负责适合源码静态扫描的确定性约束。Java 架构边界由 ArchUnit 测试校验；
 业务状态、数据安全和交互语义仍需通过代码评审及风险驱动测试验证。
@@ -189,6 +192,18 @@ if ($LASTEXITCODE -ne 0) {
     Add-Violation 'List column ellipsis convention verification failed; explicitly declare ellipsis and explain business exceptions'
 }
 
+# 页面模板和文档链接复用同一检查入口，避免 CI 与本地规则漂移。
+$pageVerifier = Resolve-RepositoryPath 'smart-manage-web/scripts/page-conventions.mjs'
+& node $pageVerifier (Join-Path $frontendSourceRoot 'domain')
+if ($LASTEXITCODE -ne 0) {
+    Add-Violation 'Page template convention verification failed; fix modal titles and ordinary field layouts'
+}
+$documentVerifier = Resolve-RepositoryPath 'scripts/verify-doc-links.mjs'
+& node $documentVerifier $resolvedRoot
+if ($LASTEXITCODE -ne 0) {
+    Add-Violation 'Documentation local link/anchor verification failed'
+}
+
 # Controller 权限声明必须引用模块权限常量，禁止散落权限编码字面量。
 $backendSourceDirectories = @('smart-manage-server/platform/src/main/java')
 $backendSourceDirectories += @(Get-ChildItem -LiteralPath (Join-Path $resolvedRoot 'smart-manage-server/domains') -Directory -ErrorAction SilentlyContinue | ForEach-Object { "smart-manage-server/domains/$($_.Name)/src/main/java" })
@@ -239,4 +254,4 @@ if ($violations.Count -gt 0) {
     exit 1
 }
 
-Write-Host "Module convention verification passed for domain assembly, governance routing (including the frontend page guide), $($registrationFiles.Count) page registration file(s), frontend operation interactions, AppModal footers, list column ellipsis, typography, inline styles, and backend permission constants." -ForegroundColor Green
+Write-Host "Module convention verification passed for domain assembly, governance routing (including the frontend page guide), $($registrationFiles.Count) page registration file(s), frontend operation interactions, AppModal footers, page templates, documentation links, list column ellipsis, typography, inline styles, and backend permission constants." -ForegroundColor Green

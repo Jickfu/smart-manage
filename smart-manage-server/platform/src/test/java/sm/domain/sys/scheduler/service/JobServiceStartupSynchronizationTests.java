@@ -22,6 +22,15 @@ import static org.mockito.Mockito.*;
 
 class JobServiceStartupSynchronizationTests {
     @Test
+    void cronPreviewUsesSameBeijingBoundaryAsTrigger() {
+        var service = new JobService(mock(JobMapper.class), mock(JobLogMapper.class), mock(Scheduler.class),
+                mock(JobTxService.class), mock(JobConverter.class), mock(JobDefinitionValidator.class),
+                mock(AppReferenceService.class));
+        var clock = java.time.Clock.fixed(java.time.Instant.parse("2026-12-31T15:59:59Z"), java.time.ZoneOffset.UTC);
+        assertEquals(java.time.LocalDateTime.of(2027, 1, 1, 0, 0),
+                service.previewCron("0 0 0 * * ?", clock).getFirst());
+    }
+    @Test
     void startupRestoresAllDefinitionsAndOnlyRemovesManagedOrphans() throws Exception {
         JobMapper mapper = mock(JobMapper.class);
         Scheduler scheduler = mock(Scheduler.class);
@@ -46,6 +55,9 @@ class JobServiceStartupSynchronizationTests {
         ArgumentCaptor<JobDetail> details = ArgumentCaptor.forClass(JobDetail.class);
         ArgumentCaptor<Trigger> triggers = ArgumentCaptor.forClass(Trigger.class);
         verify(scheduler, times(2)).scheduleJob(details.capture(), triggers.capture());
+        for (Trigger trigger : triggers.getAllValues()) {
+            assertEquals("Asia/Shanghai", ((CronTrigger) trigger).getTimeZone().getID());
+        }
         assertEquals(List.of(ManagedJobIdentity.jobKey(1L), ManagedJobIdentity.jobKey(2L)),
                 details.getAllValues().stream().map(JobDetail::getKey).toList());
         assertEquals(List.of(ManagedJobIdentity.triggerKey(1L), ManagedJobIdentity.triggerKey(2L)),

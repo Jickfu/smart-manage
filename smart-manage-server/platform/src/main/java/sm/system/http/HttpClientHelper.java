@@ -50,7 +50,8 @@ public class HttpClientHelper {
     private <T> HttpResponseData<T> executeInternal(HttpRequestSpec spec, BodyReader<T> bodyReader) {
         HttpRequest request = buildRequest(spec);
         try {
-            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            HttpResponse<byte[]> response = httpClient.send(request,
+                    info -> createResponseBodySubscriber(request, info));
             if (spec.failOnNonSuccess() && !isSuccess(response.statusCode())) {
                 throw new ExternalHttpException(ExternalHttpException.FailureType.HTTP_STATUS,
                         response.statusCode(), "目标服务返回 HTTP " + response.statusCode());
@@ -70,12 +71,30 @@ public class HttpClientHelper {
             throw new ExternalHttpException(ExternalHttpException.FailureType.INTERRUPTED,
                     "请求目标服务被中断", exception);
         } catch (IOException exception) {
+            // HttpClient 会把订阅器的业务拒绝包装为 IOException，保留安全且明确的超限分类。
+            Throwable cause = exception.getCause();
+            while (cause != null) {
+                if (cause instanceof ExternalHttpException failure) throw failure;
+                cause = cause.getCause();
+            }
             throw new ExternalHttpException(ExternalHttpException.FailureType.CONNECTION,
                     "读取目标服务响应失败", exception);
         } catch (Exception exception) {
             throw new ExternalHttpException(ExternalHttpException.FailureType.RESPONSE_PARSE,
                     "解析目标服务响应失败", exception);
         }
+    }
+
+    HttpResponse.BodySubscriber<byte[]> createResponseBodySubscriber(
+            HttpRequest request, HttpResponse.ResponseInfo info) {
+        int status = info.statusCode();
+        boolean bodyless = request.method().equals("HEAD")
+                || (status >= 100 && status < 200)
+                || status == 204 || status == 205 || status == 304;
+        // HEAD/304 的 Content-Length 可以表示资源长度；无正文响应不能据此拒绝。
+        // 只跳过声明长度预判，仍使用同一订阅器限制实际接收字节。
+        long declaredBytes = bodyless ? -1 : info.headers().firstValueAsLong("Content-Length").orElse(-1);
+        return new BoundedHttpBodySubscriber(properties.getMaxResponseBytes(), declaredBytes);
     }
 
     private HttpRequest buildRequest(HttpRequestSpec spec) {

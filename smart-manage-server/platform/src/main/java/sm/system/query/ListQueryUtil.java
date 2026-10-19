@@ -11,6 +11,8 @@ import sm.system.form.PageForm;
 import sm.system.response.ResultEnum;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -111,8 +113,18 @@ public final class ListQueryUtil {
             LambdaQueryWrapper<T> wrapper,
             PageForm form,
             Map<String, Field<T>> fields) {
-        applyFilters(wrapper, parseFilters(form.getFilters()), fields);
+        apply(wrapper, form, fields, Clock.systemUTC());
+    }
+
+    static <T> void apply(LambdaQueryWrapper<T> wrapper, PageForm form,
+                          Map<String, Field<T>> fields, Clock clock) {
+        applyFilters(wrapper, parseFilters(form.getFilters()), fields, businessToday(clock));
         applySort(wrapper, form.getSortField(), form.getSortOrder(), fields);
+    }
+
+    // 与调度和日期展示一致；一次查询固定日期，避免午夜多个条件使用不同基准。
+    static LocalDate businessToday(Clock clock) {
+        return LocalDate.now(clock.withZone(ZoneId.of("Asia/Shanghai")));
     }
 
     public static boolean hasSort(PageForm form) {
@@ -145,7 +157,7 @@ public final class ListQueryUtil {
     private static <T> void applyFilters(
             LambdaQueryWrapper<T> wrapper,
             List<Condition> conditions,
-            Map<String, Field<T>> fields) {
+            Map<String, Field<T>> fields, LocalDate today) {
         for (Condition condition : conditions) {
             if (condition == null || !StringUtils.hasText(condition.field()) || condition.operator() == null) {
                 throw parameterError("筛选字段和操作符不能为空");
@@ -157,14 +169,14 @@ public final class ListQueryUtil {
             if (!field.operators().contains(condition.operator())) {
                 throw parameterError("字段不支持该筛选操作：" + condition.field());
             }
-            applyCondition(wrapper, field, condition);
+            applyCondition(wrapper, field, condition, today);
         }
     }
 
     private static <T> void applyCondition(
             LambdaQueryWrapper<T> wrapper,
             Field<T> field,
-            Condition condition) {
+            Condition condition, LocalDate today) {
         SFunction<T, ?> column = field.column();
         Operator operator = condition.operator();
         switch (operator) {
@@ -177,7 +189,7 @@ public final class ListQueryUtil {
             case IN -> applyIn(wrapper, field, condition);
             case EQ, NE, GT, GE, LT, LE -> applyComparison(wrapper, field, condition);
             case TODAY, THIS_WEEK, THIS_MONTH, LAST_MONTH, PAST_MONTH, PAST_THREE_MONTHS, BETWEEN ->
-                    applyDateRange(wrapper, field, condition);
+                    applyDateRange(wrapper, field, condition, today);
         }
     }
 
@@ -231,8 +243,7 @@ public final class ListQueryUtil {
     private static <T> void applyDateRange(
             LambdaQueryWrapper<T> wrapper,
             Field<T> field,
-            Condition condition) {
-        LocalDate today = LocalDate.now();
+            Condition condition, LocalDate today) {
         LocalDate begin;
         LocalDate endExclusive;
         switch (condition.operator()) {

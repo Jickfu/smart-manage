@@ -48,10 +48,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-
 | 操作确认 | 前端不得直接调用 `Modal.confirm` 或使用 `Popconfirm` | 改用 `useOperationConfirm` |
 | 弹框页脚 | `AppModal.footer` 渲染树中的按钮不得被 `Space`、`Flex` 或 `div` 包裹，`PermissionActions` 必须在属性展开后显式传 `grouped={false}` | 使用 Fragment 或按钮数组，由 `AppModal` 统一控制 `12px` 间隔；特殊布局先评审公共契约 |
 | 列表省略声明 | `ListPage` 每个叶子列必须显式声明 `ellipsis`；`false` 必须有紧邻属性的中文业务原因注释 | 文本列使用标准 `ellipsis: true` 或配置对象，特殊业务显式声明例外，不用运行时默认值或固定行高掩盖遗漏 |
+| 页面接入 | `ModalEditPage` 可静态解析的标题只含基础名称；带标签普通 `Form.Item` 直接位于 `FormFieldCell` 且声明 `sm-edit-field-content` | 使用标准字段布局；专用代码编辑器按页面指南保持独立布局 |
+| 文档链接 | Git 清单中的 Markdown 本地文件与章节锚点有效，包含新增文档 | 修复真实链接；不为失效引用制造空文件，不访问网络或解析模板占位符 |
 | 后端权限 | Controller 的 `@SaCheckPermission` 不得直接填写权限编码字符串 | 引用对应模块的权限常量 |
 | 页面注册 | 至少存在一个 `pageRegistration.ts` 或 `pageRegistration.tsx`，每个注册项都必须声明 `componentKey`、`featureKey` 和 `pageType`，且 `featureKey` 不得为空 | 补全显式注册字段，使页面与稳定功能身份建立关联 |
 
 页脚检查由 `smart-manage-web/scripts/modal-footer-conventions.mjs` 使用 TypeScript AST 扫描整个 `src` 下的 TSX，识别组件导入别名、内联 JSX、数组、条件分支及同文件变量的作用域绑定；不执行函数、不展开跨文件自定义组件或动态属性对象，也不验证最终计算样式。正反例与真实仓库扫描由同目录 `modal-footer-conventions.test.mjs` 随 `pnpm test` 执行。单独排查可在前端目录执行 `node scripts/modal-footer-conventions.mjs src`，新增脚本格式使用 `pnpm exec prettier --check "scripts/modal-footer-conventions*.mjs"` 检查。
+
+页面接入检查由 `smart-manage-web/scripts/page-conventions.mjs` 扫描领域 TSX，识别导入别名、字面量/条件/模板标题及当前文件中的普通字段。它不执行函数或推断 Select 是否引用业务对象；无标签明细/隐藏值及专用代码编辑器不套普通字段检查。真实仓库和反例随 `pnpm test` 执行。动态标题、跨组件布局及实体引用语义仍须评审。
+
+根目录运行 `node scripts/verify-doc-links.mjs` 检查 Git 清单中的本地 Markdown 链接、引用链接与锚点；链接、图片、引用定义和真实标题通过前端锁定的 `mdast-util-from-markdown`、`micromark-extension-gfm` 和 `mdast-util-gfm`（仅开发依赖）的 CommonMark/GFM 语法树提取；标题包含单行、多行下划线式标题，注释及代码中的伪标题和伪 HTML 锚点不参与检查，显式 HTML 锚点通过锁定的 `parse5` 开发依赖解析属性（`id` 及 HTML `a` 的 `name`），不把 `data-id` 等自定义属性视为锚点。执行前须完成前端锁定依赖安装。代码围栏、行内代码、转义链接示例、外链、绝对部署路径和 `{领域}` 等模板不纳入文件存在性推断。运行 `node --test scripts/verify-doc-links.test.mjs` 验证中文、重复/多行下划线式标题、注释和代码内伪锚点、编码路径、标题/列表等块边界、GFM 表格单元格及行边界、HTML 锚点属性（无引号值、等号两侧空白及 `data-id` 反例）以及缺失目标的拒绝路径。检查器只覆盖其明确支持的 Markdown 链接形式，不证明示例内容或现行规则准确。
 
 脚本使用源码静态扫描完成这些适合机械判断的确定性检查，不等价于完整的架构或业务验证。以下内容不由该脚本负责：
 
@@ -76,6 +82,8 @@ mvn -f smart-manage-server/pom.xml -Pplatform-only verify
 ```
 
 纯文档修改不要求执行 Maven。确认不影响测试代码的简单后端改动才可以仅执行 `mvn -f smart-manage-server/pom.xml compile`；影响安全、权限、事务或并发语义的改动不属于该例外。实体、Mapper、配置和迁移变更还必须确认相关代码能够正常编译。
+
+`app` 的 `PersistenceModelContractTests` 随实际装配检查 Entity 表/主键/版本注解，并加载发行 classpath 中真实 MyBatis XML 命令及注解 Mapper，拒绝有写入映射却没有所属模块实体的实现；纯 SELECT 投影不强制建 Entity。测试包括缺失模型的拒绝反例，且发现的实体和写映射必须非空。JDBC 原生写入、每张表的完整建模及不存在版本字段的业务并发语义仍需评审和真实数据库测试，不能由该结构门禁代替。
 
 ## 前端
 
@@ -185,7 +193,7 @@ PostgreSQL 客户端、数据库服务或必要配置缺失时，此项记为未
 
 `.github/workflows/quality-gate.yml` 当前执行：
 
-1. 模块约定脚本、工作流安全策略及空库清理安全替身测试；
+1. 模块约定脚本（含页面接入及文档链接）、文档检查器正反例、工作流安全策略及空库清理安全替身测试；
 2. 默认当前领域及 `platform-only` 的后端 `mvn verify`；
 3. 前端依赖锁定安装；
 4. `pnpm lint`；

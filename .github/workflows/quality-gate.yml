@@ -29,6 +29,8 @@ jobs:
       - name: Verify module conventions
         shell: pwsh
         run: ./scripts/verify-module-conventions.ps1
+      - name: Verify documentation checker behavior
+        run: node --test scripts/verify-doc-links.test.mjs
       - name: Verify workflow security policy
         run: node --test scripts/workflow-security.test.mjs
       - name: Verify baseline cleanup safety

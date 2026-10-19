@@ -119,7 +119,7 @@ const OrgEditModal = ({ open, orgId, defaultParent, onClose, onSaved }: Props) =
 
   return (
     <ModalEditPage
-      title={orgId ? '编辑组织' : '新增组织'}
+      title="组织"
       open={open}
       onClose={onClose}
       fields={fields}

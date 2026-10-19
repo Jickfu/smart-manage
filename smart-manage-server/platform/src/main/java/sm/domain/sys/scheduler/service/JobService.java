@@ -209,13 +209,18 @@ public class JobService implements SmartInitializingSingleton {
     }
 
     public List<java.time.LocalDateTime> previewCron(String cronExpression) {
+        return previewCron(cronExpression, java.time.Clock.systemUTC());
+    }
+
+    List<java.time.LocalDateTime> previewCron(String cronExpression, java.time.Clock clock) {
         if (cronExpression == null || !CronExpression.isValidExpression(cronExpression.trim())) {
             throw new BizException(ResultEnum.PARAM_ERROR, "Cron 表达式不合法");
         }
         try {
             CronExpression expression = new CronExpression(cronExpression.trim());
-            java.util.Date cursor = new java.util.Date();
-            java.time.ZoneId zoneId = java.time.ZoneId.systemDefault();
+            java.util.Date cursor = java.util.Date.from(clock.instant());
+            java.time.ZoneId zoneId = java.time.ZoneId.of("Asia/Shanghai");
+            expression.setTimeZone(java.util.TimeZone.getTimeZone(zoneId));
             java.util.ArrayList<java.time.LocalDateTime> result = new java.util.ArrayList<>(5);
             for (int index = 0; index < 5; index++) {
                 cursor = expression.getNextValidTimeAfter(cursor);
@@ -259,6 +264,7 @@ public class JobService implements SmartInitializingSingleton {
                 .withIdentity(ManagedJobIdentity.triggerKey(entity.getId()))
                 .forJob(jobDetail.getKey())
                 .withSchedule(CronScheduleBuilder.cronSchedule(entity.getCronExpression())
+                        .inTimeZone(java.util.TimeZone.getTimeZone("Asia/Shanghai"))
                         .withMisfireHandlingInstructionDoNothing())
                 .build();
         try {
@@ -333,7 +339,7 @@ public class JobService implements SmartInitializingSingleton {
             Trigger trigger = scheduler.getTrigger(triggerKey);
             if (trigger != null && trigger.getNextFireTime() != null) {
                 vo.setNextFireTime(trigger.getNextFireTime().toInstant()
-                        .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime());
+                        .atZone(java.time.ZoneId.of("Asia/Shanghai")).toLocalDateTime());
             }
         } catch (SchedulerException e) {
             log.debug("获取下次触发时间失败: {}", entity.getJobName(), e);

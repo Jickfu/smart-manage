@@ -32,6 +32,101 @@ class RequestSecurityChainIntegrationTests {
     private MockMvc mockMvc;
 
     @Test
+    void classAndComposedIgnoreAnnotationsSkipLoginButStillRunOriginGuard() throws Exception {
+        new SaTokenContextRegister();
+        var controller = new ClassPublicController();
+        var composed = new ComposedPublicController();
+        var mapping = new RequestMappingHandlerMapping();
+        var classMethod = ClassPublicController.class.getDeclaredMethod("endpoint");
+        var composedMethod = ComposedPublicController.class.getDeclaredMethod("endpoint");
+        mapping.registerMapping(org.springframework.web.servlet.mvc.method.RequestMappingInfo
+                .paths("/class-public").build(), controller, classMethod);
+        mapping.registerMapping(org.springframework.web.servlet.mvc.method.RequestMappingInfo
+                .paths("/composed-public").build(), composed, composedMethod);
+        var originGuard = mock(BrowserRequestSecurity.class);
+        var config = new SaTokenConfig(mapping, JsonMapper.builder().build(), originGuard,
+                mock(sm.system.security.SessionCredentialGuard.class));
+        ReflectionTestUtils.setField(config, "noNeedLogin", new String[0]);
+        var publicMvc = MockMvcBuilders.standaloneSetup(controller, composed, new TestController())
+                .addFilters(new SaTokenContextFilterForJakartaServlet(), config.getSaServletFilter()).build();
+        publicMvc.perform(get("/class-public")).andExpect(jsonPath("$.code").value(0));
+        publicMvc.perform(get("/composed-public")).andExpect(jsonPath("$.code").value(0));
+        publicMvc.perform(get("/protected-test")).andExpect(jsonPath("$.code").value(100401));
+        org.mockito.Mockito.doThrow(new sm.system.exception.BizException(
+                sm.system.response.ResultEnum.CSRF_TOKEN_INVALID)).when(originGuard).validateOrigin();
+        publicMvc.perform(get("/class-public")).andExpect(jsonPath("$.code").value(100419));
+    }
+
+    @Test
+    void publicMethodDoesNotExemptAnotherHttpMethodOnSamePath() throws Exception {
+        new SaTokenContextRegister();
+        var controller = new MixedController();
+        var mapping = new RequestMappingHandlerMapping();
+        for (var method : MixedController.class.getDeclaredMethods()) {
+            var verb = method.getName().equals("read")
+                    ? org.springframework.web.bind.annotation.RequestMethod.GET
+                    : org.springframework.web.bind.annotation.RequestMethod.POST;
+            mapping.registerMapping(org.springframework.web.servlet.mvc.method.RequestMappingInfo
+                    .paths("/mixed").methods(verb).build(), controller, method);
+        }
+        var config = new SaTokenConfig(mapping, JsonMapper.builder().build(),
+                mock(BrowserRequestSecurity.class), mock(sm.system.security.SessionCredentialGuard.class));
+        ReflectionTestUtils.setField(config, "noNeedLogin", new String[0]);
+        var mixedMvc = MockMvcBuilders.standaloneSetup(controller)
+                .addFilters(new SaTokenContextFilterForJakartaServlet(), config.getSaServletFilter()).build();
+        mixedMvc.perform(get("/mixed")).andExpect(jsonPath("$.code").value(0));
+        mixedMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/mixed"))
+                .andExpect(jsonPath("$.code").value(100401));
+    }
+
+    @Test
+    void unsupportedHttpMethodKeepsBadRequestMeaning() throws Exception {
+        new SaTokenContextRegister();
+        var controller = new ClassPublicController();
+        var mapping = new RequestMappingHandlerMapping();
+        mapping.registerMapping(org.springframework.web.servlet.mvc.method.RequestMappingInfo
+                .paths("/class-public").methods(org.springframework.web.bind.annotation.RequestMethod.GET)
+                .build(), controller, ClassPublicController.class.getDeclaredMethod("endpoint"));
+        var config = new SaTokenConfig(mapping, JsonMapper.builder().build(),
+                mock(BrowserRequestSecurity.class), mock(sm.system.security.SessionCredentialGuard.class));
+        ReflectionTestUtils.setField(config, "noNeedLogin", new String[0]);
+        var publicMvc = MockMvcBuilders.standaloneSetup(controller)
+                .addFilters(new SaTokenContextFilterForJakartaServlet(), config.getSaServletFilter()).build();
+        publicMvc.perform(get("/class-public")).andExpect(jsonPath("$.code").value(0));
+        publicMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/class-public"))
+                .andExpect(jsonPath("$.code").value(100400))
+                .andExpect(jsonPath("$.msg").value("错误的请求：不支持当前请求方式：POST"));
+    }
+
+    @RestController
+    private static class MixedController {
+        @cn.dev33.satoken.annotation.SaIgnore
+        @GetMapping("/mixed")
+        Result<String> read() { return Result.success("public"); }
+        @org.springframework.web.bind.annotation.PostMapping("/mixed")
+        Result<String> write() { return Result.success("private"); }
+    }
+
+    @cn.dev33.satoken.annotation.SaIgnore
+    @RestController
+    private static class ClassPublicController {
+        @GetMapping("/class-public")
+        Result<String> endpoint() { return Result.success("public"); }
+    }
+
+    @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
+    @java.lang.annotation.Target(java.lang.annotation.ElementType.TYPE)
+    @cn.dev33.satoken.annotation.SaIgnore
+    private @interface PublicEndpoint { }
+
+    @PublicEndpoint
+    @RestController
+    private static class ComposedPublicController {
+        @GetMapping("/composed-public")
+        Result<String> endpoint() { return Result.success("public"); }
+    }
+
+    @Test
     void persistentGenerationGuardRejectsOldSessionAndPreservesDatabaseFailureMeaning() throws Exception {
         new SaTokenContextRegister();
         var handlerMapping = mock(RequestMappingHandlerMapping.class);

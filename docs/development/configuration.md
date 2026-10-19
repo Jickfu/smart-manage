@@ -32,6 +32,8 @@ smart-manage:
 
 环境变量继续负责具体部署实例的覆盖。是否归入环境文件按配置语义判断，不按当前值是否重复判断。`SmartManageConfigurationNamespaceTests` 同时防止已识别的环境配置重新进入公共文件。
 
+出站 HTTP 的连接超时、请求超时与 `smart-manage.infrastructure.http.max-response-bytes` 均属环境容量配置；内置环境默认响应上限为 8388608 字节，可由外部 YAML 或 `SMART_MANAGE_INFRASTRUCTURE_HTTP_MAX_RESPONSE_BYTES` 覆盖，必须为 1～2147483647。上限保护聚合响应大小，不代表并发内存预算或解压后正文限制；当前客户端不自动解压内容。超限拒绝不会自动重试。
+
 ## 修改 API context path
 
 后端 context path、浏览器 API 前缀和部署代理分别属于后端、前端与部署层。默认均使用 `/smart-manage-api`，当前开发代理和 Nginx 示例保留原请求路径，因此三者应保持一致；它们不是项目目录名、前端页面基路径或应用身份，修改时不需要重命名项目。
