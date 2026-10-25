@@ -103,6 +103,7 @@ TxService 默认不得调用其他 TxService。多个写能力需要在同一事
 - Controller 和 TxService 禁止标注；
 - 同一业务调用链只记录一次；
 - 登录和退出使用独立认证日志。
+- `@BizLog` 同时支持 HTTP 请求和定时任务等非 Web 调用。仅在当前上下文为 `ServletRequestAttributes` 时读取客户端 IP、User-Agent、URI 和 HTTP 方法；非 Web 调用的请求字段为空且不告警，操作人和成功/失败日志仍按相同规则记录。
 
 日志不得记录令牌、密码、验证码、私钥、密钥或存储凭据。
 
