@@ -43,6 +43,10 @@ class DemoMigrationPostgresTests {
             assertEquals(4, jdbc.queryForObject("SELECT count(*) FROM t_sys_org", Integer.class));
             assertEquals(3, jdbc.queryForObject("SELECT count(*) FROM t_sys_org WHERE parent_id = 1 AND org_type = 'DEPARTMENT' AND number IN ('101','102','103')", Integer.class));
             assertEquals(Boolean.TRUE, jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM t_sys_feature WHERE feature_key LIKE 'demo/%')", Boolean.class));
+            assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM t_sys_feature_data_object data_object "
+                    + "JOIN t_sys_feature feature ON feature.id = data_object.feature_id "
+                    + "WHERE feature.feature_key = 'demo/procurement/purchase-requisition' "
+                    + "AND to_regclass(data_object.schema_name || '.' || data_object.object_name) IS NOT NULL", Integer.class));
         } finally {
             verification.execute("DROP DATABASE " + database + " WITH (FORCE)");
         }

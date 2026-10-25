@@ -1,11 +1,27 @@
 import request from '@/api/request';
 import type { PageData, Result } from '@/types/api';
-import type { SqlExecutionResult, SqlLogDetail, SqlLogListForm, SqlLogListItem } from './types';
+import type {
+  SqlCatalogDetail,
+  SqlCatalogObject,
+  SqlCatalogResult,
+  SqlExecutionResult,
+  SqlLogDetail,
+  SqlLogListForm,
+  SqlLogListItem,
+} from './types';
 
 export const sqlApi = {
   execute: (sql: string) =>
     request
       .post<Result<SqlExecutionResult>>('/sys/monitor/sql/execute', { sql })
+      .then((response) => response.data.data),
+  catalog: (keyword?: string) =>
+    request
+      .post<Result<SqlCatalogResult>>('/sys/monitor/sql/catalog/list', { keyword })
+      .then((response) => response.data.data),
+  catalogDetail: (object: Pick<SqlCatalogObject, 'schemaName' | 'objectName'>) =>
+    request
+      .post<Result<SqlCatalogDetail>>('/sys/monitor/sql/catalog/detail', object)
       .then((response) => response.data.data),
   listPage: (form: SqlLogListForm) =>
     request

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.sys.base.feature.mapper.FeatureDataObjectMapper">
+    <select id="selectByFeatureId" resultType="sm.domain.sys.base.feature.model.vo.FeatureDataObjectVO">
+        SELECT a.id, a.schema_name, a.object_name, a.object_type,
+               a.object_role, a.display_name, a.seq
+        FROM t_sys_feature_data_object a
+        WHERE a.feature_id = #{featureId}
+        ORDER BY a.seq, a.id
+    </select>
+</mapper>

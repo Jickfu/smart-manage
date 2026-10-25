@@ -12,6 +12,7 @@ import { sqlApi } from './api';
 import { sqlAccess } from './permissions';
 import SqlEditor from './SqlEditor';
 import type { SqlEditorRef } from './SqlEditor';
+import SqlCatalogBrowser from './SqlCatalogBrowser';
 import type { SqlExecutionResult } from './types';
 import './sqlConsole.css';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
@@ -34,7 +35,8 @@ export default function SqlConsolePage(_props: PageComponentProps) {
   const [sqlText, setSqlText] = useState(DEFAULT_SQL);
   const [result, setResult] = useState<SqlExecutionResult>();
   const editorRef = useRef<SqlEditorRef>(null);
-  const { can } = usePermissionAccess(sqlAccess.prefix);
+  const { can, loading: permissionLoading } = usePermissionAccess(sqlAccess.prefix);
+  const canBrowseCatalog = can(sqlAccess.permissions.catalog);
   const executeMutation = useCommandMutation({
     mutationFn: sqlApi.execute,
     onSuccess: (data) => setResult(data),
@@ -76,10 +78,70 @@ export default function SqlConsolePage(_props: PageComponentProps) {
       })),
     [result],
   );
+  const appendSql = (sql: string) => {
+    setSqlText((current) => `${current.trimEnd()}${current.trim() ? '\n\n' : ''}${sql}`);
+  };
+  const workspace = (
+    <Splitter
+      orientation="vertical"
+      className={canBrowseCatalog ? 'sm-sql-workspace-splitter' : 'sm-sql-console-splitter'}
+    >
+      <Splitter.Panel defaultSize="45%" min={180}>
+        <section className="sm-sql-console-panel">
+          <SqlEditor ref={editorRef} value={sqlText} onChange={setSqlText} onExecute={execute} />
+        </section>
+      </Splitter.Panel>
+      <Splitter.Panel min={180}>
+        <section className="sm-sql-console-panel sm-sql-result-panel">
+          <div className="sm-sql-result-summary">
+            <Typography.Text strong>执行结果</Typography.Text>
+            {result && (
+              <Space wrap>
+                <Tag color={result.type === 'ERROR' ? 'error' : 'success'}>{result.type}</Tag>
+                <span>{result.rowCount} 行</span>
+                <span>{result.executeDuration} ms</span>
+                {result.statementCount > 1 && <span>{result.statementCount} 条语句</span>}
+              </Space>
+            )}
+          </div>
+          {result?.type === 'QUERY' ? (
+            <>
+              {result.truncated && (
+                <Alert type="warning" showIcon title={`${result.message}，结果已截断`} />
+              )}
+              <Table<unknown[]>
+                className="sm-sql-result-table"
+                size="small"
+                rowKey={(_record, index) => String(index)}
+                columns={tableColumns}
+                dataSource={result.rows ?? []}
+                pagination={false}
+                sticky
+                scroll={{ x: 'max-content', y: 1 }}
+              />
+            </>
+          ) : result ? (
+            <Alert
+              type={result.type === 'ERROR' ? 'error' : 'success'}
+              showIcon
+              title={result.message || '执行完成'}
+              description={
+                result.statementRowCounts && result.statementRowCounts.length > 1
+                  ? `各语句影响行数：${result.statementRowCounts.join('、')}`
+                  : undefined
+              }
+            />
+          ) : (
+            <Empty description="执行 SQL 后在此查看结果" />
+          )}
+        </section>
+      </Splitter.Panel>
+    </Splitter>
+  );
   return (
     <EditPageShell
       title="SQL 控制台"
-      loading={false}
+      loading={permissionLoading}
       actions={
         <>
           {can(sqlAccess.permissions.execute) && (
@@ -116,58 +178,16 @@ export default function SqlConsolePage(_props: PageComponentProps) {
         </>
       }
     >
-      <Splitter orientation="vertical" className="sm-sql-console-splitter">
-        <Splitter.Panel defaultSize="45%" min={180}>
-          <section className="sm-sql-console-panel">
-            <SqlEditor ref={editorRef} value={sqlText} onChange={setSqlText} onExecute={execute} />
-          </section>
-        </Splitter.Panel>
-        <Splitter.Panel min={180}>
-          <section className="sm-sql-console-panel sm-sql-result-panel">
-            <div className="sm-sql-result-summary">
-              <Typography.Text strong>执行结果</Typography.Text>
-              {result && (
-                <Space wrap>
-                  <Tag color={result.type === 'ERROR' ? 'error' : 'success'}>{result.type}</Tag>
-                  <span>{result.rowCount} 行</span>
-                  <span>{result.executeDuration} ms</span>
-                  {result.statementCount > 1 && <span>{result.statementCount} 条语句</span>}
-                </Space>
-              )}
-            </div>
-            {result?.type === 'QUERY' ? (
-              <>
-                {result.truncated && (
-                  <Alert type="warning" showIcon title={`${result.message}，结果已截断`} />
-                )}
-                <Table<unknown[]>
-                  className="sm-sql-result-table"
-                  size="small"
-                  rowKey={(_record, index) => String(index)}
-                  columns={tableColumns}
-                  dataSource={result.rows ?? []}
-                  pagination={false}
-                  sticky
-                  scroll={{ x: 'max-content', y: 1 }}
-                />
-              </>
-            ) : result ? (
-              <Alert
-                type={result.type === 'ERROR' ? 'error' : 'success'}
-                showIcon
-                title={result.message || '执行完成'}
-                description={
-                  result.statementRowCounts && result.statementRowCounts.length > 1
-                    ? `各语句影响行数：${result.statementRowCounts.join('、')}`
-                    : undefined
-                }
-              />
-            ) : (
-              <Empty description="执行 SQL 后在此查看结果" />
-            )}
-          </section>
-        </Splitter.Panel>
-      </Splitter>
+      {permissionLoading ? null : canBrowseCatalog ? (
+        <Splitter className="sm-sql-console-splitter">
+          <Splitter.Panel defaultSize={360} min={280} max={560}>
+            <SqlCatalogBrowser onAppendSql={appendSql} />
+          </Splitter.Panel>
+          <Splitter.Panel min={480}>{workspace}</Splitter.Panel>
+        </Splitter>
+      ) : (
+        workspace
+      )}
     </EditPageShell>
   );
 }

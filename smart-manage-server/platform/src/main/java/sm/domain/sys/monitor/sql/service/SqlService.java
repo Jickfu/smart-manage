@@ -1,33 +1,38 @@
 package sm.domain.sys.monitor.sql.service;
 
-import sm.domain.sys.monitor.sql.converter.SqlLogConverter;
-
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
-import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Service;
-import sm.system.security.context.CurrentUserContext;
-import sm.system.security.authorization.AdministratorOnly;
 import sm.domain.sys.base.sysparam.service.SysParamService;
+import sm.domain.sys.monitor.common.util.LogQueryValidator;
+import sm.domain.sys.monitor.sql.converter.SqlLogConverter;
+import sm.domain.sys.monitor.sql.mapper.SqlCatalogMapper;
 import sm.domain.sys.monitor.sql.mapper.SqlLogMapper;
 import sm.domain.sys.monitor.sql.model.entity.SqlLogEntity;
+import sm.domain.sys.monitor.sql.model.form.SqlCatalogListForm;
+import sm.domain.sys.monitor.sql.model.form.SqlCatalogObjectForm;
 import sm.domain.sys.monitor.sql.model.form.SqlExecuteForm;
 import sm.domain.sys.monitor.sql.model.form.SqlLogListForm;
+import sm.domain.sys.monitor.sql.model.vo.SqlCatalogDetailVO;
+import sm.domain.sys.monitor.sql.model.vo.SqlCatalogObjectVO;
+import sm.domain.sys.monitor.sql.model.vo.SqlCatalogResultVO;
 import sm.domain.sys.monitor.sql.model.vo.SqlLogDetailVO;
 import sm.domain.sys.monitor.sql.model.vo.SqlLogListVO;
 import sm.domain.sys.monitor.sql.model.vo.SqlResultVO;
 import sm.system.aop.log.BizLog;
 import sm.system.exception.BizException;
+import sm.system.query.ListQueryUtil;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.security.authorization.AdministratorOnly;
+import sm.system.security.context.CurrentUserContext;
 import sm.system.web.ClientIpResolver;
-import sm.domain.sys.monitor.common.util.LogQueryValidator;
-import sm.system.query.ListQueryUtil;
 
 import java.util.List;
-import java.util.Set;
 import java.util.Map;
+import java.util.Set;
 
 /** SQL 控制台公开业务入口。 */
 @Service
@@ -37,6 +42,7 @@ public class SqlService {
     static final String MAX_ROWS_PARAMETER = "SQL_CONSOLE_MAX_ROWS";
     static final int DEFAULT_MAX_ROWS = 1000;
     static final int HARD_MAX_ROWS = 5000;
+    static final int CATALOG_MAX_OBJECTS = 500;
     private static final Set<String> RESULT_TYPES = Set.of("QUERY", "DML", "DDL", "ERROR");
     private static final Map<String, ListQueryUtil.Field<SqlLogEntity>> LIST_FIELDS = Map.of(
             "id", ListQueryUtil.number(SqlLogEntity::getId, true),
@@ -49,6 +55,7 @@ public class SqlService {
             "createTime", ListQueryUtil.dateTime(SqlLogEntity::getCreateTime, true));
 
     private final SqlLogMapper sqlLogMapper;
+    private final SqlCatalogMapper sqlCatalogMapper;
     private final SqlExecutionTxService executionTxService;
     private final SqlLogConverter converter;
     private final CurrentUserContext currentUserContext;
@@ -64,6 +71,30 @@ public class SqlService {
         logEntity.setCreateName(currentUserContext.getUsernameOrDefault("未知"));
         logEntity.setCreateIp(resolveClientIp());
         return executionTxService.execute(plan, resolveMaxRows(), logEntity);
+    }
+
+    public SqlCatalogResultVO catalog(SqlCatalogListForm form) {
+        String keyword = StrUtil.isBlank(form.getKeyword()) ? null : form.getKeyword().trim();
+        List<SqlCatalogObjectVO> objects = sqlCatalogMapper.selectObjects(keyword, CATALOG_MAX_OBJECTS + 1);
+        boolean truncated = objects.size() > CATALOG_MAX_OBJECTS;
+        List<SqlCatalogObjectVO> visibleObjects = truncated
+                ? List.copyOf(objects.subList(0, CATALOG_MAX_OBJECTS))
+                : objects;
+        return new SqlCatalogResultVO(visibleObjects, truncated);
+    }
+
+    public SqlCatalogDetailVO catalogDetail(SqlCatalogObjectForm form) {
+        SqlCatalogObjectVO object = sqlCatalogMapper.selectObject(form.getSchemaName(), form.getObjectName());
+        if (object == null) {
+            throw new BizException(ResultEnum.NOT_FOUND, "数据库对象不存在");
+        }
+        SqlCatalogDetailVO detail = new SqlCatalogDetailVO();
+        detail.setSchemaName(object.getSchemaName());
+        detail.setObjectName(object.getObjectName());
+        detail.setObjectType(object.getObjectType());
+        detail.setComment(object.getComment());
+        detail.setColumns(sqlCatalogMapper.selectColumns(object.getSchemaName(), object.getObjectName()));
+        return detail;
     }
 
     public PageData<SqlLogListVO> listPage(SqlLogListForm form) {

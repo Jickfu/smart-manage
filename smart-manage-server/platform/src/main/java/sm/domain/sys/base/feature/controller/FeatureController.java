@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RestController;
 import sm.domain.sys.base.feature.constant.FeaturePermission;
 import sm.domain.sys.base.feature.model.form.FeatureListForm;
 import sm.domain.sys.base.feature.model.form.FeatureSaveForm;
+import sm.domain.sys.base.feature.model.vo.FeatureDataObjectVO;
 import sm.domain.sys.base.feature.model.vo.FeatureVO;
+import sm.domain.sys.base.feature.service.FeatureDataObjectService;
 import sm.domain.sys.base.feature.service.FeatureService;
 import sm.system.form.IdForm;
 import sm.system.response.PageData;
@@ -21,6 +23,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FeatureController {
     private final FeatureService service;
+    private final FeatureDataObjectService dataObjectService;
 
     @PostMapping("/sys/base/feature/listPage")
     @SaCheckPermission(FeaturePermission.LIST)
@@ -38,6 +41,12 @@ public class FeatureController {
     @SaCheckPermission(FeaturePermission.DETAIL)
     public Result<FeatureVO> detail(@RequestBody @Valid IdForm form) {
         return Result.success(service.detail(form.getId()));
+    }
+
+    @PostMapping("/sys/base/feature/data-object/list")
+    @SaCheckPermission(FeaturePermission.DATA_OBJECT_LIST)
+    public Result<List<FeatureDataObjectVO>> listDataObjects(@RequestBody @Valid IdForm form) {
+        return Result.success(dataObjectService.listByFeatureId(form.getId()));
     }
 
     @PostMapping("/sys/base/feature/save")

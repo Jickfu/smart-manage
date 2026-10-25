@@ -9,8 +9,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import sm.domain.sys.monitor.sql.constant.SqlPermission;
+import sm.domain.sys.monitor.sql.model.form.SqlCatalogListForm;
+import sm.domain.sys.monitor.sql.model.form.SqlCatalogObjectForm;
 import sm.domain.sys.monitor.sql.model.form.SqlExecuteForm;
 import sm.domain.sys.monitor.sql.model.form.SqlLogListForm;
+import sm.domain.sys.monitor.sql.model.vo.SqlCatalogDetailVO;
+import sm.domain.sys.monitor.sql.model.vo.SqlCatalogResultVO;
 import sm.domain.sys.monitor.sql.model.vo.SqlLogDetailVO;
 import sm.domain.sys.monitor.sql.model.vo.SqlLogListVO;
 import sm.domain.sys.monitor.sql.model.vo.SqlResultVO;
@@ -34,6 +38,20 @@ public class SqlController {
     @SaCheckPermission(SqlPermission.EXECUTE)
     public Result<SqlResultVO> execute(@Valid @RequestBody SqlExecuteForm form) {
         return Result.success(sqlService.execute(form));
+    }
+
+    @PostMapping("/sys/monitor/sql/catalog/list")
+    @Operation(summary = "查询数据库对象")
+    @SaCheckPermission(SqlPermission.CATALOG)
+    public Result<SqlCatalogResultVO> catalog(@Valid @RequestBody SqlCatalogListForm form) {
+        return Result.success(sqlService.catalog(form));
+    }
+
+    @PostMapping("/sys/monitor/sql/catalog/detail")
+    @Operation(summary = "查询数据库对象字段")
+    @SaCheckPermission(SqlPermission.CATALOG)
+    public Result<SqlCatalogDetailVO> catalogDetail(@Valid @RequestBody SqlCatalogObjectForm form) {
+        return Result.success(sqlService.catalogDetail(form));
     }
 
     @PostMapping("/sys/monitor/sql/log/listPage")
