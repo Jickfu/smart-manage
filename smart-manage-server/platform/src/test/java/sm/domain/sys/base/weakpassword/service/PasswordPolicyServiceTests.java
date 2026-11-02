@@ -9,7 +9,7 @@ import static org.mockito.Mockito.*;
 
 class PasswordPolicyServiceTests {
     private final WeakPasswordMapper mapper = mock(WeakPasswordMapper.class);
-    private final PasswordPolicyService policy = new PasswordPolicyService(mapper);
+    private final PasswordPolicyService policy = new PasswordPolicyService(mapper, sm.domain.sys.base.passwordconfig.service.PasswordPolicyFixtures.defaults());
 
     @Test
     void enforcesCodePointBoundariesWithoutCompositionRulesOrTrimming() {
@@ -46,6 +46,24 @@ class PasswordPolicyServiceTests {
         assertThrows(BizException.class, () -> policy.validate("Administrator2026!", "administrator"));
         assertThrows(BizException.class, () -> policy.validate("Smart-Manage2026!", "tester"));
         assertDoesNotThrow(() -> policy.validate("administrator beside quiet river", "administrator"));
+    }
+
+    @Test
+    void dynamicPolicyRequiresAllFourClassesAndSupportsFourToSixtyFour() {
+        var config = sm.domain.sys.base.passwordconfig.service.PasswordPolicyFixtures.defaults();
+        var dynamic = new PasswordPolicyService(mapper, config);
+        when(config.policy()).thenReturn(new sm.domain.sys.base.passwordconfig.model.vo.PasswordPolicyVO(4, 64, true));
+        assertDoesNotThrow(() -> dynamic.validate("Ab7!", "tester"));
+        for (String candidate : new String[]{"ab7!", "AB7!", "Abc!", "Ab78", "Ab7 ", "Ab7中", "Ab7😀", "Ab7！"}) {
+            assertThrows(BizException.class, () -> dynamic.validate(candidate, "tester"));
+        }
+        when(config.policy()).thenReturn(new sm.domain.sys.base.passwordconfig.model.vo.PasswordPolicyVO(64, 64, true));
+        assertThrows(BizException.class, () -> dynamic.validate("Ab7!", "tester"));
+        String generated = dynamic.generate("tester");
+        assertEquals(64, generated.length());
+        assertDoesNotThrow(() -> dynamic.validate(generated, "tester"));
+        when(config.policy()).thenReturn(new sm.domain.sys.base.passwordconfig.model.vo.PasswordPolicyVO(4, 64, false));
+        assertDoesNotThrow(() -> dynamic.validate("界".repeat(4), "tester"));
     }
 
     @Test

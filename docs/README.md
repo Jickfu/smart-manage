@@ -86,7 +86,7 @@
 - [系统参数](./platform/base/system-parameter.md)
 - [界面配置](./platform/base/ui-config.md)
 - [用户管理](./platform/base/user.md)
-- [弱口令管理与固定密码策略](./platform/base/weak-password.md)
+- [弱口令管理与密码策略](./platform/base/weak-password.md)
 
 监控应用（monitor）：
 

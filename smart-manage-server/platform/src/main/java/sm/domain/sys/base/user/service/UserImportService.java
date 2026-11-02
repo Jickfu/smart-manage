@@ -11,6 +11,7 @@ import sm.domain.sys.base.fileartifact.service.FileArtifactService;
 import sm.domain.sys.base.common.helper.UserCacheInvalidator;
 import sm.domain.sys.base.org.contract.OrgReference;
 import sm.domain.sys.base.org.contract.OrgReferenceReader;
+import sm.domain.sys.base.weakpassword.service.PasswordPolicyService;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.constant.UserExcelSchema;
 import sm.domain.sys.base.user.model.Gender;
@@ -27,7 +28,6 @@ import sm.system.excel.ExcelDataRow;
 import sm.system.response.ResultEnum;
 import sm.system.security.authorization.AdministratorOnly;
 import sm.system.storage.FileStoragePurpose;
-import sm.system.util.PasswordGeneratorUtil;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -53,6 +53,7 @@ public class UserImportService {
     private final UserImportTxService importTxService;
     private final FileArtifactService fileArtifactService;
     private final Validator validator;
+    private final PasswordPolicyService passwordPolicyService;
     private final UserCacheInvalidator userCacheInvalidator;
 
     @AdministratorOnly
@@ -158,7 +159,7 @@ public class UserImportService {
             } catch (RuntimeException exception) { errors.add("第 " + rowNumber + " 行：" + exception.getMessage()); continue; }
             Credential credential = null;
             if (existing == null) {
-                String password = PasswordGeneratorUtil.generate(20);
+                String password = passwordPolicyService.generate(username);
                 form.setPassword(password);
                 credential = new Credential(username, name, password);
             } else {

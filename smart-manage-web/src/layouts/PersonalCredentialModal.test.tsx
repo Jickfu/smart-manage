@@ -3,6 +3,8 @@ import { act, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import PersonalCredentialModal from './PersonalCredentialModal';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import request from '@/api/request';
 
 const mocks = vi.hoisted(() => ({
   feedback: { success: vi.fn(), fromError: vi.fn() },
@@ -30,6 +32,9 @@ vi.mock('@/api/user', () => ({
 }));
 
 beforeEach(() => {
+  vi.spyOn(request, 'get').mockResolvedValue({
+    data: { data: { minLength: 15, maxLength: 64, complexityEnabled: false } },
+  });
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.stubGlobal('matchMedia', () => ({
     matches: false,
@@ -41,6 +46,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   document.body.innerHTML = '';
@@ -50,15 +56,24 @@ async function renderPasswordModal() {
   const container = document.createElement('div');
   document.body.append(container);
   const root = createRoot(container);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient.setQueryData(['password-policy'], {
+    minLength: 15,
+    maxLength: 64,
+    complexityEnabled: false,
+  });
+  queryClient.setDefaultOptions({ queries: { retry: false, staleTime: Infinity } });
   await act(async () => {
     root.render(
-      <PersonalCredentialModal
-        type="PASSWORD"
-        onClose={() => {}}
-        onProfileSaved={() => {}}
-        onPasswordChanged={() => {}}
-        emailPasswordAvailable={false}
-      />,
+      <QueryClientProvider client={queryClient}>
+        <PersonalCredentialModal
+          type="PASSWORD"
+          onClose={() => {}}
+          onProfileSaved={() => {}}
+          onPasswordChanged={() => {}}
+          emailPasswordAvailable={false}
+        />
+      </QueryClientProvider>,
     );
   });
   const passwordInput = container.querySelector('input[type="password"]') as HTMLInputElement;

@@ -46,6 +46,7 @@ class WeakPasswordPostgresTests {
         var configuration = new MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
         configuration.addMapper(WeakPasswordMapper.class);
+        configuration.addMapper(sm.domain.sys.base.passwordconfig.mapper.PasswordConfigMapper.class);
         var interceptor = new MybatisPlusInterceptor();
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         var factory = new MybatisSqlSessionFactoryBean();
@@ -54,8 +55,8 @@ class WeakPasswordPostgresTests {
         factory.setPlugins(interceptor);
         var sessionFactory = factory.getObject();
         mapper = new SqlSessionTemplate(sessionFactory).getMapper(WeakPasswordMapper.class);
-        firstPolicy = new PasswordPolicyService(mapper);
-        secondPolicy = new PasswordPolicyService(new SqlSessionTemplate(sessionFactory).getMapper(WeakPasswordMapper.class));
+        firstPolicy = new PasswordPolicyService(mapper, new sm.domain.sys.base.passwordconfig.service.PasswordConfigService(new SqlSessionTemplate(sessionFactory).getMapper(sm.domain.sys.base.passwordconfig.mapper.PasswordConfigMapper.class), null, org.mapstruct.factory.Mappers.getMapper(sm.domain.sys.base.passwordconfig.converter.PasswordConfigConverter.class)));
+        secondPolicy = new PasswordPolicyService(new SqlSessionTemplate(sessionFactory).getMapper(WeakPasswordMapper.class), new sm.domain.sys.base.passwordconfig.service.PasswordConfigService(new SqlSessionTemplate(sessionFactory).getMapper(sm.domain.sys.base.passwordconfig.mapper.PasswordConfigMapper.class), null, org.mapstruct.factory.Mappers.getMapper(sm.domain.sys.base.passwordconfig.converter.PasswordConfigConverter.class)));
         var proxy = new ProxyFactory(new WeakPasswordTxService(mapper));
         proxy.setProxyTargetClass(true);
         proxy.addAdvice(new TransactionInterceptor(manager, new AnnotationTransactionAttributeSource()));

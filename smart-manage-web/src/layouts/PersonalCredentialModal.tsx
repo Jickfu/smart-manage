@@ -1,4 +1,4 @@
-import { PASSWORD_POLICY_HINT, passwordPolicyRule } from '@/security/passwordPolicy';
+import { usePasswordPolicy } from '@/security/usePasswordPolicy';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
 import { Button, Form, Input, Select } from 'antd';
@@ -52,6 +52,9 @@ export default function PersonalCredentialModal({
   onPasswordChanged,
   emailPasswordAvailable,
 }: PersonalCredentialModalProps) {
+  const { hint: passwordPolicyHint, rule: passwordPolicyRule } = usePasswordPolicy(
+    type === 'PASSWORD',
+  );
   const feedback = useOperationFeedback();
   const [verifyForm] = Form.useForm<VerifyValues>();
   const [changeForm] = Form.useForm<ChangeValues>();
@@ -231,7 +234,7 @@ export default function PersonalCredentialModal({
                 className="sm-edit-field-content"
                 name="value"
                 label={type === 'PHONE' ? '新手机号' : type === 'EMAIL' ? '新邮箱' : '新密码'}
-                tooltip={type === 'PASSWORD' ? PASSWORD_POLICY_HINT : undefined}
+                tooltip={type === 'PASSWORD' ? passwordPolicyHint : undefined}
                 rules={[
                   ...(type === 'PASSWORD'
                     ? [passwordPolicyRule]
