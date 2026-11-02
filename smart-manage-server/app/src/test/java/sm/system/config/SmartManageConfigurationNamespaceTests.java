@@ -80,6 +80,19 @@ class SmartManageConfigurationNamespaceTests {
     }
 
     @Test
+    void ordinaryLoginMustExpireAfterTwentyFourHoursOrTwelveIdleHours() throws IOException {
+        PropertySource<?> common = loadSingle("application.yml");
+        assertThat(common.getProperty("sa-token.is-lasting-cookie")).isEqualTo(true);
+        for (String resourceName : List.of(
+                "application-dev.yml", "application-test.yml", "application-prod.yml")) {
+            PropertySource<?> source = loadSingle(resourceName);
+            assertThat(source.getProperty("sa-token.timeout")).as(resourceName).isEqualTo(86400);
+            // 闲置期限独立于总有效期，持续访问也不能超过会话总有效期。
+            assertThat(source.getProperty("sa-token.active-timeout")).as(resourceName).isEqualTo(43200);
+        }
+    }
+
+    @Test
     void profileConfigurationMustExposeCoreDeploymentContract() throws IOException {
         for (String resourceName : List.of("application-test.yml", "application-prod.yml")) {
             assertThat(propertyNames(loadSingle(resourceName)))
