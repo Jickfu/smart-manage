@@ -85,6 +85,8 @@ mvn -f smart-manage-server/pom.xml -Pplatform-only verify
 
 `app` 的 `PersistenceModelContractTests` 随实际装配检查 Entity 表/主键/版本注解，并加载发行 classpath 中真实 MyBatis XML 命令及注解 Mapper，拒绝有写入映射却没有所属模块实体的实现；纯 SELECT 投影不强制建 Entity。测试包括缺失模型的拒绝反例，且发现的实体和写映射必须非空。JDBC 原生写入、每张表的完整建模及不存在版本字段的业务并发语义仍需评审和真实数据库测试，不能由该结构门禁代替。
 
+模型文档规则见[后端架构](../architecture/backend.md#模型字段文档)。`ArchitectureContractTests` 使用实际装配的字节码检查 Form、VO、公共表单和响应载荷的中文类型及字段 `Schema.description`，覆盖 record 组件、嵌套数据模型和继承声明方，排除生成类型及无属性的嵌套反序列化器；无自有字段的继承模型仍检查类型说明；缺失类型说明、缺失字段说明和仅有标题的反例必须被拒绝。`EntityDocumentationContractTests` 从实际装配实体定位所属源码，使用 JDK 编译器的文档语法树检查类型及非静态字段的中文 Javadoc 正文（普通 `id` 字段允许使用 `ID`），拒绝缺失、仅作者、普通注释和英文占位说明。两项门禁随 Maven `verify` 执行，支持默认领域及 `platform-only` 装配；需要完整 JDK 和对应源码，不依赖应用启动或数据库。门禁检查文档存在性、实体字段 Javadoc 多行格式、字段说明末尾无句号及 Long 类型 id 字段直接使用 ID，包含空注释、单行注释、多余句号和主键修饰的拒绝反例；单位、枚举范围、动态结构与真实业务语义仍须评审，不能用补齐注解代替行为验证。
+
 ## 前端
 
 修改前端代码至少执行：

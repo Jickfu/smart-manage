@@ -9,7 +9,7 @@ import lombok.Data;
 @Data
 @Schema(description = "应用信息")
 public class AppVO {
-	@Schema(description = "id")
+	@Schema(description = "ID")
 	private Long id;
 
 	@Schema(description = "所属领域编号（t_sys_domain.number）")

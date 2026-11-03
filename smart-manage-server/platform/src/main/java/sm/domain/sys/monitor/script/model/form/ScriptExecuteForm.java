@@ -14,10 +14,10 @@ public class ScriptExecuteForm {
 
     @NotBlank(message = "脚本内容不能为空")
     @Size(max = 1000000, message = "脚本内容不能超过1000000个字符")
-    @Schema(description = "脚本内容（JavaScript）")
+    @Schema(description = "JavaScript 脚本正文")
     private String content;
 
     @Pattern(regexp = "ATOMIC|NON_ATOMIC", message = "事务模式不合法")
-    @Schema(description = "事务模式：ATOMIC或NON_ATOMIC")
+    @Schema(description = "脚本事务模式：ATOMIC 原子事务、NON_ATOMIC 非原子执行")
     private String transactionMode = "ATOMIC";
 }

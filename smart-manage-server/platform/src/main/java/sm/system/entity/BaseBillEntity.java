@@ -16,17 +16,17 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 public class BaseBillEntity extends BaseEntity {
     /**
-     * 单据所属组织。该字段表达业务数据归属，不等同于创建人的当前登录组织。
+     * 单据所属组织。该字段表达业务数据归属，不等同于创建人的当前登录组织
      */
     private Long orgId;
 
     /**
-	 * 业务日期：单据最核心的业务发生或归属日期。
-	 */
+     * 业务日期：单据最核心的业务发生或归属日期
+     */
 	private LocalDate bizDate;
 
 	/**
-	 * 单据状态：A 暂存，B 已提交，C 已审核，D 已关闭；E-Z 由具体业务聚合解释。
+	 * 单据状态：A 暂存，B 已提交，C 已审核，D 已关闭；E-Z 由具体业务聚合解释
 	 */
 	private String billStatus;
 }

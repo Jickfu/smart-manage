@@ -12,9 +12,14 @@ import sm.domain.sys.base.common.enums.MenuLevelEnum;
 @Data
 @Schema(description = "菜单-基础资料选择-列表项")
 public class MenuSelectVO {
+	@Schema(description = "ID")
 	private Long id;
+	@Schema(description = "业务编码")
 	private String number;
+	@Schema(description = "名称")
 	private String name;
+	@Schema(description = "级别")
 	private MenuLevelEnum level;
+	@Schema(description = "是否启用")
 	private Boolean enabled;
 }

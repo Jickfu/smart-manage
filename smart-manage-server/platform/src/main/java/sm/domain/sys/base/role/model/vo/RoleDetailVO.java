@@ -26,6 +26,7 @@ public class RoleDetailVO {
 
 	@Schema(description = "描述")
 	private String description;
+	@Schema(description = "默认数据权限范围，取值见 DataScopeType：ALL、ORG_AND_CHILDREN、ORG、SELF、CUSTOM_ORGS")
 	private String defaultDataScope;
 
 	@Schema(description = "创建时间")
@@ -40,6 +41,7 @@ public class RoleDetailVO {
 	@Schema(description = "修改人")
 	private Long updateUser;
 
+	@Schema(description = "乐观锁版本号")
 	private Integer version;
 
 	@Schema(description = "权限ID列表")

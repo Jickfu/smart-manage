@@ -1,24 +1,33 @@
 package sm.domain.sys.monitor.thread.model.form;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-/** 线程热点或全量快照的受约束采集参数。 */
+/**
+ * 线程热点或全量快照的受约束采集参数。
+ */
+@Schema(description = "线程诊断采集输入表单")
 @Data
 public class ThreadCollectForm {
+    @Schema(description = "应用实例唯一标识")
     @Size(max = 160, message = "实例ID不能超过160个字符")
     private String instanceId;
 
+    @Schema(description = "线程 CPU 采样间隔，单位毫秒")
     @Min(value = 200, message = "采样时间不能小于200毫秒")
     @Max(value = 5000, message = "采样时间不能超过5000毫秒")
     private Integer sampleMillis;
 
+    @Schema(description = "最多采集的线程数量")
     @Min(value = 1, message = "线程数量不能小于1")
     @Max(value = 50, message = "线程数量不能超过50")
     private Integer limit;
 
+    @Schema(description = "线程栈最大采集深度")
     @Min(value = 1, message = "堆栈深度不能小于1")
     @Max(value = 256, message = "堆栈深度不能超过256")
     private Integer maxDepth;

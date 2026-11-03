@@ -18,7 +18,7 @@ public class SqlLogListForm extends PageForm {
     @Schema(description = "关键字搜索（SQL 文本 LIKE）")
     private String keyword;
 
-    @Schema(description = "结果类型过滤：QUERY/DML/DDL/ERROR")
+    @Schema(description = "SQL 执行结果类型：QUERY、DML、DDL、ERROR")
     private String resultType;
 
     @Schema(description = "执行开始时间")

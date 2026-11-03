@@ -7,7 +7,7 @@ import lombok.Data;
  * 权限新增默认值
  */
 @Data
-@Schema(title = "权限新增默认值")
+@Schema(description = "权限新增默认值")
 public class PermissionCreateNewDataVO {
 }
 

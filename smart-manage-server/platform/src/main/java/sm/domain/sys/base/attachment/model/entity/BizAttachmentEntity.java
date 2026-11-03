@@ -17,12 +17,30 @@ import sm.system.entity.BaseEntity;
 @TableName("t_sys_biz_attachment")
 public class BizAttachmentEntity extends BaseEntity {
 
+    /**
+     * ID
+     */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
+    /**
+     * 业务类型
+     */
     private String bizType;
+    /**
+     * 业务ID
+     */
     private String bizId;
+    /**
+     * 附件ID
+     */
     private Long attachmentId;
+    /**
+     * 排序号
+     */
     private Integer sort;
+    /**
+     * 备注
+     */
     private String remark;
 }

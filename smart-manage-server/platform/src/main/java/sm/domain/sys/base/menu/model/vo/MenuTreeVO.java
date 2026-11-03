@@ -35,6 +35,7 @@ public class MenuTreeVO {
     @Schema(description = "所属应用ID")
     private Long appId;
 
+    @Schema(description = "所属功能ID")
     private Long featureId;
 
     @Schema(description = "所属应用名称")

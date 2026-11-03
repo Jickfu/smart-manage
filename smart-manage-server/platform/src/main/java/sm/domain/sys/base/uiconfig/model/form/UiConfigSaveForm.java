@@ -18,7 +18,7 @@ import java.util.Map;
 @Schema(description = "界面配置保存表单")
 public class UiConfigSaveForm {
 
-    @Schema(description = "主键ID（新建时不传）")
+    @Schema(description = "ID")
     private Long id;
 
     @Schema(description = "乐观锁版本号，修改时必传")
@@ -58,36 +58,44 @@ public class UiConfigSaveForm {
     @Schema(description = "水印固定内容")
     private String watermarkContent;
 
+    @Schema(description = "水印是否显示当前用户姓名")
     @NotNull(message = "姓名水印配置不能为空")
     private Boolean watermarkShowName;
 
+    @Schema(description = "水印是否显示脱敏手机号")
     @NotNull(message = "手机号水印配置不能为空")
     private Boolean watermarkShowPhone;
 
+    @Schema(description = "水印是否显示脱敏邮箱")
     @NotNull(message = "邮箱水印配置不能为空")
     private Boolean watermarkShowEmail;
 
+    @Schema(description = "水印是否显示当前用户工号")
     @NotNull(message = "工号水印配置不能为空")
     private Boolean watermarkShowNumber;
 
+    @Schema(description = "水印是否显示当前用户绝对顶层组织名称")
     @NotNull(message = "最根级组织水印配置不能为空")
     private Boolean watermarkShowRootOrg;
 
+    @Schema(description = "水印水平间距（像素）")
     @NotNull(message = "水印水平间距不能为空")
     @Min(value = 20, message = "水印水平间距不能小于20像素")
     @Max(value = 500, message = "水印水平间距不能大于500像素")
     private Integer watermarkGapX;
 
+    @Schema(description = "水印垂直间距（像素）")
     @NotNull(message = "水印垂直间距不能为空")
     @Min(value = 20, message = "水印垂直间距不能小于20像素")
     @Max(value = 500, message = "水印垂直间距不能大于500像素")
     private Integer watermarkGapY;
 
+    @Schema(description = "水印字体大小（像素）")
     @NotNull(message = "水印字体大小不能为空")
     @Min(value = 12, message = "水印字体大小不能小于12像素")
     @Max(value = 32, message = "水印字体大小不能大于32像素")
     private Integer watermarkFontSize;
 
-    @Schema(description = "本次上传附件的上传会话")
+    @Schema(description = "附件上传会话映射，键为附件 ID，值为上传会话标识；用于确认临时附件归属")
     private Map<Long, String> attachmentUploadSessions;
 }

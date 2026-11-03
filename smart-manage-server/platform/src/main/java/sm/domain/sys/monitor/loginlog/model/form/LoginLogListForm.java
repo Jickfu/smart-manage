@@ -16,7 +16,7 @@ public class LoginLogListForm extends PageForm {
 	private String keyword;
 	@Schema(description = "是否成功，空表示全部")
 	private Boolean success;
-	@Schema(description = "事件类型，空表示全部")
+	@Schema(description = "登录认证事件类型，见 LoginEventType")
 	private LoginEventType eventType;
 	@Schema(description = "完整链路追踪ID")
 	private String traceId;

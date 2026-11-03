@@ -7,9 +7,9 @@ import lombok.Data;
  * @author Chekfu
  */
 @Data
-@Schema(title = "权限列表视图")
+@Schema(description = "权限列表视图")
 public class PermissionListVO {
-	@Schema(description = "id")
+	@Schema(description = "ID")
 	private Long id;
 
 	@Schema(description = "权限名称")
@@ -21,12 +21,15 @@ public class PermissionListVO {
 	@Schema(description = "应用ID")
 	private Long appId;
 
-	@Schema(description = "应用名称")
+	@Schema(description = "所属应用名称")
 	private String appName;
 
+	@Schema(description = "所属功能ID")
 	private Long featureId;
 
+	@Schema(description = "稳定功能键")
 	private String featureKey;
 
+	@Schema(description = "所属功能名称")
 	private String featureName;
 }

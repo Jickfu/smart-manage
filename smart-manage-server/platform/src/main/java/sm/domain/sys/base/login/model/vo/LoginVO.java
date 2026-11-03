@@ -7,7 +7,7 @@ import lombok.Data;
  * @author Chekfu
  */
 @Data
-@Schema(title = "登录返回视图")
+@Schema(description = "登录返回视图")
 public class LoginVO {
 
 	@Schema(description = "是否已建立登录会话")

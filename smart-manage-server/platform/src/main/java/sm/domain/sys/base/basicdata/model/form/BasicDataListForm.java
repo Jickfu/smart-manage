@@ -15,6 +15,7 @@ import sm.system.form.PageForm;
 @Schema(description = "基础数据列表表单")
 public class BasicDataListForm extends PageForm {
 
+    @Schema(description = "基础资料分类ID")
     private Long categoryId;
 
     @Schema(description = "关键词（名称、编码模糊匹配）")

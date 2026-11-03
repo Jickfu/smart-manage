@@ -10,9 +10,9 @@ import sm.domain.sys.base.menu.model.enums.MenuTargetTypeEnum;
  * @author Chekfu
  */
 @Data
-@Schema(title = "菜单列表视图")
+@Schema(description = "菜单列表视图")
 public class MenuListVO {
-	@Schema(description = "id")
+	@Schema(description = "ID")
 	private Long id;
 
 	@Schema(description = "编号")

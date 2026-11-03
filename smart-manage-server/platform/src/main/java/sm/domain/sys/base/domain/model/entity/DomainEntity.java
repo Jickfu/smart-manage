@@ -17,17 +17,35 @@ import sm.system.entity.BaseEntity;
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_sys_domain")
 public class DomainEntity extends BaseEntity {
+	/**
+	 * ID
+	 */
 	@TableId(type = IdType.ASSIGN_ID)
 	private Long id;
 
+	/**
+	 * 名称
+	 */
 	private String name;
 
+	/**
+	 * 业务编码
+	 */
 	private String number;
 
+	/**
+	 * 排序号
+	 */
 	private Integer seq;
 
+	/**
+	 * 是否启用
+	 */
 	private Boolean enabled;
 
+	/**
+	 * 乐观锁版本号
+	 */
 	@Version
 	private Integer version;
 }
