@@ -74,7 +74,7 @@ export default function CacheManagementPage(props: PageComponentProps) {
     void confirmOperation({
       type: 'delete',
       title: `删除 ${entries.length} 个缓存条目？`,
-      description: '删除后无法恢复，请确认这些缓存可以安全重建。',
+      description: `范围：${JSON.stringify(scopeLabel)}。\n删除后无法恢复，请确认这些缓存可以安全重建。`,
       confirmText: '确认删除',
       onConfirm: () => deleteMutation.mutateAsync(entries.map(entryKey)),
     });

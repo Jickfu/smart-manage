@@ -10,3 +10,6 @@
   color: var(--ant-color-error);
   font-weight: 600;
 }
+.sm-app-modal .sm-scheduler-trend-data-body {
+  padding: 16px;
+}

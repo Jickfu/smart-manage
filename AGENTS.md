@@ -19,7 +19,7 @@
 ## 架构与质量
 
 - 改动必须满足生效架构约束和与风险匹配的质量门禁，不得通过放宽规则掩盖失败。
-- 当前生效的架构、开发和验证规则以本文件“文档路由”指向的 `docs/` 文档为唯一事实来源；`AGENTS.md` 不复制其具体条款。
+- 当前生效的架构、开发和验证规则以本文件“文档路由”指向的权威文档为唯一规则来源，包含所属领域内的模块文档；`AGENTS.md` 不复制其具体条款。代码与测试用于核实实现现状，差异处理遵守[文档导航](./docs/README.md#按任务阅读)。
 - 实现前必须按任务路由阅读对应权威文档，并按[质量验证](./docs/development/verification.md)执行与风险匹配的验证。
 - 新增或显著扩展业务模块必须先使用[模块开发指南](./docs/development/module-development-guide.md)完成模块分类、样板选择、边界设计和验收基线；新增业务聚合还必须使用[业务聚合检查清单](./docs/development/business-aggregate-checklist.md)。
 - 使用支持仓库 skills 的开发代理时，新增或显著扩展业务模块应调用 `$smart-manage-module`；skill 只编排流程，仓库文档和当前代码仍是事实来源。
@@ -34,11 +34,16 @@
 
 按下表读取必要总则及本次涉及的章节，跨层或系统性变更再扩大阅读范围。已加载且未变化的规则无需重复读取。小范围修复、纯重命名或不改变模块边界的局部调整无需完整模块流程。
 
+列表与编辑页、后端模块扩展、移动查询页规划的阅读顺序见[代表任务路径](./docs/development/collaboration.md#代表任务路径)。该入口只导航，不替代对应权威正文。
+
 | 任务 | 必读文档 |
 | --- | --- |
+| 统一规范导航、跨端规划或协作流程 | `docs/design-entry.md`、`docs/backend/README.md`、`docs/mobile/README.md`、`docs/development/collaboration.md`，再按实际任务阅读权威正文 |
 | 后端代码 | 所属模块 `AGENTS.md`、`smart-manage-server/platform/AGENTS.md`、`docs/architecture/backend.md` |
 | 桌面管理端代码（`smart-manage-web`） | `smart-manage-web/AGENTS.md`、`docs/architecture/frontend.md` |
-| 桌面管理端页面、布局或交互 | `docs/development/frontend-page-guide.md` |
+| 前端视觉、组件适配或设计规范 | `docs/design/README.md`、`docs/design/adaptation-boundaries.md`，再按平台阅读对应章节 |
+| 手机浏览器、小程序的设计或客户端接入 | `docs/mobile/README.md`、`docs/design/adaptation-boundaries.md`，再按实际能力阅读安全、后端和质量文档 |
+| 桌面管理端页面、布局或交互 | `docs/design/README.md`、`docs/development/frontend-page-guide.md` |
 | 认证、权限或高风险能力 | `docs/architecture/security.md` |
 | 数据脱敏、隐私字段或凭据清除 | `docs/architecture/data-masking.md`、`docs/architecture/security.md` |
 | 功能目录、菜单、权限或页面注册 | `docs/architecture/feature-and-permission.md`、`docs/architecture/security.md` |
@@ -51,4 +56,4 @@
 | 新增业务聚合 | 上述模块文档及 `docs/development/business-aggregate-checklist.md` |
 | 具体业务模块 | 平台 `docs/platform/{应用}/` 或可选领域 `smart-manage-server/domains/{领域}/docs/{应用}/` 下对应模块文档 |
 
-`docs/proposals/` 保留方案背景与后续设想，不作为生效规则；已采纳约束以对应架构和领域文档为准。
+`docs/proposals/` 保留方案背景与后续设想，不作为生效规则；已采纳约束以对应架构、设计、开发和领域文档为准。

@@ -1,3 +1,4 @@
+import { formatOperationTargets } from '@/domain/common/component/formatOperationTargets';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useCallback, useMemo, useState } from 'react';
@@ -361,15 +362,21 @@ const UserListPage = (props: PageComponentProps) => {
         quickSearchPlaceholder="搜索姓名/工号/用户名"
         filterSummary={keyword ? `关键字：${keyword}` : undefined}
         onAddNew={() => openAddNewTab(props.appNumber, USER_EDIT_KEY)}
-        onDelete={() =>
+        onDelete={() => {
+          if (selectedRowKeys.length === 0) return;
+          const commandIds = selectedRowKeys.map(String);
+          const targets = commandIds.map((id) => {
+            const record = records.find((item) => item.id === id);
+            return record ? record.username : `ID ${id}`;
+          });
           void confirmOperation({
             type: 'delete',
             title: '确认删除',
-            description: `确定删除选中的 ${selectedRowKeys.length} 个用户吗？`,
+            description: `将删除以下用户，是否继续？\n${formatOperationTargets(targets)}`,
             confirmText: '删除',
-            onConfirm: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
-          })
-        }
+            onConfirm: () => deleteMutation.mutateAsync(commandIds),
+          });
+        }}
         onEnable={() => enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: true })}
         onDisable={() =>
           enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: false })

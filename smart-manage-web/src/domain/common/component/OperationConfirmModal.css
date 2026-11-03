@@ -55,4 +55,5 @@
   line-height: 1.7;
   text-align: center;
   white-space: pre-line;
+  overflow-wrap: anywhere;
 }

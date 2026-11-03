@@ -135,6 +135,31 @@ class SchedulerScopePostgresTests {
         });
     }
 
+    @Test
+    void dailyCountsUseHalfOpenBoundariesAndPreserveEveryStatus() {
+        transaction.executeWithoutResult(transactionStatus -> {
+            transactionStatus.setRollbackOnly();
+            var start = java.time.LocalDateTime.of(2026, 12, 26, 0, 0);
+            var end = start.plusDays(7);
+            long identifier = 9400000100L;
+            for (var time : List.of(start.minusNanos(1000), start, end.minusNanos(1000), end)) {
+                for (String executionStatus : List.of("SUCCESS", "FAILED", "SKIPPED", "RUNNING", "UNKNOWN")) {
+                    jdbc.update("INSERT INTO t_sys_job_log(id,job_id,job_name,start_time,status,domain_id,domain_name,app_id,app_name) VALUES (?,9400000030,'聚合边界',?,?,9400000010,'测试领域',9400000020,'测试应用')",
+                            identifier++, time, executionStatus);
+                }
+            }
+            var rows = logMapper.selectDailyCounts(start, end);
+            assertEquals(10, rows.size());
+            assertEquals(10, rows.stream().mapToLong(row -> row.getCount()).sum());
+            assertTrue(rows.stream().allMatch(row -> row.getDate().equals(start.toLocalDate())
+                    || row.getDate().equals(end.minusDays(1).toLocalDate())));
+            for (String executionStatus : List.of("SUCCESS", "FAILED", "SKIPPED", "RUNNING", "UNKNOWN")) {
+                assertEquals(2, rows.stream().filter(row -> executionStatus.equals(row.getStatus()))
+                        .mapToLong(row -> row.getCount()).sum());
+            }
+        });
+    }
+
     private void seed() {
         jdbc.update("INSERT INTO t_sys_domain(id,name,number) VALUES (9400000010,'原领域','verify-scheduler-old'),(9400000011,'新领域','verify-scheduler-new')");
         jdbc.update("INSERT INTO t_sys_app(id,name,number,icon,domain_id) VALUES (9400000020,'原应用','verify-scheduler-app','ClockCircleOutlined',9400000010)");

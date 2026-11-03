@@ -224,7 +224,8 @@ const PurchaseRequisitionEditPage = (props: PageComponentProps) => {
           },
           {
             title: <RequiredDetailColumnTitle>数量</RequiredDetailColumnTitle>,
-            width: 140,
+            // 六位小数的长数量须在编辑态和查看态完整显示，窄区域沿用表格横向滚动。
+            width: 180,
             render: (_value, field) => (
               <Form.Item
                 name={[field.name, 'quantity']}

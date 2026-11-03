@@ -132,6 +132,7 @@ export default function ScriptConsolePage(props: PageComponentProps) {
           {can(scriptAccess.permissions.execute) && (
             <Button
               type="primary"
+              danger
               icon={<PlayCircleOutlined />}
               loading={executeMutation.isPending}
               onClick={() => execute(editorRef.current?.getExecutableScript() ?? '')}

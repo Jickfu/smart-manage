@@ -4,6 +4,14 @@
         "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="sm.domain.sys.scheduler.mapper.JobLogMapper">
 
+    <!-- 半开范围约束分区键，数据库聚合后仅返回日期、状态和数量。 -->
+    <select id="selectDailyCounts" resultType="sm.domain.sys.scheduler.model.vo.SchedulerDailyCountVO">
+        SELECT CAST(start_time AS date) AS date, status, COUNT(*) AS count
+        FROM t_sys_job_log
+        WHERE start_time &gt;= #{start} AND start_time &lt; #{end}
+        GROUP BY CAST(start_time AS date), status
+    </select>
+
     <!-- PostgreSQL DISTINCT ON 一次取得当前页每个任务的最近执行实例，避免列表 N+1。 -->
     <select id="selectLatestByJobIds" resultType="sm.domain.sys.scheduler.model.entity.JobLogEntity">
         SELECT DISTINCT ON (job_id)

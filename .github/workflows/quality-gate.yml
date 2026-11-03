@@ -30,7 +30,7 @@ jobs:
         shell: pwsh
         run: ./scripts/verify-module-conventions.ps1
       - name: Verify documentation checker behavior
-        run: node --test scripts/verify-doc-links.test.mjs
+        run: node --test scripts/verify-doc-links.test.mjs scripts/verify-doc-examples.test.mjs
       - name: Verify workflow security policy
         run: node --test scripts/workflow-security.test.mjs
       - name: Verify baseline cleanup safety
@@ -38,6 +38,31 @@ jobs:
         run: ./scripts/verify-baseline.tests.ps1
       - name: Verify deployment key generator
         run: node --test scripts/generate-deployment-keys.test.mjs
+
+  design-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          version: 11.17.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: tools/design-docs/pnpm-lock.yaml
+      - name: Install documentation dependencies
+        working-directory: tools/design-docs
+        run: pnpm install --frozen-lockfile
+      - name: Verify documentation content boundaries
+        working-directory: tools/design-docs
+        run: pnpm test
+      - name: Check documentation tool formatting
+        working-directory: tools/design-docs
+        run: pnpm format:check
+      - name: Build documentation without publication
+        working-directory: tools/design-docs
+        run: pnpm build
 
   backend:
     runs-on: ubuntu-latest

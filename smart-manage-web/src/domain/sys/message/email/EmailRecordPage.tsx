@@ -142,7 +142,7 @@ const EmailRecordPage = (props: PageComponentProps) => {
             void confirmOperation({
               type: 'normal',
               title: '确认创建新的重发任务？',
-              description: '系统将根据原邮件内容创建一条新的发送任务，是否继续？',
+              description: `原邮件记录 ID：${selected.id}。\n系统将根据原邮件内容创建一条新的发送任务，是否继续？`,
               confirmText: '重新发送',
               onConfirm: () => command.mutateAsync('retry'),
             }),

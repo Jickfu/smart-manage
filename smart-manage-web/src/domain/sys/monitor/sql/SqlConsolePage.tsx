@@ -46,9 +46,8 @@ export default function SqlConsolePage(_props: PageComponentProps) {
       feedback.warning('请输入要执行的 SQL');
       return;
     }
-    const run = () => executeMutation.mutate(candidate);
     if (!requiresConfirmation(candidate)) {
-      run();
+      executeMutation.mutate(candidate);
       return;
     }
     void confirmOperation({
@@ -56,7 +55,8 @@ export default function SqlConsolePage(_props: PageComponentProps) {
       title: '确认执行写入或结构变更 SQL？',
       description: '该操作可能修改数据库。多条语句仅允许纯 INSERT，并会在同一事务中执行。',
       confirmText: '确认执行',
-      onConfirm: run,
+      // 返回命令 Promise，确认框才能保持处理中锁定，并在失败时保留重试上下文。
+      onConfirm: () => executeMutation.mutateAsync(candidate),
     });
   };
   const tableColumns = useMemo<ColumnsType<unknown[]>>(

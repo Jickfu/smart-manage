@@ -4,6 +4,30 @@
   gap: 10px;
   min-height: 0;
 }
+
+.sm-runtime-history-data-value {
+  white-space: nowrap;
+}
+
+.sm-app-modal .sm-runtime-history-data-body {
+  padding: 16px;
+  height: min(520px, 65vh);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sm-runtime-history-data-body > p {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.sm-runtime-history-data-table {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
 .sm-runtime-monitor-metrics {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

@@ -4,6 +4,7 @@ import type { EChartsCoreOption } from 'echarts/core';
 import QuickLaunchCard from '@/domain/common/home/QuickLaunchCard';
 import HomeCardGrid from '@/domain/common/home/HomeCardGrid';
 import SmChart from '@/domain/common/chart/SmChart';
+import { chartCategoryColors } from '@/domain/common/chart/chartColors';
 import './MessageHome.css';
 
 const exampleTag = <Tag color="blue">示例</Tag>;
@@ -11,14 +12,27 @@ const exampleTag = <Tag color="blue">示例</Tag>;
 const MessageHome = () => {
   const trendOption = useMemo<EChartsCoreOption>(
     () => ({
+      color: [...chartCategoryColors],
       tooltip: { trigger: 'axis' },
       legend: { bottom: 0 },
       grid: { left: 42, right: 18, top: 18, bottom: 42 },
       xAxis: { type: 'category', data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'] },
       yAxis: { type: 'value' },
       series: [
-        { name: '邮件', type: 'line', smooth: true, data: [82, 96, 74, 121, 108, 54, 67] },
-        { name: '站内消息', type: 'line', smooth: true, data: [42, 61, 55, 78, 69, 31, 38] },
+        {
+          name: '邮件',
+          type: 'line',
+          smooth: false,
+          connectNulls: false,
+          data: [82, 96, 74, 121, 108, 54, 67],
+        },
+        {
+          name: '站内消息',
+          type: 'line',
+          smooth: false,
+          connectNulls: false,
+          data: [42, 61, 55, 78, 69, 31, 38],
+        },
       ],
     }),
     [],

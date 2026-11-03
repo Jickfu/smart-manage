@@ -42,3 +42,5 @@ administrator-initial-password.txt
 .codex
 skills-lock.json
 **/.playwright-cli
+tools/design-docs/.vitepress/cache/
+tools/design-docs/.vitepress/.temp/

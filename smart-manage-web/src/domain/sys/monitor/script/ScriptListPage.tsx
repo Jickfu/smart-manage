@@ -1,3 +1,4 @@
+import { formatOperationTargets } from '@/domain/common/component/formatOperationTargets';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useState } from 'react';
@@ -51,9 +52,8 @@ export default function ScriptListPage(props: PageComponentProps) {
     queryFn: scriptApi.listPage,
   });
   const deleteMutation = useCommandMutation({
-    mutationFn: async () => {
-      const selected = records.filter((record) => selectedKeys.includes(record.id));
-      for (const script of selected) await scriptApi.delete(script.id, script.version);
+    mutationFn: async (targets: Pick<ScriptListItem, 'id' | 'version'>[]) => {
+      for (const script of targets) await scriptApi.delete(script.id, script.version);
     },
     onSuccess: async () => {
       setSelectedKeys([]);
@@ -104,12 +104,22 @@ export default function ScriptListPage(props: PageComponentProps) {
           feedback.warning('请选择要删除的脚本');
           return;
         }
+        // 确认与执行共用此刻的对象快照，后台刷新不能替换待删除对象或版本。
+        const targets = records
+          .filter((record) => selectedKeys.includes(record.id))
+          .map((record) => ({
+            id: record.id,
+            version: record.version,
+            number: record.number,
+            name: record.name,
+          }));
+        if (targets.length === 0) return;
         void confirmOperation({
           type: 'delete',
           title: '确认删除选中的脚本？',
-          description: '执行历史中的脚本快照不会被删除。',
+          description: `${formatOperationTargets(targets.map((record) => `${record.number} — ${record.name}`))}\n执行历史中的脚本快照不会被删除。`,
           confirmText: '确认删除',
-          onConfirm: () => deleteMutation.mutateAsync(),
+          onConfirm: () => deleteMutation.mutateAsync(targets),
         });
       }}
       rowKey="id"

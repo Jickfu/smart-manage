@@ -84,6 +84,22 @@ Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包�
 
 分页入参继承 `PageForm`，分页结果使用 `PageData<T>`。Controller 只依赖公开 Service，禁止直接依赖 Mapper 或 TxService。
 
+### 分页、筛选与排序
+
+公共类型以 [PageForm](../../smart-manage-server/platform/src/main/java/sm/system/form/PageForm.java) 和 [PageData](../../smart-manage-server/platform/src/main/java/sm/system/response/PageData.java) 为准：页码从 1 开始；页码为空或小于 1 时按 1 处理；页大小默认 10，空值或小于 1 时按 10 处理，最大 100。桌面查询 Hook 默认请求 20 条，这是客户端选择，不改变服务端默认值；接口对接应显式传入实际分页参数。
+
+`PageData.of(total, pageNum, pageSize, records)` 中 `total` 为记录总数，不是总页数；记录为空时返回数组 `[]`，不返回 null。Service 使用实际生效的分页参数构造结果，Controller 再包一层 `Result.success(...)`，不直接暴露 MyBatis 分页对象或重复嵌套 Result。公共分页对象只规范载荷，不执行数据库查询、权限或业务范围校验。
+
+列表筛选与排序按实际查询方式复用 [ListQueryUtil](../../smart-manage-server/platform/src/main/java/sm/system/query/ListQueryUtil.java) 或 [ListSqlQuery](../../smart-manage-server/platform/src/main/java/sm/system/query/ListSqlQuery.java)。Service 注册稳定字段键、类型、允许操作符和排序能力，客户端字段不能直接变成 SQL 列名或表达式。联表使用的 SQL 列或表达式来自服务端常量白名单，不能从用户输入拼接；这与禁止任意裸字段查询的要求不冲突。
+
+`PageForm` 提供 `filters`、`sortField`、`sortOrder`，不提供通用 `keyword`：快速搜索及树范围等业务参数由所属 Form 显式定义。注册筛选能力不自动建立功能权限或数据范围；条件最终必须与授权范围共同应用。无排序字段时由领域查询提供适合任务的默认顺序，不能假定公共解析器会自动排序。当前联表解析器拒绝未注册字段、不支持的操作符和非法排序方向；相对日期遵守下文业务时间约定。
+
+### 异常与响应出口
+
+领域失败抛出语义明确的 `BizException`，由 [GlobalExceptionHandler](../../smart-manage-server/platform/src/main/java/sm/system/exception/GlobalExceptionHandler.java) 及 [ExceptionResultResolver](../../smart-manage-server/platform/src/main/java/sm/system/exception/ExceptionResultResolver.java) 统一转换；不在每个 Controller 捕获所有异常再返回成功空值，也不由各模块另建错误级别或 HTTP 状态映射。过滤器及文件流出口按各自协议处理，不能假定所有失败都能重新写 JSON。
+
+业务自定义说明必须可安全展示，不携带 SQL、堆栈、连接信息或凭据。未知系统异常保留服务端诊断，客户端使用统一安全说明；`traceId` 用于关联排障，不是成功凭证或业务幂等键。具体反馈展示继续由客户端协议决定。
+
 ## Service 与事务
 
 公开 `*Service` 是其所属业务职责的入口，负责该职责内的查询、业务命令、权限补充校验、操作日志入口和业务组装。同一模块的多个公开 Service 必须保持边界明确，禁止出现职责重叠或为绕过内部边界而拆分的空壳 Service。
@@ -93,6 +109,8 @@ Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包�
 TxService 默认不得调用其他 TxService。多个写能力需要在同一事务组合时，应抽取同模块 package-private、无事务注解的 `*Writer`，由新的 TxService 统一协调；Writer 只承载可复用的持久化写入和事务内校验，不成为业务入口或事务 owner。跨模块组合不能直接暴露 Mapper 或 package-private Writer，由能力提供方发布最小事务参与 Contract；其实现本身不创建事务，并应在无活动事务时拒绝执行。只有业务明确要求独立提交和失败隔离时，才允许评审 `REQUIRES_NEW` 等嵌套事务边界，且必须先用 ADR 明确传播行为、失败语义和调用方可见结果；当前自动化契约仍禁止 TxService 互调。
 
 资源不存在、状态非法、无权限、参数不合法或持久化结果异常时必须抛出明确异常，禁止用 `null` 或静默忽略表示失败。
+
+TxService 的事务应通过 Spring 管理的代理入口调用；不要自行 `new` 实例或用同类自调用假定新事务生效。仅有注解和架构测试不能证明回滚、锁及并发行为；验证门槛见[质量验证](../development/verification.md#真实-postgresql-验证)。查询型扩展不为凑结构新增空 TxService 或 Writer；跨模块参与方的事务要求以实际 Contract 为准，不能因普通公开 Service 无事务就假定跨模块写入会自动加入调用方事务。
 
 ## 操作日志
 
