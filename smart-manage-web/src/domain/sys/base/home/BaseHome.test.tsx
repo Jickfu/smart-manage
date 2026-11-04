@@ -84,7 +84,7 @@ it('显示真实统计、递归统计组织，并按启用状态查询用户', a
   ]);
   expect(container.textContent).not.toContain('示例');
   expect(JSON.parse(vi.mocked(userApi.listPage).mock.calls[0]![0].filters!)).toEqual([
-    { field: 'enabled', type: 'boolean', operator: 'EQ', value: true },
+    { field: 'enabled', type: 'boolean', operator: 'IN', values: [true] },
   ]);
   expect(orgApi.tree).toHaveBeenCalledWith(false);
   permissions.allowed = false;
