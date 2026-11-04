@@ -39393,3 +39393,80 @@ COMMENT ON COLUMN public.t_sys_weak_password.create_time IS '创建时间';
 COMMENT ON COLUMN public.t_sys_weak_password.update_time IS '更新时间';
 COMMENT ON COLUMN public.t_sys_weak_password.create_user IS '创建人';
 COMMENT ON COLUMN public.t_sys_weak_password.update_user IS '修改人';
+
+-- 密码策略仅作用于后续凭据写入，保留已有密码及默认校验行为。
+CREATE TABLE public.t_sys_password_config (
+    id bigint PRIMARY KEY CHECK (id = 1),
+    min_length integer NOT NULL CHECK (min_length BETWEEN 4 AND 64),
+    complexity_enabled boolean NOT NULL,
+    version integer NOT NULL DEFAULT 0,
+    create_time timestamp DEFAULT now(),
+    update_time timestamp,
+    create_user bigint,
+    update_user bigint
+);
+COMMENT ON TABLE public.t_sys_password_config IS '全系统密码策略单例';
+COMMENT ON COLUMN public.t_sys_password_config.id IS 'ID';
+COMMENT ON COLUMN public.t_sys_password_config.min_length IS '密码最小长度';
+COMMENT ON COLUMN public.t_sys_password_config.complexity_enabled IS '是否启用四类字符复杂度';
+COMMENT ON COLUMN public.t_sys_password_config.version IS '乐观锁版本';
+COMMENT ON COLUMN public.t_sys_password_config.create_time IS '创建时间';
+COMMENT ON COLUMN public.t_sys_password_config.update_time IS '更新时间';
+COMMENT ON COLUMN public.t_sys_password_config.create_user IS '创建人';
+COMMENT ON COLUMN public.t_sys_password_config.update_user IS '修改人';
+
+-- 常驻任务按代码注册；共享期望状态不因重启而重置。
+CREATE TABLE public.t_sys_singleton_task (
+    id bigint PRIMARY KEY,
+    number varchar(120) NOT NULL UNIQUE,
+    name varchar(120) NOT NULL,
+    app_number varchar(120) NOT NULL REFERENCES public.t_sys_app(number),
+    description varchar(1000) NOT NULL,
+    controllable boolean NOT NULL,
+    requested boolean NOT NULL,
+    version integer NOT NULL DEFAULT 0,
+    state varchar(20) NOT NULL DEFAULT 'STOPPED' CHECK (state IN ('STOPPED','STARTING','RUNNING','STOPPING','FAILED')),
+    owner_instance_id varchar(120),
+    run_id varchar(36),
+    generation bigint NOT NULL DEFAULT 0,
+    started_at timestamp,
+    heartbeat_at timestamp,
+    retry_at timestamp,
+    last_error varchar(80)
+);
+CREATE TABLE public.t_sys_singleton_event (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    task_number varchar(120) NOT NULL REFERENCES public.t_sys_singleton_task(number),
+    occurred_at timestamp NOT NULL DEFAULT localtimestamp,
+    event_type varchar(30) NOT NULL,
+    instance_id varchar(120),
+    run_id varchar(36),
+    reason varchar(80)
+);
+CREATE INDEX idx_singleton_event_task ON public.t_sys_singleton_event(task_number, id DESC);
+COMMENT ON TABLE public.t_sys_singleton_task IS '集群单例任务共享控制与运行状态';
+COMMENT ON TABLE public.t_sys_singleton_event IS '集群单例任务近期运行事件，每任务保留最近200条';
+
+COMMENT ON COLUMN public.t_sys_singleton_task.id IS 'ID';
+COMMENT ON COLUMN public.t_sys_singleton_task.number IS '编码';
+COMMENT ON COLUMN public.t_sys_singleton_task.name IS '名称';
+COMMENT ON COLUMN public.t_sys_singleton_task.app_number IS '所属应用编码';
+COMMENT ON COLUMN public.t_sys_singleton_task.description IS '任务说明';
+COMMENT ON COLUMN public.t_sys_singleton_task.controllable IS '是否允许管理端启停';
+COMMENT ON COLUMN public.t_sys_singleton_task.requested IS '期望是否运行';
+COMMENT ON COLUMN public.t_sys_singleton_task.version IS '启停命令乐观锁版本';
+COMMENT ON COLUMN public.t_sys_singleton_task.state IS '实际运行状态';
+COMMENT ON COLUMN public.t_sys_singleton_task.owner_instance_id IS '当前执行实例';
+COMMENT ON COLUMN public.t_sys_singleton_task.run_id IS '本次运行身份';
+COMMENT ON COLUMN public.t_sys_singleton_task.generation IS '执行代际';
+COMMENT ON COLUMN public.t_sys_singleton_task.started_at IS '本次开始时间';
+COMMENT ON COLUMN public.t_sys_singleton_task.heartbeat_at IS '最近心跳时间';
+COMMENT ON COLUMN public.t_sys_singleton_task.retry_at IS '退避截止时间';
+COMMENT ON COLUMN public.t_sys_singleton_task.last_error IS '安全失败分类';
+COMMENT ON COLUMN public.t_sys_singleton_event.id IS 'ID';
+COMMENT ON COLUMN public.t_sys_singleton_event.task_number IS '任务编码';
+COMMENT ON COLUMN public.t_sys_singleton_event.occurred_at IS '事件时间';
+COMMENT ON COLUMN public.t_sys_singleton_event.event_type IS '事件类型';
+COMMENT ON COLUMN public.t_sys_singleton_event.instance_id IS '执行实例';
+COMMENT ON COLUMN public.t_sys_singleton_event.run_id IS '运行身份';
+COMMENT ON COLUMN public.t_sys_singleton_event.reason IS '安全原因分类';

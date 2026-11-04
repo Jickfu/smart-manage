@@ -22,7 +22,7 @@ const enabledUsersForm = {
   pageNum: 1,
   pageSize: 1,
   filters: serializeListFilters([
-    { field: 'enabled', type: 'boolean', operator: 'EQ', value: true },
+    { field: 'enabled', type: 'boolean', operator: 'IN', values: [true] },
   ]),
 };
 const rolesForm = { pageNum: 1, pageSize: 1 };

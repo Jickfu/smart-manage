@@ -97,6 +97,7 @@ interface WorkbenchState {
   /** 原子提交组合菜单导航，避免先创建应用首页、后因内容页超限留下半完成状态。 */
   openMenuTarget: (appNumber: string, appInfo: AppVO, tab: ContentTabItem | null) => AddTabResult;
   openListTab: (appNumber: string, componentKey: string) => AddTabResult;
+  openSingletonEditTab: (appNumber: string, componentKey: string) => AddTabResult;
   openCustomTab: (appNumber: string, componentKey: string) => AddTabResult;
   openExternalLinkTab: (
     appNumber: string,
@@ -503,6 +504,18 @@ export const useWorkbenchStore = create<WorkbenchState>((set, get) => ({
       closable: true,
       componentKey,
       pageType: 'LIST',
+    });
+  },
+
+  // 菜单直达的单例编辑页没有单据 ID，按组件复用固定页签并保留 EDIT 协议。
+  openSingletonEditTab: (appNumber, componentKey) => {
+    return get().addContentTab(appNumber, {
+      key: createListTabKey(componentKey),
+      label: getRegisteredTabTitle(componentKey, 'EDIT'),
+      closable: true,
+      componentKey,
+      pageType: 'EDIT',
+      operationType: OperationType.EDIT,
     });
   },
 
