@@ -1537,3 +1537,28 @@ INSERT INTO public.t_sys_weak_password (id, word, match_digest, description) VAL
 (560000000000010999, 'zzzxxx', 'ea047fa1f36a6537a954fbdc483da63160defabba8adcc1c95b15e148be01218', NULL),
 (560000000000011000, 'zzzzzz', '95fbeb8f769d2c0079d1d11348877da944aaefaba6ecf9f7f7dab6344ece8605', NULL),
 (560000000000011001, 'zzzzzzzz', 'c129db8be8904b40ac21c9cf5d9f5c0e24ef455d1d7a7bbfd7049fc6dc9d2429', NULL);
+
+INSERT INTO public.t_sys_password_config (id, min_length, complexity_enabled) VALUES (1, 15, false);
+INSERT INTO public.t_sys_feature (id, feature_key, app_id, default_name, default_seq, description)
+VALUES (560000000000000200, 'sys/base/password-config', 31, '密码策略', 136, '配置全系统新密码的长度和复杂度要求');
+INSERT INTO public.t_sys_permission (id, name, number, feature_id) VALUES
+(560000000000000201, '密码策略-查看', 'sys:base:password-config:detail', 560000000000000200),
+(560000000000000202, '密码策略-保存', 'sys:base:password-config:save', 560000000000000200);
+INSERT INTO public.t_sys_menu (id, number, name, level, parent_id, app_id, permission_id, path, component, sort, feature_id, target_type, icon)
+VALUES (560000000000000210, 'password_config', '密码策略', 1, 470000000000000005, 31, 560000000000000201,
+'/sys/base/password-config', 'sys/base/password-config', 61, 560000000000000200, 'INTERNAL_PAGE', 'LockOutlined');
+INSERT INTO public.t_sys_feature_data_object
+(id, feature_id, schema_name, object_name, object_type, object_role, display_name, seq)
+VALUES (560000000000000220, 560000000000000200, 'public', 't_sys_password_config', 'TABLE', 'PRIMARY', '密码策略', 10);
+INSERT INTO public.t_sys_feature (id, feature_key, app_id, default_name, default_seq, description)
+VALUES (560000000000000300, 'sys/scheduler/singleton', 32, '常驻任务', 40, '集群单例任务运行状态与启停管理');
+INSERT INTO public.t_sys_permission (id, name, number, feature_id) VALUES
+(560000000000000301, '常驻任务-列表', 'sys:scheduler:singleton:listPage', 560000000000000300),
+(560000000000000302, '常驻任务-详情', 'sys:scheduler:singleton:detail', 560000000000000300),
+(560000000000000303, '常驻任务-启停', 'sys:scheduler:singleton:control', 560000000000000300);
+INSERT INTO public.t_sys_menu (id, number, name, level, parent_id, app_id, permission_id, path, component, sort, feature_id, target_type, icon)
+VALUES (560000000000000310, 'singleton', '常驻任务', 1, 0, 32, 560000000000000301,
+'/sys/scheduler/singleton', 'sys/scheduler/singleton', 30, 560000000000000300, 'INTERNAL_PAGE', 'ClusterOutlined');
+INSERT INTO public.t_sys_feature_data_object (id, feature_id, schema_name, object_name, object_type, object_role, display_name, seq) VALUES
+(560000000000000320, 560000000000000300, 'public', 't_sys_singleton_task', 'TABLE', 'PRIMARY', '常驻任务', 10),
+(560000000000000321, 560000000000000300, 'public', 't_sys_singleton_event', 'TABLE', 'LOG', '常驻任务近期事件', 20);
