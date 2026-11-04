@@ -221,6 +221,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baselin
 
 PostgreSQL 客户端、数据库服务或必要配置缺失时，此项记为未验证并说明原因；普通 `mvn test` 通过或测试被跳过不能算作此项通过。
 
+### 调度首页统计性能回归
+
+`SchedulerHomePerformancePostgresTests` 随上述空库验证脚本运行，仅允许脚本生成的 `smart_manage_verify_` 临时库。它使用真实迁移结构和 Mapper，写入 131,250 条窗口内日志，覆盖五种状态、跨月、两个空日期及 2 KiB 失败正文，另加时间边界外和长期 RUNNING 记录。测试完成后清理本次夹具，临时库由脚本清理；不得连接业务库或正式环境执行。
+
+测试通过真实 Executor 观察每个 summary 请求的一次聚合、三次计数及返回对象类型，断言没有完整日志实体或重复查询；使用真实 `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` 断言只访问窗口内两个月分区，并对照只有时间下限的旧查询。统计日期沿用[业务时间约定](../architecture/backend.md#业务时间)，不引入下游项目的时间策略。
+
+输出中的 `SCHEDULER_SQL`、`SCHEDULER_JDBC`、`SCHEDULER_MAPPER`、`SCHEDULER_SERVICE` 和 `SCHEDULER_HTTP` 分别记录 SQL 服务端执行、JDBC 完整取回及字段转换、真实 MyBatis 实体或投影映射、完整 Service 和回环 HTTP 请求耗时，每项区分首次与两次重复访问。HTTP 使用临时 Tomcat、真实 Spring MVC Controller、Service、Mapper 和 PostgreSQL，包含 JSON 响应取回，但不装配完整应用的登录鉴权、Redis、反向代理和浏览器；不能视为正式部署端到端耗时。SQL 的首次 EXPLAIN 在接口和取回测试之后执行，全部测试也都在夹具写入和 ANALYZE 后运行，不宣称磁盘冷缓存。
+
+JDBC 字节数为非空字段转为 UTF-8 后的大小，不是协议流量或浏览器响应大小。旧明细对照保留原来的仅下限条件，因此比聚合窗口多取回一条排他上限处记录。测试使用直接 JDBC 连接而非生产连接池，不设置绝对毫秒或加速比例门限；验收依据是统计正确性、裁剪范围、查询次数和返回规模，性能数字用于当前机器观察。结果保存在 Maven Surefire 报告中；完整应用部署后的链路耗时仍需在目标环境另行验证。
+
 ## 浏览器验收
 
 页面交互、布局或样式发生变化时，按受影响场景核对真实页面；纯文档修改不触发浏览器验收。记录操作与可见结果，涉及字号、滚动或布局时检查最终计算样式及同类页面，生命周期改动覆盖回显、只读和脏数据保护等相关路径。

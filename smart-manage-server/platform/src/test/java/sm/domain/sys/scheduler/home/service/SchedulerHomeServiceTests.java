@@ -11,6 +11,52 @@ import static org.mockito.ArgumentMatchers.*;
 
 class SchedulerHomeServiceTests {
     @Test
+    void summaryReadsClockOnceAndDoesNotFetchDetailsOrRepeatQueries() {
+        JobMapper jobs = mock(JobMapper.class);
+        JobLogMapper logs = mock(JobLogMapper.class);
+        Clock clock = mock(Clock.class);
+        when(clock.withZone(ZoneId.of("Asia/Shanghai"))).thenReturn(clock);
+        when(clock.getZone()).thenReturn(ZoneId.of("Asia/Shanghai"));
+        // 第二次取时会跨日，确保同一响应的窗口和今日指标不会分属两天。
+        when(clock.instant()).thenReturn(Instant.parse("2026-12-31T15:59:59Z"),
+                Instant.parse("2026-12-31T16:00:00Z"));
+        when(jobs.selectCount(any())).thenReturn(10L, 7L);
+        when(logs.selectCount(any())).thenReturn(4L);
+        when(logs.selectDailyCounts(any(), any())).thenReturn(List.of());
+
+        var result = new SchedulerHomeService(jobs, logs).summary(clock);
+
+        assertEquals(10, result.getTotalJobs());
+        assertEquals(7, result.getEnabledJobs());
+        assertEquals(3, result.getPausedJobs());
+        assertEquals(4, result.getRunningExecutions());
+        verify(clock).instant();
+        verify(jobs, times(2)).selectCount(any());
+        verify(logs).selectCount(any());
+        verify(logs).selectDailyCounts(LocalDate.of(2026, 12, 25).atStartOfDay(),
+                LocalDate.of(2027, 1, 1).atStartOfDay());
+        verifyNoMoreInteractions(jobs, logs);
+    }
+
+    @Test
+    void configuredBusinessDateIsIndependentOfJvmDefaultZone() {
+        TimeZone originalZone = TimeZone.getDefault();
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"));
+            JobMapper jobs = mock(JobMapper.class);
+            JobLogMapper logs = mock(JobLogMapper.class);
+            when(logs.selectDailyCounts(any(), any())).thenReturn(List.of());
+            var result = new SchedulerHomeService(jobs, logs).summary(
+                    Clock.fixed(Instant.parse("2026-12-31T16:00:00Z"), ZoneId.systemDefault()));
+            assertEquals(LocalDate.of(2027, 1, 1), result.getTrends().getLast().getDate());
+            verify(logs).selectDailyCounts(LocalDate.of(2026, 12, 26).atStartOfDay(),
+                    LocalDate.of(2027, 1, 2).atStartOfDay());
+        } finally {
+            TimeZone.setDefault(originalZone);
+        }
+    }
+
+    @Test
     void beijingMidnightMonthEndAndYearEndKeepSevenDaysAndAllStatusTotals() {
         for (String instant : List.of("2026-12-31T15:59:59Z", "2026-12-31T16:00:00Z", "2026-02-28T16:00:00Z")) {
             Clock clock = Clock.fixed(Instant.parse(instant), ZoneOffset.UTC);
