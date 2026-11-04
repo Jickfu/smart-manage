@@ -1,7 +1,7 @@
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useState } from 'react';
 import type { Key } from 'react';
-import { Alert, Button, Tag, Tree } from 'antd';
+import { Button, Tag, Tree } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -150,14 +150,13 @@ export default function CacheManagementPage(props: PageComponentProps) {
         pageSize={list.pageSize}
         quickSearchPlaceholder="搜索 Key 或缓存名称"
         filterSummary={scope.scopeType === 'ALL' ? undefined : scopeLabel}
-        toolbarExtra={
-          categoryOnly ? (
-            <Alert
-              type="info"
-              showIcon
-              title="该类别包含安全敏感数据，仅登记 Key 规则，不扫描或展示具体条目。"
-            />
-          ) : undefined
+        tableNotice={
+          categoryOnly
+            ? {
+                key: `cache-category-${scopeLabel}`,
+                title: '该类别包含安全敏感数据，仅登记 Key 规则，不扫描或展示具体条目。',
+              }
+            : undefined
         }
         treePanel={
           <ListTreePanel>

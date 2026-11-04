@@ -12,8 +12,16 @@ describe('SQL 编辑器执行内容', () => {
     expect(getExecutableSqlFromState(state)).toBe('select 2;');
   });
 
-  it('没有选区时返回完整 SQL', () => {
+  it('没有选区时拒绝执行全文', () => {
     const state = EditorState.create({ doc: '  select 1;  ' });
-    expect(getExecutableSqlFromState(state)).toBe('select 1;');
+    expect(getExecutableSqlFromState(state)).toBe('');
   });
+});
+
+it('纯空白选区不能回退执行其他 SQL', () => {
+  const state = EditorState.create({
+    doc: '  \nselect 1;',
+    selection: EditorSelection.single(0, 3),
+  });
+  expect(getExecutableSqlFromState(state)).toBe('');
 });

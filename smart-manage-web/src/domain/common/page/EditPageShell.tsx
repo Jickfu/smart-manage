@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { PageNotice, type PageNoticeConfig } from '@/domain/common/component/PageNotice';
 import { Spin } from 'antd';
 import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
 import './pageLayout.css';
@@ -6,6 +7,7 @@ import { usePageTabTitle } from './tab/usePageTabTitle';
 
 interface EditPageShellProps {
   title: string;
+  notice?: PageNoticeConfig;
   loading: boolean;
   error?: Error | null;
   onRetry?: () => void;
@@ -16,6 +18,7 @@ interface EditPageShellProps {
 /** 编辑页壳层：只负责布局、加载、错误和按钮区域，不感知业务命令与单据状态。 */
 export function EditPageShell({
   title,
+  notice,
   loading,
   error,
   onRetry,
@@ -26,6 +29,7 @@ export function EditPageShell({
   return (
     <section className="sm-common-page sm-edit-page">
       {error && <RequestErrorState error={error} onRetry={onRetry} />}
+      {!error && <PageNotice notice={notice} />}
       {actions && (
         <div className="sm-edit-header" hidden={Boolean(error)} inert={Boolean(error)}>
           <div className="sm-edit-header-actions">{actions}</div>

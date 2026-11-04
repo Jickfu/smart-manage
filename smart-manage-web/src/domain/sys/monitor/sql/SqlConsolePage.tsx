@@ -41,11 +41,13 @@ export default function SqlConsolePage(_props: PageComponentProps) {
     mutationFn: sqlApi.execute,
     onSuccess: (data) => setResult(data),
   });
-  const execute = (candidate = sqlText.trim()) => {
-    if (!candidate) {
-      feedback.warning('请输入要执行的 SQL');
+  const execute = (candidate: string) => {
+    if (!candidate.trim()) {
+      feedback.warning('请先选中要执行的 SQL，再点击执行或按 Ctrl + E');
       return;
     }
+    if (permissionLoading || !can(sqlAccess.permissions.execute) || executeMutation.isPending)
+      return;
     if (!requiresConfirmation(candidate)) {
       executeMutation.mutate(candidate);
       return;
@@ -141,6 +143,10 @@ export default function SqlConsolePage(_props: PageComponentProps) {
   return (
     <EditPageShell
       title="SQL 控制台"
+      notice={{
+        key: 'sql-selection',
+        title: '请先选中要执行的 SQL，再点击执行或按 Ctrl + E；未选中时不会执行。',
+      }}
       loading={permissionLoading}
       actions={
         <>
@@ -172,9 +178,6 @@ export default function SqlConsolePage(_props: PageComponentProps) {
           >
             清空
           </Button>
-          <Typography.Text type="secondary" className="sm-sql-console-hint">
-            选中 SQL 后按 Ctrl + E 可执行选区
-          </Typography.Text>
         </>
       }
     >

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
+import { PageNotice, type PageNoticeConfig } from '@/domain/common/component/PageNotice';
 import type { TableProps } from 'antd';
 import { Button, Spin, Table } from 'antd';
 import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
@@ -28,6 +29,10 @@ interface StandardListPermissions {
 
 interface ListPageProps<T> {
   title: string;
+  /** 整页说明，固定在搜索与工具栏上方。 */
+  notice?: PageNoticeConfig;
+  /** 仅作用于表格的说明；左树右表时只占右侧区域。 */
+  tableNotice?: PageNoticeConfig;
   /** 过滤区内容 */
   filterContent?: ReactNode;
   /** 首次打开时展开过滤区，默认收起；切换页签保留当前状态。 */
@@ -112,6 +117,8 @@ interface ListPageProps<T> {
  */
 function ListPage<T>({
   title,
+  notice,
+  tableNotice,
   filterContent,
   defaultFilterExpanded = false,
   expandedFilterFields = [],
@@ -316,6 +323,7 @@ function ListPage<T>({
 
   return (
     <section className="sm-common-page sm-list-page">
+      <PageNotice notice={notice} />
       <div className="sm-list-top">
         <ListFilterBar
           title={title}
@@ -413,6 +421,7 @@ function ListPage<T>({
             onPageChange={onPageChange}
             showPagination={showPagination}
             treePanel={treePanel}
+            notice={tableNotice}
             tableHeaderExtra={resolvedTableHeaderExtra}
           />
         </Spin>

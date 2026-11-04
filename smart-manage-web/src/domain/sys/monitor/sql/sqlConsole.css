@@ -31,10 +31,6 @@
   min-height: 0;
 }
 
-.sm-sql-console-hint {
-  margin-left: 6px;
-}
-
 .sm-sql-console-panel {
   display: flex;
   flex-direction: column;

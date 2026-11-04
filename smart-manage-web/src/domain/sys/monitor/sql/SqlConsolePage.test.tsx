@@ -9,6 +9,7 @@ import SqlConsolePage from './SqlConsolePage';
 import { sqlApi } from './api';
 import type { SqlExecutionResult } from './types';
 
+const selection = vi.hoisted(() => ({ text: '' }));
 const feedback = vi.hoisted(() => ({ warning: vi.fn(), fromError: vi.fn() }));
 vi.mock('./api', () => ({ sqlApi: { execute: vi.fn() } }));
 vi.mock('@/domain/common/component/useOperationFeedback', () => ({
@@ -35,7 +36,7 @@ vi.mock('./SqlEditor', async () => {
   return {
     default: forwardRef(
       ({ value, onChange }: { value: string; onChange: (value: string) => void }, ref) => {
-        useImperativeHandle(ref, () => ({ getExecutableSql: () => value }));
+        useImperativeHandle(ref, () => ({ getExecutableSql: () => selection.text }));
         return (
           <textarea
             aria-label="SQL"
@@ -61,6 +62,7 @@ const result: SqlExecutionResult = {
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  selection.text = '';
   installJsdomBrowserStubs();
   container = document.createElement('div');
   document.body.append(container);
@@ -92,6 +94,7 @@ function button(label: string) {
   return found;
 }
 async function enterSql(sql: string) {
+  selection.text = sql;
   const editor = container.querySelector('textarea')!;
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(editor, sql);
@@ -143,9 +146,27 @@ it('写入失败保留 SQL 与确认框，允许明确重试', async () => {
   expect(sqlApi.execute).toHaveBeenCalledTimes(2);
 });
 
-it('普通查询仍直接执行，不增加确认流程', async () => {
+it('选中查询仍直接执行，不增加确认流程', async () => {
+  selection.text = 'SELECT 1';
   vi.mocked(sqlApi.execute).mockResolvedValue(result);
   await act(async () => button('执行').click());
   expect(sqlApi.execute).toHaveBeenCalledTimes(1);
   expect(document.querySelector('[role="dialog"]')).toBeNull();
+});
+
+it.each(['', '  \n  '])('无有效选区时不请求、不确认：%j', async (selectedText) => {
+  selection.text = selectedText;
+  await act(async () => button('执行').click());
+  expect(sqlApi.execute).not.toHaveBeenCalled();
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(feedback.warning).toHaveBeenCalledWith('请先选中要执行的 SQL，再点击执行或按 Ctrl + E');
+});
+
+it('确认使用首次选区快照，不随后续编辑器选择改变', async () => {
+  vi.mocked(sqlApi.execute).mockResolvedValue(result);
+  await enterSql('UPDATE example SET value = 3');
+  await act(async () => button('执行').click());
+  selection.text = 'DELETE FROM example';
+  await act(async () => button('确认执行').click());
+  expect(vi.mocked(sqlApi.execute).mock.calls[0]?.[0]).toBe('UPDATE example SET value = 3');
 });
