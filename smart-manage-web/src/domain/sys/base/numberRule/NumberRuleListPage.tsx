@@ -10,6 +10,7 @@ import ListPage from '@/domain/common/page/list/ListPage';
 import ListTree from '@/domain/common/page/list/ListTree';
 import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
 import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
+import { formatOperationTargets } from '@/domain/common/component/formatOperationTargets';
 import { useListSelection } from '@/domain/common/page/list/useListSelection';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { useEnabledMutation } from '@/domain/common/page/command/useEnabledMutation';
@@ -223,15 +224,21 @@ const NumberRuleListPage = (props: PageComponentProps) => {
       }
       onAddNew={() => openAddNewTab(props.appNumber, componentKeys.numberRuleEdit)}
       onEnable={() => enabledMutation.mutate({ ids: selectedIds, enabled: true })}
-      onDisable={() =>
+      onDisable={() => {
+        const commandIds = [...selectedIds];
+        if (commandIds.length === 0) return;
+        const targets = commandIds.map((id) => {
+          const record = records.find((item) => item.id === id);
+          return record ? `${record.ruleKey} — ${record.name}` : `ID ${id}`;
+        });
         void confirmOperation({
           type: 'warning',
           title: '确认停用所选编号规则？',
-          description: '正在使用的规则会被后端拒绝停用，请先切换对应业务引用。',
+          description: `${formatOperationTargets(targets)}\n正在使用的规则会被后端拒绝停用，请先切换对应业务引用。`,
           confirmText: '停用',
-          onConfirm: () => enabledMutation.mutateAsync({ ids: selectedIds, enabled: false }),
-        })
-      }
+          onConfirm: () => enabledMutation.mutateAsync({ ids: commandIds, enabled: false }),
+        });
+      }}
       enabledCommandLoading={enabledMutation.isPending}
       toolbarActions={[
         { builtin: 'add' },

@@ -250,6 +250,33 @@ class PurchaseRequisitionTxServiceTests {
         verify(entryMapper).delete(any());
     }
 
+    @Test
+    void attachmentFailuresKeepCauseWithoutExposingDetails() throws IOException {
+        var mapper = mock(PurchaseRequisitionMapper.class);
+        var entries = mock(PurchaseRequisitionEntryMapper.class);
+        var attachments = mock(AttachmentService.class);
+        var entity = new PurchaseRequisitionEntity();
+        entity.setId(1L);
+        entity.setVersion(2);
+        entity.setBillStatus(StandardBillStatus.SAVED.getValue());
+        when(mapper.selectById(1L)).thenReturn(entity);
+        when(mapper.updateById(any(PurchaseRequisitionEntity.class))).thenReturn(1);
+        when(entries.insert(any(PurchaseRequisitionEntryEntity.class))).thenReturn(1);
+        var failure = new IOException("private-storage-path diagnostic");
+        org.mockito.Mockito.doThrow(failure).when(attachments).deleteForAggregate(any(), any());
+        org.mockito.Mockito.doThrow(failure).when(attachments).promoteForAggregate(any());
+        var service = new PurchaseRequisitionTxService(mock(CurrentUserContext.class), mapper, entries,
+                attachments, mock(NumberGeneratorAccessor.class), mock(PurchaseRequisitionDataScope.class));
+        var deletion = assertThrows(BizException.class, () -> service.deleteById(1L, 2));
+        org.junit.jupiter.api.Assertions.assertSame(failure, deletion.getCause());
+        org.junit.jupiter.api.Assertions.assertFalse(deletion.getMessage().contains("private-storage-path"));
+        var form = submitForm(1L, 2);
+        form.setAttachmentIds(List.of(99L));
+        var promotion = assertThrows(BizException.class, () -> service.save(form));
+        org.junit.jupiter.api.Assertions.assertSame(failure, promotion.getCause());
+        org.junit.jupiter.api.Assertions.assertFalse(promotion.getMessage().contains("private-storage-path"));
+    }
+
     private static PurchaseRequisitionSubmitForm submitForm(Long id, Integer version) {
         PurchaseRequisitionEntryForm entryForm = new PurchaseRequisitionEntryForm();
         entryForm.setMaterialName("测试物料");

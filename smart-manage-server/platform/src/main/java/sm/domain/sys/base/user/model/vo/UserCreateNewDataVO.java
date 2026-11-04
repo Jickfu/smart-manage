@@ -11,7 +11,7 @@ import java.util.List;
  * @author Chekfu
  */
 @Data
-@Schema(title = "用户新增默认值")
+@Schema(description = "用户新增默认值")
 public class UserCreateNewDataVO {
 
 	@Schema(description = "是否启用")

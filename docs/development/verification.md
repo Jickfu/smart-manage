@@ -18,7 +18,9 @@
 | PostgreSQL 测试保护的权限、凭据、事务或并发行为 | 即使未修改迁移，也必须执行[真实 PostgreSQL 验证](#真实-postgresql-验证) |
 | 新增或显著扩展模块、治理入口或门禁引用 | 模块约定脚本，并叠加实际代码和风险所需检查；调整门禁还须验证其相关行为 |
 
-文档检查覆盖 README、CONTRIBUTING、AGENTS、docs、项目 skill 及脚本的反向引用。移动章节时检查锚点；区分真实路径与 `{领域}` 等示例占位符，不为消除死链创建空文件。格式检查可从仓库根目录执行：
+文档检查覆盖 README、CONTRIBUTING、AGENTS、docs、项目 skill 及脚本的反向引用。移动章节时检查锚点；区分真实路径与 `{领域}` 等示例占位符，不为消除死链创建空文件。
+
+跨端任务入口还由模块约定脚本检查根 AGENTS、协作导航、后端和移动端入口到各自权威正文的关键引用；移动端入口还须保留安全、数据权限和数据脱敏正文引用，模块指南及 skill 须保留移动端入口。这只证明阅读路径存在，不证明任务已执行或正文语义无冲突。格式检查可从仓库根目录执行：
 
 ```bash
 git diff --check
@@ -40,8 +42,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-
 
 | 分类 | 检查内容 | 违规后的修复方向 |
 | --- | --- | --- |
-| 治理文件 | 模块开发指南、前端页面指南、模块模式目录、模块开发 skill 及其代理配置必须存在 | 恢复规定文件；规范调整时同步更新仓库治理入口 |
-| 文档与 skill 路由 | 根目录及前后端 `AGENTS.md` 必须指向模块开发指南；前端 `AGENTS.md` 还必须明确指向 `../docs/development/frontend-page-guide.md`；模块开发 skill 必须明确引用本脚本的执行要求 | 补充明确的文档路由或校验步骤；静态引用检查不能证明脚本已实际执行 |
+| 治理文件 | 统一规范首页、前后端及移动端规范入口、协作导航、模块开发指南、前端规范正文、前端页面指南、模块模式目录、模块开发 skill 及其代理配置必须存在 | 恢复规定文件；规范调整时同步更新仓库治理入口 |
+| 文档与 skill 路由 | 根目录及前后端 `AGENTS.md` 必须指向模块开发指南；根目录、前端 `AGENTS.md` 和模块 skill 还须指向 `docs/design/README.md` 与 `adaptation-boundaries.md` 的对应相对路径；前端继续明确指向 `../docs/development/frontend-page-guide.md`；模块 skill 引用本脚本 | 补充明确的文档路由或校验步骤；静态引用检查不能证明脚本已实际执行 |
+| 设计术语 | `docs/design/` 的 Markdown 正文不得出现外部参考品牌名称，来源及研究材料保留在提案目录 | 使用项目术语；不通过改动图片或删除第三方源码许可信息规避要求 |
 | 前端样式 | `smart-manage-web/src/domain` 下的 TSX 文件不得使用内联 `style` | 使用项目既有样式文件、组件能力或设计 token |
 | 前端字号 | `smart-manage-web/src` 下的 CSS 不得重复声明 `font-size: 12px` 或 `font-size: var(--ant-font-size-sm)` | 由全局主题提供默认密度；标题、骨架、图标和特殊展示按明确语义使用 token 或保留必要字号 |
 | 操作反馈 | 除统一封装自身外，前端不得直接调用 Ant Design `message` 的操作反馈方法 | 改用 `useOperationFeedback` |
@@ -72,6 +75,39 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-module-
 pwsh.exe -NoProfile -Command "Get-Help .\scripts\verify-module-conventions.ps1 -Detailed"
 ```
 
+## 文档浏览入口
+
+页面指南与图表规范中标记 `contract=...` 的 TSX 接入片段使用前端锁定 TypeScript、真实组件类型和前端配置校验；从仓库根目录执行：
+
+```bash
+node --test scripts/verify-doc-examples.test.mjs
+```
+
+该测试仅在内存创建虚拟文件，不生成业务源码，不加载运行实例；有序操作片段的调用方变量由测试补充类型上下文，其他片段自带导入。正例保护列表、编辑、确认反馈及图表公开调用类型，反例拒绝不存在的 `SmChart.height` 和误用的 `EditPage.fields`。它不能检查命令 Promise 是否真的覆盖远端执行、权限正确性、实际渲染或数据口径，相关语义仍需评审及适用的行为测试。新增或修改这些片段及相关公共契约时执行该测试，格式检查使用前端锁定 Prettier：
+
+```bash
+cd smart-manage-web
+pnpm exec prettier --check ../scripts/verify-doc-examples.test.mjs
+```
+
+CI 随文档检查器测试执行这项契约检查。新示例只有需要保护实际公共调用时才增加标记和上下文，不将所有说明性伪代码都强制变成完整页面。
+
+仅修改 `tools/design-docs`、其正文范围或构建策略时，在独立目录执行：
+
+```bash
+cd tools/design-docs
+pnpm install --frozen-lockfile
+pnpm test
+pnpm format:check
+pnpm build
+```
+
+本地编辑预览使用 `pnpm dev`，静态产物验收使用 `pnpm preview`；均默认只监听 `127.0.0.1`。静态子路径构建前设置 `SM_DESIGN_DOCS_BASE=/design-docs/`，然后执行同一构建和预览命令；验收结束后取消该变量并恢复默认产物。
+
+内容与配置改动需检查正式/待评审标记、中文及规则编号搜索、图片、章节锚点和站内跳转，确认未收录提案不进入产物或搜索索引。导航/主题改动增加桌面与窄屏浏览器验收；CI 独立执行内容测试、格式和静态构建，不发布。
+
+文档脚本使用 Node 内置测试，重点保护效力分类、内容排除、引用处理、中文搜索与业务依赖隔离；不以只检查默认文字的测试代替浏览器交互。构建完成后用 HTML 解析器检查真实产物中的本地资源、章节锚点、部署前缀及研究内容排除，不仅检查配置声明。仍须执行仓库文档链接、模块约定与差异检查。未修改业务前端时无需执行其全量测试与构建。
+
 ## 后端
 
 从仓库根目录验证当前全部领域和平台隔离装配；领域边界变更必须执行两种配置：
@@ -84,6 +120,8 @@ mvn -f smart-manage-server/pom.xml -Pplatform-only verify
 纯文档修改不要求执行 Maven。确认不影响测试代码的简单后端改动才可以仅执行 `mvn -f smart-manage-server/pom.xml compile`；影响安全、权限、事务或并发语义的改动不属于该例外。实体、Mapper、配置和迁移变更还必须确认相关代码能够正常编译。
 
 `app` 的 `PersistenceModelContractTests` 随实际装配检查 Entity 表/主键/版本注解，并加载发行 classpath 中真实 MyBatis XML 命令及注解 Mapper，拒绝有写入映射却没有所属模块实体的实现；纯 SELECT 投影不强制建 Entity。测试包括缺失模型的拒绝反例，且发现的实体和写映射必须非空。JDBC 原生写入、每张表的完整建模及不存在版本字段的业务并发语义仍需评审和真实数据库测试，不能由该结构门禁代替。
+
+模型文档规则见[后端架构](../architecture/backend.md#模型字段文档)。`ArchitectureContractTests` 使用实际装配的字节码检查 Form、VO、公共表单和响应载荷的中文类型及字段 `Schema.description`，覆盖 record 组件、嵌套数据模型和继承声明方，排除生成类型及无属性的嵌套反序列化器；无自有字段的继承模型仍检查类型说明；缺失类型说明、缺失字段说明和仅有标题的反例必须被拒绝。`EntityDocumentationContractTests` 从实际装配实体定位所属源码，使用 JDK 编译器的文档语法树检查类型及非静态字段的中文 Javadoc 正文（普通 `id` 字段允许使用 `ID`），拒绝缺失、仅作者、普通注释和英文占位说明。两项门禁随 Maven `verify` 执行，支持默认领域及 `platform-only` 装配；需要完整 JDK 和对应源码，不依赖应用启动或数据库。门禁检查文档存在性、实体字段 Javadoc 多行格式、字段说明末尾无句号及 Long 类型 id 字段直接使用 ID，包含空注释、单行注释、多余句号和主键修饰的拒绝反例；单位、枚举范围、动态结构与真实业务语义仍须评审，不能用补齐注解代替行为验证。
 
 ## 前端
 
@@ -183,11 +221,29 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-baselin
 
 PostgreSQL 客户端、数据库服务或必要配置缺失时，此项记为未验证并说明原因；普通 `mvn test` 通过或测试被跳过不能算作此项通过。
 
+### 调度首页统计性能回归
+
+`SchedulerHomePerformancePostgresTests` 随上述空库验证脚本运行，仅允许脚本生成的 `smart_manage_verify_` 临时库。它使用真实迁移结构和 Mapper，写入 131,250 条窗口内日志，覆盖五种状态、跨月、两个空日期及 2 KiB 失败正文，另加时间边界外和长期 RUNNING 记录。测试完成后清理本次夹具，临时库由脚本清理；不得连接业务库或正式环境执行。
+
+测试通过真实 Executor 观察每个 summary 请求的一次聚合、三次计数及返回对象类型，断言没有完整日志实体或重复查询；使用真实 `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` 断言只访问窗口内两个月分区，并对照只有时间下限的旧查询。统计日期沿用[业务时间约定](../architecture/backend.md#业务时间)，不引入下游项目的时间策略。
+
+输出中的 `SCHEDULER_SQL`、`SCHEDULER_JDBC`、`SCHEDULER_MAPPER`、`SCHEDULER_SERVICE` 和 `SCHEDULER_HTTP` 分别记录 SQL 服务端执行、JDBC 完整取回及字段转换、真实 MyBatis 实体或投影映射、完整 Service 和回环 HTTP 请求耗时，每项区分首次与两次重复访问。HTTP 使用临时 Tomcat、真实 Spring MVC Controller、Service、Mapper 和 PostgreSQL，包含 JSON 响应取回，但不装配完整应用的登录鉴权、Redis、反向代理和浏览器；不能视为正式部署端到端耗时。SQL 的首次 EXPLAIN 在接口和取回测试之后执行，全部测试也都在夹具写入和 ANALYZE 后运行，不宣称磁盘冷缓存。
+
+JDBC 字节数为非空字段转为 UTF-8 后的大小，不是协议流量或浏览器响应大小。旧明细对照保留原来的仅下限条件，因此比聚合窗口多取回一条排他上限处记录。测试使用直接 JDBC 连接而非生产连接池，不设置绝对毫秒或加速比例门限；验收依据是统计正确性、裁剪范围、查询次数和返回规模，性能数字用于当前机器观察。结果保存在 Maven Surefire 报告中；完整应用部署后的链路耗时仍需在目标环境另行验证。
+
 ## 浏览器验收
 
 页面交互、布局或样式发生变化时，按受影响场景核对真实页面；纯文档修改不触发浏览器验收。记录操作与可见结果，涉及字号、滚动或布局时检查最终计算样式及同类页面，生命周期改动覆盖回显、只读和脏数据保护等相关路径。
 
 使用当前环境可用的浏览器工具完成真实页面验收，必要时保持可见浏览器与持久会话，便于用户接续操作。登录需要验证码时由用户完成，不绕过登录保护；工具或运行环境不可用时如实标记未验证。
+
+## 移动端验证边界
+
+当前没有移动端运行工程，平台和技术栈尚未确定。只修改移动规范时执行文档链接、模块约定及规范站相关测试和构建，不创建空工程、伪造运行脚本或把桌面前端构建算作移动端验证。
+
+未来实际开发时，先在本节登记真实客户端的锁定安装、静态检查、测试和构建命令，再按[场景验收基线](../mobile/README.md#场景验收基线)覆盖相关行为；变更服务端时叠加已有后端及数据风险门槛。查询乱序、缓存隔离及异步命令应有与所用框架匹配的行为测试，不能只检查提示文字或按钮存在。
+
+浏览器窄屏只验证当前浏览器的布局，不证明触摸、软键盘、系统返回、前后台恢复或小程序兼容。手机浏览器使用已声明范围内的真实设备和浏览器验收；小程序在平台选定后补充宿主开发工具及真机验证。验收说明实际设备、宿主版本和已覆盖行为，不以“移动端通过”概括未覆盖的平台。
 
 ## CI 门禁
 
@@ -204,6 +260,7 @@ PostgreSQL 客户端、数据库服务或必要配置缺失时，此项记为未
 9. PostgreSQL 16 上平台及完整业务发行的 Flyway 空库迁移；
 10. 使用迁移完成后的真实权限目录执行代码权限一致性校验。
 11. 使用迁移完成后的真实功能目录校验全部页面注册的 `featureKey`，并校验菜单与入口权限属于同一功能。
+12. 独立文档入口锁定安装、内容边界测试、格式与静态构建/产物检查；不发布站点，不改变业务前端构建。
 
 CI 固定验证当前仓库的默认装配与平台隔离装配，不包含具体业务领域名称。前端默认自动发现当前目录，平台作业实际删除全部可选领域目录；后端分别使用默认 `current-domains` 与 `platform-only`，平台作业同样实际删除领域子目录。领域一致性门禁比较后端聚合声明与前端目录。新增或移除领域只需维护后端聚合声明和对应两端目录，不需要修改工作流；声明了不存在的领域仍应失败，不能静默跳过。无业务领域时两个入口都验证平台。裁剪步骤见[移除 Demo](./remove-demo.md)。
 

@@ -2,6 +2,11 @@
 INSERT INTO public.t_sys_domain VALUES (430000000000000001, '演示', 'demo', 10, true, '2026-07-27 17:59:01.999094', '2026-09-02 12:35:22.927639', NULL, 1, 1);
 INSERT INTO public.t_sys_app VALUES (430000000000000002, '采购管理', 'procurement', 'ShoppingCartOutlined', 1, '采购业务管理', 430000000000000001, true, '2026-07-27 17:59:01.999094', '2026-07-27 17:59:01.999094', '#1677ff', NULL, NULL, 0);
 INSERT INTO public.t_sys_feature VALUES (450000000000000002, 'demo/procurement/purchase-requisition', 430000000000000002, '采购申请', NULL, 20, NULL, NULL, true, 'SYSTEM', NULL, NULL, NULL, NULL, 0);
+INSERT INTO public.t_sys_feature_data_object
+    (id, feature_id, schema_name, object_name, object_type, object_role, display_name, seq)
+VALUES
+    (540100000000000001, 450000000000000002, 'public', 't_demo_purchase_requisition', 'TABLE', 'PRIMARY', '采购申请', 10),
+    (540100000000000002, 450000000000000002, 'public', 't_demo_purchase_requisition_entry', 'TABLE', 'DETAIL', '采购申请明细', 20);
 INSERT INTO public.t_sys_number_reference VALUES (461000000000000001, 'demo/procurement/purchase-requisition.number', 450000000000000002, '采购申请编号', NULL, true, '采购申请业务编号', NULL, NULL, NULL, NULL, 0);
 INSERT INTO public.t_sys_number_rule VALUES (460000000000000001, 'demo/procurement/purchase-requisition', '采购申请编号', 'PR-{bill.bizDate:yyyyMMdd}-{seq:5}', 'ORG', 'DAY', 1, true, true, '采购申请按组织、业务日期独立流水；格式可按需加入受控变量 org.number', NULL, NULL, NULL, NULL, 0, 'demo/procurement/purchase-requisition.number');
 INSERT INTO public.t_sys_number_rule_segment VALUES (461000000000000011, 'demo/procurement/purchase-requisition', 1, 'FIXED', 'PR', NULL, NULL, '-');

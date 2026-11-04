@@ -1381,6 +1381,51 @@ COMMENT ON COLUMN public.t_sys_feature.version IS '乐观锁版本号';
 
 
 --
+-- Name: t_sys_feature_data_object; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_feature_data_object (
+    id bigint NOT NULL,
+    feature_id bigint NOT NULL,
+    schema_name character varying(63) DEFAULT 'public'::character varying NOT NULL,
+    object_name character varying(63) NOT NULL,
+    object_type character varying(30) DEFAULT 'TABLE'::character varying NOT NULL,
+    object_role character varying(20) NOT NULL,
+    display_name character varying(100),
+    seq integer DEFAULT 99 NOT NULL,
+    CONSTRAINT ck_sys_feature_data_object_role CHECK (((object_role)::text = ANY ((ARRAY['PRIMARY'::character varying, 'DETAIL'::character varying, 'RELATION'::character varying, 'HISTORY'::character varying, 'LOG'::character varying])::text[]))),
+    CONSTRAINT ck_sys_feature_data_object_type CHECK (((object_type)::text = ANY ((ARRAY['TABLE'::character varying, 'PARTITIONED_TABLE'::character varying, 'VIEW'::character varying, 'MATERIALIZED_VIEW'::character varying, 'FOREIGN_TABLE'::character varying])::text[])))
+);
+
+
+COMMENT ON TABLE public.t_sys_feature_data_object IS '功能关联数据对象';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.id IS 'ID';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.feature_id IS '所属功能ID';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.schema_name IS '数据库模式名';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.object_name IS '数据对象名';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.object_type IS '对象类型';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.object_role IS '对象角色';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.display_name IS '显示名称';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.seq IS '排序';
+
+
+--
 -- Name: t_sys_file_artifact; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -17298,6 +17343,14 @@ ALTER TABLE ONLY public.t_sys_feature
 
 
 --
+-- Name: t_sys_feature_data_object t_sys_feature_data_object_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_feature_data_object
+    ADD CONSTRAINT t_sys_feature_data_object_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: t_sys_file_artifact t_sys_file_artifact_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -20346,6 +20399,14 @@ ALTER TABLE ONLY public.t_sys_feature
 
 
 --
+-- Name: t_sys_feature_data_object uk_sys_feature_data_object; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_feature_data_object
+    ADD CONSTRAINT uk_sys_feature_data_object UNIQUE (feature_id, schema_name, object_name);
+
+
+--
 -- Name: t_sys_file_artifact uk_sys_file_artifact_object_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -20732,6 +20793,13 @@ CREATE INDEX idx_sys_email_task_dispatch ON public.t_sys_email_task USING btree 
 --
 
 CREATE INDEX idx_sys_feature_app ON public.t_sys_feature USING btree (app_id);
+
+
+--
+-- Name: idx_sys_feature_data_object_feature; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_feature_data_object_feature ON public.t_sys_feature_data_object USING btree (feature_id, seq, id);
 
 
 --
@@ -38938,6 +39006,14 @@ ALTER TABLE ONLY public.t_sys_email_task
 
 ALTER TABLE ONLY public.t_sys_feature
     ADD CONSTRAINT fk_sys_feature_app FOREIGN KEY (app_id) REFERENCES public.t_sys_app(id);
+
+
+--
+-- Name: t_sys_feature_data_object fk_sys_feature_data_object_feature; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_feature_data_object
+    ADD CONSTRAINT fk_sys_feature_data_object_feature FOREIGN KEY (feature_id) REFERENCES public.t_sys_feature(id);
 
 
 --

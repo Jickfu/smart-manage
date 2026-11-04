@@ -72,7 +72,7 @@ public class MenuDetailVO {
 	@Schema(description = "修改人")
 	private Long updateUser;
 
-	@Schema(description = "父菜单信息")
+	@Schema(description = "父菜单引用")
 	private ReferenceInfo parent;
 
 	@Data

@@ -14,6 +14,10 @@ import java.util.List;
 @Mapper
 public interface JobLogMapper extends BaseMapper<JobLogEntity> {
 
+    List<sm.domain.sys.scheduler.model.vo.SchedulerDailyCountVO> selectDailyCounts(
+            @Param("start") java.time.LocalDateTime start,
+            @Param("end") java.time.LocalDateTime end);
+
     List<JobLogEntity> selectLatestByJobIds(@Param("jobIds") List<Long> jobIds);
     List<SchedulerCatalogRowVO> selectCatalog();
 }

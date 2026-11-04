@@ -7,7 +7,7 @@ import lombok.Data;
  * 领域新增默认值
  */
 @Data
-@Schema(title = "领域新增默认值")
+@Schema(description = "领域新增默认值")
 public class DomainCreateNewDataVO {
 
 	@Schema(description = "排序")

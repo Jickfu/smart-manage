@@ -101,6 +101,62 @@ INSERT INTO public.t_sys_feature VALUES (450000000000000030, 'sys/scheduler/job'
 INSERT INTO public.t_sys_feature VALUES (450000000000000024, 'sys/monitor/slow-sql', 30, '慢SQL分析', NULL, 90, NULL, NULL, true, 'SYSTEM', NULL, '2026-08-19 16:16:00.874373', NULL, NULL, 1);
 INSERT INTO public.t_sys_feature VALUES (520000000000000020, 'sys/base/openapi-catalog', 31, 'API文档', NULL, 20, NULL, '显式注册的 API 版本、协议和文档', true, 'SYSTEM', '2026-08-31 21:18:52.196357', NULL, NULL, NULL, 0);
 
+INSERT INTO public.t_sys_feature_data_object
+    (id, feature_id, schema_name, object_name, object_type, object_role, display_name, seq)
+VALUES
+    (540000000000000001, 450000000000000004, 'public', 't_sys_app', 'TABLE', 'PRIMARY', '应用', 10),
+    (540000000000000002, 450000000000000005, 'public', 't_sys_attachment_config', 'TABLE', 'PRIMARY', '附件配置', 10),
+    (540000000000000003, 450000000000000009, 'public', 't_sys_menu', 'TABLE', 'PRIMARY', '菜单', 10),
+    (540000000000000004, 450000000000000010, 'public', 't_sys_org', 'TABLE', 'PRIMARY', '组织', 10),
+    (540000000000000005, 450000000000000013, 'public', 't_sys_role', 'TABLE', 'PRIMARY', '角色', 10),
+    (540000000000000006, 450000000000000013, 'public', 't_sys_role_perms', 'TABLE', 'RELATION', '角色权限', 20),
+    (540000000000000007, 450000000000000013, 'public', 't_sys_role_data_scope', 'TABLE', 'RELATION', '角色数据范围', 30),
+    (540000000000000008, 450000000000000013, 'public', 't_sys_role_data_scope_org', 'TABLE', 'DETAIL', '数据范围组织', 40),
+    (540000000000000009, 450000000000000015, 'public', 't_sys_user', 'TABLE', 'PRIMARY', '用户', 10),
+    (540000000000000010, 450000000000000015, 'public', 't_sys_user_assignment', 'TABLE', 'DETAIL', '用户任职', 20),
+    (540000000000000011, 450000000000000015, 'public', 't_sys_user_role', 'TABLE', 'RELATION', '用户角色', 30),
+    (540000000000000012, 450000000000000017, 'public', 't_sys_login_log', 'PARTITIONED_TABLE', 'LOG', '登录日志', 10),
+    (540000000000000013, 450000000000000018, 'public', 't_sys_operate_log', 'PARTITIONED_TABLE', 'LOG', '操作日志', 10),
+    (540000000000000014, 450000000000000022, 'public', 't_sys_script', 'TABLE', 'PRIMARY', '脚本', 10),
+    (540000000000000015, 450000000000000023, 'public', 't_sys_script_log', 'PARTITIONED_TABLE', 'LOG', '脚本执行日志', 10),
+    (540000000000000016, 450000000000000026, 'public', 't_sys_sql_log', 'PARTITIONED_TABLE', 'LOG', 'SQL执行日志', 10),
+    (540000000000000017, 450000000000000100, 'public', 't_sys_feature', 'TABLE', 'PRIMARY', '功能', 10),
+    (540000000000000018, 450000000000000100, 'public', 't_sys_feature_data_object', 'TABLE', 'DETAIL', '功能数据对象', 20),
+    (540000000000000019, 460000000000000010, 'public', 't_sys_number_rule', 'TABLE', 'PRIMARY', '编号规则', 10),
+    (540000000000000020, 460000000000000010, 'public', 't_sys_number_rule_segment', 'TABLE', 'DETAIL', '编号格式段', 20),
+    (540000000000000021, 460000000000000010, 'public', 't_sys_number_reference', 'TABLE', 'RELATION', '编号引用', 30),
+    (540000000000000022, 460000000000000010, 'public', 't_sys_number_counter', 'TABLE', 'RELATION', '编号计数器', 40),
+    (540000000000000023, 450000000000000006, 'public', 't_sys_basic_data_category', 'TABLE', 'PRIMARY', '基础资料分类', 10),
+    (540000000000000024, 450000000000000006, 'public', 't_sys_basic_data_item', 'TABLE', 'DETAIL', '基础资料项目', 20),
+    (540000000000000025, 450000000000000008, 'public', 't_sys_file_config', 'TABLE', 'PRIMARY', '存储配置', 10),
+    (540000000000000026, 450000000000000012, 'public', 't_sys_permission', 'TABLE', 'PRIMARY', '权限定义', 10),
+    (540000000000000027, 450000000000000029, 'public', 't_sys_job_log', 'PARTITIONED_TABLE', 'LOG', '任务执行日志', 10),
+    (540000000000000028, 450000000000000007, 'public', 't_sys_domain', 'TABLE', 'PRIMARY', '领域', 10),
+    (540000000000000029, 480000000000000100, 'public', 't_sys_weak_password', 'TABLE', 'PRIMARY', '弱口令词库', 10),
+    (540000000000000030, 450000000000000011, 'public', 't_sys_param', 'TABLE', 'PRIMARY', '系统参数', 10),
+    (540000000000000031, 470000000000001010, 'public', 't_sys_email_account', 'TABLE', 'PRIMARY', '发信账号', 10),
+    (540000000000000032, 470000000000001020, 'public', 't_sys_email_task', 'TABLE', 'PRIMARY', '邮件任务', 10),
+    (540000000000000033, 470000000000001020, 'public', 't_sys_email_attempt', 'TABLE', 'LOG', '邮件投递尝试', 20),
+    (540000000000000034, 470000000000001030, 'public', 't_sys_email_task', 'TABLE', 'PRIMARY', '邮件任务', 10),
+    (540000000000000035, 470000000000001030, 'public', 't_sys_email_attempt', 'TABLE', 'LOG', '邮件投递尝试', 20),
+    (540000000000000036, 450000000000000021, 'public', 't_sys_monitor_host', 'TABLE', 'PRIMARY', '监控主机', 10),
+    (540000000000000037, 450000000000000021, 'public', 't_sys_monitor_host_history', 'TABLE', 'HISTORY', '主机历史', 20),
+    (540000000000000038, 450000000000000021, 'public', 't_sys_monitor_instance', 'TABLE', 'DETAIL', '应用实例', 30),
+    (540000000000000039, 450000000000000021, 'public', 't_sys_monitor_instance_history', 'TABLE', 'HISTORY', '实例历史', 40),
+    (540000000000000040, 450000000000000041, 'public', 't_sys_monitor_alert_rule', 'TABLE', 'PRIMARY', '告警规则', 10),
+    (540000000000000041, 450000000000000041, 'public', 't_sys_monitor_alert_rule_recipient', 'TABLE', 'DETAIL', '告警接收人', 20),
+    (540000000000000042, 450000000000000041, 'public', 't_sys_monitor_alert_incident', 'TABLE', 'LOG', '告警事件', 30),
+    (540000000000000043, 450000000000000041, 'public', 't_sys_monitor_alert_notification', 'TABLE', 'LOG', '告警通知', 40),
+    (540000000000000044, 510000000000000010, 'public', 't_sys_inbox_message', 'TABLE', 'PRIMARY', '站内消息', 10),
+    (540000000000000045, 510000000000000010, 'public', 't_sys_inbox_recipient', 'PARTITIONED_TABLE', 'DETAIL', '消息接收人', 20),
+    (540000000000000046, 520000000000000010, 'public', 't_sys_openapi_application', 'TABLE', 'PRIMARY', '第三方应用', 10),
+    (540000000000000047, 520000000000000010, 'public', 't_sys_openapi_credential', 'TABLE', 'DETAIL', '应用凭据', 20),
+    (540000000000000048, 520000000000000010, 'public', 't_sys_openapi_grant', 'TABLE', 'RELATION', 'API授权', 30),
+    (540000000000000049, 520000000000000030, 'public', 't_sys_openapi_invocation_log', 'PARTITIONED_TABLE', 'LOG', 'OpenAPI调用日志', 10),
+    (540000000000000050, 450000000000000014, 'public', 't_sys_ui_config', 'TABLE', 'PRIMARY', '界面配置', 10),
+    (540000000000000051, 450000000000000030, 'public', 't_sys_job', 'TABLE', 'PRIMARY', '定时任务', 10),
+    (540000000000000052, 520000000000000020, 'public', 't_sys_openapi_release', 'TABLE', 'PRIMARY', 'API发布', 10);
+
 
 --
 -- Data for Name: t_sys_file_config; Type: TABLE DATA; Schema: public; Owner: -
@@ -224,6 +280,7 @@ INSERT INTO public.t_sys_permission VALUES (420000000000001008, '菜单管理-�
 INSERT INTO public.t_sys_permission VALUES (420000000000001009, '基础数据管理-启用', 'sys:base:basic-data:enable', '2026-07-27 17:59:01.958211', NULL, NULL, NULL, 0, 450000000000000006, NULL);
 INSERT INTO public.t_sys_permission VALUES (50071, '应用缓存-清理', 'sys:monitor:cache:clear', '2026-05-17 20:09:21.311371', '2026-08-03 21:22:35.436359', NULL, NULL, 1, 450000000000000020, NULL);
 INSERT INTO public.t_sys_permission VALUES (413501707400000001, 'SQL控制台-执行', 'sys:monitor:sql:execute', '2026-05-18 00:27:43.408601', '2026-08-04 22:10:07.527334', NULL, NULL, 1, 450000000000000025, NULL);
+INSERT INTO public.t_sys_permission VALUES (540000000000000101, 'SQL控制台-数据库对象查询', 'sys:monitor:sql:catalog', NULL, NULL, NULL, NULL, 0, 450000000000000025, NULL);
 INSERT INTO public.t_sys_permission VALUES (413501707400000003, 'SQL执行历史-列表', 'sys:monitor:sql:log:listPage', '2026-05-18 00:43:01.026314', '2026-08-04 22:10:07.527334', NULL, NULL, 1, 450000000000000026, NULL);
 INSERT INTO public.t_sys_permission VALUES (419000000000000001, '脚本控制台-执行', 'sys:monitor:script:execute', NULL, '2026-08-05 00:25:49.513377', NULL, NULL, 1, 450000000000000022, NULL);
 INSERT INTO public.t_sys_permission VALUES (419000000000000002, '脚本管理-列表', 'sys:monitor:script:listPage', NULL, '2026-08-05 00:25:49.513377', NULL, NULL, 1, 450000000000000022, NULL);
@@ -267,6 +324,7 @@ INSERT INTO public.t_sys_permission VALUES (450000000000000005, '组织管理-�
 INSERT INTO public.t_sys_permission VALUES (450000000000000006, '组织管理-封存', 'sys:base:org:archive', NULL, NULL, NULL, NULL, 0, 450000000000000010, NULL);
 INSERT INTO public.t_sys_permission VALUES (450000000000000007, '组织管理-解封', 'sys:base:org:unarchive', NULL, NULL, NULL, NULL, 0, 450000000000000010, NULL);
 INSERT INTO public.t_sys_permission VALUES (450000000000000101, '功能管理-查询', 'sys:base:feature:listPage', NULL, NULL, NULL, NULL, 0, 450000000000000100, NULL);
+INSERT INTO public.t_sys_permission VALUES (540000000000000100, '功能管理-数据对象查询', 'sys:base:feature:data-object:list', NULL, NULL, NULL, NULL, 0, 450000000000000100, NULL);
 INSERT INTO public.t_sys_permission VALUES (450000000000000102, '功能管理-详情', 'sys:base:feature:detail', NULL, NULL, NULL, NULL, 0, 450000000000000100, NULL);
 INSERT INTO public.t_sys_permission VALUES (450000000000000103, '功能管理-保存', 'sys:base:feature:save', NULL, NULL, NULL, NULL, 0, 450000000000000100, NULL);
 INSERT INTO public.t_sys_permission VALUES (450000000000000104, '功能管理-选择', 'sys:base:feature:select', NULL, NULL, NULL, NULL, 0, 450000000000000100, NULL);

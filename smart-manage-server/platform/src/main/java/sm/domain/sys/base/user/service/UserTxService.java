@@ -26,7 +26,6 @@ import sm.domain.sys.base.user.model.Gender;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.helper.Argon2Helper;
-import sm.system.util.PasswordGeneratorUtil;
 
 import java.util.Objects;
 import java.util.List;
@@ -93,8 +92,7 @@ class UserTxService {
         if (UserConstant.SUPER_ADMIN.equals(entity.getUsername()) != administratorTarget) {
             throw new BizException(ResultEnum.PERMISSION_ERROR, "目标用户不属于此凭据重置入口");
         }
-        String password = PasswordGeneratorUtil.generate(20);
-        passwordPolicyService.validate(password, entity.getUsername());
+        String password = passwordPolicyService.generate(entity.getUsername());
         entity.setPassword(Argon2Helper.encode(password));
         entity.setPasswordReset(true);
         if (mapper.updateById(entity) == 0) {

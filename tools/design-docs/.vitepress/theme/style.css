@@ -1,0 +1,47 @@
+:root {
+  --vp-c-brand-1: #0e5fd8;
+  --vp-c-brand-2: #276ff5;
+  --vp-c-brand-3: #0041b0;
+  --vp-font-family-base:
+    "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+}
+
+.document-status {
+  margin-bottom: 28px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--vp-c-brand-1);
+  border-radius: 2px;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-text-1);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.document-status p {
+  margin: 4px 0 0;
+  color: var(--vp-c-text-2);
+}
+
+.document-status-review {
+  border-color: #b45309;
+  background: #fff7ed;
+}
+
+.document-status-reference {
+  border-color: #64748b;
+  background: #f1f5f9;
+}
+
+.repository-reference {
+  border-bottom: 1px dotted var(--vp-c-divider);
+}
+
+.repository-reference-label {
+  color: var(--vp-c-text-2);
+  font-size: 0.85em;
+}
+
+.vp-doc img {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 4px;
+}

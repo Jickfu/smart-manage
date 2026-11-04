@@ -21,7 +21,7 @@ Smart Manage 是可二次开发的企业中后台底座。贡献范围与阶段�
 
 ## 开发与验证
 
-保持单一主题和最小充分范围，不夹带无关重构。按[文档导航](./docs/README.md#按任务阅读)读取涉及的架构和领域规则；新增或显著扩展模块执行[模块开发指南](./docs/development/module-development-guide.md)，普通页面调整按[前端页面指南](./docs/development/frontend-page-guide.md)。
+保持单一主题和最小充分范围，不夹带无关重构。按[文档导航](./docs/README.md#按任务阅读)读取涉及的架构和领域规则；新增或显著扩展模块执行[模块开发指南](./docs/development/module-development-guide.md)，桌面页面调整按[前端设计规范](./docs/design/README.md)和[前端页面指南](./docs/development/frontend-page-guide.md)，手机浏览器与小程序按[移动端规范](./docs/mobile/README.md)。
 
 提交前按[质量验证](./docs/development/verification.md#按改动类型选择验证)执行对应检查，并在提交说明中如实列出结果和未验证项。纯文档修改无需代码构建；快速启动命令见 [README](./README.md#快速开始)。
 

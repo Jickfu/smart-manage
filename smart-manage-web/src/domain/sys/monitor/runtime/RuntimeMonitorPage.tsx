@@ -1,5 +1,10 @@
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
-import { RequestErrorDescription } from '@/domain/common/component/RequestErrorState';
+import {
+  RequestErrorDescription,
+  RequestErrorState,
+} from '@/domain/common/component/RequestErrorState';
+import AppModal from '@/domain/common/component/AppModal';
+import ListTableShell from '@/domain/common/page/list/ListTableShell';
 import { isErrorFeedbackSuppressed } from '@/api/errorPresentation';
 import { lazy, Suspense, useMemo, useState } from 'react';
 import {
@@ -16,7 +21,7 @@ import {
   Typography,
 } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { EChartsCoreOption } from 'echarts/core';
+import { createHistoryCharts } from './historyCharts';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { runtimeMonitorApi } from './api';
@@ -25,7 +30,6 @@ import type { HistoryPoint, HostSnapshot, InstanceSnapshot, MonitorHost } from '
 import {
   monitorBytes as bytes,
   monitorHealthPresentation,
-  monitorHistoryValues,
   monitorPercent as percent,
   monitorRatio as ratio,
 } from './formatters';
@@ -47,6 +51,7 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
   const [instanceId, setInstanceId] = useState<string>();
   const [range, setRange] = useState('1h');
   const [scope, setScope] = useState<'HOST' | 'INSTANCE'>('INSTANCE');
+  const [dataChartTitle, setDataChartTitle] = useState<string>();
   const [selectedLifecycleInstanceId, setSelectedLifecycleInstanceId] = useState<string>();
   const queryClient = useQueryClient();
   const confirmOperation = useOperationConfirm();
@@ -100,12 +105,18 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
     },
     onError: (error) => feedback.fromError(error, '实例退役失败'),
   });
-  const charts = useMemo(() => historyOptions(scope, history.data ?? []), [history.data, scope]);
+  const charts = useMemo(
+    () => createHistoryCharts(scope, history.data ?? [], range),
+    [history.data, scope, range],
+  );
+  const dataChart = charts.find((chart) => chart.title === dataChartTitle);
+  const pageError = getBlockingQueryError(topology) ?? getBlockingQueryError(instances);
+  const historyError = getBlockingQueryError(history);
   return (
     <EditPageShell
       title="运行监控"
       loading={topology.isLoading || instances.isLoading}
-      error={getBlockingQueryError(topology) ?? getBlockingQueryError(instances)}
+      error={pageError}
       onRetry={() => {
         void (topology.isEnabled && topology.refetch());
         void (instances.isEnabled && instances.refetch());
@@ -122,7 +133,10 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
               label: `${item.instanceId} · ${item.hostId}（${item.lifecycle === 'RETIRED' ? '已退役' : item.online ? '在线' : '离线'}${item.current ? '，当前' : ''}）`,
               disabled: false,
             }))}
-            onChange={setInstanceId}
+            onChange={(value) => {
+              setDataChartTitle(undefined);
+              setInstanceId(value);
+            }}
           />
           <Segmented
             value={scope}
@@ -130,9 +144,19 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
               { label: '实例趋势', value: 'INSTANCE' },
               { label: '主机趋势', value: 'HOST' },
             ]}
-            onChange={(value) => setScope(value as 'HOST' | 'INSTANCE')}
+            onChange={(value) => {
+              setDataChartTitle(undefined);
+              setScope(value as 'HOST' | 'INSTANCE');
+            }}
           />
-          <Select value={range} options={ranges} onChange={setRange} />
+          <Select
+            value={range}
+            options={ranges}
+            onChange={(value) => {
+              setDataChartTitle(undefined);
+              setRange(value);
+            }}
+          />
           <Button
             type="primary"
             loading={instanceSnapshot.isFetching || hostSnapshot.isFetching}
@@ -207,14 +231,78 @@ export default function RuntimeMonitorPage({ active }: PageComponentProps) {
             }
           />
         )}
-        {charts.map((chart) => (
-          <Card key={chart.title} title={chart.title} loading={history.isLoading}>
-            <Suspense fallback={<div>正在加载图表</div>}>
-              <SmChart option={chart.option} ariaLabel={chart.title} />
-            </Suspense>
-          </Card>
-        ))}
+        {!historyError &&
+          charts.map((chart) => (
+            <Card
+              key={chart.title}
+              title={chart.title}
+              loading={history.isLoading}
+              extra={
+                <Button
+                  type="link"
+                  disabled={history.data === undefined}
+                  onClick={() => setDataChartTitle(chart.title)}
+                >
+                  查看数据
+                </Button>
+              }
+            >
+              <Suspense fallback={<div>正在加载图表</div>}>
+                <SmChart option={chart.option} ariaLabel={chart.title} />
+              </Suspense>
+            </Card>
+          ))}
         {hostSnapshot.data?.snapshot && <FilesystemCard snapshot={hostSnapshot.data.snapshot} />}
+        <AppModal
+          title={`${dataChartTitle ?? '历史趋势'}数据`}
+          open={Boolean(dataChart) && !pageError}
+          width={1000}
+          bodyMode="fixed"
+          classNames={{ body: 'sm-runtime-history-data-body' }}
+          onCancel={() => setDataChartTitle(undefined)}
+          footer={<Button onClick={() => setDataChartTitle(undefined)}>关闭</Button>}
+        >
+          <p>
+            {scope === 'HOST' ? '主机' : '实例'}：{scopeId}；查询范围：
+            {ranges.find((item) => item.value === range)?.label}。
+          </p>
+          <p>
+            显示当前范围全部聚合统计点，图例显隐不改变本表口径。“—”表示缺失，0
+            表示实际零值；比例保留接口原值，图表乘以 100 显示百分比，其余单位见列名。
+          </p>
+          <p>
+            时间为统计桶起点；1 小时／6 小时／24 小时／7 天分别按 1／5／10／30 分钟聚合。
+            最高文件系统使用率及 P95/P99 取桶内最大值，其余指标取有效值平均；P95/P99
+            不代表整个时间段重新计算的百分位。
+          </p>
+          {historyError ? (
+            <RequestErrorState error={historyError} onRetry={() => void history.refetch()} />
+          ) : (
+            <>
+              {history.error && !isErrorFeedbackSuppressed(history.error) && (
+                <p>刷新失败，当前展示上次成功加载的数据。</p>
+              )}
+              <div className="sm-runtime-history-data-table">
+                <ListTableShell
+                  total={history.data?.length ?? 0}
+                  showPagination={false}
+                  table={
+                    <Table<HistoryPoint>
+                      className="sm-list-table sm-table-fill"
+                      size="small"
+                      rowKey="sampleTime"
+                      pagination={false}
+                      columns={dataChart?.columns}
+                      dataSource={history.data ?? []}
+                      // 仅启用表头分离，实际高度及底部横向滚动由既有列表 flex 布局控制。
+                      scroll={{ x: 'max-content', y: 1 }}
+                    />
+                  }
+                />
+              </div>
+            </>
+          )}
+        </AppModal>
       </div>
     </EditPageShell>
   );
@@ -436,91 +524,4 @@ function FilesystemCard({ snapshot }: { snapshot: HostSnapshot }) {
       />
     </Card>
   );
-}
-function historyOptions(
-  scope: 'HOST' | 'INSTANCE',
-  points: HistoryPoint[],
-): Array<{ title: string; option: EChartsCoreOption }> {
-  const groups: Array<{
-    title: string;
-    definitions: Array<[string, keyof HistoryPoint, number?]>;
-  }> =
-    scope === 'HOST'
-      ? [
-          {
-            title: '主机利用率',
-            definitions: [
-              ['CPU %', 'cpuUsage', 100],
-              ['内存 %', 'memoryUsage', 100],
-              ['最高文件系统 %', 'filesystemUsage', 100],
-            ],
-          },
-          {
-            title: '磁盘 IO',
-            definitions: [
-              ['读 B/s', 'diskReadBytesPerSecond'],
-              ['写 B/s', 'diskWriteBytesPerSecond'],
-            ],
-          },
-          {
-            title: '网络 IO',
-            definitions: [
-              ['接收 B/s', 'networkReceiveBytesPerSecond'],
-              ['发送 B/s', 'networkTransmitBytesPerSecond'],
-            ],
-          },
-        ]
-      : [
-          {
-            title: 'JVM 利用率',
-            definitions: [
-              ['进程 CPU %', 'processCpuUsage', 100],
-              ['Heap %', 'heapUsage', 100],
-              ['连接池 %', 'dbPoolUsage', 100],
-            ],
-          },
-          {
-            title: 'HTTP 流量',
-            definitions: [
-              ['QPS', 'requestRate'],
-              ['5xx req/s', 'serverErrorRate'],
-            ],
-          },
-          {
-            title: 'HTTP 延迟',
-            definitions: [
-              ['P95 ms', 'p95Ms'],
-              ['P99 ms', 'p99Ms'],
-            ],
-          },
-          {
-            title: '线程与连接池等待',
-            definitions: [
-              ['线程数', 'threadCount'],
-              ['阻塞线程', 'blockedThreadCount'],
-              ['连接池等待', 'dbWaiting'],
-            ],
-          },
-        ];
-  return groups.map(({ title, definitions }) => ({
-    title,
-    option: {
-      tooltip: { trigger: 'axis' },
-      legend: { data: definitions.map((item) => item[0]), top: 0 },
-      grid: { left: 56, right: 24, top: 48, bottom: 32 },
-      xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: points.map((item) => item.sampleTime.replace('T', ' ').slice(0, 16)),
-      },
-      yAxis: { type: 'value' },
-      series: definitions.map(([name, key, multiplier]) => ({
-        name,
-        type: 'line',
-        smooth: true,
-        showSymbol: false,
-        data: monitorHistoryValues(points, key, multiplier),
-      })),
-    },
-  }));
 }

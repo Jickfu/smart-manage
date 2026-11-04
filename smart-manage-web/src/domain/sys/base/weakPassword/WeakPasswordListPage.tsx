@@ -105,7 +105,7 @@ export default function WeakPasswordListPage(props: PageComponentProps) {
               void confirmOperation({
                 type: 'delete',
                 title: '确认删除弱口令？',
-                description: '删除后，此词条将不再参与弱口令拦截。',
+                description: `词条：${JSON.stringify(record.word)}。\n删除后，此词条将不再参与弱口令拦截。`,
                 confirmText: '删除',
                 onConfirm: () =>
                   deleteMutation.mutateAsync({ id: record.id, version: record.version }),

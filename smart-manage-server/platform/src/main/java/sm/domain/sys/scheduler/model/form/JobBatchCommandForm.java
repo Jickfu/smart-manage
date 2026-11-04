@@ -8,11 +8,14 @@ import lombok.Data;
 
 import java.util.List;
 
-/** 定时任务批量状态命令。 */
+/**
+ * 定时任务批量状态命令。
+ */
 @Data
 @Schema(description = "定时任务批量命令表单")
 public class JobBatchCommandForm {
 
+    @Schema(description = "待执行命令的任务 ID 和版本列表")
     @Valid
     @NotEmpty(message = "任务列表不能为空")
     @Size(max = 100, message = "单次最多操作100个任务")

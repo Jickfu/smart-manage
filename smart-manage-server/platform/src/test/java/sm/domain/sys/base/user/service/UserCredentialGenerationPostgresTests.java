@@ -57,6 +57,7 @@ class UserCredentialGenerationPostgresTests {
         configuration.setMapUnderscoreToCamelCase(true);
         configuration.addMapper(UserMapper.class);
         configuration.addMapper(WeakPasswordMapper.class);
+        configuration.addMapper(sm.domain.sys.base.passwordconfig.mapper.PasswordConfigMapper.class);
         var interceptor = new MybatisPlusInterceptor();
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         var factory = new MybatisSqlSessionFactoryBean();
@@ -68,7 +69,7 @@ class UserCredentialGenerationPostgresTests {
         mapper = new SqlSessionTemplate(factory.getObject()).getMapper(UserMapper.class);
         var target = new UserTxService(mapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
                 mock(OrgReferenceReader.class), mock(CurrentUserContext.class), mock(UserWriter.class),
-                new PasswordPolicyService(new SqlSessionTemplate(factory.getObject()).getMapper(WeakPasswordMapper.class)),
+                new PasswordPolicyService(new SqlSessionTemplate(factory.getObject()).getMapper(WeakPasswordMapper.class), new sm.domain.sys.base.passwordconfig.service.PasswordConfigService(new SqlSessionTemplate(factory.getObject()).getMapper(sm.domain.sys.base.passwordconfig.mapper.PasswordConfigMapper.class), null, org.mapstruct.factory.Mappers.getMapper(sm.domain.sys.base.passwordconfig.converter.PasswordConfigConverter.class))),
                 mock(AttachmentGateway.class));
         var proxy = new ProxyFactory(target);
         proxy.setProxyTargetClass(true);

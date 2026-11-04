@@ -8,7 +8,7 @@
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-ohabW4S1Hvd+BN+bS3SyM/iNfnRAKZ/AmTzXePrQ0JE='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'sha256-94yxlxSgux3AL73uDkda0ZIumG2QLe7PQPwB/7qIink='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
     />
     <title>Smart Manage - 登录</title>
     <script src="/js/sm2.js"></script>
@@ -143,7 +143,7 @@
                     </svg>
                   </button>
                   <span id="newPasswordHelp" class="sm-field-help-content" role="tooltip"
-                    >15～64个字符，可使用空格和长口令；不能使用弱口令或账号、系统名称的简单变体。</span
+                    >正在加载密码策略…</span
                   >
                 </span>
                 <button
@@ -276,7 +276,7 @@
                     </svg>
                   </button>
                   <span id="recoveryNewPasswordHelp" class="sm-field-help-content" role="tooltip"
-                    >15～64个字符，可使用空格和长口令；不能使用弱口令或账号、系统名称的简单变体。</span
+                    >正在加载密码策略…</span
                   >
                 </span>
               </div>
@@ -843,6 +843,9 @@
         passwordChangeFormEl.hidden = false;
         passwordEl.value = '';
         hideError();
+        loadPasswordPolicy().catch(function (error) {
+          showError(error.message);
+        });
         newPasswordEl.focus();
       }
 
@@ -900,6 +903,9 @@
             if (result.code !== 0) throw new Error(result.msg || '验证码发送失败');
             emailRecoveryFormEl.hidden = true;
             emailResetFormEl.hidden = false;
+            loadPasswordPolicy().catch(function (error) {
+              showError(error.message);
+            });
             recoveryEmailHintEl.textContent =
               '如果账号存在且已绑定该邮箱，6位验证码已发送到 ' +
               recoveryEmail +
@@ -916,10 +922,40 @@
       }
 
       // 按 Unicode 码点计数，密码中的空格保持原样；弱口令由后端统一拦截。
-      function getPasswordPolicyError(password) {
+      async function loadPasswordPolicy() {
+        var response = await fetch(API_BASE + '/sys/base/login/password/policy', {
+          cache: 'no-store',
+        });
+        if (!response.ok) throw new Error('密码策略加载失败，请重试');
+        var result = await response.json();
+        var policy = result.data;
+        if (
+          result.code !== 0 ||
+          !policy ||
+          !Number.isInteger(policy.minLength) ||
+          policy.minLength < 4 ||
+          policy.minLength > 64 ||
+          policy.maxLength !== 64 ||
+          typeof policy.complexityEnabled !== 'boolean'
+        )
+          throw new Error('密码策略加载失败，请重试');
+        var hint =
+          policy.minLength +
+          '～64个字符' +
+          (policy.complexityEnabled
+            ? '，必须包含大写字母、小写字母、数字和特殊字符'
+            : '，允许空格和长口令') +
+          '；不能使用弱口令或账号、系统名称的简单变体。';
+        document.getElementById('newPasswordHelp').textContent = hint;
+        document.getElementById('recoveryNewPasswordHelp').textContent = hint;
+        return policy;
+      }
+
+      function getPasswordPolicyError(password, policy) {
         if (!password || !password.trim()) return '密码不能为空或全为空白';
         var length = Array.from(password).length;
-        if (length < 15 || length > 64) return '密码须为15～64个字符';
+        if (length < policy.minLength || length > policy.maxLength)
+          return '密码须为' + policy.minLength + '～64个字符';
         if (
           Array.from(password).some(function (character) {
             var codePoint = character.codePointAt(0);
@@ -931,10 +967,24 @@
           })
         )
           return '密码不能包含控制字符或无效字符';
+        if (
+          policy.complexityEnabled &&
+          (!/[A-Z]/.test(password) ||
+            !/[a-z]/.test(password) ||
+            !/[0-9]/.test(password) ||
+            !/[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]/.test(password))
+        )
+          return '密码必须包含大写字母、小写字母、数字和特殊字符';
         return undefined;
       }
 
+      function setEmailPasswordResetLoading(loading) {
+        resetPasswordByEmailBtnEl.disabled = loading;
+        resetPasswordByEmailBtnEl.textContent = loading ? '重置中...' : '重置密码';
+      }
+
       async function resetPasswordByEmail() {
+        if (resetPasswordByEmailBtnEl.disabled) return;
         var code = recoveryCodeEl.value.trim();
         var newPassword = recoveryNewPasswordEl.value;
         var confirmPassword = recoveryConfirmPasswordEl.value;
@@ -943,26 +993,35 @@
           recoveryCodeEl.focus();
           return;
         }
-        var policyError = getPasswordPolicyError(newPassword);
+        // 读取规则本身也属于提交过程，必须在第一次 await 前锁定按钮。
+        setEmailPasswordResetLoading(true);
+        var policy;
+        try {
+          policy = await loadPasswordPolicy();
+        } catch (error) {
+          showError(error.message);
+          setEmailPasswordResetLoading(false);
+          return;
+        }
+        var policyError = getPasswordPolicyError(newPassword, policy);
         if (policyError) {
           showError(policyError);
+          setEmailPasswordResetLoading(false);
           recoveryNewPasswordEl.focus();
           return;
         }
         if (newPassword !== confirmPassword) {
           showError('两次输入的密码不一致');
+          setEmailPasswordResetLoading(false);
           recoveryConfirmPasswordEl.focus();
           return;
         }
-        resetPasswordByEmailBtnEl.disabled = true;
-        resetPasswordByEmailBtnEl.textContent = '重置中...';
         var encryptedNewPassword;
         try {
           encryptedNewPassword = await encryptPassword(newPassword);
         } catch (error) {
           showError(error.message);
-          resetPasswordByEmailBtnEl.disabled = false;
-          resetPasswordByEmailBtnEl.textContent = '重置密码';
+          setEmailPasswordResetLoading(false);
           return;
         }
         fetch(API_BASE + '/sys/base/login/password/email/reset', {
@@ -988,8 +1047,7 @@
             showError(error.message || '网络异常，密码重置失败');
           })
           .finally(function () {
-            resetPasswordByEmailBtnEl.disabled = false;
-            resetPasswordByEmailBtnEl.textContent = '重置密码';
+            setEmailPasswordResetLoading(false);
           });
       }
 
@@ -1000,26 +1058,39 @@
       }
 
       async function changePassword() {
+        if (changePasswordBtnEl.disabled) return;
+        // 防止规则加载期间重复消费一次性改密票据。
+        setPasswordChangeLoading(true);
         var newPassword = newPasswordEl.value;
         var confirmPassword = confirmPasswordEl.value;
-        var policyError = getPasswordPolicyError(newPassword);
+        var policy;
+        try {
+          policy = await loadPasswordPolicy();
+        } catch (error) {
+          showError(error.message);
+          setPasswordChangeLoading(false);
+          return;
+        }
+        var policyError = getPasswordPolicyError(newPassword, policy);
         if (policyError) {
           showError(policyError);
+          setPasswordChangeLoading(false);
           newPasswordEl.focus();
           return;
         }
         if (newPassword !== confirmPassword) {
           showError('两次输入的密码不一致');
+          setPasswordChangeLoading(false);
           confirmPasswordEl.focus();
           return;
         }
         if (!passwordChangeTicket) {
+          setPasswordChangeLoading(false);
           showError('改密凭证已失效，请返回登录后重试');
           return;
         }
 
         hideError();
-        setPasswordChangeLoading(true);
         var encryptedNewPassword;
         try {
           encryptedNewPassword = await encryptPassword(newPassword);

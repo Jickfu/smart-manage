@@ -15,7 +15,7 @@ export interface SqlEditorRef {
   getExecutableSql: () => string;
 }
 
-/** 有选区时返回选区 SQL，否则返回完整文档。 */
+/** 只返回明确选中的 SQL，编辑器未就绪时拒绝执行。 */
 function getExecutableSql(view: EditorView | null): string {
   return view ? getExecutableSqlFromState(view.state) : '';
 }

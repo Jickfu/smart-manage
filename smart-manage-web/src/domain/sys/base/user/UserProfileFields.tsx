@@ -1,4 +1,4 @@
-import { PASSWORD_POLICY_HINT, passwordPolicyRule } from '@/security/passwordPolicy';
+import { usePasswordPolicy } from '@/security/usePasswordPolicy';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { Button, DatePicker, Form, Input, Select, Upload } from 'antd';
 import type { UploadProps } from 'antd';
@@ -19,6 +19,7 @@ export function UserProfileFields({
   isAddNew,
   canReadSensitive,
 }: UserProfileFieldsProps) {
+  const { hint: passwordPolicyHint, rule: passwordPolicyRule } = usePasswordPolicy(isAddNew);
   const feedback = useOperationFeedback();
   const form = Form.useFormInstance();
   const name = Form.useWatch('name', form) as string | undefined;
@@ -172,7 +173,7 @@ export function UserProfileFields({
                   name="password"
                   label="初始密码"
                   rules={[passwordPolicyRule]}
-                  tooltip={PASSWORD_POLICY_HINT}
+                  tooltip={passwordPolicyHint}
                 >
                   <Input.Password
                     variant="underlined"

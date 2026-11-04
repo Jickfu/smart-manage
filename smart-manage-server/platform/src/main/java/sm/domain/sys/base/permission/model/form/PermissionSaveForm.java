@@ -9,9 +9,9 @@ import lombok.Data;
  * @author Chekfu
  */
 @Data
-@Schema(title = "权限保存")
+@Schema(description = "权限保存")
 public class PermissionSaveForm {
-	@Schema(description = "id，为空则新增")
+	@Schema(description = "ID")
 	private Long id;
 
 	@Schema(description = "乐观锁版本号，修改时必传")

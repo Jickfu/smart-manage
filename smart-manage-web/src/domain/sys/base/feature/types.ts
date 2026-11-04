@@ -25,6 +25,24 @@ export interface FeatureVO {
   source: 'SYSTEM' | 'PLUGIN' | 'EXTERNAL';
 }
 
+export type FeatureDataObjectType =
+  | 'TABLE'
+  | 'PARTITIONED_TABLE'
+  | 'VIEW'
+  | 'MATERIALIZED_VIEW'
+  | 'FOREIGN_TABLE';
+export type FeatureDataObjectRole = 'PRIMARY' | 'DETAIL' | 'RELATION' | 'HISTORY' | 'LOG';
+
+export interface FeatureDataObject {
+  id: string;
+  schemaName: string;
+  objectName: string;
+  objectType: FeatureDataObjectType;
+  objectRole: FeatureDataObjectRole;
+  displayName?: string;
+  seq: number;
+}
+
 export interface FeatureSaveForm {
   id: string;
   version: number;

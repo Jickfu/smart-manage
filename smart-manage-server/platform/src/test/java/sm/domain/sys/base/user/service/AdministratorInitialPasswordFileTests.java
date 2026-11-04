@@ -38,7 +38,7 @@ class AdministratorInitialPasswordFileTests {
         AdministratorInitialPasswordFile passwordFile =
                 new AdministratorInitialPasswordFile(temporaryDirectory);
 
-        AdministratorInitialPasswordFile.PreparedPassword preparedPassword = passwordFile.prepare();
+        AdministratorInitialPasswordFile.PreparedPassword preparedPassword = passwordFile.prepare(20);
 
         assertEquals(temporaryDirectory.resolve("administrator-initial-password.txt"),
                 preparedPassword.path());
@@ -53,7 +53,7 @@ class AdministratorInitialPasswordFileTests {
         AdministratorInitialPasswordFile passwordFile =
                 new AdministratorInitialPasswordFile(temporaryDirectory);
 
-        AdministratorInitialPasswordFile.PreparedPassword preparedPassword = passwordFile.prepare();
+        AdministratorInitialPasswordFile.PreparedPassword preparedPassword = passwordFile.prepare(20);
 
         assertEquals("Existing-Password-729!", preparedPassword.password());
         assertEquals("Existing-Password-729!", Files.readString(path).strip());
@@ -63,7 +63,7 @@ class AdministratorInitialPasswordFileTests {
     void losingInstanceOnlyDeletesItsOwnInvalidPasswordFile() throws Exception {
         AdministratorInitialPasswordFile passwordFile =
                 new AdministratorInitialPasswordFile(temporaryDirectory);
-        AdministratorInitialPasswordFile.PreparedPassword preparedPassword = passwordFile.prepare();
+        AdministratorInitialPasswordFile.PreparedPassword preparedPassword = passwordFile.prepare(20);
         Path path = preparedPassword.path();
 
         Files.writeString(path, "Other-Password-826!\n");

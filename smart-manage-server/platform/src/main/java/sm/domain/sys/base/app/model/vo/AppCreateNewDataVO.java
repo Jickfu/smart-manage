@@ -7,7 +7,7 @@ import lombok.Data;
  * 应用新增默认值
  */
 @Data
-@Schema(title = "应用新增默认值")
+@Schema(description = "应用新增默认值")
 public class AppCreateNewDataVO {
 
 	@Schema(description = "图标")

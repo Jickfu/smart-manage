@@ -1,3 +1,4 @@
+import { formatOperationTargets } from '@/domain/common/component/formatOperationTargets';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useCallback, useMemo, useState } from 'react';
 import { Button } from 'antd';
@@ -175,13 +176,18 @@ const PermissionListPage = (props: PageComponentProps) => {
         onAddNew={() => openEdit(null)}
         onDelete={() => {
           if (selectedRowKeys.length === 0) return;
+          const commandIds = selectedRowKeys.map(String);
+          const targets = commandIds.map((id) => {
+            const record = records.find((item) => item.id === id);
+            return record ? `${record.number} — ${record.name}` : `ID ${id}`;
+          });
           void confirmOperation({
             type: 'delete',
             title: '确认删除',
-            description: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
+            description: `将删除以下权限，是否继续？\n${formatOperationTargets(targets)}`,
             confirmText: '删除',
             cancelText: '取消',
-            onConfirm: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
+            onConfirm: () => deleteMutation.mutateAsync(commandIds),
           });
         }}
         onRefresh={async () => {

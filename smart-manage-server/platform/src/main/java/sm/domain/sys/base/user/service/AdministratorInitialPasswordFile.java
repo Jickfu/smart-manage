@@ -23,7 +23,6 @@ import java.util.Set;
 @Component
 class AdministratorInitialPasswordFile {
     static final String FILE_NAME = "administrator-initial-password.txt";
-    private static final int PASSWORD_LENGTH = 20;
     private static final Set<PosixFilePermission> OWNER_READ_WRITE = Set.of(
             PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
 
@@ -51,14 +50,14 @@ class AdministratorInitialPasswordFile {
         return ideWorkingDirectory.toAbsolutePath().normalize();
     }
 
-    PreparedPassword prepare() {
+    PreparedPassword prepare(int passwordLength) {
         Path passwordFile = workingDirectory.resolve(FILE_NAME);
         try {
             if (Files.exists(passwordFile)) {
                 securePermissions(passwordFile);
                 return new PreparedPassword(readPassword(passwordFile), passwordFile);
             }
-            String password = PasswordGeneratorUtil.generate(PASSWORD_LENGTH);
+            String password = PasswordGeneratorUtil.generate(passwordLength);
             try {
                 Files.writeString(passwordFile, password + System.lineSeparator(), StandardCharsets.UTF_8,
                         java.nio.file.StandardOpenOption.CREATE_NEW,

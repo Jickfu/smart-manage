@@ -1,6 +1,6 @@
 # 前端架构
 
-本文档是桌面管理端 `smart-manage-web` 的技术基线、路由、状态职责、页面类型和页签生命周期的权威来源，不自动约束其他客户端。具体页面实现与交互约束归[前端页面指南](../development/frontend-page-guide.md)，注册协议细节归[页面注册约定](./page-registration-convention.md)。
+本文档是桌面管理端 `smart-manage-web` 的技术基线、路由、状态职责、页面类型和页签生命周期的权威来源，不自动约束其他客户端。已采纳的视觉与组件适配边界归[前端设计规范](../design/README.md)，具体页面接入与交互契约归[前端页面指南](../development/frontend-page-guide.md)，注册协议细节归[页面注册约定](./page-registration-convention.md)。
 
 ## 领域裁剪与加载
 

@@ -106,6 +106,7 @@ export type EditField = EditFieldBase &
 
 interface EditPageProps {
   title: string;
+  notice?: import('@/domain/common/component/PageNotice').PageNoticeConfig;
   /** 页面正文卡片完全由调用方声明，EditPage 只负责统一壳层、Form 与折叠布局。 */
   sections: EditPageSection[];
   /** 从服务端数据稳定派生的初始值；引用变化代表新快照，不得内联构造等价对象。 */
@@ -152,6 +153,7 @@ function isEditable(opType: OperationType, domainEditable: boolean): boolean {
 /** 通用编辑页 — 使用 antd Form 驱动校验与字段状态 */
 const EditPage = ({
   title,
+  notice,
   sections,
   initialValues,
   editable: domainEditable = true,
@@ -294,6 +296,7 @@ const EditPage = ({
   return (
     <EditPageShell
       title={title}
+      notice={notice}
       loading={loading}
       error={error}
       onRetry={onRetry}
@@ -354,6 +357,7 @@ const EditPage = ({
             items={sections.map((section) => ({
               key: section.key,
               label: section.label,
+              notice: section.notice,
               children: section.content(fieldsEditable),
               extra: (expanded: boolean) =>
                 expanded ? section.extra?.(fieldsEditable) : undefined,

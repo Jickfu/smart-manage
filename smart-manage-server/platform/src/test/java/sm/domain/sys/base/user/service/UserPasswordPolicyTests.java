@@ -24,7 +24,7 @@ import static org.mockito.Mockito.*;
 class UserPasswordPolicyTests {
     private final UserMapper mapper = mock(UserMapper.class);
     private final WeakPasswordMapper blacklist = mock(WeakPasswordMapper.class);
-    private final PasswordPolicyService policy = new PasswordPolicyService(blacklist);
+    private final PasswordPolicyService policy = new PasswordPolicyService(blacklist, sm.domain.sys.base.passwordconfig.service.PasswordPolicyFixtures.defaults());
     private final UserWriter writer = new UserWriter(mapper, mock(UserRoleMapper.class),
             mock(UserAssignmentMapper.class), mock(OrgReferenceReader.class), policy);
     private final UserTxService service = new UserTxService(mapper, mock(UserRoleMapper.class),

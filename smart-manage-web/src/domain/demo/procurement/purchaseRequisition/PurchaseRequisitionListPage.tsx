@@ -1,3 +1,4 @@
+import { formatOperationTargets } from '@/domain/common/component/formatOperationTargets';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
 import { Button, Tag } from 'antd';
@@ -103,7 +104,7 @@ const PurchaseRequisitionListPage = (props: PageComponentProps) => {
     void confirmOperation({
       type: 'delete',
       title: '删除采购申请',
-      description: '只有暂存状态的采购申请可以删除，是否继续？',
+      description: `${formatOperationTargets(records.map((record) => record.number))}\n只有暂存状态的采购申请可以删除，是否继续？`,
       confirmText: '删除',
       onConfirm: () => deleteMutation.mutateAsync(records),
     });

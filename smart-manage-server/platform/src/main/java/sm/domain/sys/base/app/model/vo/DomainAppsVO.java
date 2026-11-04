@@ -11,7 +11,7 @@ import java.util.List;
 @Data
 @Schema(description = "领域及应用")
 public class DomainAppsVO {
-	@Schema(description = "id")
+	@Schema(description = "ID")
 	private Long id;
 
 	@Schema(description = "名称")

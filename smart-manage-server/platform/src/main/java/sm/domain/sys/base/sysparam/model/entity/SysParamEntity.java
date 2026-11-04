@@ -18,27 +18,45 @@ import sm.system.entity.BaseEntity;
 @TableName("t_sys_param")
 public class SysParamEntity extends BaseEntity {
 
+    /**
+     * ID
+     */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    /** 参数编码 */
+    /**
+     * 参数编码
+     */
     private String number;
 
-    /** 参数名称 */
+    /**
+     * 参数名称
+     */
     private String name;
 
-    /** 参数值 */
+    /**
+     * 系统参数值，具体格式由所属参数定义
+     */
     private String value;
 
-    /** 描述 */
+    /**
+     * 描述
+     */
     private String description;
 
-    /** 是否系统内置 */
+    /**
+     * 是否系统内置
+     */
     private Boolean isSystem;
 
-    /** 所属功能 ID；为空表示全局参数 */
+    /**
+     * 所属功能 ID；为空表示全局参数
+     */
     private Long featureId;
 
+    /**
+     * 乐观锁版本号
+     */
     @Version
     private Integer version;
 }

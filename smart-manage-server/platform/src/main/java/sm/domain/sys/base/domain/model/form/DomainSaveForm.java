@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 @Schema(description = "领域管理-保存")
 public class DomainSaveForm {
-	@Schema(description = "id，为空则新增")
+	@Schema(description = "ID")
 	private Long id;
 
 	@Schema(description = "乐观锁版本号，修改时必传")

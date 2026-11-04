@@ -37,6 +37,8 @@ Domain A
 
 Smart Manage 遵循：**先实现领域，后发现协作，再提取 Contract。** Contract 由真实消费者和真实用例塑造，而不是由对未来需求的猜测产生。真实消费者可以位于当前仓库，也可以位于已经存在且用例可核实的独立扩展项目；不得仅因某能力未来可能复用而提前建设 Contract。没有真实跨领域消费者的 Domain 不需要 `contract` 包；同一顶级 Domain 内的应用和模块也不因潜在复用而提前升级为独立边界。
 
+常驻循环和监听存在两个已核实的下游消费者，最小接入接口位于 `sm.domain.sys.scheduler.singleton.contract`，运行与管理语义见[集群单例任务](../platform/scheduler/singleton.md)。
+
 当前附件和编号规则存在采购领域这一真实消费者，用户引用与状态校验也存在已核实的独立业务领域消费者，因此其最小跨领域接口和边界模型位于 `sm.domain.sys` 对应模块的 `contract` 包。消费者项目只用于证明用例，不反向成为 Smart Manage 的架构或业务事实来源。
 
 已核实的独立业务项目需要发布业务定时任务，因此任务展示元数据注解 `SchedulerJobDefinition` 位于 `sm.domain.sys.scheduler.contract`。业务 Job 仅依赖该注解及 Quartz API，不依赖调度模块的内部 Job、Service 或 Mapper；任务发现和执行管理仍由调度领域拥有。
@@ -84,6 +86,22 @@ Controller 中的 `@SaCheckPermission` 必须引用所属模块 `constant` 包�
 
 分页入参继承 `PageForm`，分页结果使用 `PageData<T>`。Controller 只依赖公开 Service，禁止直接依赖 Mapper 或 TxService。
 
+### 分页、筛选与排序
+
+公共类型以 [PageForm](../../smart-manage-server/platform/src/main/java/sm/system/form/PageForm.java) 和 [PageData](../../smart-manage-server/platform/src/main/java/sm/system/response/PageData.java) 为准：页码从 1 开始；页码为空或小于 1 时按 1 处理；页大小默认 10，空值或小于 1 时按 10 处理，最大 100。桌面查询 Hook 默认请求 20 条，这是客户端选择，不改变服务端默认值；接口对接应显式传入实际分页参数。
+
+`PageData.of(total, pageNum, pageSize, records)` 中 `total` 为记录总数，不是总页数；记录为空时返回数组 `[]`，不返回 null。Service 使用实际生效的分页参数构造结果，Controller 再包一层 `Result.success(...)`，不直接暴露 MyBatis 分页对象或重复嵌套 Result。公共分页对象只规范载荷，不执行数据库查询、权限或业务范围校验。
+
+列表筛选与排序按实际查询方式复用 [ListQueryUtil](../../smart-manage-server/platform/src/main/java/sm/system/query/ListQueryUtil.java) 或 [ListSqlQuery](../../smart-manage-server/platform/src/main/java/sm/system/query/ListSqlQuery.java)。Service 注册稳定字段键、类型、允许操作符和排序能力，客户端字段不能直接变成 SQL 列名或表达式。联表使用的 SQL 列或表达式来自服务端常量白名单，不能从用户输入拼接；这与禁止任意裸字段查询的要求不冲突。
+
+`PageForm` 提供 `filters`、`sortField`、`sortOrder`，不提供通用 `keyword`：快速搜索及树范围等业务参数由所属 Form 显式定义。注册筛选能力不自动建立功能权限或数据范围；条件最终必须与授权范围共同应用。无排序字段时由领域查询提供适合任务的默认顺序，不能假定公共解析器会自动排序。当前联表解析器拒绝未注册字段、不支持的操作符和非法排序方向；相对日期遵守下文业务时间约定。
+
+### 异常与响应出口
+
+领域失败抛出语义明确的 `BizException`，由 [GlobalExceptionHandler](../../smart-manage-server/platform/src/main/java/sm/system/exception/GlobalExceptionHandler.java) 及 [ExceptionResultResolver](../../smart-manage-server/platform/src/main/java/sm/system/exception/ExceptionResultResolver.java) 统一转换；不在每个 Controller 捕获所有异常再返回成功空值，也不由各模块另建错误级别或 HTTP 状态映射。过滤器及文件流出口按各自协议处理，不能假定所有失败都能重新写 JSON。
+
+业务自定义说明必须可安全展示，不携带 SQL、堆栈、连接信息或凭据。未知系统异常保留服务端诊断，客户端使用统一安全说明；`traceId` 用于关联排障，不是成功凭证或业务幂等键。具体反馈展示继续由客户端协议决定。
+
 ## Service 与事务
 
 公开 `*Service` 是其所属业务职责的入口，负责该职责内的查询、业务命令、权限补充校验、操作日志入口和业务组装。同一模块的多个公开 Service 必须保持边界明确，禁止出现职责重叠或为绕过内部边界而拆分的空壳 Service。
@@ -94,6 +112,8 @@ TxService 默认不得调用其他 TxService。多个写能力需要在同一事
 
 资源不存在、状态非法、无权限、参数不合法或持久化结果异常时必须抛出明确异常，禁止用 `null` 或静默忽略表示失败。
 
+TxService 的事务应通过 Spring 管理的代理入口调用；不要自行 `new` 实例或用同类自调用假定新事务生效。仅有注解和架构测试不能证明回滚、锁及并发行为；验证门槛见[质量验证](../development/verification.md#真实-postgresql-验证)。查询型扩展不为凑结构新增空 TxService 或 Writer；跨模块参与方的事务要求以实际 Contract 为准，不能因普通公开 Service 无事务就假定跨模块写入会自动加入调用方事务。
+
 ## 操作日志
 
 `@BizLog` 只标注在公开 Service 的业务命令方法：
@@ -103,6 +123,7 @@ TxService 默认不得调用其他 TxService。多个写能力需要在同一事
 - Controller 和 TxService 禁止标注；
 - 同一业务调用链只记录一次；
 - 登录和退出使用独立认证日志。
+- `@BizLog` 同时支持 HTTP 请求和定时任务等非 Web 调用。仅在当前上下文为 `ServletRequestAttributes` 时读取客户端 IP、User-Agent、URI 和 HTTP 方法；非 Web 调用的请求字段为空且不告警，操作人和成功/失败日志仍按相同规则记录。
 
 日志不得记录令牌、密码、验证码、私钥、密钥或存储凭据。
 
@@ -123,6 +144,21 @@ Entity 表达持久化模型，Form 表达输入，VO 表达接口输出；不�
 联表查询可直接投影 VO，统计、外部响应和局部不可变快照可以使用独立模型，不要求每张表、每条 SQL 或每个 Mapper 都创建 Entity/Converter。纯字段 Entity→VO 映射使用 MapStruct；直接 SQL 投影不为凑结构增加空 Converter。手写更新 SQL 必须显式包含版本条件、版本推进和受影响行数检查，`@Version` 不会自动保护手写 SQL。
 
 装配级持久化模型测试读取 XML 并注册实际装配的 `@Mapper` 接口，覆盖真实 MyBatis XML 与注解映射：有 INSERT/UPDATE/DELETE 的 Mapper 所属模块必须拥有实体；实体具有显式表、主键和版本字段注解。该检查不从方法名称猜测写入，也不把 SELECT 投影当成写模块；它不能证明每张写表均已建模，也不检查 JDBC 原生 SQL，模块分类和事务行为仍需评审及相应测试。
+
+### 模型字段文档
+
+模型文档是开源底座对维护者和接口使用者的契约，必须与当前代码、数据库结构及领域规则一致，不从字段英文名猜测特殊语义。
+
+- `model.entity` 中的实体及 `sm.system.entity` 基类必须使用简体中文 Javadoc 说明类型用途和每个非静态字段的持久化语义。普通块注释、仅有 `@author` 或重复英文标识符不能替代说明；实体不为满足接口文档而添加 `@Schema`。
+- `model.form`、`model.vo` 中的数据模型，以及公共 `sm.system.form`、`Result`、`PageData`，必须在类型和每个声明的非静态字段上填写中文 `@Schema(description = "...")`。规则同时覆盖 record 组件与嵌套数据模型；仅填写 `title` 或类级说明不代表字段已说明。继承字段由声明方维护，不在子类重复定义。反序列化器等技术协作者和编译器／Lombok 生成成员不属于数据模型。
+- 普通字段由 Javadoc 或 `Schema.description` 单一承载说明，不机械复制两份相同文字。特殊处理、非直观业务约束继续补充中文注释。说明应区分业务身份与数据库 ID、文件 ID 与业务附件关联 ID、编码与展示名称等不同概念。
+- 字段说明末尾不加句号；普通 `id` 字段直接写 `ID`，不加“记录”等修饰。Javadoc 使用多行格式，`/**`、` * 字段说明` 和 ` */` 分别独占一行。`id` 的 `ID` 说明是中文正文检查的明确例外，不扩展为允许其他字段使用英文占位说明。
+- 数量、容量、速率、时长和比率应说明单位及必要的统计口径；比率应明确原始值与展示百分比的关系。可用性标记、未知值、负值哨兵及 null 有特定含义时必须解释，不将未知描述为零。
+- 字符串状态和类型应说明允许值或指向所属稳定枚举；复杂集合、Map 和动态 JSON 应说明元素、键值及受控边界。条件必填、默认值、修改时的版本要求和字段间依赖应按真实行为描述。
+- 文档注解不替代 Bean Validation、Service 业务校验或权限判断。无条件必填优先由实际校验注解表达，不为文档效果新增校验或将条件必填错误标为全局必填。
+- 密码哈希、加密存储值、浏览器密文、脱敏响应和一次性凭证应明确各自语义；示例不得包含真实凭据。文档完善不改变序列化、敏感字段访问或业务行为。
+
+类型和字段的文档注解由装配级 ArchUnit 门禁检查，实体 Javadoc 使用 JDK 编译器语法树检查；二者不能证明说明的业务准确性，单位、状态取值和特殊约束仍须结合所属实现评审。验证入口见[质量验证](../development/verification.md#后端)。
 
 ### 业务时间
 

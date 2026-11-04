@@ -14,7 +14,7 @@ import lombok.Data;
 @Schema(description = "角色保存表单")
 public class RoleSaveForm {
 
-	@Schema(description = "id，为空则新增")
+	@Schema(description = "ID")
 	private Long id;
 
 	@Schema(description = "乐观锁版本号，修改时必传")

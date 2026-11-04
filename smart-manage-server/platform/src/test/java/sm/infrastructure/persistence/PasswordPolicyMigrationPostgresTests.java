@@ -28,7 +28,7 @@ class PasswordPolicyMigrationPostgresTests {
             created = true;
             var source = new DriverManagerDataSource(upgradeUrl, username, password);
             Flyway.configure().dataSource(source).locations("classpath:db/platform/migration")
-                    .target("2").cleanDisabled(true).load().migrate();
+                    .cleanDisabled(true).load().migrate();
             var jdbc = new JdbcTemplate(source);
             jdbc.update("""
                     INSERT INTO t_sys_user (id, username, number, name, password, password_reset, enabled)
@@ -47,12 +47,16 @@ class PasswordPolicyMigrationPostgresTests {
                     SELECT count(*) FROM information_schema.columns
                     WHERE table_schema = 'public' AND table_name LIKE 't_sys_job%' AND column_name = 'job_group'
                     """, Integer.class));
-            assertEquals(java.util.List.of("1", "2"), jdbc.queryForList(
+            assertEquals(java.util.List.of("1", "2", "3", "4"), jdbc.queryForList(
                     "SELECT version FROM flyway_schema_history ORDER BY installed_rank", String.class));
             // 再次迁移不得恢复管理员删除的词条，也不得覆盖真实维护内容。
             jdbc.update("DELETE FROM t_sys_weak_password WHERE id = 560000000000010000");
             jdbc.update("UPDATE t_sys_weak_password SET description = '管理员补充的真实说明' WHERE id = 560000000000010001");
             jdbc.update("UPDATE t_sys_menu SET icon = 'SettingOutlined' WHERE id = 560000000000000110");
+            assertEquals(15, jdbc.queryForObject("SELECT min_length FROM t_sys_password_config WHERE id = 1", Integer.class));
+            assertEquals(false, jdbc.queryForObject("SELECT complexity_enabled FROM t_sys_password_config WHERE id = 1", Boolean.class));
+            jdbc.update("UPDATE t_sys_password_config SET min_length = 8, complexity_enabled = true WHERE id = 1");
+            var policy = jdbc.queryForMap("SELECT * FROM t_sys_password_config WHERE id = 1");
             var dictionary = jdbc.queryForList("SELECT * FROM t_sys_weak_password ORDER BY id");
             var menu = jdbc.queryForMap("SELECT * FROM t_sys_menu WHERE id = 560000000000000110");
             var administrator = jdbc.queryForMap("SELECT * FROM t_sys_user WHERE id = 1");
@@ -62,6 +66,7 @@ class PasswordPolicyMigrationPostgresTests {
             flyway.migrate();
             flyway.migrate();
             assertEquals(history, jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank"));
+            assertEquals(policy, jdbc.queryForMap("SELECT * FROM t_sys_password_config WHERE id = 1"));
             assertEquals(menu, jdbc.queryForMap("SELECT * FROM t_sys_menu WHERE id = 560000000000000110"));
             assertEquals(dictionary, jdbc.queryForList("SELECT * FROM t_sys_weak_password ORDER BY id"));
             assertEquals(administrator, jdbc.queryForMap("SELECT * FROM t_sys_user WHERE id = 1"));

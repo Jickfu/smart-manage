@@ -9,12 +9,16 @@ import lombok.EqualsAndHashCode;
 import sm.system.entity.BaseEntity;
 
 /**
+ * 权限持久化实体。
  * @author Chekfu
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_sys_permission")
 public class PermissionEntity extends BaseEntity {
+	/**
+	 * ID
+	 */
 	@TableId(type = IdType.ASSIGN_ID)
 	private Long id;
 	/**
@@ -29,8 +33,14 @@ public class PermissionEntity extends BaseEntity {
 	 * 应用ID
 	 */
 	private Long featureId;
+	/**
+	 * 所属应用ID
+	 */
 	private Long appId;
 
+	/**
+	 * 乐观锁版本号
+	 */
 	@Version
 	private Integer version;
 }

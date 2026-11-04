@@ -35,62 +35,68 @@ import pageRegistrationModule10 from '../../sys/base/openApi/pageRegistration';
 // src/domain/sys/base/org/pageRegistration.ts
 import pageRegistrationModule11 from '../../sys/base/org/pageRegistration';
 
+// src/domain/sys/base/passwordConfig/pageRegistration.ts
+import pageRegistrationModule12 from '../../sys/base/passwordConfig/pageRegistration';
+
 // src/domain/sys/base/permission/pageRegistration.ts
-import pageRegistrationModule12 from '../../sys/base/permission/pageRegistration';
+import pageRegistrationModule13 from '../../sys/base/permission/pageRegistration';
 
 // src/domain/sys/base/role/pageRegistration.ts
-import pageRegistrationModule13 from '../../sys/base/role/pageRegistration';
+import pageRegistrationModule14 from '../../sys/base/role/pageRegistration';
 
 // src/domain/sys/base/sysParam/pageRegistration.ts
-import pageRegistrationModule14 from '../../sys/base/sysParam/pageRegistration';
+import pageRegistrationModule15 from '../../sys/base/sysParam/pageRegistration';
 
 // src/domain/sys/base/uiConfig/pageRegistration.ts
-import pageRegistrationModule15 from '../../sys/base/uiConfig/pageRegistration';
+import pageRegistrationModule16 from '../../sys/base/uiConfig/pageRegistration';
 
 // src/domain/sys/base/user/pageRegistration.ts
-import pageRegistrationModule16 from '../../sys/base/user/pageRegistration';
+import pageRegistrationModule17 from '../../sys/base/user/pageRegistration';
 
 // src/domain/sys/base/weakPassword/pageRegistration.ts
-import pageRegistrationModule17 from '../../sys/base/weakPassword/pageRegistration';
+import pageRegistrationModule18 from '../../sys/base/weakPassword/pageRegistration';
 
 // src/domain/sys/message/email/pageRegistration.ts
-import pageRegistrationModule18 from '../../sys/message/email/pageRegistration';
+import pageRegistrationModule19 from '../../sys/message/email/pageRegistration';
 
 // src/domain/sys/message/inbox/pageRegistration.ts
-import pageRegistrationModule19 from '../../sys/message/inbox/pageRegistration';
+import pageRegistrationModule20 from '../../sys/message/inbox/pageRegistration';
 
 // src/domain/sys/monitor/alert/pageRegistration.ts
-import pageRegistrationModule20 from '../../sys/monitor/alert/pageRegistration';
+import pageRegistrationModule21 from '../../sys/monitor/alert/pageRegistration';
 
 // src/domain/sys/monitor/cache/pageRegistration.ts
-import pageRegistrationModule21 from '../../sys/monitor/cache/pageRegistration';
+import pageRegistrationModule22 from '../../sys/monitor/cache/pageRegistration';
 
 // src/domain/sys/monitor/loginLog/pageRegistration.ts
-import pageRegistrationModule22 from '../../sys/monitor/loginLog/pageRegistration';
+import pageRegistrationModule23 from '../../sys/monitor/loginLog/pageRegistration';
 
 // src/domain/sys/monitor/operateLog/pageRegistration.ts
-import pageRegistrationModule23 from '../../sys/monitor/operateLog/pageRegistration';
+import pageRegistrationModule24 from '../../sys/monitor/operateLog/pageRegistration';
 
 // src/domain/sys/monitor/runtime/pageRegistration.ts
-import pageRegistrationModule24 from '../../sys/monitor/runtime/pageRegistration';
+import pageRegistrationModule25 from '../../sys/monitor/runtime/pageRegistration';
 
 // src/domain/sys/monitor/script/pageRegistration.ts
-import pageRegistrationModule25 from '../../sys/monitor/script/pageRegistration';
+import pageRegistrationModule26 from '../../sys/monitor/script/pageRegistration';
 
 // src/domain/sys/monitor/slowSql/pageRegistration.ts
-import pageRegistrationModule26 from '../../sys/monitor/slowSql/pageRegistration';
+import pageRegistrationModule27 from '../../sys/monitor/slowSql/pageRegistration';
 
 // src/domain/sys/monitor/sql/pageRegistration.ts
-import pageRegistrationModule27 from '../../sys/monitor/sql/pageRegistration';
+import pageRegistrationModule28 from '../../sys/monitor/sql/pageRegistration';
 
 // src/domain/sys/monitor/thread/pageRegistration.ts
-import pageRegistrationModule28 from '../../sys/monitor/thread/pageRegistration';
+import pageRegistrationModule29 from '../../sys/monitor/thread/pageRegistration';
 
 // src/domain/sys/scheduler/execution/pageRegistration.ts
-import pageRegistrationModule29 from '../../sys/scheduler/execution/pageRegistration';
+import pageRegistrationModule30 from '../../sys/scheduler/execution/pageRegistration';
 
 // src/domain/sys/scheduler/job/pageRegistration.ts
-import pageRegistrationModule30 from '../../sys/scheduler/job/pageRegistration';
+import pageRegistrationModule31 from '../../sys/scheduler/job/pageRegistration';
+
+// src/domain/sys/scheduler/singleton/pageRegistration.ts
+import pageRegistrationModule32 from '../../sys/scheduler/singleton/pageRegistration';
 
 import { registerPageRegistrationModules } from './componentRegistry';
 
@@ -125,4 +131,6 @@ registerPageRegistrationModules([
   pageRegistrationModule28,
   pageRegistrationModule29,
   pageRegistrationModule30,
+  pageRegistrationModule31,
+  pageRegistrationModule32,
 ]);

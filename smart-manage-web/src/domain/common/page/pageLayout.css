@@ -130,3 +130,14 @@
 .sm-modal-edit-content[hidden] {
   display: none;
 }
+
+.sm-edit-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sm-edit-section {
+  min-width: 0;
+}

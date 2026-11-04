@@ -18,40 +18,65 @@ import sm.system.entity.BaseEntity;
 @TableName("t_sys_job")
 public class JobEntity extends BaseEntity {
 
+    /**
+     * ID
+     */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    /** 任务编码 */
+    /**
+     * 任务编码
+     */
     private String number;
 
-    /** 任务名称 */
+    /**
+     * 任务名称
+     */
     private String jobName;
 
-    /** 所属应用，领域由应用推导。 */
+    /**
+     * 所属应用，领域由应用推导
+     */
     private Long appId;
 
-    /** Job 实现类全限定名 */
+    /**
+     * Job 实现类全限定名
+     */
     private String jobClassName;
 
-    /** Cron 表达式 */
+    /**
+     * Cron 表达式
+     */
     private String cronExpression;
 
-    /** 任务参数（JSON） */
+    /**
+     * 任务参数（JSON）
+     */
     private String jobData;
 
-    /** 共享资源互斥键；不同任务使用相同键时不并行执行 */
+    /**
+     * 共享资源互斥键；不同任务使用相同键时不并行执行
+     */
     private String mutexKey;
 
-    /** 状态：ENABLED / PAUSED */
+    /**
+     * 任务状态：ENABLED 启用、PAUSED 暂停
+     */
     private String status;
 
-    /** 是否系统内置 */
+    /**
+     * 是否系统内置
+     */
     private Boolean isSystem;
 
-    /** 描述 */
+    /**
+     * 描述
+     */
     private String description;
 
-    /** 乐观锁版本号 */
+    /**
+     * 乐观锁版本号
+     */
     @Version
     private Integer version;
 }

@@ -1,0 +1,11 @@
+.sm-page-notice {
+  flex: none;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.sm-page-notice-content {
+  min-width: 0;
+}

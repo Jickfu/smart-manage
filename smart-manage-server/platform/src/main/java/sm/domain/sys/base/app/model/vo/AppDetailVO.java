@@ -9,7 +9,7 @@ public class AppDetailVO {
 	@Data
 	@Schema(description = "所属领域")
 	public static class DomainRef {
-		@Schema(description = "id")
+		@Schema(description = "ID")
 		private Long id;
 		@Schema(description = "编码")
 		private String number;
@@ -17,7 +17,7 @@ public class AppDetailVO {
 		private String name;
 	}
 
-	@Schema(description = "id")
+	@Schema(description = "ID")
 	private Long id;
 
 	@Schema(description = "乐观锁版本号")
@@ -41,6 +41,7 @@ public class AppDetailVO {
 	@Schema(description = "描述")
 	private String description;
 
+	@Schema(description = "所属领域信息")
 	private DomainRef domain;
 
 	@Schema(description = "启用")

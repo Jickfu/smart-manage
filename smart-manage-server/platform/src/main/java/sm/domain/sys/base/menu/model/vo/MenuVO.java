@@ -11,9 +11,10 @@ import java.util.List;
 /**
  * @author Chekfu
  */
+@Schema(description = "菜单输出模型")
 @Data
 public class MenuVO {
-	@Schema(description = "菜单ID")
+	@Schema(description = "ID")
 	private Long id;
 
 	@Schema(description = "稳定菜单编码")

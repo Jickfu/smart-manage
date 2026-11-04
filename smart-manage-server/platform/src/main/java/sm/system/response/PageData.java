@@ -1,5 +1,7 @@
 package sm.system.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.Getter;
 
 import java.util.Collections;
@@ -10,11 +12,16 @@ import java.util.List;
  *
  * @author Chekfu
  */
+@Schema(description = "分页数据")
 @Getter
 public final class PageData<T> {
+    @Schema(description = "当前页码，从 1 开始")
     private final long pageNum;
+    @Schema(description = "每页记录数")
     private final long pageSize;
+    @Schema(description = "记录总数")
     private final long total;
+    @Schema(description = "查询结果记录列表")
     private final List<T> records;
 
     private PageData(long total, long pageNum, long pageSize, List<T> records) {

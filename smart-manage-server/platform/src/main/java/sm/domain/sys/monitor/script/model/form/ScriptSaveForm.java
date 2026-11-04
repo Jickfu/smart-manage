@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 @Schema(description = "脚本保存表单")
 public class ScriptSaveForm {
-    @Schema(description = "主键ID（新建时不传）")
+    @Schema(description = "ID")
     private Long id;
 
     @Schema(description = "乐观锁版本号，修改时必传")
@@ -26,7 +26,7 @@ public class ScriptSaveForm {
 
     @NotBlank(message = "脚本内容不能为空")
     @Size(max = 1000000, message = "脚本内容不能超过1000000个字符")
-    @Schema(description = "脚本内容")
+    @Schema(description = "JavaScript 脚本正文")
     private String content;
 
     @Schema(description = "描述")

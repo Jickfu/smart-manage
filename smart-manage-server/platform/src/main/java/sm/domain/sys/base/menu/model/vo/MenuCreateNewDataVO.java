@@ -7,7 +7,7 @@ import lombok.Data;
  * 菜单新增默认值
  */
 @Data
-@Schema(title = "菜单新增默认值")
+@Schema(description = "菜单新增默认值")
 public class MenuCreateNewDataVO {
 	@Schema(description = "父级 id")
 	private Long parentId;
