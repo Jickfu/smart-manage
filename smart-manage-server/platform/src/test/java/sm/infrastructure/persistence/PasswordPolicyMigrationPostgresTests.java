@@ -47,7 +47,7 @@ class PasswordPolicyMigrationPostgresTests {
                     SELECT count(*) FROM information_schema.columns
                     WHERE table_schema = 'public' AND table_name LIKE 't_sys_job%' AND column_name = 'job_group'
                     """, Integer.class));
-            assertEquals(java.util.List.of("1", "2", "3"), jdbc.queryForList(
+            assertEquals(java.util.List.of("1", "2", "3", "4"), jdbc.queryForList(
                     "SELECT version FROM flyway_schema_history ORDER BY installed_rank", String.class));
             // 再次迁移不得恢复管理员删除的词条，也不得覆盖真实维护内容。
             jdbc.update("DELETE FROM t_sys_weak_password WHERE id = 560000000000010000");

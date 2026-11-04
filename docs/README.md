@@ -120,6 +120,7 @@
 调度应用（scheduler）：
 
 - [任务调度](./platform/scheduler/job.md)
+- [集群单例常驻任务与接入](./platform/scheduler/singleton.md)
 
 消息应用（message）：
 

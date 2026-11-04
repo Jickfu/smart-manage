@@ -37,6 +37,8 @@ Domain A
 
 Smart Manage 遵循：**先实现领域，后发现协作，再提取 Contract。** Contract 由真实消费者和真实用例塑造，而不是由对未来需求的猜测产生。真实消费者可以位于当前仓库，也可以位于已经存在且用例可核实的独立扩展项目；不得仅因某能力未来可能复用而提前建设 Contract。没有真实跨领域消费者的 Domain 不需要 `contract` 包；同一顶级 Domain 内的应用和模块也不因潜在复用而提前升级为独立边界。
 
+常驻循环和监听存在两个已核实的下游消费者，最小接入接口位于 `sm.domain.sys.scheduler.singleton.contract`，运行与管理语义见[集群单例任务](../platform/scheduler/singleton.md)。
+
 当前附件和编号规则存在采购领域这一真实消费者，用户引用与状态校验也存在已核实的独立业务领域消费者，因此其最小跨领域接口和边界模型位于 `sm.domain.sys` 对应模块的 `contract` 包。消费者项目只用于证明用例，不反向成为 Smart Manage 的架构或业务事实来源。
 
 已核实的独立业务项目需要发布业务定时任务，因此任务展示元数据注解 `SchedulerJobDefinition` 位于 `sm.domain.sys.scheduler.contract`。业务 Job 仅依赖该注解及 Quartz API，不依赖调度模块的内部 Job、Service 或 Mapper；任务发现和执行管理仍由调度领域拥有。

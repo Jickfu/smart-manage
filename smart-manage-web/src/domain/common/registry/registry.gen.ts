@@ -95,6 +95,9 @@ import pageRegistrationModule30 from '../../sys/scheduler/execution/pageRegistra
 // src/domain/sys/scheduler/job/pageRegistration.ts
 import pageRegistrationModule31 from '../../sys/scheduler/job/pageRegistration';
 
+// src/domain/sys/scheduler/singleton/pageRegistration.ts
+import pageRegistrationModule32 from '../../sys/scheduler/singleton/pageRegistration';
+
 import { registerPageRegistrationModules } from './componentRegistry';
 
 registerPageRegistrationModules([
@@ -129,4 +132,5 @@ registerPageRegistrationModules([
   pageRegistrationModule29,
   pageRegistrationModule30,
   pageRegistrationModule31,
+  pageRegistrationModule32,
 ]);
