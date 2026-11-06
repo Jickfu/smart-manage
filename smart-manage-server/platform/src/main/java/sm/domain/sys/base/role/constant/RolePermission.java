@@ -10,6 +10,8 @@ public final class RolePermission {
     public static final String ASSIGN_PERMISSIONS = "sys:base:role:assignPermissions";
     public static final String ASSIGN_DATA_SCOPES = "sys:base:role:assignDataScopes";
 
+    public static final String SET_DEFAULT = "sys:base:role:setDefault";
+
     private RolePermission() {
     }
 }

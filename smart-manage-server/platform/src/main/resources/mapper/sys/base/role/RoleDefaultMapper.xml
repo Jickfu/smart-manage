@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.sys.base.role.mapper.RoleDefaultMapper">
+    <resultMap id="configurationMap" type="sm.domain.sys.base.role.model.vo.RoleDefaultVO">
+        <result property="version" column="version"/>
+        <association property="role" javaType="sm.domain.sys.base.common.model.vo.ReferenceVO" notNullColumn="role_id">
+            <id property="id" column="role_id"/>
+            <result property="number" column="role_number"/>
+            <result property="name" column="role_name"/>
+        </association>
+    </resultMap>
+    <select id="selectConfiguration" resultMap="configurationMap" flushCache="true" useCache="false">
+        SELECT a.version, b.id AS role_id, b.number AS role_number, b.name AS role_name
+        FROM t_sys_role_default a LEFT JOIN t_sys_role b ON b.id = a.role_id
+        WHERE a.id = 1
+    </select>
+    <select id="selectForUpdate" resultType="sm.domain.sys.base.role.model.entity.RoleDefaultEntity" flushCache="true" useCache="false">
+        SELECT a.* FROM t_sys_role_default a WHERE a.id = 1 FOR UPDATE
+    </select>
+    <update id="updateRole">
+        UPDATE t_sys_role_default SET role_id = #{roleId}, version = version + 1
+        WHERE id = 1 AND version = #{version}
+    </update>
+</mapper>

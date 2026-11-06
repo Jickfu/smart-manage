@@ -4,6 +4,7 @@ import sm.domain.sys.base.role.converter.RoleConverterImpl;
 
 import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.role.mapper.RoleMapper;
+import sm.domain.sys.base.role.mapper.RoleDefaultMapper;
 import sm.domain.sys.base.role.mapper.RolePermissionMapper;
 import sm.domain.sys.base.datascope.service.DataScopeConfigurationService;
 import sm.system.resource.BusinessResourceRegistry;
@@ -41,7 +42,7 @@ class RoleServiceTests {
         when(mapper.selectPage(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(page);
         RoleService service = new RoleService(
-                mapper,
+                mapper, mock(RoleDefaultMapper.class),
                 mock(RolePermissionMapper.class),
                 mock(RoleTxService.class),
                 new RoleConverterImpl(), mock(DataScopeConfigurationService.class),
@@ -63,7 +64,7 @@ class RoleServiceTests {
         RoleMapper mapper = mock(RoleMapper.class);
         when(mapper.selectUserRoleNumbers(10L, 20L)).thenReturn(List.of("operator", "reviewer"));
         RoleService service = new RoleService(
-                mapper,
+                mapper, mock(RoleDefaultMapper.class),
                 mock(RolePermissionMapper.class),
                 mock(RoleTxService.class),
                 new RoleConverterImpl(), mock(DataScopeConfigurationService.class),
@@ -104,7 +105,7 @@ class RoleServiceTests {
 
     private RoleService service(RoleTxService txService, BusinessResourceRegistry resourceRegistry) {
         return new RoleService(
-                mock(RoleMapper.class),
+                mock(RoleMapper.class), mock(RoleDefaultMapper.class),
                 mock(RolePermissionMapper.class),
                 txService,
                 new RoleConverterImpl(), mock(DataScopeConfigurationService.class),

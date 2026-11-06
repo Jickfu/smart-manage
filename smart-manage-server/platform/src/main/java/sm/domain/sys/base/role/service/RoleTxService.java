@@ -1,5 +1,7 @@
 package sm.domain.sys.base.role.service;
 
+import sm.domain.sys.base.role.model.form.RoleDefaultSaveForm;
+import sm.domain.sys.base.role.mapper.RoleDefaultMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,8 +33,26 @@ import java.util.HashSet;
 @Transactional(rollbackFor = Exception.class)
 class RoleTxService {
     private final RoleMapper mapper;
+    private final RoleDefaultMapper defaultMapper;
     private final RolePermissionMapper permissionMapper;
     private final DataScopeConfigurationService dataScopeConfigurationService;
+
+    public void setDefault(RoleDefaultSaveForm form) {
+        var configuration = defaultMapper.selectForUpdate();
+        if (configuration == null) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "默认角色配置缺失");
+        if (!Objects.equals(configuration.getVersion(), form.getVersion())
+                || !Objects.equals(configuration.getRoleId(), form.getPreviousRoleId())) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "默认角色已发生变化，请刷新后重试");
+        }
+        if (form.getRoleId() != null && mapper.selectForUpdate(form.getRoleId()) == null) {
+            throw new BizException(ResultEnum.NOT_FOUND, "角色不存在");
+        }
+        if (Objects.equals(configuration.getRoleId(), form.getRoleId())) return;
+        // 显式更新空值以支持取消；不得写入或删除任何手工用户角色关系。
+        if (defaultMapper.updateRole(form.getRoleId(), form.getVersion()) != 1) {
+            throw new BizException(ResultEnum.DATA_CONFLICT, "默认角色已发生变化，请刷新后重试");
+        }
+    }
 
     public Long save(RoleSaveForm form) {
         // 检查角色编码唯一性
@@ -81,18 +101,32 @@ class RoleTxService {
     }
 
     public void deleteById(Long id) {
-        if (id == null) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "角色ID不能为空");
+        if (id == null) throw new BizException(ResultEnum.PARAM_ERROR, "角色ID不能为空");
+        deleteByIds(java.util.List.of(id));
+    }
+
+    public void deleteByIds(java.util.List<Long> ids) {
+        if (ids == null || ids.isEmpty() || ids.stream().anyMatch(Objects::isNull)) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "角色ID列表不能为空或包含空值");
         }
-        // 删除和权限整体替换使用相同的父行锁顺序，避免先删明细再竞争父行。
-        RoleEntity entity = mapper.selectForUpdate(id);
-        if (entity == null) {
-            throw new BizException(ResultEnum.NOT_FOUND, "角色不存在");
+        // 与设置命令统一先锁配置，再按固定顺序锁角色；整批拒绝或整批提交。
+        var configuration = defaultMapper.selectForUpdate();
+        if (configuration == null) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "默认角色配置缺失");
+        if (configuration.getRoleId() != null && ids.contains(configuration.getRoleId())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "请先取消或切换默认角色，再删除该角色");
         }
-        permissionMapper.delete(new LambdaQueryWrapper<RolePermissionEntity>()
-                .eq(RolePermissionEntity::getRoleId, id));
-        if (mapper.deleteById(id) == 0) {
-            throw new BizException(ResultEnum.DATA_CONFLICT, "角色已被其他用户删除");
+        var roleIds = ids.stream().distinct().sorted().toList();
+        for (Long roleId : roleIds) {
+            if (mapper.selectForUpdate(roleId) == null) {
+                throw new BizException(ResultEnum.NOT_FOUND, "角色不存在");
+            }
+        }
+        for (Long roleId : roleIds) {
+            permissionMapper.delete(new LambdaQueryWrapper<RolePermissionEntity>()
+                    .eq(RolePermissionEntity::getRoleId, roleId));
+            if (mapper.deleteById(roleId) != 1) {
+                throw new BizException(ResultEnum.DATA_CONFLICT, "角色已被其他用户删除");
+            }
         }
     }
 

@@ -7,7 +7,7 @@
     <select id="selectUserRoleNumbers" resultType="java.lang.String" flushCache="true" useCache="false">
         SELECT DISTINCT a.number
         FROM t_sys_role a
-        INNER JOIN t_sys_user_role b ON b.role_id = a.id
+        INNER JOIN v_sys_user_effective_role b ON b.role_id = a.id
         WHERE b.user_id = #{userId}
           AND b.org_id = #{orgId}
         ORDER BY a.number

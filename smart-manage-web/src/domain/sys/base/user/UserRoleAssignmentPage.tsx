@@ -15,6 +15,7 @@ import { userAccess } from './permissions';
 import { userQueryKeys } from './queryKeys';
 import type { UserRoleOrganizationVO } from './types';
 import './UserRoleAssignmentPage.css';
+import { PageNotice } from '@/domain/common/component/PageNotice';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
 
 type RolesByOrgId = Record<string, RoleSelectVO[]>;
@@ -214,6 +215,16 @@ const UserRoleAssignmentPage = ({ appNumber, tabKey, billId, context }: PageComp
               { key: 'username', label: '账号', children: workspaceQuery.data.username },
               { key: 'number', label: '工号', children: workspaceQuery.data.number },
             ]}
+          />
+          <PageNotice
+            notice={{
+              key: 'inherited-default-role',
+              title: workspaceQuery.data.defaultRole
+                ? `默认继承：${workspaceQuery.data.defaultRole.number} — ${workspaceQuery.data.defaultRole.name}。由系统默认角色统一管理，在有效任职组织下生效。下方仅维护手工分配；移除同名手工角色后仍保留默认继承权限。`
+                : workspaceQuery.data.username === 'administrator'
+                  ? '管理员按独立身份规则拥有全部权限，不依赖默认角色。'
+                  : '当前未设置默认角色，下方维护手工分配的角色。',
+            }}
           />
           <Splitter className="sm-user-role-split">
             <Splitter.Panel defaultSize="46%" min="36%" max="60%">

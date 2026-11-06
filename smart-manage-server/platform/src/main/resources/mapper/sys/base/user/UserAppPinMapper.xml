@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="sm.domain.sys.base.user.apppin.mapper.UserAppPinMapper">
-    <select id="selectUserPins" resultType="sm.domain.sys.base.user.apppin.model.vo.PinnedAppVO">
+    <select id="selectUserPins" resultType="sm.domain.sys.base.user.apppin.model.vo.PinnedAppVO" flushCache="true" useCache="false">
         SELECT CASE WHEN b.builtin_key = 'builtin:inbox' THEN b.builtin_key ELSE a.number END AS number,
                CASE WHEN b.builtin_key = 'builtin:inbox' THEN '消息中心' ELSE a.name END AS name, b.seq
         FROM t_sys_app a
@@ -15,7 +15,7 @@
               SELECT 1
               FROM t_sys_menu d
               INNER JOIN t_sys_role_perms e ON e.permission_id = d.permission_id
-              INNER JOIN t_sys_user_role f ON f.role_id = e.role_id
+              INNER JOIN v_sys_user_effective_role f ON f.role_id = e.role_id
               WHERE d.app_id = a.id
                 AND d.enabled = true
                 AND f.user_id = #{userId}
