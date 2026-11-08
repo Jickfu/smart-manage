@@ -53,9 +53,18 @@ class RestrictedScriptExecutorTests {
     void rejectsDeepResultGraph() {
         var outcome = executor.execute(
                 "let value = {}; let cursor = value; for (let index = 0; index < 30; index++) { cursor.next = {}; cursor = cursor.next; } return value;",
-                Map.of(), 1);
+                Map.of(), 3);
 
         assertEquals("ERROR", outcome.status());
         assertTrue(outcome.error().contains("层级过深"));
+    }
+
+    @Test
+    void returnsTimeoutOutcomeInsteadOfLeakingContextCancellation() {
+        var outcome = executor.execute("while (true) {}", Map.of(), 1);
+
+        assertEquals("TIMEOUT", outcome.status());
+        assertNull(outcome.value());
+        assertEquals("脚本执行超时", outcome.error());
     }
 }

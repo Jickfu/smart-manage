@@ -53,7 +53,7 @@ public class RestrictedScriptExecutor {
     private Outcome executeAcquired(String source, Map<String, Object> context, int boundedTimeout) {
         Instant start = Instant.now();
         AtomicBoolean timedOut = new AtomicBoolean(false);
-        try (Context polyglot = Context.newBuilder("js")
+        Context polyglot = Context.newBuilder("js")
                 .option("engine.WarnInterpreterOnly", "false")
                 .allowHostAccess(HostAccess.NONE)
                 .allowHostClassLookup(className -> false)
@@ -61,7 +61,8 @@ public class RestrictedScriptExecutor {
                 .allowCreateProcess(false)
                 .allowNativeAccess(false)
                 .allowIO(false)
-                .build()) {
+                .build();
+        try {
             String contextJson = json.writeValueAsString(context);
             String contextLiteral = json.writeValueAsString(contextJson);
             var timeout = timeoutExecutor.schedule(() -> {
@@ -82,6 +83,13 @@ public class RestrictedScriptExecutor {
                 return new Outcome("ERROR", null, safeMessage(failure), duration(start));
             } finally {
                 timeout.cancel(false);
+            }
+        } finally {
+            try {
+                polyglot.close();
+            } catch (RuntimeException failure) {
+                // 超时线程已强制关闭 Context 时，重复关闭可能再次抛出取消异常，不能让它越过 Outcome 契约。
+                if (!timedOut.get()) throw failure;
             }
         }
     }

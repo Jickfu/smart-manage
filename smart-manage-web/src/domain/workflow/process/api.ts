@@ -23,6 +23,7 @@ export const workflowActionLabels: Record<string, string> = {
   REDUCE_SIGN: '减签',
   ADMIN_JUMP: '管理员跳转',
   ADMIN_RETURN: '管理员退回',
+  TERMINATE: '终止',
   SUSPEND: '挂起',
   RESUME: '恢复',
   VARIABLES_UPDATE: '修改流程变量',

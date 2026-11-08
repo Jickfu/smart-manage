@@ -18,12 +18,13 @@ public interface WorkflowEngine {
     Run cooperate(Long instanceId, Long taskId, Long actorId, Cooperation action,
                   List<Long> targetUserIds, String reason);
     Run takeBack(Long instanceId, Long actorId, String reason);
-    Run retryScript(Long instanceId, Long taskId, Long actorId);
+    ScriptRetry retryScript(Long instanceId, Long taskId, Long actorId);
     Run inspect(Long instanceId);
     Selection select(Long actorId, Box box, int offset, int limit);
     String chart(Long instanceId);
     CandidateChange replaceCandidates(Long instanceId, Long taskId, Long actorId, List<Long> candidates);
     record CandidateChange(Task before, Task after) { }
+    record ScriptRetry(Run run, boolean succeeded) { }
 
     enum Box { PENDING, COMPLETED, STARTED }
     record Selection(List<Long> instanceIds, long total) { }

@@ -57,12 +57,13 @@ class WarmFlowRuntimePostgresTests {
         new ResourceDatabasePopulator(new ClassPathResource("db/workflow/migration/V1__warm_flow_schema.sql")).execute(source);
         jdbc.execute("""
                 CREATE TABLE t_workflow_script_execution (
-                    id bigint PRIMARY KEY, instance_id bigint NOT NULL, task_id bigint NOT NULL,
+                    id bigint PRIMARY KEY, instance_id bigint NOT NULL REFERENCES flow_instance(id), task_id bigint NOT NULL,
                     node_code varchar(100) NOT NULL, status varchar(20) NOT NULL, duration_ms integer NOT NULL,
                     error_message varchar(500), result_data text, operator_id bigint NOT NULL,
                     create_time timestamp, update_time timestamp, create_user bigint, update_user bigint)
                 """);
-        transaction = new TransactionTemplate(new DataSourceTransactionManager(source));
+        var transactionManager = new DataSourceTransactionManager(source);
+        transaction = new TransactionTemplate(transactionManager);
         var configuration = new MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
         configuration.addMapper(sm.domain.workflow.process.engine.warmflow.mapper.WarmFlowTaskQueryMapper.class);
@@ -81,7 +82,7 @@ class WarmFlowRuntimePostgresTests {
         var scriptListener = new sm.domain.workflow.process.script.service.WorkflowScriptListener(scriptExecutor,
                 session.getMapper(sm.domain.workflow.process.script.mapper.WorkflowScriptExecutionMapper.class),
                 org.mockito.Mockito.mock(sm.domain.sys.base.user.contract.UserReferenceReader.class),
-                tools.jackson.databind.json.JsonMapper.builder().build());
+                tools.jackson.databind.json.JsonMapper.builder().build(), transactionManager);
         context = new AnnotationConfigApplicationContext();
         context.registerBean("workflowScriptExecutor", sm.system.script.RestrictedScriptExecutor.class, () -> scriptExecutor);
         context.registerBean("workflowScriptListener", sm.domain.workflow.process.script.service.WorkflowScriptListener.class,
@@ -390,6 +391,75 @@ class WarmFlowRuntimePostgresTests {
         assertTrue(failed.tasks().getFirst().script());
         assertEquals("ERROR", jdbc.queryForObject(
                 "SELECT status FROM t_workflow_script_execution WHERE instance_id = ?", String.class, failed.id()));
+
+        var failedRetry = transaction.execute(status -> engine.retryScript(
+                failed.id(), failed.tasks().getFirst().id(), 10L));
+        assertFalse(failedRetry.succeeded());
+        assertFalse(failedRetry.run().active());
+        assertEquals(2, jdbc.queryForObject(
+                "SELECT count(*) FROM t_workflow_script_execution WHERE instance_id = ?", Integer.class, failed.id()));
+    }
+
+    @Test
+    void scriptRejectsIndirectOrFractionalParticipantsAndRollsBackVariablesWhenAdvancementFails() {
+        transaction.executeWithoutResult(status -> {
+            var indirectScript = node("indirect-script", 1, null, "indirect-gate").setExt("""
+                    {"smNodeType":"SCRIPT","script":"return { participants: [40] };"}
+                    """);
+            var indirectGate = node("indirect-gate", 3, null, "indirect-approval");
+            var indirect = new DefJson().setFlowCode("script-indirect-participants").setFlowName("脚本间接参与人")
+                    .setVersion("1").setModelValue("CLASSICS").setNodeList(List.of(
+                            node("indirect-start", 0, null, "indirect-script"), indirectScript, indirectGate,
+                            node("indirect-approval", 1, "20", "indirect-end"),
+                            node("indirect-end", 2, null, null)));
+            FlowEngine.defService().publish(FlowEngine.defService().importDef(indirect).getId());
+
+            var fractionalScript = node("fractional-script", 1, null, "fractional-approval").setExt("""
+                    {"smNodeType":"SCRIPT","script":"return { participants: [40.5] };"}
+                    """);
+            var fractional = new DefJson().setFlowCode("script-fractional-participant").setFlowName("脚本小数参与人")
+                    .setVersion("1").setModelValue("CLASSICS").setNodeList(List.of(
+                            node("fractional-start", 0, null, "fractional-script"), fractionalScript,
+                            node("fractional-approval", 1, "20", "fractional-end"),
+                            node("fractional-end", 2, null, null)));
+            FlowEngine.defService().publish(FlowEngine.defService().importDef(fractional).getId());
+
+            var invalidVariableScript = node("invalid-variable-script", 1, null, "invalid-variable-gate").setExt("""
+                    {"smNodeType":"SCRIPT","script":"return { variables: { days: 'not-a-number' } };"}
+                    """);
+            var invalidVariableGate = node("invalid-variable-gate", 3, null, null).setSkipList(List.of(
+                    new SkipJson().setNowNodeCode("invalid-variable-gate").setNextNodeCode("invalid-variable-approval")
+                            .setSkipType("PASS").setSkipCondition("gt@@days|3"),
+                    new SkipJson().setNowNodeCode("invalid-variable-gate").setNextNodeCode("invalid-variable-fallback")
+                            .setSkipType("PASS")));
+            var invalidVariable = new DefJson().setFlowCode("script-invalid-variable").setFlowName("脚本错误变量")
+                    .setVersion("1").setModelValue("CLASSICS").setNodeList(List.of(
+                            node("invalid-variable-start", 0, null, "invalid-variable-script"), invalidVariableScript,
+                            invalidVariableGate, node("invalid-variable-approval", 1, "20", "invalid-variable-end"),
+                            node("invalid-variable-fallback", 1, "21", "invalid-variable-end"),
+                            node("invalid-variable-end", 2, null, null)));
+            FlowEngine.defService().publish(FlowEngine.defService().importDef(invalidVariable).getId());
+        });
+
+        var indirect = transaction.execute(status -> engine.start("script-indirect-participants", "SCRIPT-3", 10L, Map.of()));
+        assertFalse(indirect.active());
+        assertTrue(indirect.tasks().getFirst().script());
+        assertTrue(jdbc.queryForObject(
+                "SELECT error_message FROM t_workflow_script_execution WHERE instance_id = ?", String.class, indirect.id())
+                .contains("紧随脚本"));
+
+        var fractional = transaction.execute(status -> engine.start("script-fractional-participant", "SCRIPT-4", 10L, Map.of()));
+        assertFalse(fractional.active());
+        assertTrue(jdbc.queryForObject(
+                "SELECT error_message FROM t_workflow_script_execution WHERE instance_id = ?", String.class, fractional.id())
+                .contains("无效用户"));
+
+        var invalidVariable = transaction.execute(status -> engine.start("script-invalid-variable", "SCRIPT-5", 10L, Map.of()));
+        assertFalse(invalidVariable.active());
+        assertTrue(invalidVariable.tasks().getFirst().script());
+        assertFalse(invalidVariable.variables().containsKey("days"));
+        assertEquals("ERROR", jdbc.queryForObject(
+                "SELECT status FROM t_workflow_script_execution WHERE instance_id = ?", String.class, invalidVariable.id()));
     }
 
     private static NodeJson node(String code, int type, String users, String next) {

@@ -220,7 +220,7 @@ public class WarmFlowRuntimeAdapter implements WorkflowEngine {
     }
 
     @Override
-    public Run retryScript(Long instanceId, Long taskId, Long actorId) {
+    public ScriptRetry retryScript(Long instanceId, Long taskId, Long actorId) {
         lock(instanceId);
         Run before = inspect(instanceId);
         requireRunning(before);
@@ -228,10 +228,10 @@ public class WarmFlowRuntimeAdapter implements WorkflowEngine {
         if (before.tasks().stream().noneMatch(task -> Objects.equals(task.id(), taskId) && task.script())) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "当前任务不是可重试的脚本节点");
         }
-        scripts.retry(instanceId, taskId, actorId);
+        boolean succeeded = scripts.retry(instanceId, taskId, actorId);
         Run result = inspect(instanceId);
         requireCandidates(result);
-        return result;
+        return new ScriptRetry(result, succeeded);
     }
 
     @Override

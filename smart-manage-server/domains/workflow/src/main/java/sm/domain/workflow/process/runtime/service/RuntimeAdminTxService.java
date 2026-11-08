@@ -94,17 +94,20 @@ class RuntimeAdminTxService {
         return result;
     }
 
-    WorkflowEngine.Run retryScript(ScriptRetryForm form, Long actorId) {
+    WorkflowEngine.ScriptRetry retryScript(ScriptRetryForm form, Long actorId) {
         String digest = commands.digest(form);
         var receipt = commands.replay(form.requestId(), actorId, digest);
-        if (receipt != null) return receipt;
+        if (receipt != null) return new WorkflowEngine.ScriptRetry(receipt, true);
         var reference = lockBusiness(form.instanceId());
         var before = engine.inspect(form.instanceId());
-        var result = engine.retryScript(form.instanceId(), form.taskId(), actorId);
+        var retry = engine.retryScript(form.instanceId(), form.taskId(), actorId);
+        var result = retry.run();
         audit(form.instanceId(), form.taskId(), "SCRIPT_RETRY", actorId, form.reason(), before, result);
-        notifications.record(reference, result);
-        commands.save(form.requestId(), actorId, digest, result);
-        return result;
+        if (retry.succeeded()) {
+            notifications.record(reference, result);
+            commands.save(form.requestId(), actorId, digest, result);
+        }
+        return retry;
     }
 
     private InstanceService.Reference lockBusiness(Long instanceId) {

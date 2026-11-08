@@ -10,6 +10,9 @@ import org.dromara.warm.flow.core.listener.GlobalListener;
 import org.dromara.warm.flow.core.listener.ListenerVariable;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import sm.domain.sys.base.user.contract.UserReferenceReader;
 import sm.domain.workflow.process.script.mapper.WorkflowScriptExecutionMapper;
 import sm.domain.workflow.process.script.model.entity.WorkflowScriptExecutionEntity;
@@ -31,6 +34,7 @@ public class WorkflowScriptListener implements GlobalListener, SmartInitializing
     private final WorkflowScriptExecutionMapper executions;
     private final UserReferenceReader users;
     private final ObjectMapper json;
+    private final PlatformTransactionManager transactionManager;
 
     @Override
     public void afterSingletonsInstantiated() {
@@ -65,42 +69,30 @@ public class WorkflowScriptListener implements GlobalListener, SmartInitializing
         context.put("nodeCode", node.getNodeCode());
         context.put("variables", instance.getVariableMap() == null ? Map.of() : instance.getVariableMap());
         var outcome = executor.execute(source, context, 3);
-        var execution = new WorkflowScriptExecutionEntity();
-        execution.setInstanceId(instance.getId());
-        execution.setTaskId(task.getId());
-        execution.setNodeCode(node.getNodeCode());
-        execution.setStatus(outcome.status());
-        execution.setDurationMs(outcome.durationMs());
-        execution.setOperatorId(operatorId);
+        var execution = execution(instance, task, node, operatorId, outcome);
         if (!"SUCCESS".equals(outcome.status())) {
-            execution.setErrorMessage(outcome.error());
-            executions.insert(execution);
-            FlowEngine.insService().unActive(instance.getId());
+            fail(instance, execution, outcome.error());
             return false;
         }
+        ScriptResult result;
         try {
-            ScriptResult result = validate(outcome.value());
+            result = validate(outcome.value());
+            requireDirectManualTask(instance.getDefinitionId(), node, result.participants());
             execution.setResultData(json.writeValueAsString(result));
-            executions.insert(execution);
-            if (!result.variables().isEmpty()) {
-                FlowEngine.taskService().mergeVariable(instance, result.variables());
-                FlowEngine.insService().updateById(instance);
-            }
-            String actor = operatorId.toString();
-            FlowParams params = FlowParams.build().handler(actor).permissionFlag(List.of(actor)).ignore(true)
-                    .skipType("PASS").flowStatus("SCRIPT").hisStatus("SCRIPT")
-                    .message(retry ? "管理员重试脚本节点" : "脚本节点自动完成")
-                    .variable(result.variables());
-            if (!result.participants().isEmpty()) {
-                params.nextHandler(result.participants().stream().map(String::valueOf).toArray(String[]::new));
-            }
-            FlowEngine.taskService().skip(task.getId(), params);
+        } catch (RuntimeException failure) {
+            fail(instance, execution, safeMessage(failure));
+            return false;
+        }
+
+        try {
+            var nested = new TransactionTemplate(transactionManager);
+            nested.setPropagationBehavior(TransactionDefinition.PROPAGATION_NESTED);
+            nested.executeWithoutResult(status -> advance(task, operatorId, retry, result, execution));
             return true;
         } catch (RuntimeException failure) {
-            execution.setStatus("ERROR");
-            execution.setErrorMessage(safeMessage(failure));
-            if (execution.getId() == null) executions.insert(execution); else executions.updateById(execution);
-            FlowEngine.insService().unActive(instance.getId());
+            var failedExecution = execution(instance, task, node, operatorId, outcome);
+            failedExecution.setResultData(execution.getResultData());
+            fail(instance, failedExecution, safeMessage(failure));
             return false;
         }
     }
@@ -129,15 +121,65 @@ public class WorkflowScriptListener implements GlobalListener, SmartInitializing
                 throw new IllegalArgumentException("participants 必须是1到100名用户");
             }
             participants = values.stream().map(valueId -> {
-                if (!(valueId instanceof Number number) || number.longValue() <= 0) {
+                if (!(valueId instanceof Number number)) {
                     throw new IllegalArgumentException("participants 包含无效用户");
                 }
-                return number.longValue();
+                try {
+                    long identifier = new java.math.BigDecimal(number.toString()).longValueExact();
+                    if (identifier <= 0) throw new ArithmeticException();
+                    return identifier;
+                } catch (NumberFormatException | ArithmeticException failure) {
+                    throw new IllegalArgumentException("participants 包含无效用户");
+                }
             }).distinct().toList();
             users.requireEnabledByIds(participants);
         }
         if (json.writeValueAsBytes(variables).length > 100_000) throw new IllegalArgumentException("脚本变量结果过大");
         return new ScriptResult(variables, participants);
+    }
+
+    private void requireDirectManualTask(Long definitionId, Node node, List<Long> participants) {
+        if (participants.isEmpty()) return;
+        var outgoing = FlowEngine.skipService().getByDefIdAndNowNodeCode(definitionId, node.getNodeCode());
+        if (outgoing.size() != 1) throw new IllegalArgumentException("participants 只能用于紧随脚本的人工任务");
+        Node target = FlowEngine.nodeService().getByDefIdAndNodeCode(definitionId, outgoing.getFirst().getNextNodeCode());
+        if (target == null || !Integer.valueOf(1).equals(target.getNodeType()) || isScript(target)) {
+            throw new IllegalArgumentException("participants 只能用于紧随脚本的人工任务");
+        }
+    }
+
+    private void advance(Task task, Long operatorId, boolean retry, ScriptResult result,
+                         WorkflowScriptExecutionEntity execution) {
+        executions.insert(execution);
+        String actor = operatorId.toString();
+        FlowParams params = FlowParams.build().handler(actor).permissionFlag(List.of(actor)).ignore(true)
+                .skipType("PASS").flowStatus("SCRIPT").hisStatus("SCRIPT")
+                .message(retry ? "管理员重试脚本节点" : "脚本节点自动完成")
+                .variable(result.variables());
+        if (!result.participants().isEmpty()) {
+            params.nextHandler(result.participants().stream().map(String::valueOf).toArray(String[]::new));
+        }
+        // NESTED 事务将变量、历史、任务和成功记录作为一个保存点处理，推进失败后外层仍可记录错误并挂起。
+        FlowEngine.taskService().skip(task.getId(), params);
+    }
+
+    private WorkflowScriptExecutionEntity execution(Instance instance, Task task, Node node, Long operatorId,
+                                                      RestrictedScriptExecutor.Outcome outcome) {
+        var execution = new WorkflowScriptExecutionEntity();
+        execution.setInstanceId(instance.getId());
+        execution.setTaskId(task.getId());
+        execution.setNodeCode(node.getNodeCode());
+        execution.setStatus(outcome.status());
+        execution.setDurationMs(outcome.durationMs());
+        execution.setOperatorId(operatorId);
+        return execution;
+    }
+
+    private void fail(Instance instance, WorkflowScriptExecutionEntity execution, String message) {
+        if ("SUCCESS".equals(execution.getStatus())) execution.setStatus("ERROR");
+        execution.setErrorMessage(message);
+        executions.insert(execution);
+        FlowEngine.insService().unActive(instance.getId());
     }
 
     public boolean isScript(Node node) {

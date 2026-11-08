@@ -131,7 +131,7 @@ export default function InstanceDetailPage(props: PageComponentProps) {
       });
       if (!accepted) return;
     }
-    await mutation.mutateAsync(values);
+    mutation.mutate(values);
   };
   return (
     <div className="sm-workflow-instance-detail">

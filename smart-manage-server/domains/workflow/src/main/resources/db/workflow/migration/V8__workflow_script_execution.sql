@@ -1,6 +1,6 @@
 CREATE TABLE t_workflow_script_execution (
     id bigint PRIMARY KEY,
-    instance_id bigint NOT NULL REFERENCES t_workflow_instance(id),
+    instance_id bigint NOT NULL REFERENCES flow_instance(id),
     task_id bigint NOT NULL,
     node_code varchar(100) NOT NULL,
     status varchar(20) NOT NULL,
