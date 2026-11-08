@@ -5,6 +5,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import sm.domain.sys.base.datascope.service.DataScopeConfigurationService;
 import sm.domain.sys.base.role.mapper.RoleMapper;
+import sm.domain.sys.base.role.mapper.RoleDefaultMapper;
 import sm.domain.sys.base.role.mapper.RolePermissionMapper;
 import sm.domain.sys.base.role.model.entity.RoleEntity;
 import sm.domain.sys.base.role.model.form.RoleSaveForm;
@@ -26,6 +27,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RoleTxServiceTests {
+
+    @Test
+    void batchDeleteRejectsDefaultRoleBeforeDeletingAnyTarget() {
+        RoleMapper mapper = mock(RoleMapper.class);
+        RoleDefaultMapper defaults = mock(RoleDefaultMapper.class);
+        var configuration = new sm.domain.sys.base.role.model.entity.RoleDefaultEntity();
+        configuration.setRoleId(20L);
+        when(defaults.selectForUpdate()).thenReturn(configuration);
+        var transaction = new RoleTxService(mapper, defaults, mock(RolePermissionMapper.class),
+                mock(DataScopeConfigurationService.class));
+        assertThrows(BizException.class, () -> transaction.deleteByIds(List.of(10L,20L)));
+        verifyNoInteractions(mapper);
+    }
+
 
     @ParameterizedTest
     @ValueSource(strings = {"buyer", "admin", "administrator"})
@@ -70,7 +85,7 @@ class RoleTxServiceTests {
     void dataScopeAssignmentTreatsAdminAsOrdinaryRole() {
         RoleMapper mapper = scopeMapper("admin");
         DataScopeConfigurationService configuration = mock(DataScopeConfigurationService.class);
-        RoleTxService service = new RoleTxService(mapper, mock(RolePermissionMapper.class), configuration);
+        RoleTxService service = new RoleTxService(mapper, mock(RoleDefaultMapper.class), mock(RolePermissionMapper.class), configuration);
 
         service.assignDataScopes(scopeForm(List.of()));
 
@@ -87,7 +102,7 @@ class RoleTxServiceTests {
         form.setVersion(1);
 
         BizException error = assertThrows(BizException.class, () ->
-                new RoleTxService(mapper, mock(RolePermissionMapper.class), configuration).assignDataScopes(form));
+                new RoleTxService(mapper, mock(RoleDefaultMapper.class), mock(RolePermissionMapper.class), configuration).assignDataScopes(form));
 
         assertEquals(ResultEnum.DATA_CONFLICT.getCode(), error.getCode());
         verify(mapper, never()).updateById(any(RoleEntity.class));
@@ -102,7 +117,7 @@ class RoleTxServiceTests {
         RoleDataScopeRuleForm duplicate = scopeRule("", "SELF", List.of());
 
         BizException error = assertThrows(BizException.class, () ->
-                new RoleTxService(mapper, mock(RolePermissionMapper.class), configuration)
+                new RoleTxService(mapper, mock(RoleDefaultMapper.class), mock(RolePermissionMapper.class), configuration)
                         .assignDataScopes(scopeForm(List.of(first, duplicate))));
 
         assertEquals(ResultEnum.PARAM_ERROR.getCode(), error.getCode());
@@ -117,7 +132,7 @@ class RoleTxServiceTests {
         DataScopeConfigurationService configuration = mock(DataScopeConfigurationService.class);
 
         BizException error = assertThrows(BizException.class, () ->
-                new RoleTxService(mapper, mock(RolePermissionMapper.class), configuration)
+                new RoleTxService(mapper, mock(RoleDefaultMapper.class), mock(RolePermissionMapper.class), configuration)
                         .assignDataScopes(scopeForm(List.of())));
 
         assertEquals(ResultEnum.DATA_CONFLICT.getCode(), error.getCode());
@@ -130,7 +145,7 @@ class RoleTxServiceTests {
         DataScopeConfigurationService configuration = mock(DataScopeConfigurationService.class);
 
         BizException error = assertThrows(BizException.class, () ->
-                new RoleTxService(mapper, mock(RolePermissionMapper.class), configuration)
+                new RoleTxService(mapper, mock(RoleDefaultMapper.class), mock(RolePermissionMapper.class), configuration)
                         .assignDataScopes(scopeForm(List.of(scopeRule(null, "CUSTOM_ORGS", List.of())))));
 
         assertEquals(ResultEnum.PARAM_ERROR.getCode(), error.getCode());
@@ -146,7 +161,7 @@ class RoleTxServiceTests {
         RoleDataScopeRuleForm resourceRule = scopeRule(null, "ORG", List.of());
         RoleDataScopeRuleForm actionRule = scopeRule("VIEW", "CUSTOM_ORGS", organizations);
 
-        new RoleTxService(mapper, mock(RolePermissionMapper.class), configuration)
+        new RoleTxService(mapper, mock(RoleDefaultMapper.class), mock(RolePermissionMapper.class), configuration)
                 .assignDataScopes(scopeForm(List.of(resourceRule, actionRule)));
 
         assertEquals("ORG", mapper.selectById(10L).getDefaultDataScope());
@@ -186,7 +201,7 @@ class RoleTxServiceTests {
     }
 
     private RoleTxService service(RoleMapper mapper) {
-        return new RoleTxService(mapper, mock(RolePermissionMapper.class),
+        return new RoleTxService(mapper, mock(RoleDefaultMapper.class), mock(RolePermissionMapper.class),
                 mock(DataScopeConfigurationService.class));
     }
 

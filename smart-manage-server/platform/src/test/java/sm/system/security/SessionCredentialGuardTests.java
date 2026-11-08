@@ -19,7 +19,7 @@ class SessionCredentialGuardTests {
             sessions.when(StpUtil::getStpLogic).thenReturn(logic);
             for (Object claim : new Object[]{null, 0L, "-1", "1.0", "01", "9999999999999999999"}) {
                 when(session.get(SessionCredentialGuard.GENERATION_CLAIM)).thenReturn(claim);
-                assertThrows(BizException.class, new SessionCredentialGuard(verifier)::checkCurrent);
+                assertThrows(BizException.class, new SessionCredentialGuard(verifier, mock(sm.system.security.context.CurrentUserContext.class))::checkCurrent);
             }
         }
         verifyNoInteractions(verifier);
@@ -35,7 +35,7 @@ class SessionCredentialGuardTests {
         try (var sessions = mockStatic(StpUtil.class)) {
             sessions.when(StpUtil::getStpLogic).thenReturn(logic);
             sessions.when(StpUtil::getLoginIdAsLong).thenReturn(1L);
-            new SessionCredentialGuard(verifier).checkCurrent();
+            new SessionCredentialGuard(verifier, mock(sm.system.security.context.CurrentUserContext.class)).checkCurrent();
         }
         verify(verifier).verify(1L, 7L);
     }

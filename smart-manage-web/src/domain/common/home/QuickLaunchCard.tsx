@@ -1,3 +1,4 @@
+import { useUserStore } from '@/stores/user';
 import { useMemo, useState } from 'react';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { RequestErrorState } from '@/domain/common/component/RequestErrorState';
@@ -65,6 +66,7 @@ function buildTreeData(options: QuickLaunchItemVO[], keyword: string): TreeDataN
 const QuickLaunchCard = ({ scope, appNumber }: QuickLaunchCardProps) => {
   const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
+  const hasOrganization = useUserStore((state) => Boolean(state.userInfo?.currentOrgId));
   const [managerOpen, setManagerOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [selectedMenuIds, setSelectedMenuIds] = useState<string[] | null>(null);
@@ -80,7 +82,7 @@ const QuickLaunchCard = ({ scope, appNumber }: QuickLaunchCardProps) => {
     meta: { errorPresentation: 'local-initial' },
     queryKey: quickLaunchQueryKeys.configuration(scopeForm),
     queryFn: () => quickLaunchApi.configuration(scopeForm),
-    enabled: managerOpen,
+    enabled: managerOpen && hasOrganization,
   });
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -162,21 +164,23 @@ const QuickLaunchCard = ({ scope, appNumber }: QuickLaunchCardProps) => {
                   <span className="sm-quick-launch-name">{item.name}</span>
                 </button>
               ))}
-              <button
-                type="button"
-                className="sm-quick-launch-item sm-quick-launch-item--add"
-                title="管理快速发起"
-                onClick={() => {
-                  setKeyword('');
-                  setSelectedMenuIds(null);
-                  setManagerOpen(true);
-                }}
-              >
-                <span className="sm-quick-launch-icon">
-                  <PlusOutlined />
-                </span>
-                <span className="sm-quick-launch-name">添加</span>
-              </button>
+              {hasOrganization && (
+                <button
+                  type="button"
+                  className="sm-quick-launch-item sm-quick-launch-item--add"
+                  title="管理快速发起"
+                  onClick={() => {
+                    setKeyword('');
+                    setSelectedMenuIds(null);
+                    setManagerOpen(true);
+                  }}
+                >
+                  <span className="sm-quick-launch-icon">
+                    <PlusOutlined />
+                  </span>
+                  <span className="sm-quick-launch-name">添加</span>
+                </button>
+              )}
             </div>
           </div>
         </Spin>

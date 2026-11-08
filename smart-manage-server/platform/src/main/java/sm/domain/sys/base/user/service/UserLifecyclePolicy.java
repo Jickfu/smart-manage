@@ -12,11 +12,21 @@ final class UserLifecyclePolicy {
     }
 
     static void checkSave(UserSaveForm form, UserEntity existing) {
-        if (UserConstant.SUPER_ADMIN.equals(form.getUsername())) {
-            throw new BizException(ResultEnum.PERMISSION_ERROR, "管理员账号不能通过普通用户保存入口维护");
-        }
+        checkUsername(form.getUsername());
         // 根据数据库目标检查，不能信任请求中可伪造的用户名。
         checkTarget(existing);
+    }
+
+    static void checkUsername(String username) {
+        if (username == null || username.isBlank()) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "用户名不能为空");
+        }
+        if (UserConstant.SUPER_ADMIN.equalsIgnoreCase(username.trim())) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "管理员账号不能通过普通用户保存入口维护");
+        }
+        if (username.contains("@") || username.length() > 100 || !username.equals(username.trim())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "用户名最长100字符，且不能含有@或首尾空白");
+        }
     }
 
     static void checkTarget(UserEntity target) {

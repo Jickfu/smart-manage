@@ -62,6 +62,12 @@ export function updateCurrentUserPassword(currentPassword: string, newPassword: 
     .then((response) => response.data);
 }
 
+export function renameCurrentUser(username: string, currentPassword: string) {
+  return request
+    .post<Result<void>>('/sys/base/user/current/username', { username, currentPassword })
+    .then((response) => response.data);
+}
+
 export function verifyCurrentUserPassword(currentPassword: string) {
   return request
     .post<Result<void>>('/sys/base/user/current/password/verify', { currentPassword })

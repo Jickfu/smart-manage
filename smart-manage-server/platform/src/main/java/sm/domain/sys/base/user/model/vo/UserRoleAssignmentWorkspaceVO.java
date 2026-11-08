@@ -1,5 +1,6 @@
 package sm.domain.sys.base.user.model.vo;
 
+import sm.domain.sys.base.common.model.vo.ReferenceVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import lombok.Data;
@@ -22,4 +23,6 @@ public class UserRoleAssignmentWorkspaceVO {
 	private String number;
 	@Schema(description = "可分配角色的任职组织列表")
 	private List<UserRoleOrganizationVO> organizations;
+    @Schema(description = "自动继承的默认角色，与手工分配独立，空表示未设置或目标为管理员")
+    private ReferenceVO defaultRole;
 }

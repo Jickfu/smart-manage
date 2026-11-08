@@ -10,7 +10,7 @@ export function useRoleDeleteMutation(onSuccess: () => void | Promise<void>) {
   const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
   return useCommandMutation({
-    mutationFn: (ids: string[]) => Promise.all(ids.map((id) => roleApi.delete(id))),
+    mutationFn: (ids: string[]) => roleApi.deleteBatch(ids),
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: roleQueryKeys.details() });
       await Promise.all([

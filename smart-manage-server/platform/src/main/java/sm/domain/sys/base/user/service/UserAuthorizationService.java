@@ -7,6 +7,7 @@ import sm.domain.sys.base.common.model.vo.ReferenceVO;
 import sm.domain.sys.base.org.contract.OrgReference;
 import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.domain.sys.base.permission.service.PermissionService;
+import sm.domain.sys.base.role.service.RoleService;
 import sm.domain.sys.base.user.mapper.UserAssignmentMapper;
 import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.domain.sys.base.user.mapper.UserRoleMapper;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserAuthorizationService {
     private final UserMapper userMapper;
+    private final RoleService roleService;
     private final UserRoleMapper userRoleMapper;
     private final UserAssignmentMapper userAssignmentMapper;
     private final OrgReferenceReader orgReferenceReader;
@@ -65,6 +67,7 @@ public class UserAuthorizationService {
         result.setUsername(user.getUsername());
         result.setNumber(user.getNumber());
         result.setOrganizations(organizations);
+        if (!"administrator".equals(user.getUsername())) result.setDefaultRole(roleService.defaultRole().getRole());
         return result;
     }
 
@@ -76,7 +79,7 @@ public class UserAuthorizationService {
     public List<String> permissions(String prefix) {
         if (currentUserContext.isAdministrator()) return List.of("*");
         return permissionService.getUserPermissionsByPrefix(
-                currentUserContext.getUserId(), currentUserContext.getOrgId(), prefix);
+                currentUserContext.getUserId(), currentUserContext.getOptionalOrgId(), prefix);
     }
 
     private List<UserAssignmentVO> loadAssignments(Long userId) {

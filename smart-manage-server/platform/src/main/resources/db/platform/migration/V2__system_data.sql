@@ -1562,3 +1562,15 @@ VALUES (560000000000000310, 'singleton', '常驻任务', 1, 0, 32, 5600000000000
 INSERT INTO public.t_sys_feature_data_object (id, feature_id, schema_name, object_name, object_type, object_role, display_name, seq) VALUES
 (560000000000000320, 560000000000000300, 'public', 't_sys_singleton_task', 'TABLE', 'PRIMARY', '常驻任务', 10),
 (560000000000000321, 560000000000000300, 'public', 't_sys_singleton_event', 'TABLE', 'LOG', '常驻任务近期事件', 20);
+
+INSERT INTO public.t_sys_role_default(id, role_id, version) VALUES (1, NULL, 0);
+
+INSERT INTO public.t_sys_permission(id, name, number, version, feature_id)
+VALUES (470000000000000102, '角色管理-设置默认角色', 'sys:base:role:setDefault', 0, 450000000000000013);
+INSERT INTO public.t_sys_feature_data_object(id, feature_id, schema_name, object_name, object_type, object_role, display_name, seq)
+VALUES (540000000000000102, 450000000000000013, 'public', 't_sys_role_default', 'TABLE', 'RELATION', '默认角色配置', 40);
+
+-- 注册开关和归属以单个参数原子保存。
+INSERT INTO public.t_sys_param (id, number, name, value, description, is_system, version)
+VALUES (480000000000000015, 'SELF_REGISTRATION_POLICY', '邮箱自助注册策略', 'DISABLED',
+        'DISABLED 关闭；UNASSIGNED 未分配部门；ORGANIZATION:组织ID:职位 分配主职组织', true, 0);

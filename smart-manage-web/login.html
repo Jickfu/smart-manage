@@ -8,7 +8,7 @@
     <!-- 内联登录脚本使用固定 SHA-256 摘要授权，脚本内容变化时必须同步更新摘要。 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'sha256-94yxlxSgux3AL73uDkda0ZIumG2QLe7PQPwB/7qIink='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+      content="default-src 'self'; script-src 'self' 'sha256-Tzx2/X+u4W1fkvWZVqtiARtMt8gvSsQBhju7J6Wi+7c='; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
     />
     <title>Smart Manage - 登录</title>
     <script src="/js/sm2.js"></script>
@@ -64,7 +64,7 @@
                   id="username"
                   class="sm-input"
                   type="text"
-                  placeholder="用户名"
+                  placeholder="用户名或邮箱"
                   autocomplete="username"
                 />
               </div>
@@ -90,12 +90,61 @@
               </div>
 
               <div class="sm-form-extra">
+                <button id="openRegistrationBtn" class="sm-link-button" type="button" hidden>
+                  注册账号
+                </button>
                 <button id="forgotPasswordBtn" class="sm-link-button" type="button">
                   忘记密码
                 </button>
               </div>
 
               <button id="loginBtn" class="sm-login-btn" type="submit">登录</button>
+            </form>
+
+            <form id="registrationForm" class="sm-form" hidden>
+              <div class="sm-input-wrap">
+                <input
+                  id="registrationEmail"
+                  class="sm-input"
+                  type="email"
+                  maxlength="254"
+                  placeholder="邮箱地址"
+                  aria-label="邮箱地址"
+                  autocomplete="email"
+                  required
+                />
+              </div>
+              <div class="sm-input-wrap">
+                <input
+                  id="registrationCode"
+                  class="sm-input"
+                  inputmode="numeric"
+                  pattern="[0-9]{6}"
+                  maxlength="6"
+                  placeholder="6 位邮箱验证码"
+                  aria-label="邮箱验证码"
+                  autocomplete="one-time-code"
+                  required
+                />
+              </div>
+              <button id="sendRegistrationCodeBtn" class="sm-link-button" type="button">
+                发送邮箱验证码
+              </button>
+              <div class="sm-input-wrap">
+                <input
+                  id="registrationPassword"
+                  class="sm-input"
+                  type="password"
+                  placeholder="设置登录密码"
+                  aria-label="设置登录密码"
+                  autocomplete="new-password"
+                  required
+                />
+              </div>
+              <button id="registerBtn" class="sm-login-btn" type="submit">注册</button>
+              <button id="cancelRegistrationBtn" class="sm-link-button" type="button">
+                返回登录
+              </button>
             </form>
 
             <form id="passwordChangeForm" class="sm-form" autocomplete="off" hidden>
@@ -395,6 +444,14 @@
       var loginLogoEl = document.getElementById('loginLogo');
       var loginTitleEl = document.getElementById('loginTitle');
       var usernameEl = document.getElementById('username');
+      var registrationFormEl = document.getElementById('registrationForm');
+      var registrationEmailEl = document.getElementById('registrationEmail');
+      var registrationCodeEl = document.getElementById('registrationCode');
+      var registrationPasswordEl = document.getElementById('registrationPassword');
+      var openRegistrationBtnEl = document.getElementById('openRegistrationBtn');
+      var sendRegistrationCodeBtnEl = document.getElementById('sendRegistrationCodeBtn');
+      var registerBtnEl = document.getElementById('registerBtn');
+      var cancelRegistrationBtnEl = document.getElementById('cancelRegistrationBtn');
       var passwordEl = document.getElementById('password');
       var captchaModalEl = document.getElementById('captchaModal');
       var captchaCanvasEl = document.getElementById('captchaCanvas');
@@ -645,6 +702,7 @@
       }
 
       function getCaptchaIdentity() {
+        if (captchaPurpose === 'registration') return registrationEmailEl.value.trim();
         return captchaPurpose === 'email-recovery'
           ? recoveryEmailEl.value.trim()
           : usernameEl.value.trim();
@@ -666,7 +724,12 @@
       }
 
       function setCaptchaActionLoading(loading) {
-        if (captchaPurpose === 'email-recovery') {
+        if (captchaPurpose === 'registration') {
+          sendRegistrationCodeBtnEl.disabled = loading;
+          registerBtnEl.disabled = loading;
+          cancelRegistrationBtnEl.disabled = loading;
+          registrationEmailEl.readOnly = loading;
+        } else if (captchaPurpose === 'email-recovery') {
           sendRecoveryCodeBtnEl.disabled = loading;
           resendRecoveryCodeBtnEl.disabled = loading;
           sendRecoveryCodeBtnEl.textContent = loading ? '验证中...' : '发送邮箱验证码';
@@ -767,7 +830,9 @@
             setCaptchaStatus('验证成功', 'success');
             captchaModalEl.hidden = true;
             captchaChallenge = null;
-            if (captchaPurpose === 'email-recovery') {
+            if (captchaPurpose === 'registration') {
+              submitRegistrationCodeRequest(result.data.captchaTicket);
+            } else if (captchaPurpose === 'email-recovery') {
               submitRecoveryCodeRequest(result.data.captchaTicket);
             } else {
               submitLogin(result.data.captchaTicket);
@@ -850,6 +915,8 @@
       }
 
       function showLoginForm(successMessage) {
+        registrationFormEl.hidden = true;
+        registrationFormEl.reset();
         resetPasswordVisibility();
         passwordChangeTicket = '';
         newPasswordEl.value = '';
@@ -1200,6 +1267,88 @@
       checkExistingSession();
 
       // 事件绑定
+      async function postRegistration(path, form) {
+        var response = await fetch(API_BASE + '/sys/base/registration/' + path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        var result = await response.json();
+        if (result.code !== 0) throw new Error(result.msg || '注册请求失败');
+        return result.data;
+      }
+
+      async function submitRegistrationCodeRequest(captchaTicket) {
+        try {
+          var message = await postRegistration('code', {
+            email: registrationEmailEl.value.trim(),
+            captchaTicket: captchaTicket,
+          });
+          showSuccess(message || '验证码发送请求已受理');
+          registrationCodeEl.focus();
+        } catch (error) {
+          showError(error.message || '验证码发送失败');
+        } finally {
+          setCaptchaActionLoading(false);
+        }
+      }
+
+      fetch(API_BASE + '/sys/base/registration/availability', { cache: 'no-store' })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (result) {
+          openRegistrationBtnEl.hidden = result.data !== true;
+        })
+        .catch(function () {
+          openRegistrationBtnEl.hidden = true;
+        });
+
+      openRegistrationBtnEl.addEventListener('click', function () {
+        defaultLoginTitle = defaultLoginTitle || loginTitleEl.textContent;
+        loginTitleEl.textContent = '邮箱注册';
+        loginFormEl.hidden = true;
+        registrationFormEl.hidden = false;
+        hideError();
+        registrationEmailEl.focus();
+      });
+      cancelRegistrationBtnEl.addEventListener('click', function () {
+        showLoginForm();
+      });
+      sendRegistrationCodeBtnEl.addEventListener('click', function () {
+        if (!registrationEmailEl.reportValidity()) return;
+        hideError();
+        openCaptchaModal('registration');
+      });
+      registrationFormEl.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (registerBtnEl.disabled) return;
+        registerBtnEl.disabled = true;
+        sendRegistrationCodeBtnEl.disabled = true;
+        cancelRegistrationBtnEl.disabled = true;
+        var email = registrationEmailEl.value.trim();
+        var code = registrationCodeEl.value.trim();
+        var password = registrationPasswordEl.value;
+        try {
+          var policy = await loadPasswordPolicy();
+          var validationMessage = getPasswordPolicyError(password, policy);
+          if (validationMessage) throw new Error(validationMessage);
+          await postRegistration('complete', {
+            email: email,
+            code: code,
+            password: await encryptPassword(password),
+          });
+          usernameEl.value = email;
+          showLoginForm('注册成功，请使用邮箱和密码登录');
+        } catch (error) {
+          showError(error.message || '注册失败');
+        } finally {
+          registerBtnEl.disabled = false;
+          sendRegistrationCodeBtnEl.disabled = false;
+          cancelRegistrationBtnEl.disabled = false;
+        }
+      });
+
       usernameEl.addEventListener('input', function () {
         hideError();
       });

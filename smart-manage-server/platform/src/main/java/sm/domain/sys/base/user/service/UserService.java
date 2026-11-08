@@ -220,8 +220,8 @@ public class UserService {
 	 */
 	public UserCreateNewDataVO createNewData() {
 		UserCreateNewDataVO vo = new UserCreateNewDataVO();
-		// 未分配组织的用户只能以禁用状态暂存。
-		vo.setEnabled(false);
+		// 普通用户可在无组织的情况下使用个人功能。
+		vo.setEnabled(true);
 		// 可根据业务需要设置默认角色等
 		return vo;
 	}

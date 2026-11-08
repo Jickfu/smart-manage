@@ -48,7 +48,7 @@ class UserAppPinServiceTests {
 		CurrentUserContext currentUserContext = mock(CurrentUserContext.class);
 		UserAppPinMapper mapper = mock(UserAppPinMapper.class);
 		when(currentUserContext.getUserId()).thenReturn(10L);
-		when(currentUserContext.getOrgId()).thenReturn(30L);
+		when(currentUserContext.getOptionalOrgId()).thenReturn(30L);
 		when(currentUserContext.isAdministrator()).thenReturn(false);
 		UserAppPinService service = new UserAppPinService(currentUserContext, mock(AppService.class),
 				mapper, mock(UserAppPinTxService.class));

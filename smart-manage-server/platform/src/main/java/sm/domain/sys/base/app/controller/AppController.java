@@ -1,5 +1,6 @@
 package sm.domain.sys.base.app.controller;
 
+import sm.system.security.authorization.PersonalSessionAllowed;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -84,6 +85,7 @@ public class AppController {
 	}
 
 	@Operation(summary = "领域与应用列表", description = "获取领域及其下应用")
+	@PersonalSessionAllowed
 	@GetMapping("/sys/base/app/apps")
 	public Result<List<DomainAppsVO>> apps() {
 		return Result.success(service.getUserDomainApps(currentUserContext.getUserId()));

@@ -102,16 +102,3 @@
   height: 70vh;
   border: 0;
 }
-
-@media (max-width: 900px) {
-  .sm-business-attachment-item {
-    grid-template-columns: 22px minmax(180px, 1fr);
-    row-gap: 4px;
-  }
-
-  .sm-business-attachment-uploader,
-  .sm-business-attachment-time,
-  .sm-business-attachment-remark {
-    grid-column: 2;
-  }
-}

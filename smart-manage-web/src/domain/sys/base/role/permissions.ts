@@ -7,4 +7,5 @@ export const roleAccess = defineAccessResource('sys:base:role', {
   delete: 'delete',
   assignPermissions: 'assignPermissions',
   assignDataScopes: 'assignDataScopes',
+  setDefault: 'setDefault',
 });

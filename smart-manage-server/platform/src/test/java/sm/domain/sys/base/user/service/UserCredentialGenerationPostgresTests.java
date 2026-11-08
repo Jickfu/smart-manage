@@ -120,6 +120,17 @@ class UserCredentialGenerationPostgresTests {
     }
 
     @Test
+    void renamingAndRestoringUsernameNeverRestoresOldSession() {
+        service.renameCurrentUser(USER_ID, "renamed-credential-user", "initial-test-password");
+        assertEquals("renamed-credential-user", mapper.selectById(USER_ID).getUsername());
+        assertEquals(1L, snapshot().generation());
+
+        service.renameCurrentUser(USER_ID, "verify-credential-user", "initial-test-password");
+        assertEquals(2L, snapshot().generation());
+        assertThrows(BizException.class, () -> new UserSessionStateVerifier(mapper).verify(USER_ID, 0));
+    }
+
+    @Test
     void bindingAndRestoringSameMailboxDoesNotRestoreOldGeneration() {
         var original = snapshot();
         service.bindVerifiedEmail(original, "new@example.invalid");

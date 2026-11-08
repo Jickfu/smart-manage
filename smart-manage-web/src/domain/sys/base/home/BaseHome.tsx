@@ -114,7 +114,7 @@ const BaseHome = () => {
                   if (canViewOrgs) void organizations.refetch();
                 }}
               />
-              <span>未封存组织</span>
+              <span>组织数量</span>
             </div>
             <div>
               <Metric

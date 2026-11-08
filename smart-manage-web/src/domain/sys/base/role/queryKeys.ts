@@ -1,5 +1,6 @@
 export const roleQueryKeys = {
   all: ['sys', 'role'] as const,
+  defaultRole: () => [...roleQueryKeys.all, 'defaultRole'] as const,
   lists: () => [...roleQueryKeys.all, 'list'] as const,
   list: (params: object) => [...roleQueryKeys.lists(), params] as const,
   details: () => [...roleQueryKeys.all, 'detail'] as const,

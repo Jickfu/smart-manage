@@ -34,7 +34,19 @@ node scripts/generate-deployment-keys.mjs --output /opt/customer-a/config/deploy
 
 Linux/macOS 文件创建权限为 `0600`；Windows 在写入前取消继承 ACL，仅授权当前用户。权限设置失败则停止并删除本次未完成文件。交付服务运行账号时，应由管理员显式授权该账号读取，保留最小访问范围。
 
-生成文件是 `NAME=value` 配置材料，**Spring Boot 不会自动读取 `.env` 文件**。请选择一种接入方式：
+## 部署密钥文件
+
+推荐将生成文件固定放在部署目录的 `config/deployment-keys.env`，由同目录的 `application-prod.yml` 导入：
+
+```yaml
+spring:
+  config:
+    import: "deployment-keys.env[.properties]"
+```
+
+导入路径相对于 `application-prod.yml`。`[.properties]` 让 Spring Boot 按 Properties 格式读取脚本输出的 `NAME=value`，并解析 JAR 内生产配置引用的三个同名占位符。使用必需导入，文件缺失时启动会报错。服务运行账号须能读取文件。[生产目录与启动方式](./configuration.md#生产环境)
+
+已有部署也可以继续使用以下接入方式：
 
 - 通过服务管理器、容器编排或密钥管理设施，将文件内三个变量注入 Java 进程环境。
 - 将值填入仓库外的外部 YAML：`smart-manage.system.security.sm2.js.private-key`、`smart-manage.system.security.sm2.js.public-key` 和 `smart-manage.system.security.sm4.key-base64`。外部配置加载方式见[生产环境](./configuration.md#生产环境)。
@@ -47,7 +59,7 @@ Linux/macOS 文件创建权限为 `0600`；Windows 在写入前取消继承 ACL�
 2. 所有后端实例配置相同的 SM2 密钥对与 SM4 密钥；为不同实例配置不同的实例 ID。
 3. 登录页在每次提交密码前通过 `GET /sys/base/login/password/publicKey` 获取当前公钥。接口与请求均禁用缓存；公钥缺失、格式错误、曲线点无效或网络失败时阻止密码提交。无需修改 `login.html`，无需因换密钥修改 CSP 摘要。
 4. 保持 HTTPS、生产 Cookie 与代理配置；SM2 不能替代 TLS。代理不得强制缓存公钥接口。
-5. 将密钥放入受控备份，与数据库备份建立可追溯对应关系。SM4 密钥丢失后不能从数据库密文恢复。
+5. 将整个 `config/` 放入受控备份，与对应 JAR 和数据库备份建立可追溯的对应关系。采用外部密钥管理时，保留匹配的密钥版本和恢复方式。恢复已有数据库时使用原密钥，SM4 密钥丢失后无法从数据库密文恢复。
 6. 在生产环境重新创建 OpenAPI 凭据并交付对应调用方；创建成功只显示一次，关闭后不能再次读取。不要沿用测试凭据。
 7. 替换数据库和 Redis 口令、初始管理员密码；在相应管理页面配置生产 SMTP 密码、S3 Access Key/Secret Key 或 FTP 凭据。HTTPS 证书及私钥由证书签发和部署设施管理，不由本工具生成。
 8. 验证普通登录、首次改密、邮箱找回、存储访问、邮件发送，以及已启用的 OpenAPI 签名和双向解密。多实例验证必须覆盖各个节点。

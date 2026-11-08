@@ -27,7 +27,7 @@ public class CurrentUserContext {
 
 	private void setIdentityClaims(cn.dev33.satoken.session.SaSession session, Long orgId,
 			String username, boolean administrator) {
-		session.set(ORG_ID_KEY, orgId);
+		if (orgId != null) session.set(ORG_ID_KEY, orgId);
 		session.set(USERNAME_KEY, username);
 		session.set(ADMINISTRATOR_KEY, administrator);
 	}
@@ -41,15 +41,22 @@ public class CurrentUserContext {
 	}
 
 	public Long getOrgId() {
+        Long orgId = getOptionalOrgId();
+        if (orgId == null) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "此功能需要有效的任职组织");
+        }
+        return orgId;
+    }
+
+    /** 个人功能可在没有任职组织的正式会话中运行。 */
+    public Long getOptionalOrgId() {
 		OpenApiActorContext.Actor actor = OpenApiActorContext.currentOrNull();
 		if (actor != null) {
 			return actor.orgId();
 		}
 		Object orgIdClaim = StpUtil.getTokenSession().get(ORG_ID_KEY);
-		if (!(orgIdClaim instanceof Number orgIdNumber) || orgIdNumber.longValue() <= 0) {
-			throw new BizException(ResultEnum.UNAUTHORIZED, "当前登录会话缺少组织上下文，请重新登录");
-		}
-		return orgIdNumber.longValue();
+		return orgIdClaim instanceof Number orgIdNumber && orgIdNumber.longValue() > 0
+                ? orgIdNumber.longValue() : null;
 	}
 
 	public void setOrgId(Long orgId) {

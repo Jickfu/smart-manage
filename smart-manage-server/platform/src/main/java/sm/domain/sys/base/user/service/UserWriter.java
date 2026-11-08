@@ -42,6 +42,14 @@ class UserWriter {
     }
 
     Long save(UserSaveForm form, Long desiredId) {
+        return save(form, desiredId, false);
+    }
+
+    Long register(UserSaveForm form) {
+        return save(form, null, true);
+    }
+
+    private Long save(UserSaveForm form, Long desiredId, boolean registration) {
         UserLifecyclePolicy.checkSave(form,
                 form.getId() == null ? null : mapper.selectById(form.getId()));
         LambdaQueryWrapper<UserEntity> usernameCheck = new LambdaQueryWrapper<UserEntity>()
@@ -76,10 +84,7 @@ class UserWriter {
             entity.setId(desiredId);
         }
 
-        if (form.getId() != null && !Objects.equals(entity.getUsername(), form.getUsername())) {
-            throw new BizException(ResultEnum.PARAM_ERROR, "登录用户名创建后不允许修改");
-        }
-        if (form.getId() == null) entity.setUsername(form.getUsername());
+        entity.setUsername(form.getUsername());
         if (form.getId() != null && form.getPassword() != null && !form.getPassword().isEmpty()) {
             throw new BizException(ResultEnum.PARAM_ERROR, "编辑用户不能修改密码，请使用重置密码");
         }
@@ -102,11 +107,11 @@ class UserWriter {
                 throw new BizException(ResultEnum.PARAM_ERROR, "新增用户密码不能为空");
             }
             entity.setThemeColor(UserThemeColor.DEFAULT);
-            entity.setPasswordReset(true);
-            entity.setEnabled(!form.getAssignments().isEmpty());
+            entity.setPasswordReset(!registration);
+            if (registration) entity.setEmailVerifiedAt(java.time.LocalDateTime.now());
+            entity.setEnabled(true);
             if (mapper.insert(entity) != 1) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "新增数据失败");
         } else {
-            if (form.getAssignments().isEmpty()) entity.setEnabled(false);
             if (mapper.updateById(entity) == 0) {
                 throw new BizException(ResultEnum.DATA_CONFLICT, "用户已被其他用户修改，请刷新后重试");
             }
@@ -171,6 +176,8 @@ class UserWriter {
         }
         // 任职和角色必须保持一致，避免重新任职时历史授权自动恢复。
         if (!removedOrgIds.isEmpty()) {
+            // 账号保持启用，但持有旧任职上下文的会话必须重新登录。
+            mapper.revokeCredentialsAfterAssignmentRemoval(userId);
             userRoleMapper.delete(new LambdaQueryWrapper<UserRoleEntity>()
                     .eq(UserRoleEntity::getUserId, userId).in(UserRoleEntity::getOrgId, removedOrgIds));
         }

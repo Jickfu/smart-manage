@@ -20,6 +20,7 @@ body {
 }
 
 :root {
+  --sm-desktop-min-width: 960px;
   --sm-color-text: #212121;
   --sm-color-text-secondary: #666;
   --sm-color-text-tertiary: #999;

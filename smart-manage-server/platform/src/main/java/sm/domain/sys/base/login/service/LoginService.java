@@ -67,29 +67,31 @@ public class LoginService {
 	public LoginVO login(LoginForm form) {
 		String clientIp = clientIpResolver.resolveCurrentRequest();
 		loginProtectionService.consumeCaptchaTicket(form.getUsername(), clientIp, form.getCaptchaTicket());
+        String accountIdentity = userAuthenticationService.protectionIdentity(form.getUsername());
+        loginProtectionService.assertLoginAllowed(accountIdentity, clientIp);
 
 		// SM2 解密前端密码
 		String decryptedPassword;
 		try {
 			decryptedPassword = decryptLoginPayload(form.getPassword(), form.getUsername());
 		} catch (BizException exception) {
-			loginProtectionService.recordAuthenticationFailure(form.getUsername(), clientIp);
+			loginProtectionService.recordAuthenticationFailure(accountIdentity, clientIp);
 			throw exception;
 		}
 		if (temporaryLoginService.supports(decryptedPassword)) {
 			try {
 				LoginVO login = temporaryLoginService.consume(form.getUsername(), decryptedPassword);
-				loginProtectionService.clearAfterSuccess(form.getUsername(), clientIp);
+				loginProtectionService.clearAfterSuccess(accountIdentity, clientIp);
 				return login;
 			} catch (BizException exception) {
-				loginProtectionService.recordAuthenticationFailure(form.getUsername(), clientIp);
+				loginProtectionService.recordAuthenticationFailure(accountIdentity, clientIp);
 				writeLoginFailure(form.getUsername(), "用户名或密码错误");
 				throw exception;
 			}
 		}
 		var authentication = userAuthenticationService.authenticate(form.getUsername(), decryptedPassword);
 		if (!authentication.successful()) {
-			loginProtectionService.recordAuthenticationFailure(form.getUsername(), clientIp);
+			loginProtectionService.recordAuthenticationFailure(accountIdentity, clientIp);
 			String publicMessage = credentialFailure(authentication.message())
 					? "用户名或密码错误"
 					: authentication.message();
@@ -100,7 +102,7 @@ public class LoginService {
 			return failed;
 		}
 		if (authentication.passwordReset()) {
-			loginProtectionService.clearAfterSuccess(form.getUsername(), clientIp);
+			loginProtectionService.clearAfterSuccess(accountIdentity, clientIp);
 			writePasswordChangeRequired(authentication);
 			String ticket = UUID.randomUUID().toString();
 			redisTemplate.opsForValue().set(
@@ -114,7 +116,7 @@ public class LoginService {
 			return passwordReset;
 		}
 		LoginVO login = userSessionService.completeLogin(authentication);
-		loginProtectionService.clearAfterSuccess(form.getUsername(), clientIp);
+		loginProtectionService.clearAfterSuccess(accountIdentity, clientIp);
 		return login;
 	}
 
@@ -130,6 +132,12 @@ public class LoginService {
 		}
 		return new CaptchaTicketVO(loginProtectionService.issueCaptchaTicket(form.getUsername()));
 	}
+
+    public String consumeRegistrationCaptcha(String email, String ticket) {
+        String clientIp = clientIpResolver.resolveCurrentRequest();
+        loginProtectionService.consumeCaptchaTicket(email, clientIp, ticket);
+        return clientIp;
+    }
 
 	public void requestEmailPasswordCode(EmailPasswordCodeRequestForm form) {
 		String clientIp = clientIpResolver.resolveCurrentRequest();
@@ -179,7 +187,9 @@ public class LoginService {
 
 	private void writeLoginFailure(String username, String message) {
 		RequestMeta requestMeta = requestMeta();
-		logWriteService.writeLoginFailed(username, message, requestMeta.ip(), requestMeta.userAgent());
+		// 邮箱是私密登录别名，失败日志不保留其明文。
+        String auditName = username.contains("@") ? "[邮箱登录]" : username;
+        logWriteService.writeLoginFailed(auditName, message, requestMeta.ip(), requestMeta.userAgent());
 	}
 
 	private void writePasswordChangeRequired(sm.domain.sys.base.user.model.vo.UserAuthentication authentication) {

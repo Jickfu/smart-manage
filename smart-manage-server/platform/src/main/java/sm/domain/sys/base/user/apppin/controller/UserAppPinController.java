@@ -1,5 +1,6 @@
 package sm.domain.sys.base.user.apppin.controller;
 
+import sm.system.security.authorization.PersonalSessionAllowed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -21,6 +22,7 @@ import java.util.List;
 public class UserAppPinController {
 	private final UserAppPinService service;
 
+	@PersonalSessionAllowed
 	@GetMapping("/sys/base/user/current/app-pins")
 	@Operation(summary = "固定应用列表")
 	public Result<List<PinnedAppVO>> list() {

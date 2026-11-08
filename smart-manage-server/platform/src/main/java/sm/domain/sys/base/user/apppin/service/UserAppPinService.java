@@ -19,7 +19,9 @@ public class UserAppPinService {
 	private final UserAppPinTxService txService;
 
 	public List<PinnedAppVO> listCurrentUserPins() {
-		return mapper.selectUserPins(currentUserContext.getUserId(), currentUserContext.getOrgId(),
+		Long orgId = currentUserContext.getOptionalOrgId();
+		if (orgId == null) return List.of();
+		return mapper.selectUserPins(currentUserContext.getUserId(), orgId,
 				currentUserContext.isAdministrator());
 	}
 

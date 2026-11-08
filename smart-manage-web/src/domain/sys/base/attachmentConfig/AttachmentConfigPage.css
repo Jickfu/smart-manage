@@ -40,13 +40,3 @@
   margin-top: 6px;
   color: var(--sm-danger);
 }
-
-@media (max-width: 900px) {
-  .sm-attachment-config-rule-tables {
-    flex-direction: column;
-  }
-
-  .sm-attachment-config-rule-table {
-    width: 100%;
-  }
-}

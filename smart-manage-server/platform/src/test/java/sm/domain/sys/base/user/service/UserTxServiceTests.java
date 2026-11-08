@@ -46,6 +46,7 @@ class UserTxServiceTests {
                 mock(sm.domain.sys.base.org.contract.OrgReferenceReader.class), mock(CurrentUserContext.class),
                 writer, mock(PasswordPolicyService.class), attachmentGateway);
         UserSaveForm form = new UserSaveForm();
+        form.setUsername("avatar-user");
         form.setAvatarAttachmentId(20L);
         form.setAttachmentUploadSessions(java.util.Map.of(20L, "avatar-session"));
 
@@ -218,7 +219,7 @@ class UserTxServiceTests {
         UserEntity saved = entityCaptor.getValue();
         assertEquals(UserThemeColor.DEFAULT, saved.getThemeColor());
         assertTrue(saved.getPasswordReset());
-		assertFalse(saved.getEnabled());
+		assertTrue(saved.getEnabled());
     }
 
 	@Test

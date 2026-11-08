@@ -74,6 +74,28 @@ class UserTxService {
         return userWriter.save(form, desiredId);
     }
 
+    public void renameCurrentUser(Long userId, String username, String password) {
+        UserLifecyclePolicy.checkUsername(username);
+        UserEntity user = mapper.selectById(userId);
+        UserLifecyclePolicy.checkTarget(user);
+        if (user == null || !Boolean.TRUE.equals(user.getEnabled())
+                || !Argon2Helper.verify(user.getPassword(), password)) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "原密码不正确或账号不可用");
+        }
+        if (username.equals(user.getUsername())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "新用户名与当前用户名相同");
+        }
+        user.setUsername(username);
+        try {
+            // 版本条件阻止原密码校验后发生并发改密或禁用时继续改名。
+            if (mapper.updateById(user) != 1) {
+                throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变更，请重试");
+            }
+        } catch (DuplicateKeyException exception) {
+            throw new BizException(ResultEnum.UNIQUE_CONFLICT, "用户名已存在");
+        }
+    }
+
     /** 普通目标重置路径不得接收超级管理员，即使未来上层路由有误也必须拒绝。 */
     public String resetPassword(Long userId) {
         return resetPasswordTarget(userId, false);
@@ -271,20 +293,15 @@ class UserTxService {
         EnabledCommandUtil.update(mapper, UserEntity::getId, UserEntity::getEnabled, ids, enabled, "用户");
     }
 
-	/** 启用账号前必须确认每个用户都有唯一且可用的主职组织。 */
+	/** 启用有主职的账号前校验主职组织有效性；无任职的账号可以使用个人功能。 */
 	private void validateEnabledUserAssignments(List<Long> userIds) {
 		List<UserAssignmentEntity> primaryAssignments = userAssignmentMapper.selectList(
 				new LambdaQueryWrapper<UserAssignmentEntity>()
 						.in(UserAssignmentEntity::getUserId, userIds)
 						.eq(UserAssignmentEntity::getIsPrimary, true));
-		Set<Long> assignedUserIds = new HashSet<>();
 		Set<Long> organizationIds = new HashSet<>();
 		for (UserAssignmentEntity assignment : primaryAssignments) {
-			assignedUserIds.add(assignment.getUserId());
 			organizationIds.add(assignment.getOrgId());
-		}
-		if (!assignedUserIds.containsAll(userIds)) {
-			throw new BizException(ResultEnum.BILL_STATUS_ERROR, "启用用户前必须配置主职组织");
 		}
 		var organizations = orgReferenceReader.findByIds(organizationIds);
 		if (organizations.size() != organizationIds.size()

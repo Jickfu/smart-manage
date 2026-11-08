@@ -25,11 +25,13 @@ CREATE FUNCTION public.advance_user_credential_generation() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    IF NEW.password IS DISTINCT FROM OLD.password
+    IF NEW.username IS DISTINCT FROM OLD.username
+        OR NEW.password IS DISTINCT FROM OLD.password
         OR NEW.password_reset IS DISTINCT FROM OLD.password_reset
         OR NEW.email IS DISTINCT FROM OLD.email
         OR NEW.email_verified_at IS DISTINCT FROM OLD.email_verified_at
-        OR NEW.enabled IS DISTINCT FROM OLD.enabled THEN
+        OR NEW.enabled IS DISTINCT FROM OLD.enabled
+        OR NEW.credential_generation = OLD.credential_generation + 1 THEN
         NEW.credential_generation := OLD.credential_generation + 1;
         -- MyBatis-Plus 可能已经递增 NEW.version；固定 OLD+1，不能重复递增。
         NEW.version := OLD.version + 1;
@@ -39470,3 +39472,27 @@ COMMENT ON COLUMN public.t_sys_singleton_event.event_type IS '事件类型';
 COMMENT ON COLUMN public.t_sys_singleton_event.instance_id IS '执行实例';
 COMMENT ON COLUMN public.t_sys_singleton_event.run_id IS '运行身份';
 COMMENT ON COLUMN public.t_sys_singleton_event.reason IS '安全原因分类';
+
+-- 默认角色独立于手工授权，空角色表示未设置；固定单例和版本共同保护并发切换。
+CREATE TABLE public.t_sys_role_default (
+    id bigint PRIMARY KEY CHECK (id = 1),
+    role_id bigint REFERENCES public.t_sys_role(id),
+    version integer NOT NULL DEFAULT 0
+);
+COMMENT ON TABLE public.t_sys_role_default IS '全局默认角色配置';
+COMMENT ON COLUMN public.t_sys_role_default.id IS 'ID';
+COMMENT ON COLUMN public.t_sys_role_default.role_id IS '默认角色ID，空表示未设置';
+COMMENT ON COLUMN public.t_sys_role_default.version IS '并发版本号';
+
+-- UNION 去重，默认角色只在有效任职组织中生效，不创建任职或手工角色关系。
+CREATE VIEW public.v_sys_user_effective_role AS
+SELECT a.user_id, a.org_id, a.role_id FROM public.t_sys_user_role a
+UNION
+SELECT a.user_id, a.org_id, b.role_id
+FROM public.t_sys_user_assignment a
+CROSS JOIN public.t_sys_role_default b
+INNER JOIN public.t_sys_user c ON c.id = a.user_id
+INNER JOIN public.t_sys_org d ON d.id = a.org_id
+WHERE b.role_id IS NOT NULL AND c.enabled = true
+  AND d.enabled = true AND d.archived = false AND c.username <> 'administrator';
+COMMENT ON VIEW public.v_sys_user_effective_role IS '用户组织有效角色：手工授权与默认角色的并集';
