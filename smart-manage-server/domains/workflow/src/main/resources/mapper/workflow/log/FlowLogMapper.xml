@@ -44,7 +44,7 @@
                    operation.action,
                    operation.operator_id,
                    operation.reason,
-                   operation.create_time,
+                   operation.event_time,
                    'MANAGEMENT'
             FROM t_workflow_operation operation
             JOIN t_workflow_instance workflow ON workflow.id = operation.instance_id
@@ -58,7 +58,7 @@
                    CONCAT('SCRIPT_', execution.status),
                    execution.operator_id,
                    execution.error_message,
-                   execution.create_time,
+                   execution.event_time,
                    'SCRIPT'
             FROM t_workflow_script_execution execution
             JOIN t_workflow_instance workflow ON workflow.id = execution.instance_id

@@ -76,6 +76,7 @@ export default function LeaveListPage(props: PageComponentProps) {
       isRowSelectable={(row) => isStandardBillEditable(row.billStatus) && !row.currentInstanceId}
       columns={[
         {
+          ellipsis: true,
           title: '单据编号',
           dataIndex: 'number',
           width: 190,
@@ -99,11 +100,21 @@ export default function LeaveListPage(props: PageComponentProps) {
             </Button>
           ),
         },
-        { title: '事由', dataIndex: 'reason' },
-        { title: '开始时间', dataIndex: 'startTime', width: 180 },
-        { title: '结束时间', dataIndex: 'endTime', width: 180 },
-        { title: '天数', dataIndex: 'days', width: 80 },
         {
+          ellipsis: true,
+          title: '事由',
+          dataIndex: 'reason',
+          render: (value?: string) => (
+            <span className="sm-list-cell-text" title={value}>
+              {value}
+            </span>
+          ),
+        },
+        { ellipsis: true, title: '开始时间', dataIndex: 'startTime', width: 180 },
+        { ellipsis: true, title: '结束时间', dataIndex: 'endTime', width: 180 },
+        { ellipsis: true, title: '天数', dataIndex: 'days', width: 80 },
+        {
+          ellipsis: true,
           title: '状态',
           dataIndex: 'billStatus',
           width: 100,

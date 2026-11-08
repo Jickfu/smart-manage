@@ -7,6 +7,15 @@
   flex-direction: column;
 }
 
+/* 长文本列使用稳定显示宽度，避免把 max-content 横向表格撑开。 */
+.sm-list-cell-text {
+  display: block;
+  max-inline-size: 24rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* === 顶部区域（过滤 + 工具栏） === */
 
 .sm-list-top {

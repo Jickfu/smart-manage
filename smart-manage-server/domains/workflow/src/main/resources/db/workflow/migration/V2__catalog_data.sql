@@ -1,40 +1,24 @@
-CREATE TABLE t_workflow_operation (
-    id bigint PRIMARY KEY,
-    instance_id bigint NOT NULL REFERENCES t_workflow_instance(id),
-    task_id bigint,
-    action varchar(40) NOT NULL,
-    operator_id bigint NOT NULL,
-    reason varchar(500) NOT NULL,
-    before_data text,
-    after_data text,
-    create_time timestamp,
-    update_time timestamp,
-    create_user bigint,
-    update_user bigint
-);
-COMMENT ON TABLE t_workflow_operation IS '流程实例管理操作审计；实例禁止删除，审计记录随实例永久保留';
-COMMENT ON COLUMN t_workflow_operation.id IS '主键';
-COMMENT ON COLUMN t_workflow_operation.instance_id IS '流程实例ID';
-COMMENT ON COLUMN t_workflow_operation.task_id IS '关联当前任务ID';
-COMMENT ON COLUMN t_workflow_operation.action IS '管理动作';
-COMMENT ON COLUMN t_workflow_operation.operator_id IS '操作人ID';
-COMMENT ON COLUMN t_workflow_operation.reason IS '操作原因';
-COMMENT ON COLUMN t_workflow_operation.before_data IS '操作前工作流投影';
-COMMENT ON COLUMN t_workflow_operation.after_data IS '操作后工作流投影';
-COMMENT ON COLUMN t_workflow_operation.create_time IS '创建时间';
-COMMENT ON COLUMN t_workflow_operation.update_time IS '更新时间';
-COMMENT ON COLUMN t_workflow_operation.create_user IS '创建人';
-COMMENT ON COLUMN t_workflow_operation.update_user IS '更新人';
-CREATE INDEX idx_workflow_operation_instance ON t_workflow_operation(instance_id, create_time, id);
+INSERT INTO t_sys_domain (id, name, number, seq) VALUES (470000000000000001, '工作流', 'workflow', 30);
+
+INSERT INTO t_sys_app (id, name, number, icon, domain_id, seq) VALUES
+(470000000000000002, '流程管理', 'process', 'ApartmentOutlined', 470000000000000001, 10);
+
+INSERT INTO t_sys_feature (id, feature_key, app_id, default_name, default_seq) VALUES
+(470000000000000011, 'workflow/process/definition', 470000000000000002, '流程定义', 10),
+(470000000000000012, 'workflow/process/task', 470000000000000002, '个人流程任务', 50);
 
 INSERT INTO t_sys_feature (id, feature_key, app_id, default_name, default_seq) VALUES
 (470000000000000013, 'workflow/process/instance', 470000000000000002, '流程实例', 20),
 (470000000000000014, 'workflow/process/task-monitor', 470000000000000002, '任务监控', 30),
 (470000000000000015, 'workflow/process/flow-log', 470000000000000002, '流转日志', 40);
 
-UPDATE t_sys_feature
-SET default_name = '个人流程任务', default_seq = 50
-WHERE id = 470000000000000012;
+INSERT INTO t_sys_permission (id, name, number, feature_id) VALUES
+(470000000000000021, '流程定义-入口', 'workflow:process:definition', 470000000000000011),
+(470000000000000022, '流程定义-列表', 'workflow:process:definition:listPage', 470000000000000011),
+(470000000000000023, '流程定义-设计', 'workflow:process:definition:design', 470000000000000011),
+(470000000000000024, '流程定义-保存', 'workflow:process:definition:save', 470000000000000011),
+(470000000000000025, '流程定义-发布与停用', 'workflow:process:definition:publish', 470000000000000011),
+(470000000000000032, '任务监控-维护候选人', 'workflow:process:task-monitor:maintain', 470000000000000014);
 
 INSERT INTO t_sys_permission (id, name, number, feature_id) VALUES
 (470000000000000041, '流程实例-入口', 'workflow:process:instance', 470000000000000013),
@@ -50,13 +34,12 @@ INSERT INTO t_sys_permission (id, name, number, feature_id) VALUES
 (470000000000000061, '流转日志-入口', 'workflow:process:flow-log', 470000000000000015),
 (470000000000000062, '流转日志-列表', 'workflow:process:flow-log:listPage', 470000000000000015);
 
-DELETE FROM t_sys_menu WHERE id = 470000000000000042;
-DELETE FROM t_sys_permission WHERE id = 470000000000000031;
-UPDATE t_sys_permission
-SET name = '任务监控-维护候选人',
-    number = 'workflow:process:task-monitor:maintain',
-    feature_id = 470000000000000014
-WHERE id = 470000000000000032;
+INSERT INTO t_sys_permission (id, name, number, feature_id) VALUES
+(470000000000000049, '流程实例-重试脚本节点', 'workflow:process:instance:script-retry', 470000000000000013);
+
+INSERT INTO t_sys_menu (id, number, name, level, app_id, permission_id, path, component, icon, sort, feature_id, target_type) VALUES
+(470000000000000041, 'workflow_definition', '流程定义', 1, 470000000000000002, 470000000000000021,
+ '/workflow/process/definition', 'workflow/process/definition', 'ApartmentOutlined', 10, 470000000000000011, 'INTERNAL_PAGE');
 
 INSERT INTO t_sys_menu (id, number, name, level, app_id, permission_id, path, component, icon, sort, feature_id, target_type) VALUES
 (470000000000000043, 'workflow_instance', '流程实例', 1, 470000000000000002, 470000000000000041,
@@ -65,3 +48,7 @@ INSERT INTO t_sys_menu (id, number, name, level, app_id, permission_id, path, co
  '/workflow/process/task-monitor', 'workflow/process/task-monitor', 'MonitorOutlined', 30, 470000000000000014, 'INTERNAL_PAGE'),
 (470000000000000045, 'workflow_flow_log', '流转日志', 1, 470000000000000002, 470000000000000061,
  '/workflow/process/flow-log', 'workflow/process/flow-log', 'ProfileOutlined', 40, 470000000000000015, 'INTERNAL_PAGE');
+
+INSERT INTO t_sys_job (id, number, job_name, description, job_class_name, cron_expression, job_data, status, is_system, version, app_id)
+VALUES (470000000000000051, 'workflowNotification', '工作流通知投递', '投递已提交工作流事务中的待办和结果通知',
+ 'sm.domain.workflow.process.notification.job.DispatchWorkflowNotificationJob', '0/10 * * * * ?', '{}', 'ENABLED', true, 0, 470000000000000002);

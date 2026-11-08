@@ -34,7 +34,8 @@ public class InstanceService implements WorkflowHistoryReader {
     public void register(Long id, WorkflowSubmission.Command command) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) throw new IllegalStateException("实例关联必须参加业务事务");
         var instance = new WorkflowInstanceEntity();
-        instance.setId(id);
+        // 业务轮次沿用已生成的引擎实例 ID，供审批和审计关联。
+        instance.setId(java.util.Objects.requireNonNull(id, "缺少引擎实例 ID"));
         instance.setBusinessType(command.businessType());
         instance.setBusinessId(command.businessId());
         instance.setNumber(command.number());

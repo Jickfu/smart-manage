@@ -28,7 +28,7 @@ class TaskServiceTests {
         var script = history(3L, "SCRIPT", WorkflowEngine.HistoryCategory.SCRIPT);
         var cooperation = history(4L, "TRANSFER", WorkflowEngine.HistoryCategory.COOPERATION);
         var run = new WorkflowEngine.Run(10L, 2L, 7L, WorkflowEngine.State.APPROVING,
-                List.of(), List.of(approval, management, script, cooperation), List.of(), true, true, Map.of());
+                List.of(), List.of(approval, management, script, cooperation), List.of(), true, true, Map.of("apiToken", "fixture-only"));
         when(instances.readable(10L)).thenReturn(run);
         when(instances.reference(10L)).thenReturn(
                 new InstanceService.Reference(10L, "demo.leave", 20L, "L-20", 1L, 7L, "{}"));
@@ -39,6 +39,7 @@ class TaskServiceTests {
         var detail = service.detail(10L);
 
         assertEquals(List.of(approval), detail.run().history());
+        assertEquals(Map.of(), detail.run().variables());
     }
 
     private static WorkflowEngine.History history(Long id, String action,

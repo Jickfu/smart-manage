@@ -123,13 +123,14 @@ export default function InstanceDetailPage(props: PageComponentProps) {
   };
   const submit = async (values: CommandValues) => {
     if (command === 'terminate') {
-      const accepted = await confirm({
+      await confirm({
         type: 'destructive',
-        title: '确认终止当前流程实例',
-        description: '终止后当前审批轮次结束且不能恢复，业务单据将自行处理流程结果。',
+        title: '确认终止流程实例',
+        description: `单据 ${detail?.number ?? props.billId} 的审批轮次将结束且无法恢复，业务单据将自行处理流程结果。`,
         confirmText: '终止流程',
+        onConfirm: () => mutation.mutateAsync(values),
       });
-      if (!accepted) return;
+      return;
     }
     mutation.mutate(values);
   };
@@ -424,7 +425,12 @@ function InstanceContent({
                       render: (id?: string) => (id ? (detail.actorNames[id] ?? id) : '-'),
                     },
                     { title: '意见', dataIndex: 'opinion' },
-                    { title: '时间', dataIndex: 'time', width: 170 },
+                    {
+                      title: '时间',
+                      dataIndex: 'time',
+                      width: 250,
+                      render: (value?: string | null) => value ?? '-',
+                    },
                   ]}
                 />
               ),

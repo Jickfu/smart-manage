@@ -2,9 +2,9 @@
 
 ## 权威来源
 
-数据库结构和必要初始化数据只由所属模块的 Flyway 迁移定义。平台位于 `smart-manage-server/platform/src/main/resources/db/platform/migration`，可选 DEMO 位于 `smart-manage-server/domains/demo/src/main/resources/db/demo/migration`。构建后资源随普通 JAR 交付，不再使用根目录 `db/business` 或复制迁移目录。
+数据库结构和必要初始化数据只由所属模块的 Flyway 迁移定义。平台位于 `smart-manage-server/platform/src/main/resources/db/platform/migration`，可选 Demo 位于 `smart-manage-server/domains/demo/src/main/resources/db/demo/migration`，工作流位于 `smart-manage-server/domains/workflow/src/main/resources/db/workflow/migration`。构建后资源随普通 JAR 交付，不再使用根目录 `db/business` 或复制迁移目录。
 
-当前尚未正式发布，本次直接重组 V1/V2 基线，不兼容旧开发库，不自动修改历史或删除数据。新安装使用空库；已有个人开发库是否重建由使用者明确决定。正式发布后的规则见下文。
+本项目是可供二次开发的开源产品底座。正式发布前，平台、Demo 和工作流各自以 V1（结构）和 V2（初始化数据）作为安装基线，开发期间的后续迁移按内容归并到这两个版本。此阶段的底座开发库只含可重建的测试数据，基线变更后使用空库重建，不改写 Flyway 历史。正式发布或已承载业务数据的数据库遵守下文的升级规则。
 
 ## 平台与领域迁移链
 
@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | 类路径 | `classpath:db/platform/migration` | `classpath:db/demo/migration` |
 | 历史表 | `flyway_schema_history` | `flyway_demo_schema_history` |
-| 版本 | V1 结构、V2 必要数据，后续递增 | 独立从 V1 开始 |
+| 版本 | V1 结构、V2 必要数据，后续递增 | 独立 V1 结构、V2 初始化数据，发布后递增 |
 | 启用 | 始终 | 默认随 `current-domains` 装配；`platform-only` 排除 |
 
 领域 JAR 的 `META-INF/smart-manage/migration.properties` 声明 `id`、`location`、`table`、`minimum-platform-version`。平台通用配置发现声明，保留 Boot 的平台 Flyway Bean 与初始化依赖，先执行平台，再检查领域最低平台版本并执行领域迁移。已声明领域的配置无效、目录缺失、空链、重名或迁移失败均拒绝启动，不自动跳过；装配测试确认选入的领域声明确实存在。

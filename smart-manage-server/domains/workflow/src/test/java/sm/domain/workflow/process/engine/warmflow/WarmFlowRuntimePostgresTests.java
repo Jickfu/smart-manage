@@ -1,6 +1,7 @@
 package sm.domain.workflow.process.engine.warmflow;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import org.dromara.warm.flow.core.FlowEngine;
 import org.dromara.warm.flow.core.dto.DefJson;
@@ -20,8 +21,11 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.transaction.support.TransactionTemplate;
 import sm.domain.workflow.process.engine.WorkflowEngine;
 import sm.domain.workflow.process.engine.warmflow.helper.WarmFlowRuntimeAdapter;
+import sm.domain.workflow.process.log.mapper.FlowLogMapper;
+import sm.domain.workflow.process.log.model.vo.FlowLogRow;
 import sm.system.exception.BizException;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -40,6 +44,7 @@ class WarmFlowRuntimePostgresTests {
     private JdbcTemplate jdbc;
     private TransactionTemplate transaction;
     private WarmFlowRuntimeAdapter engine;
+    private FlowLogMapper logMapper;
     private String schema;
 
     @BeforeAll
@@ -55,19 +60,13 @@ class WarmFlowRuntimePostgresTests {
         var source = new DriverManagerDataSource(url + (url.contains("?") ? "&" : "?") + "currentSchema=" + schema, user, password);
         jdbc = new JdbcTemplate(source);
         new ResourceDatabasePopulator(new ClassPathResource("db/workflow/migration/V1__warm_flow_schema.sql")).execute(source);
-        jdbc.execute("""
-                CREATE TABLE t_workflow_script_execution (
-                    id bigint PRIMARY KEY, instance_id bigint NOT NULL REFERENCES flow_instance(id), task_id bigint NOT NULL,
-                    node_code varchar(100) NOT NULL, status varchar(20) NOT NULL, duration_ms integer NOT NULL,
-                    error_message varchar(500), result_data text, operator_id bigint NOT NULL,
-                    create_time timestamp, update_time timestamp, create_user bigint, update_user bigint)
-                """);
         var transactionManager = new DataSourceTransactionManager(source);
         transaction = new TransactionTemplate(transactionManager);
         var configuration = new MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
         configuration.addMapper(sm.domain.workflow.process.engine.warmflow.mapper.WarmFlowTaskQueryMapper.class);
         configuration.addMapper(sm.domain.workflow.process.script.mapper.WorkflowScriptExecutionMapper.class);
+        configuration.addMapper(FlowLogMapper.class);
         var factory = new MybatisSqlSessionFactoryBean();
         factory.setDataSource(source);
         factory.setConfiguration(configuration);
@@ -75,17 +74,19 @@ class WarmFlowRuntimePostgresTests {
         var mapperResources = new java.util.ArrayList<org.springframework.core.io.Resource>();
         mapperResources.addAll(List.of(resolver.getResources("classpath*:warm/flow/*.xml")));
         mapperResources.addAll(List.of(resolver.getResources("classpath*:mapper/workflow/engine/WarmFlowTaskQueryMapper.xml")));
+        mapperResources.addAll(List.of(resolver.getResources("classpath*:mapper/workflow/log/FlowLogMapper.xml")));
         factory.setMapperLocations(mapperResources.toArray(org.springframework.core.io.Resource[]::new));
         var sessionFactory = factory.getObject();
         var session = new org.mybatis.spring.SqlSessionTemplate(sessionFactory);
+        logMapper = session.getMapper(FlowLogMapper.class);
         var scriptExecutor = new sm.system.script.RestrictedScriptExecutor(tools.jackson.databind.json.JsonMapper.builder().build());
-        var scriptListener = new sm.domain.workflow.process.script.service.WorkflowScriptListener(scriptExecutor,
+        var scriptListener = new sm.domain.workflow.process.engine.warmflow.helper.WorkflowScriptListener(scriptExecutor,
                 session.getMapper(sm.domain.workflow.process.script.mapper.WorkflowScriptExecutionMapper.class),
                 org.mockito.Mockito.mock(sm.domain.sys.base.user.contract.UserReferenceReader.class),
                 tools.jackson.databind.json.JsonMapper.builder().build(), transactionManager);
         context = new AnnotationConfigApplicationContext();
         context.registerBean("workflowScriptExecutor", sm.system.script.RestrictedScriptExecutor.class, () -> scriptExecutor);
-        context.registerBean("workflowScriptListener", sm.domain.workflow.process.script.service.WorkflowScriptListener.class,
+        context.registerBean("workflowScriptListener", sm.domain.workflow.process.engine.warmflow.helper.WorkflowScriptListener.class,
                 () -> scriptListener);
         context.registerBean("sqlSessionFactory", org.apache.ibatis.session.SqlSessionFactory.class, () -> sessionFactory);
         context.register(FlowAutoConfig.class);
@@ -104,13 +105,55 @@ class WarmFlowRuntimePostgresTests {
     @BeforeEach
     void clearRuns() {
         // 上游持有进程级静态上下文，整套真实引擎测试共享一个 Spring 生命周期。
-        jdbc.execute("TRUNCATE flow_instance, flow_task, flow_his_task, flow_user, t_workflow_script_execution");
+        jdbc.execute("""
+                TRUNCATE flow_instance, flow_task, flow_his_task, flow_user, t_workflow_script_execution,
+                         t_workflow_operation, t_workflow_outbox, t_workflow_instance
+                """);
     }
 
     @AfterAll
     void cleanup() {
         if (context != null) context.close();
         if (schema != null) verification.execute("DROP SCHEMA " + schema + " CASCADE");
+    }
+
+    @Test
+    void approvalHistoryAndLogUseTheSameAbsoluteTimeAcrossDatabaseTimeZones() {
+        var approved = transaction.execute(status -> {
+            jdbc.execute("SET LOCAL TIME ZONE 'America/Los_Angeles'");
+            var run = start();
+            jdbc.update("""
+                    INSERT INTO t_workflow_instance
+                        (id, business_type, business_id, number, org_id, applicant_id, request_id, request_digest, snapshot)
+                    VALUES (?, 'demo.leave', 1, 'L-TIME', 1, 10, ?, 'digest', '{}')
+                    """, run.id(), UUID.randomUUID());
+            Instant before = Instant.now().minusSeconds(1);
+            var completed = engine.approve(run.id(), run.tasks().getFirst().id(), 20L, "同意");
+            var approval = completed.history().getLast();
+            assertEquals("APPROVED", approval.action());
+            assertFalse(approval.time().isBefore(before));
+            assertFalse(approval.time().isAfter(Instant.now()));
+            assertEquals(approval.time(), logTime(approval.id()));
+
+            // 完成时间缺失时，轨迹和日志仍必须读到同一个跨日时刻。
+            jdbc.update("""
+                    UPDATE flow_his_task SET create_time = TIMESTAMPTZ '2026-10-02 16:01:02.123Z',
+                                             update_time = NULL WHERE id = ?
+                    """, approval.id());
+            return completed;
+        });
+        transaction.executeWithoutResult(status -> {
+            jdbc.execute("SET LOCAL TIME ZONE 'Asia/Shanghai'");
+            Instant expected = Instant.parse("2026-10-02T16:01:02.123Z");
+            assertEquals(expected, engine.inspect(approved.id()).history().getLast().time());
+            assertEquals(expected, logTime(approved.history().getLast().id()));
+        });
+    }
+
+    private Instant logTime(Long historyId) {
+        return logMapper.listPage(Page.of(1, 10), "L-TIME").getRecords().stream()
+                .filter(row -> row.getId().equals("H:" + historyId))
+                .findFirst().map(FlowLogRow::getEventTime).orElseThrow();
     }
 
     @Test

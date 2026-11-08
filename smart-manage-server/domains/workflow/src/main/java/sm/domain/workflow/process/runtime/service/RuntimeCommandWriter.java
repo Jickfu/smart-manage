@@ -1,4 +1,5 @@
 package sm.domain.workflow.process.runtime.service;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import sm.domain.workflow.process.runtime.mapper.RuntimeCommandMapper;
@@ -18,7 +19,8 @@ class RuntimeCommandWriter {
     WorkflowEngine.Run replay(UUID requestId, Long actorId, String digest) {
         if (requestId == null) throw new BizException(ResultEnum.PARAM_ERROR, "缺少命令请求标识");
         mapper.lockRequest(requestId);
-        var receipt = mapper.selectById(requestId);
+        var receipt = mapper.selectOne(new LambdaQueryWrapper<RuntimeCommandEntity>()
+                .eq(RuntimeCommandEntity::getRequestId, requestId));
         if (receipt == null) return null;
         if (!Objects.equals(receipt.getActorId(), actorId) || !Objects.equals(receipt.getRequestDigest(), digest)) {
             throw new BizException(ResultEnum.DATA_CONFLICT, "请求标识已用于不同操作者或命令内容");

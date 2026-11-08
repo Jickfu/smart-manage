@@ -82,17 +82,17 @@ class FlowLogMapperPostgresTests {
                 CREATE TABLE flow_his_task (
                     id bigint PRIMARY KEY, instance_id bigint, task_id bigint, node_name varchar(100),
                     node_type integer, cooperate_type integer, flow_status varchar(50), skip_type varchar(50),
-                    approver varchar(100), message text, del_flag char(1), create_time timestamp, update_time timestamp)
+                    approver varchar(100), message text, del_flag char(1), create_time timestamptz, update_time timestamptz)
                 """);
         jdbc.execute("""
                 CREATE TABLE t_workflow_operation (
                     id bigint PRIMARY KEY, instance_id bigint, task_id bigint, action varchar(50),
-                    operator_id bigint, reason text, create_time timestamp)
+                    operator_id bigint, reason text, event_time timestamptz)
                 """);
         jdbc.execute("""
                 CREATE TABLE t_workflow_script_execution (
                     id bigint PRIMARY KEY, instance_id bigint, task_id bigint, node_code varchar(100),
-                    status varchar(50), operator_id bigint, error_message text, create_time timestamp)
+                    status varchar(50), operator_id bigint, error_message text, event_time timestamptz)
                 """);
         jdbc.execute("CREATE TABLE flow_task (id bigint PRIMARY KEY, node_name varchar(100))");
     }

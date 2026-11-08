@@ -62,7 +62,7 @@ export default function DefinitionVersionsPage(props: PageComponentProps) {
     const id = selected.id;
     void confirm({
       type: 'warning',
-      title: `发布 V${selected.version}`,
+      title: `发布「${selected.name}」V${selected.version}`,
       description:
         '仅发布已经保存的设计。发布后该版本不可修改；后续变更需复制新版本，已运行实例继续使用原版本。',
       confirmText: '发布',
@@ -136,6 +136,7 @@ export default function DefinitionVersionsPage(props: PageComponentProps) {
       ]}
       columns={[
         {
+          ellipsis: true,
           title: '版本号',
           dataIndex: 'version',
           width: 140,
@@ -149,8 +150,9 @@ export default function DefinitionVersionsPage(props: PageComponentProps) {
             </Button>
           ),
         },
-        { title: '流程名称', dataIndex: 'name' },
+        { ellipsis: true, title: '流程名称', dataIndex: 'name' },
         {
+          ellipsis: true,
           title: '版本状态',
           key: 'status',
           width: 180,

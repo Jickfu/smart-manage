@@ -85,6 +85,7 @@ export default function TaskCenter({ active, context, onDirtyChange }: DomainVie
         }
         columns={[
           {
+            ellipsis: true,
             title: '单据编号',
             dataIndex: 'number',
             render: (value: string, row) => (
@@ -93,9 +94,10 @@ export default function TaskCenter({ active, context, onDirtyChange }: DomainVie
               </Button>
             ),
           },
-          { title: '流程实例', dataIndex: 'id', width: 190 },
-          { title: '当前节点', dataIndex: 'currentNode', width: 180 },
+          { ellipsis: true, title: '流程实例', dataIndex: 'id', width: 190 },
+          { ellipsis: true, title: '当前节点', dataIndex: 'currentNode', width: 180 },
           {
+            ellipsis: true,
             title: '状态',
             dataIndex: 'state',
             width: 100,

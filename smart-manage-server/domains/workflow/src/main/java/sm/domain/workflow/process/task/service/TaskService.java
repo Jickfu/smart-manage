@@ -49,7 +49,7 @@ public class TaskService {
                 .toList();
         var run = new WorkflowEngine.Run(completeRun.id(), completeRun.definitionId(), completeRun.applicantId(),
                 completeRun.state(), completeRun.tasks(), approvalHistory, completeRun.nodeTargets(),
-                completeRun.approvalStarted(), completeRun.active(), completeRun.variables());
+                completeRun.approvalStarted(), completeRun.active(), java.util.Map.of());
         var actorIds = new java.util.HashSet<Long>();
         actorIds.add(reference.applicantId());
         run.tasks().forEach(task -> actorIds.addAll(task.candidates()));

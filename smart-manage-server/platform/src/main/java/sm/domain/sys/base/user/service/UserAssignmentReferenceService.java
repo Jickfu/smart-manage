@@ -28,10 +28,10 @@ public class UserAssignmentReferenceService implements UserAssignmentReader {
     }
 
     @Override
-    public List<Long> findEnabledRoleMembers(Long orgId, Long roleId) {
+    public List<Long> findEnabledExplicitRoleMembers(Long orgId, Long roleId) {
         requireOrganization(orgId);
         if (roleId == null || roleId <= 0) throw new BizException(ResultEnum.PARAM_ERROR, "角色不能为空");
-        return List.copyOf(userMapper.selectEnabledRoleMembers(orgId, roleId));
+        return List.copyOf(userMapper.selectEnabledExplicitRoleMembers(orgId, roleId));
     }
 
     private void requireOrganization(Long orgId) {

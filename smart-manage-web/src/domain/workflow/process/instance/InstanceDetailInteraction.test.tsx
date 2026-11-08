@@ -93,7 +93,7 @@ function detail(active: boolean, script = false): InstanceAdminDetail {
           nodeName: '主管审批',
           actorId: '20',
           action: 'APPROVED',
-          time: '2026-10-03 09:00:00',
+          time: '2026-10-02T16:01:02.123Z',
         },
       ],
     },
@@ -202,6 +202,12 @@ async function selectRadio(label: string) {
   await act(async () => radio!.click());
   await settle();
 }
+
+it('流转轨迹按管理端时区显示跨日的引擎历史', async () => {
+  await renderPage();
+
+  expect(container.textContent).toContain('2026-10-02T16:01:02.123Z');
+});
 
 it('活动实例只开放可执行命令，失败重试复用同一请求标识', async () => {
   mocks.post.mockRejectedValueOnce(new Error('temporary failure')).mockResolvedValueOnce({});
@@ -363,9 +369,38 @@ it('终止命令必须经过破坏性确认，取消确认不发送请求', asyn
   await settle();
 
   expect(mocks.confirm).toHaveBeenCalledWith(
-    expect.objectContaining({ type: 'destructive', confirmText: '终止流程' }),
+    expect.objectContaining({
+      type: 'destructive',
+      confirmText: '终止流程',
+      description: expect.stringContaining('LV-100'),
+      onConfirm: expect.any(Function),
+    }),
   );
   expect(mocks.post).not.toHaveBeenCalled();
+});
+
+it('终止失败后可在同一确认流程中以原请求标识重试', async () => {
+  mocks.post.mockRejectedValueOnce(new Error('连接中断')).mockResolvedValueOnce(undefined);
+  await renderPage();
+
+  await act(async () => button('终止')!.click());
+  await setText('操作原因', '业务已经线下关闭');
+  await act(async () => button('确定')!.click());
+  const { onConfirm } = mocks.confirm.mock.calls[0]![0] as { onConfirm: () => Promise<unknown> };
+
+  await act(async () => {
+    await expect(onConfirm()).rejects.toThrow('连接中断');
+  });
+  await act(async () => {
+    await onConfirm();
+  });
+
+  expect(mocks.post).toHaveBeenCalledTimes(2);
+  expect(mocks.post.mock.calls[0]).toEqual(mocks.post.mock.calls[1]);
+  expect(mocks.post).toHaveBeenLastCalledWith(
+    'instance/terminate',
+    expect.objectContaining({ instanceId: '100', reason: '业务已经线下关闭' }),
+  );
 });
 
 it('管理记录将终止命令显示为中文动作', async () => {

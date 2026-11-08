@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { generateUUID } from '@/utils';
 import { Button, Form, Input, Select, Tabs } from 'antd';
 import { useQueryClient } from '@tanstack/react-query';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { workflowActionLabels, workflowApi, stateLabels } from '../api';
 import type { ApprovalDetail } from '../api';
@@ -66,29 +67,41 @@ export default function ApprovalPanel({
                     onFinish={(values) => mutation.mutate(values)}
                   >
                     <div className="sm-workflow-form-scroll">
-                      <Form.Item name="action" label="处理结果" rules={[{ required: true }]}>
-                        <Select
-                          options={[
-                            { value: 'APPROVE', label: '同意' },
-                            { value: 'REJECT', label: '拒绝并结束本轮' },
-                          ]}
-                        />
-                      </Form.Item>
-                      <Form.Item
-                        name="opinion"
-                        label="审批意见"
-                        dependencies={['action']}
-                        rules={[
-                          ({ getFieldValue }) => ({
-                            validator: async (_rule, value: string | undefined) => {
-                              if (getFieldValue('action') === 'REJECT' && !value?.trim())
-                                throw new Error('拒绝时必须填写审批意见');
-                            },
-                          }),
-                        ]}
-                      >
-                        <Input.TextArea maxLength={1000} rows={6} showCount />
-                      </Form.Item>
+                      <FormFieldGrid maxColumns={1}>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="action"
+                            label="处理结果"
+                            rules={[{ required: true }]}
+                          >
+                            <Select
+                              options={[
+                                { value: 'APPROVE', label: '同意' },
+                                { value: 'REJECT', label: '拒绝并结束本轮' },
+                              ]}
+                            />
+                          </Form.Item>
+                        </FormFieldCell>
+                        <FormFieldCell>
+                          <Form.Item
+                            className="sm-edit-field-content"
+                            name="opinion"
+                            label="审批意见"
+                            dependencies={['action']}
+                            rules={[
+                              ({ getFieldValue }) => ({
+                                validator: async (_rule, value: string | undefined) => {
+                                  if (getFieldValue('action') === 'REJECT' && !value?.trim())
+                                    throw new Error('拒绝时必须填写审批意见');
+                                },
+                              }),
+                            ]}
+                          >
+                            <Input.TextArea maxLength={1000} rows={6} showCount />
+                          </Form.Item>
+                        </FormFieldCell>
+                      </FormFieldGrid>
                     </div>
                     <Button
                       className="sm-workflow-submit"
@@ -119,7 +132,7 @@ export default function ApprovalPanel({
                       </strong>
                       <p>
                         {item.actorId ? (detail.actorNames[item.actorId] ?? item.actorId) : '系统'}{' '}
-                        · {item.time}
+                        · {item.time ?? '-'}
                       </p>
                       <p>{item.opinion}</p>
                     </li>

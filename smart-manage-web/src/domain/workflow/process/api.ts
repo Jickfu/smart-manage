@@ -64,7 +64,7 @@ export interface ApprovalDetail {
       actorId?: string;
       action: string;
       opinion?: string;
-      time: string;
+      time: string | null;
     }[];
   };
 }
@@ -179,7 +179,7 @@ export interface FlowLogRow {
   operatorId?: string;
   operatorName?: string;
   opinion?: string;
-  eventTime?: string;
+  eventTime?: string | null;
   source: 'ENGINE' | 'MANAGEMENT' | 'SCRIPT';
 }
 

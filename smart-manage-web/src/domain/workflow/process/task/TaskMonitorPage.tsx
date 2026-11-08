@@ -49,6 +49,7 @@ export default function TaskMonitorPage(props: PageComponentProps) {
       toolbarActions={[{ builtin: 'refresh' }]}
       columns={[
         {
+          ellipsis: true,
           title: '单据编号',
           dataIndex: 'number',
           width: 180,
@@ -58,21 +59,29 @@ export default function TaskMonitorPage(props: PageComponentProps) {
             </Button>
           ),
         },
-        { title: '业务类型', dataIndex: 'businessType', width: 200 },
-        { title: '任务节点', dataIndex: 'nodeName' },
+        { ellipsis: true, title: '业务类型', dataIndex: 'businessType', width: 200 },
+        { ellipsis: true, title: '任务节点', dataIndex: 'nodeName' },
         {
+          ellipsis: true,
           title: '候选人',
           dataIndex: 'candidates',
-          render: (values: string[], row) =>
-            values.map((id) => row.candidateNames[id] ?? id).join('、'),
+          render: (values: string[], row) => {
+            const names = values.map((id) => row.candidateNames[id] ?? id).join('、');
+            return (
+              <span className="sm-list-cell-text" title={names}>
+                {names}
+              </span>
+            );
+          },
         },
         {
+          ellipsis: true,
           title: '运行状态',
           dataIndex: 'active',
           width: 100,
           render: (value: boolean) => (value ? '活动' : '挂起'),
         },
-        { title: '到达时间', dataIndex: 'createTime', width: 180 },
+        { ellipsis: true, title: '到达时间', dataIndex: 'createTime', width: 180 },
       ]}
     />
   );

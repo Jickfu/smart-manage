@@ -15,6 +15,6 @@ public interface UserAssignmentReader {
     /** 返回指定启用组织中仍启用的负责人，兼任也属于有效任职。 */
     List<Long> findEnabledOrgLeaders(Long orgId);
 
-    /** 返回指定组织下拥有指定角色且仍启用的用户，不扩展到上下级组织。 */
-    List<Long> findEnabledRoleMembers(Long orgId, Long roleId);
+    /** 返回在指定组织显式分配该角色的启用任职人员。默认角色的隐式继承只用于平台授权。 */
+    List<Long> findEnabledExplicitRoleMembers(Long orgId, Long roleId);
 }

@@ -45,6 +45,7 @@ export default function FlowLogPage(props: PageComponentProps) {
       toolbarActions={[{ builtin: 'refresh' }]}
       columns={[
         {
+          ellipsis: true,
           title: '单据编号',
           dataIndex: 'number',
           width: 180,
@@ -66,29 +67,47 @@ export default function FlowLogPage(props: PageComponentProps) {
             </Button>
           ),
         },
-        { title: '业务类型', dataIndex: 'businessType', width: 180 },
-        { title: '节点', dataIndex: 'nodeName', width: 160 },
+        { ellipsis: true, title: '业务类型', dataIndex: 'businessType', width: 180 },
+        { ellipsis: true, title: '节点', dataIndex: 'nodeName', width: 160 },
         {
+          ellipsis: true,
           title: '动作',
           dataIndex: 'action',
           width: 140,
           render: (value: string) => workflowActionLabels[value] ?? value,
         },
         {
+          ellipsis: true,
           title: '操作人',
           dataIndex: 'operatorName',
           width: 140,
           render: (value: string | undefined, row) => value ?? row.operatorId ?? '-',
         },
-        { title: '意见/原因', dataIndex: 'opinion' },
         {
+          ellipsis: true,
+          title: '意见/原因',
+          dataIndex: 'opinion',
+          render: (value?: string) => (
+            <span className="sm-list-cell-text" title={value}>
+              {value}
+            </span>
+          ),
+        },
+        {
+          ellipsis: true,
           title: '来源',
           dataIndex: 'source',
           width: 100,
           render: (value: FlowLogRow['source']) =>
             value === 'ENGINE' ? '流程引擎' : value === 'SCRIPT' ? '脚本节点' : '管理操作',
         },
-        { title: '时间', dataIndex: 'eventTime', width: 180 },
+        {
+          ellipsis: true,
+          title: '时间',
+          dataIndex: 'eventTime',
+          width: 250,
+          render: (value?: string | null) => value ?? '-',
+        },
       ]}
     />
   );

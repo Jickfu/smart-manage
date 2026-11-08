@@ -9,7 +9,7 @@
           AND b.org_id = #{orgId} AND b.is_org_leader
         ORDER BY a.id
     </select>
-    <select id="selectEnabledRoleMembers" resultType="java.lang.Long">
+    <select id="selectEnabledExplicitRoleMembers" resultType="java.lang.Long">
         SELECT DISTINCT a.id FROM t_sys_user a
         INNER JOIN t_sys_user_role b ON b.user_id = a.id
         INNER JOIN t_sys_org c ON c.id = b.org_id

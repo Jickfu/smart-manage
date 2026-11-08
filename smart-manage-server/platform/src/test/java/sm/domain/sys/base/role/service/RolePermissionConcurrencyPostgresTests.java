@@ -5,6 +5,7 @@ import sm.domain.sys.base.menu.mapper.MenuMapper;
 import sm.domain.sys.base.permission.mapper.PermissionMapper;
 import sm.domain.sys.base.datascope.mapper.RoleDataScopeMapper;
 import sm.domain.sys.base.role.model.form.RoleDefaultSaveForm;
+import sm.domain.sys.base.user.mapper.UserMapper;
 import sm.system.exception.BizException;
 import java.util.concurrent.ExecutionException;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
@@ -45,6 +46,7 @@ class RolePermissionConcurrencyPostgresTests {
     private TransactionTemplate transaction;
     private RoleTxService service;
     private RoleMapper roleMapper;
+    private UserMapper userReader;
     private RoleDefaultMapper defaultReader;
     private AppMapper appReader;
     private MenuMapper menuReader;
@@ -62,6 +64,7 @@ class RolePermissionConcurrencyPostgresTests {
         var configuration = new MybatisConfiguration();
         configuration.setMapUnderscoreToCamelCase(true);
         configuration.addMapper(RoleMapper.class);
+        configuration.addMapper(UserMapper.class);
         configuration.addMapper(AppMapper.class);
         configuration.addMapper(MenuMapper.class);
         configuration.addMapper(PermissionMapper.class);
@@ -73,6 +76,7 @@ class RolePermissionConcurrencyPostgresTests {
         factory.setConfiguration(configuration);
         factory.setMapperLocations(new ClassPathResource("mapper/sys/base/role/RoleMapper.xml"),
                 new ClassPathResource("mapper/sys/base/role/RoleDefaultMapper.xml"),
+                new ClassPathResource("mapper/sys/base/user/UserMapper.xml"),
                 new ClassPathResource("mapper/sys/base/permission/PermissionMapper.xml"),
                 new ClassPathResource("mapper/sys/base/datascope/RoleDataScopeMapper.xml"),
                 new ClassPathResource("mapper/common/ListSqlQueryMapper.xml"),
@@ -80,6 +84,7 @@ class RolePermissionConcurrencyPostgresTests {
                 new ClassPathResource("mapper/sys/base/menu/MenuMapper.xml"));
         var session = new SqlSessionTemplate(factory.getObject());
         roleMapper = session.getMapper(RoleMapper.class);
+        userReader = session.getMapper(UserMapper.class);
         defaultReader = session.getMapper(RoleDefaultMapper.class);
         appReader = session.getMapper(AppMapper.class);
         menuReader = session.getMapper(MenuMapper.class);
@@ -194,6 +199,7 @@ class RolePermissionConcurrencyPostgresTests {
         });
         assertEquals(List.of("verify-role-lock"),roleMapper.selectUserRoleNumbers(-9200002L,1L));
         assertEquals(List.of("verify-role-lock"),roleMapper.selectUserRoleNumbers(-9200002L,-9200004L));
+        assertTrue(userReader.selectEnabledExplicitRoleMembers(1L, ROLE_ID).isEmpty());
         assertEquals(List.of(),roleMapper.selectUserRoleNumbers(-9200002L,-999L));
         assertTrue(permissionReader.selectUserPermissionNumbers(-9200002L,1L,null).contains("sys:base:role:listPage"));
         assertFalse(appReader.selectUserDomainApps(-9200002L,1L).isEmpty());
@@ -206,6 +212,8 @@ class RolePermissionConcurrencyPostgresTests {
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM t_sys_role WHERE id=-9200003",Integer.class));
         jdbc.update("INSERT INTO t_sys_user_role(id,user_id,org_id,role_id) VALUES (-9200007,-9200002,1,?)",ROLE_ID);
         assertEquals(1,roleMapper.selectUserRoleNumbers(-9200002L,1L).size());
+        assertEquals(List.of(-9200002L), userReader.selectEnabledExplicitRoleMembers(1L, ROLE_ID));
+        assertTrue(userReader.selectEnabledExplicitRoleMembers(-9200004L, ROLE_ID).isEmpty());
         setDefault(-9200003L);
         assertTrue(permissionReader.selectUserPermissionNumbers(-9200002L,-9200004L,null).isEmpty());
         assertTrue(menuReader.selectUserMenus(-9200002L,-9200004L,31L,false).isEmpty());

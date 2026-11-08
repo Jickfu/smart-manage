@@ -409,7 +409,7 @@ Warm-Flow starter 需要重点验证 Jackson 3、MyBatis-Plus 版本收敛、Map
 
 ## 12. 决策演进与后续使用规则
 
-使用仓库 [codex-duet-github skill](../../.agents/skills/codex-duet-github/SKILL.md)，在原对话[工作流模块选型 Compare](https://chatgpt.com/c/6ab3986a-6654-83e8-a282-184042dc6561)中实际完成过两轮 Discussion。没有启用 Plan 或正式 Review，也没有把 ChatGPT 的源码判断当作本地测试结果。后续用户明确决定优先于历史讨论建议。
+使用仓库 `codex-duet-github` 技能，在原对话[工作流模块选型 Compare](https://chatgpt.com/c/6ab3986a-6654-83e8-a282-184042dc6561)中实际完成过两轮 Discussion。没有启用 Plan 或正式 Review，也没有把 ChatGPT 的源码判断当作本地测试结果。后续用户明确决定优先于历史讨论建议。
 
 启动时 GitHub 连接账户为 `Jickfu`，权限元数据包含 push；本地与远端 main 基线为 `d276907b722b55589c72953b126ea59cead55c3c`。固定 SHA 读取检查通过，研究文档发布到 `codex/workflow-design-discussion-20260926`，未修改业务代码或主分支。本次文档整理记录用户后续确认，不声称新的界面方案已由对方做过源码评审或运行验收。
 

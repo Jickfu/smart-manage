@@ -21,7 +21,7 @@ public class AssignmentService {
         if ("sm:leader".equals(rule)) {
             candidates = assignments.findEnabledOrgLeaders(orgId);
         } else if (rule != null && rule.matches("sm:role:[1-9][0-9]{0,18}")) {
-            candidates = assignments.findEnabledRoleMembers(orgId, identifier(rule));
+            candidates = assignments.findEnabledExplicitRoleMembers(orgId, identifier(rule));
         } else if (rule != null && rule.matches("sm:user:[1-9][0-9]{0,18}")) {
             candidates = List.of(users.requireEnabled(identifier(rule)).id());
         } else {

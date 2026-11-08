@@ -49,6 +49,7 @@ export default function InstanceListPage(props: PageComponentProps) {
       toolbarActions={[{ builtin: 'refresh' }]}
       columns={[
         {
+          ellipsis: true,
           title: '单据编号',
           dataIndex: 'number',
           width: 180,
@@ -58,28 +59,31 @@ export default function InstanceListPage(props: PageComponentProps) {
             </Button>
           ),
         },
-        { title: '业务类型', dataIndex: 'businessType', width: 200 },
+        { ellipsis: true, title: '业务类型', dataIndex: 'businessType', width: 200 },
         {
+          ellipsis: true,
           title: '申请人',
           dataIndex: 'applicantName',
           width: 140,
           render: (value: string | undefined, row) => value ?? row.applicantId,
         },
-        { title: '当前节点', dataIndex: 'currentNode' },
+        { ellipsis: true, title: '当前节点', dataIndex: 'currentNode' },
         {
+          ellipsis: true,
           title: '状态',
           dataIndex: 'state',
           width: 100,
           render: (state: InstanceRow['state']) => stateLabels[state],
         },
         {
+          ellipsis: true,
           title: '运行状态',
           dataIndex: 'active',
           width: 100,
           render: (active: boolean, row) =>
             row.state === 'APPROVING' ? (active ? '活动' : '挂起') : '-',
         },
-        { title: '发起时间', dataIndex: 'createTime', width: 180 },
+        { ellipsis: true, title: '发起时间', dataIndex: 'createTime', width: 180 },
       ]}
     />
   );

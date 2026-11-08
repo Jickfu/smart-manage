@@ -256,6 +256,7 @@ export default function DefinitionListPage(props: PageComponentProps) {
         ]}
         columns={[
           {
+            ellipsis: true,
             title: '流程编码',
             dataIndex: 'number',
             width: 140,
@@ -283,9 +284,10 @@ export default function DefinitionListPage(props: PageComponentProps) {
               );
             },
           },
-          { title: '名称', dataIndex: 'name', width: 160 },
-          { title: '绑定业务', dataIndex: 'businessType', width: 200 },
+          { ellipsis: true, title: '名称', dataIndex: 'name', width: 160 },
+          { ellipsis: true, title: '绑定业务', dataIndex: 'businessType', width: 200 },
           {
+            ellipsis: true,
             title: '版本',
             key: 'versions',
             render: (_value, row) => {
@@ -298,6 +300,7 @@ export default function DefinitionListPage(props: PageComponentProps) {
             },
           },
           {
+            ellipsis: true,
             title: '状态',
             key: 'enabled',
             width: 100,

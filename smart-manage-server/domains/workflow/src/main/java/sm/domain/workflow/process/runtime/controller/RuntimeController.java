@@ -2,10 +2,8 @@ package sm.domain.workflow.process.runtime.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import sm.domain.workflow.process.engine.WorkflowEngine;
 import sm.domain.workflow.process.runtime.model.form.ApprovalForm;
 import sm.domain.workflow.process.runtime.service.RuntimeService;
-import sm.system.form.IdForm;
 import sm.system.response.Result;
 
 /** 登录后以任务资格或申请人身份授权，菜单权限不能授予审批权。 */
@@ -15,15 +13,23 @@ import sm.system.response.Result;
 public class RuntimeController {
     private final RuntimeService service;
     @PostMapping("/approve")
-    public Result<WorkflowEngine.Run> approve(@RequestBody @Valid ApprovalForm form) { return Result.success(service.approve(form)); }
+    public Result<Void> approve(@RequestBody @Valid ApprovalForm form) {
+        service.approve(form);
+        return Result.success();
+    }
     @PostMapping("/withdraw")
-    public Result<WorkflowEngine.Run> withdraw(@RequestBody @Valid sm.domain.workflow.process.runtime.model.form.WithdrawForm form) { return Result.success(service.withdraw(form)); }
+    public Result<Void> withdraw(@RequestBody @Valid sm.domain.workflow.process.runtime.model.form.WithdrawForm form) {
+        service.withdraw(form);
+        return Result.success();
+    }
     @PostMapping("/cooperate")
-    public Result<WorkflowEngine.Run> cooperate(@RequestBody @Valid sm.domain.workflow.process.runtime.model.form.TaskCooperationForm form) {
-        return Result.success(service.cooperate(form));
+    public Result<Void> cooperate(@RequestBody @Valid sm.domain.workflow.process.runtime.model.form.TaskCooperationForm form) {
+        service.cooperate(form);
+        return Result.success();
     }
     @PostMapping("/take-back")
-    public Result<WorkflowEngine.Run> takeBack(@RequestBody @Valid sm.domain.workflow.process.runtime.model.form.InstanceCommandForm form) {
-        return Result.success(service.takeBack(form));
+    public Result<Void> takeBack(@RequestBody @Valid sm.domain.workflow.process.runtime.model.form.InstanceCommandForm form) {
+        service.takeBack(form);
+        return Result.success();
     }
 }

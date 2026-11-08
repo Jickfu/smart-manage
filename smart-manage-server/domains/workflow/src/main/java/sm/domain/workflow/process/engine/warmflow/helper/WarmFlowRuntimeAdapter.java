@@ -27,7 +27,7 @@ import java.util.Objects;
 public class WarmFlowRuntimeAdapter implements WorkflowEngine {
     private final FlowInstanceMapper instanceMapper;
     private final WarmFlowTaskQueryMapper taskQueries;
-    private final sm.domain.workflow.process.script.service.WorkflowScriptListener scripts;
+    private final WorkflowScriptListener scripts;
 
     @Override
     public CandidateChange replaceCandidates(Long instanceId, Long taskId, Long actorId, List<Long> candidates) {
@@ -264,9 +264,10 @@ public class WarmFlowRuntimeAdapter implements WorkflowEngine {
             if (Objects.equals(entry.getCooperateType(), 6)) action = "ADD_SIGN";
             if (Objects.equals(entry.getCooperateType(), 7)) action = "REDUCE_SIGN";
             if ("APPROVED".equals(action) || "REJECTED".equals(action)) approvalStarted = true;
+            // 与全局流转日志取同一个事件时间，优先使用引擎写入的完成时间。
+            var eventTime = entry.getUpdateTime() != null ? entry.getUpdateTime() : entry.getCreateTime();
             history.add(new History(entry.getId(), entry.getNodeCode(), entry.getNodeName(), userId(entry.getApprover()),
-                    // createTime 是任务创建时间；历史完成时间由引擎写入 updateTime。
-                    action, entry.getMessage(), entry.getUpdateTime() == null ? null : entry.getUpdateTime().toInstant(),
+                    action, entry.getMessage(), eventTime == null ? null : eventTime.toInstant(),
                     historyCategory(action)));
         }
         // 脚本节点可在 Warm-Flow 写入开始历史前同步完成；产品轨迹仍应从“提交”开始。
