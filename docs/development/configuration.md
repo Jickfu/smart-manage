@@ -125,10 +125,12 @@ Flyway 只创建账号 `administrator` 和不可登录的空密码标记。首�
 
 ### Profile 选择与配置叠加
 
-仓库内 `application.yml` 默认选择 `dev`，保留开发启动体验；生产选择属于部署配置，不修改 JAR 内的默认 Profile。推荐在固定工作目录启动：
+仓库内 `application.yml` 默认选择 `dev`。生产部署建议在 JAR 同级的 `config/application.yml` 激活 `prod`：
 
-```bash
-java -jar smart-manage-server.jar --spring.profiles.active=prod
+```yaml
+spring:
+  profiles:
+    active: prod
 ```
 
 此时默认配置按以下顺序叠加，后者覆盖同名属性，未覆盖属性仍保留：
@@ -141,15 +143,7 @@ java -jar smart-manage-server.jar --spring.profiles.active=prod
 
 因此仅提供外部 `config/application-prod.yml`，仍然会加载 JAR 内的两个文件，不是只加载生产文件，也无需复制公共模板到服务器。外部文件只填写实际覆盖项；未覆盖的必填占位符必须通过其他部署来源提供。
 
-若希望通过两个外部文件管理部署，也可以在 `config/application.yml` 中只声明：
-
-```yaml
-spring:
-  profiles:
-    active: prod
-```
-
-再把生产连接信息、实例配置等放入 `config/application-prod.yml`，直接执行 `java -jar smart-manage-server.jar`。`SPRING_PROFILES_ACTIVE=prod` 也是等效选择。`spring.profiles.active` 不能放入 `application-prod.yml` 等 Profile 专属文件。两种部署方式共享相同的配置叠加机制，区别只是 Profile 的选择入口；不要在多个入口维护相互矛盾的值。
+也可以用 `--spring.profiles.active=prod` 或 `SPRING_PROFILES_ACTIVE=prod` 激活生产配置。`spring.profiles.active` 放在通用配置中，避免在多个入口维护相互矛盾的值。
 
 默认外部查找位置基于**进程工作目录**，不会自动追随 JAR 路径；systemd 的 `WorkingDirectory` 应固定为对应实例目录。从其他目录启动时，可通过 `--spring.config.additional-location=file:/opt/smart-manage/node-a/config/` 添加配置目录。目录路径以 `/` 结尾；不要仅用 `spring.config.location` 指向外部目录，因为它会替换默认搜索位置，可能遗漏 JAR 内的公共与生产策略。更复杂的位置组合以 [Spring Boot 外部配置规则](https://docs.spring.io/spring-boot/reference/features/external-config.html)为准。
 
@@ -166,15 +160,17 @@ smart-manage/
 ├─ smart-manage-server.jar
 ├─ config/
 │  ├─ application.yml
-│  └─ application-prod.yml
+│  ├─ application-prod.yml
+│  └─ deployment-keys.env
 ├─ logs/
 └─ smfiles/
 ```
 
-以仓库中的 `smart-manage-server/app/src/main/resources/application-prod.yml` 为配置项参考，在部署目录创建不纳入版本控制的
-`config/application.yml` 或 `config/application-prod.yml` 并填写真实配置。默认部署固定工作目录为 JAR 所在目录；使用其他工作目录时，按上节显式提供外部配置位置，并明确日志等相对路径的解析位置。
-外部 YAML 优先于 Jar 内配置，因此生产部署可以使用外部 YAML、环境变量或外部密钥管理设施提供配置；
-Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
+以仓库中的 `smart-manage-server/app/src/main/resources/application-prod.yml` 为参考，在部署目录的 `config/application-prod.yml` 填写生产连接信息和实例配置，并导入同目录的密钥文件。导入语法和文件权限见[部署密钥文件](./production-keys.md#部署密钥文件)。外部配置文件保存在仓库外。JAR 内的 `${...}` 占位符用于检查必填配置。
+
+配置齐备后，在 JAR 所在目录执行 `java -jar smart-manage-server.jar`。使用 systemd 托管时，将 `WorkingDirectory` 设为 JAR 所在目录，`ExecStart` 使用同一启动命令并指向部署的 JAR。采用文件导入时，Spring Boot 自行加载密钥。
+
+备份与迁移时，将对应版本的 JAR 与整个 `config/` 成套保管，并记录对应的数据库和附件恢复点。完整恢复范围见[备份、恢复与发布回退](../architecture/deployment.md#备份恢复与发布回退)。
 
 生产环境使用 `prod` Profile，必须显式配置：
 
