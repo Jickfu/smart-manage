@@ -1,5 +1,6 @@
 package sm.domain.sys.monitor.loginlog.controller;
 
+import sm.system.security.authorization.PersonalSessionAllowed;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +32,7 @@ public class LoginLogController {
 		return Result.success(service.listPage(form));
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/log/login/current/listPage")
 	@Operation(summary = "当前账号登录日志分页")
 	public Result<PageData<LoginLogListVO>> currentListPage(@Valid @RequestBody LoginLogListForm form) {

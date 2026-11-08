@@ -18,6 +18,7 @@ import sm.system.helper.Argon2Helper;
 import sm.system.response.ResultEnum;
 
 import java.util.List;
+import java.util.Locale;
 
 /** 用户凭据校验与密码生命周期服务。 */
 @Service
@@ -32,8 +33,7 @@ public class UserAuthenticationService {
     private final AdministratorUserCredentialService administratorUserCredentialService;
 
     public UserAuthentication authenticate(String username, String password) {
-        UserEntity user = userMapper.selectOne(
-                new LambdaQueryWrapper<UserEntity>().eq(UserEntity::getUsername, username));
+        UserEntity user = findByLoginIdentifier(username);
         if (user == null || user.getPassword() == null || user.getPassword().isBlank()
                 || !Argon2Helper.verify(user.getPassword(), password)) {
             return UserAuthentication.failed("用户名或密码错误");
@@ -42,6 +42,23 @@ public class UserAuthenticationService {
             return UserAuthentication.failed("用户已被禁用");
         }
         return authenticateAvailableUser(user, false);
+    }
+
+    /** 登录别名解析到同一账号，账号级限流不随改名或切换邮箱重置。 */
+    public String protectionIdentity(String identifier) {
+        UserEntity user = findByLoginIdentifier(identifier);
+        return user == null ? "input:" + identifier : "user:" + user.getId();
+    }
+
+    private UserEntity findByLoginIdentifier(String identifier) {
+        String value = identifier.trim();
+        if (!value.contains("@")) {
+            return userMapper.selectOne(new LambdaQueryWrapper<UserEntity>().eq(UserEntity::getUsername, value));
+        }
+        return userMapper.selectOne(new LambdaQueryWrapper<UserEntity>()
+                .eq(UserEntity::getEmail, value.toLowerCase(Locale.ROOT))
+                .isNotNull(UserEntity::getEmailVerifiedAt)
+                .ne(UserEntity::getUsername, UserConstant.SUPER_ADMIN));
     }
 
     /** 二级认证只验证当前真实管理员自己的密码。 */
@@ -77,8 +94,12 @@ public class UserAuthenticationService {
                         .eq(UserAssignmentEntity::getUserId, user.getId())
                         .eq(UserAssignmentEntity::getIsPrimary, true));
         if (primaryAssignment == null) {
-            return UserAuthentication.failed(hideStateReason
-                    ? "用户名或密码错误" : "用户未配置主职组织，请联系管理员");
+            if (UserConstant.SUPER_ADMIN.equals(user.getUsername())) {
+                return UserAuthentication.failed("用户未配置主职组织，请联系管理员");
+            }
+            return new UserAuthentication(user.getId(), user.getUsername(), user.getName(),
+                    !hideStateReason && Boolean.TRUE.equals(user.getPasswordReset()), false,
+                    null, user.getCredentialGeneration(), null);
         }
         OrgReference primaryOrganization = orgReferenceReader.require(primaryAssignment.getOrgId());
         if (!primaryOrganization.enabled() || primaryOrganization.archived()) {
@@ -91,7 +112,7 @@ public class UserAuthenticationService {
                 primaryOrganization.id(), user.getCredentialGeneration(), null);
     }
 
-    /** 这里只按不可变用户名路由；日志与管理员身份校验位于真正的命令 Bean。 */
+    /** 这里只按保留管理员身份路由；日志与管理员身份校验位于真正的命令 Bean。 */
     public ResetPasswordVO resetPassword(Long userId) {
         UserEntity target = userMapper.selectById(userId);
         if (target == null) throw new BizException(ResultEnum.NOT_FOUND, "用户不存在");

@@ -20,6 +20,7 @@ import sm.system.exception.ExceptionResultResolver;
 import sm.system.response.ResultEnum;
 import sm.system.security.web.BrowserRequestSecurity;
 import sm.system.security.SessionCredentialGuard;
+import sm.system.security.authorization.PersonalSessionAllowed;
 import tools.jackson.databind.json.JsonMapper;
 
 
@@ -51,10 +52,14 @@ public class SaTokenConfig {
 					SaRouter.match("/**")
 							.notMatch(noNeedLogin)
 							.check(r -> {
-								if (isIgnoredHandler()) return;
+								HandlerMethod handler = resolveHandler();
+								if (hasHandlerAnnotation(handler, SaIgnore.class)) return;
 								StpUtil.checkLogin();
 								sessionCredentialGuard.checkCurrent();
 								browserRequestSecurity.validateCsrfToken();
+								if (handler != null && !hasHandlerAnnotation(handler, PersonalSessionAllowed.class)) {
+									sessionCredentialGuard.requireOrganization();
+								}
 							});
 				})
 				.setBeforeAuth(obj -> {
@@ -115,10 +120,14 @@ public class SaTokenConfig {
 	/** 按实际 MVC 目标识别声明，避免公开 GET 路径同时放行同路径的受保护 POST。 */
     // Filter 回调不声明受检异常；保留 MVC 原始异常类型，交由统一响应解析器分类。
     @SneakyThrows(Exception.class)
-    private boolean isIgnoredHandler() {
+    private HandlerMethod resolveHandler() {
         var chain = requestMappingHandlerMapping.getHandler(sm.system.util.ServletUtil.getRequest());
-        if (chain == null || !(chain.getHandler() instanceof HandlerMethod handler)) return false;
-        return AnnotatedElementUtils.hasAnnotation(handler.getMethod(), SaIgnore.class)
-                || AnnotatedElementUtils.hasAnnotation(handler.getBeanType(), SaIgnore.class);
+        return chain != null && chain.getHandler() instanceof HandlerMethod handler ? handler : null;
+    }
+
+    private boolean hasHandlerAnnotation(HandlerMethod handler,
+            Class<? extends java.lang.annotation.Annotation> annotation) {
+        return handler != null && (AnnotatedElementUtils.hasAnnotation(handler.getMethod(), annotation)
+                || AnnotatedElementUtils.hasAnnotation(handler.getBeanType(), annotation));
     }
 }

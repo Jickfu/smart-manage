@@ -123,7 +123,7 @@ class UserProfileServiceTests {
 
         CurrentUserContext context = mock(CurrentUserContext.class);
         when(context.getUserId()).thenReturn(10L);
-        when(context.getOrgId()).thenReturn(30L);
+        when(context.getOptionalOrgId()).thenReturn(30L);
         UserConverter converter = mock(UserConverter.class);
         when(converter.toInfoVO(user)).thenReturn(new UserInfoVO());
         UserProfileService service = new UserProfileService(userMapper, assignmentMapper,

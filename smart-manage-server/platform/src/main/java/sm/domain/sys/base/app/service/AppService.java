@@ -97,7 +97,9 @@ public class AppService {
 		if (currentUserContext.isAdministrator()) {
 			return getAllDomainApps();
 		}
-		return assembleDomainApps(mapper.selectUserDomainApps(userId, currentUserContext.getOrgId()));
+		Long orgId = currentUserContext.getOptionalOrgId();
+		if (orgId == null) return List.of();
+		return assembleDomainApps(mapper.selectUserDomainApps(userId, orgId));
 	}
 
 	public List<DomainAppsVO> getAllDomainApps() {

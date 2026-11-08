@@ -67,6 +67,7 @@ class LoginServiceTests {
                 loginRedisAccessor, browserPasswordCipher, userEmailPasswordService);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(clientIpResolver.resolveCurrentRequest()).thenReturn("127.0.0.1");
+        when(userAuthenticationService.protectionIdentity("administrator")).thenReturn("user:1");
         when(browserPasswordCipher.decrypt("encrypted-password")).thenReturn("password");
     }
 
@@ -130,7 +131,7 @@ class LoginServiceTests {
         assertSame(expected, loginService.login(form));
 
         verify(loginProtectionService).consumeCaptchaTicket("administrator", "127.0.0.1", "captcha-ticket");
-        verify(loginProtectionService).clearAfterSuccess("administrator", "127.0.0.1");
+        verify(loginProtectionService).clearAfterSuccess("user:1", "127.0.0.1");
     }
 
     @Test
@@ -144,7 +145,7 @@ class LoginServiceTests {
         when(browserPasswordCipher.decrypt("encrypted-password")).thenReturn("SMTL1.credential");
 
         assertSame(expected, loginService.login(form));
-        verify(loginProtectionService).clearAfterSuccess("administrator", "127.0.0.1");
+        verify(loginProtectionService).clearAfterSuccess("user:1", "127.0.0.1");
         verify(userAuthenticationService, never()).authenticate("administrator", "SMTL1.credential");
     }
 
@@ -162,7 +163,7 @@ class LoginServiceTests {
             LoginVO actual = loginService.login(form);
 
             assertEquals("用户名或密码错误", actual.getMsg());
-            verify(loginProtectionService).recordAuthenticationFailure("administrator", "127.0.0.1");
+            verify(loginProtectionService).recordAuthenticationFailure("user:1", "127.0.0.1");
             verify(logWriteService).writeLoginFailed(
                     "administrator", "用户名或密码错误", "127.0.0.1", "test-agent");
         }

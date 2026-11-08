@@ -133,7 +133,8 @@ class RequestSecurityChainIntegrationTests {
         when(handlerMapping.getHandlerMethods()).thenReturn(Map.of());
         var userMapper = mock(sm.domain.sys.base.user.mapper.UserMapper.class);
         var guard = new sm.system.security.SessionCredentialGuard(
-                new sm.domain.sys.base.user.service.UserSessionStateVerifier(userMapper));
+                new sm.domain.sys.base.user.service.UserSessionStateVerifier(userMapper),
+                new sm.system.security.context.CurrentUserContext());
         var config = new SaTokenConfig(handlerMapping, JsonMapper.builder().build(),
                 mock(BrowserRequestSecurity.class), guard);
         ReflectionTestUtils.setField(config, "noNeedLogin", new String[]{"/public-test"});
@@ -156,6 +157,40 @@ class RequestSecurityChainIntegrationTests {
             protectedMvc.perform(get("/protected-test")).andExpect(jsonPath("$.data").value("secret"));
             when(userMapper.selectSecurityState(1L)).thenThrow(new IllegalStateException("database unavailable"));
             protectedMvc.perform(get("/protected-test")).andExpect(jsonPath("$.code").value(100500));
+        }
+    }
+
+    @Test
+    void unassignedSessionCanUsePersonalEndpointButCannotEnterOrganizationEndpoint() throws Exception {
+        new SaTokenContextRegister();
+        var controller = new TestController();
+        var handlerMapping = new RequestMappingHandlerMapping();
+        for (String name : new String[]{"personalEndpoint", "protectedEndpoint"}) {
+            String path = name.equals("personalEndpoint") ? "/personal-test" : "/protected-test";
+            handlerMapping.registerMapping(org.springframework.web.servlet.mvc.method.RequestMappingInfo
+                    .paths(path).methods(org.springframework.web.bind.annotation.RequestMethod.GET).build(),
+                    controller, TestController.class.getDeclaredMethod(name));
+        }
+        var guard = new sm.system.security.SessionCredentialGuard(
+                mock(sm.system.security.AuthenticatedSessionStateVerifier.class),
+                new sm.system.security.context.CurrentUserContext());
+        var config = new SaTokenConfig(handlerMapping, JsonMapper.builder().build(),
+                mock(BrowserRequestSecurity.class), guard);
+        ReflectionTestUtils.setField(config, "noNeedLogin", new String[0]);
+        var browser = MockMvcBuilders.standaloneSetup(controller)
+                .addFilters(new SaTokenContextFilterForJakartaServlet(), config.getSaServletFilter()).build();
+        var session = mock(cn.dev33.satoken.session.SaSession.class);
+        var logic = mock(cn.dev33.satoken.stp.StpLogic.class);
+        when(logic.getTokenSession(false)).thenReturn(session);
+        when(session.get(sm.system.security.SessionCredentialGuard.GENERATION_CLAIM)).thenReturn("0");
+        try (var authentication = org.mockito.Mockito.mockStatic(cn.dev33.satoken.stp.StpUtil.class)) {
+            authentication.when(cn.dev33.satoken.stp.StpUtil::getStpLogic).thenReturn(logic);
+            authentication.when(cn.dev33.satoken.stp.StpUtil::getTokenSession).thenReturn(session);
+            authentication.when(cn.dev33.satoken.stp.StpUtil::getLoginIdAsLong).thenReturn(1L);
+            browser.perform(get("/personal-test")).andExpect(jsonPath("$.data").value("personal"));
+            browser.perform(get("/protected-test")).andExpect(jsonPath("$.code").value(100403));
+            when(session.get("orgId")).thenReturn(1L);
+            browser.perform(get("/protected-test")).andExpect(jsonPath("$.data").value("secret"));
         }
     }
 
@@ -215,6 +250,12 @@ class RequestSecurityChainIntegrationTests {
         @GetMapping("/public-test")
         Result<String> publicEndpoint() {
             return Result.success("ok");
+        }
+
+        @sm.system.security.authorization.PersonalSessionAllowed
+        @GetMapping("/personal-test")
+        Result<String> personalEndpoint() {
+            return Result.success("personal");
         }
 
         @GetMapping("/protected-test")

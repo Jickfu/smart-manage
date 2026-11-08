@@ -72,6 +72,7 @@ public class UserProfileService {
     }
 
     public AttachmentEntity requireAvatar(Long userId) {
+        if (!userId.equals(currentUserContext.getUserId())) currentUserContext.getOrgId();
         UserEntity user = userMapper.selectById(userId);
         if (user == null || user.getAvatarAttachmentId() == null) {
             throw new BizException(ResultEnum.NOT_FOUND, "用户头像未设置");
@@ -161,6 +162,19 @@ public class UserProfileService {
         userCacheInvalidator.tryRefreshUsers(List.of(userId));
     }
 
+    @BizLog(value = "修改个人用户名", recordResponse = false)
+    public void renameCurrentUser(String username, String encryptedPassword) {
+        String password;
+        try {
+            password = browserPasswordCipher.decrypt(encryptedPassword);
+        } catch (Sm2CiphertextException exception) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "密码加密数据无效");
+        }
+        Long userId = currentUserContext.getUserId();
+        txService.renameCurrentUser(userId, username, password);
+        userCacheInvalidator.tryRefreshUsers(List.of(userId));
+    }
+
     @BizLog("修改个人主题")
     @CacheInvalidate(name = BaseCacheName.USER_INFO, key = "@currentUserContext.getUserId()")
     public void updateCurrentTheme(String themeColor) {
@@ -190,11 +204,13 @@ public class UserProfileService {
             assignmentVO.setIsPrimary(assignment.getIsPrimary());
             availableAssignments.add(assignmentVO);
         }
-        OrgReference currentOrganization = availableOrganizations.get(currentUserContext.getOrgId());
+        result.setAssignments(availableAssignments);
+        Long currentOrgId = currentUserContext.getOptionalOrgId();
+        if (currentOrgId == null) return;
+        OrgReference currentOrganization = availableOrganizations.get(currentOrgId);
         if (currentOrganization == null) {
             throw new BizException(ResultEnum.PERMISSION_ERROR, "当前组织不在用户的有效任职范围内");
         }
-        result.setAssignments(availableAssignments);
         result.setCurrentOrgId(currentOrganization.id());
         result.setCurrentOrgName(currentOrganization.name());
         assembleOrganizationNames(result, currentOrganization);

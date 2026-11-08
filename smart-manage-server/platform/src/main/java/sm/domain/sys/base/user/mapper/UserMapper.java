@@ -16,6 +16,7 @@ import sm.domain.sys.base.user.model.UserCredentialSnapshot;
  */
 @Mapper
 public interface UserMapper extends BaseMapper<UserEntity> {
+	int revokeCredentialsAfterAssignmentRemoval(@Param("id") Long id);
 	UserEntity selectSecurityState(@Param("id") Long id);
 	int updatePasswordByVerifiedEmail(@Param("snapshot") UserCredentialSnapshot snapshot, @Param("password") String password);
 	int bindVerifiedEmail(@Param("snapshot") UserCredentialSnapshot snapshot, @Param("email") String email);

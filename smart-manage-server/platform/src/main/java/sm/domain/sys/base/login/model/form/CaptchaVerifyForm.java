@@ -16,7 +16,7 @@ import lombok.Data;
 public class CaptchaVerifyForm {
     @Schema(description = "用户名")
     @NotBlank(message = "用户名不能为空")
-    @Size(max = 100, message = "用户名长度不能超过100个字符")
+    @Size(max = 255, message = "登录标识长度不能超过255个字符")
     private String username;
 
     @Schema(description = "验证码挑战标识")

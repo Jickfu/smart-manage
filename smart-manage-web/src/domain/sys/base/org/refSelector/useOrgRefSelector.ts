@@ -35,11 +35,12 @@ const toSelectableTreeNode = (
 };
 
 /** 组织引用选择器：左侧行政组织树，右侧展示当前节点及其直接下级。 */
-export function useOrgRefSelector(excludedId?: string): RefSelectorFieldConfig {
+export function useOrgRefSelector(excludedId?: string, enabled = true): RefSelectorFieldConfig {
   const treeQuery = useQuery({
     queryKey: orgQueryKeys.tree(),
     queryFn: () => orgApi.tree(false),
     staleTime: 5 * 60 * 1000,
+    enabled,
   });
   const treeData = useMemo(
     () =>

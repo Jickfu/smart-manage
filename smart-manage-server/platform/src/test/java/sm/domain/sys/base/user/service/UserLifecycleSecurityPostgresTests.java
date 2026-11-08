@@ -8,6 +8,10 @@ import org.mybatis.spring.SqlSessionTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import sm.domain.sys.base.org.contract.OrgReference;
+import sm.domain.sys.base.sysparam.model.RegistrationPolicy;
+import sm.domain.sys.base.sysparam.service.SysParamService;
+import sm.domain.sys.base.user.model.entity.UserEntity;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -53,6 +57,10 @@ class UserLifecycleSecurityPostgresTests {
     private TransactionTemplate databaseTransaction;
     private Long orgId;
 
+    private SysParamService registrationParameters;
+    private UserRegistrationTxService registration;
+    private UserAuthenticationService authentication;
+
     @BeforeEach
     void setUp() throws Exception {
         var source = new DriverManagerDataSource(System.getProperty("smartManage.testDbUrl"),
@@ -84,11 +92,21 @@ class UserLifecycleSecurityPostgresTests {
         when(identity.getUserId()).thenReturn(DELEGATE_ID);
         orgId = jdbc.queryForObject("SELECT org_id FROM t_sys_user_assignment WHERE user_id=1 AND is_primary=true", Long.class);
         when(identity.getOrgId()).thenReturn(orgId);
+        when(identity.getOptionalOrgId()).thenReturn(orgId);
         when(identity.isAdministrator()).thenReturn(false);
         var policy = mock(PasswordPolicyService.class);
+        when(organizations.findByIds(java.util.Set.of(orgId))).thenReturn(java.util.Map.of(
+                orgId, new OrgReference(orgId, null, "SM", "SM", "SM", "SM", "COMPANY", true, false)));
+        when(organizations.require(orgId)).thenReturn(
+                new OrgReference(orgId, null, "SM", "SM", "SM", "SM", "COMPANY", true, false));
         writer = new UserWriter(mapper, roles, assignments, organizations, policy);
         var target = new UserTxService(mapper, roles, assignments, organizations, identity, writer,
                 policy, mock(AttachmentGateway.class));
+        registrationParameters = mock(SysParamService.class);
+        registration = new UserRegistrationTxService(registrationParameters, writer);
+        authentication = new UserAuthenticationService(mapper, assignments, organizations, target,
+                mock(UserCacheInvalidator.class), mock(RegularUserCredentialService.class),
+                mock(AdministratorUserCredentialService.class));
         var proxy = new ProxyFactory(target);
         proxy.setProxyTargetClass(true);
         proxy.addAdvice(new TransactionInterceptor(manager, new AnnotationTransactionAttributeSource()));
@@ -96,6 +114,10 @@ class UserLifecycleSecurityPostgresTests {
         service = new UserService(mapper, assignments, organizations, mock(AttachmentService.class),
                 transaction, mock(UserCacheInvalidator.class), mock(UserConverter.class), identity);
         jdbc.update("INSERT INTO t_sys_user(id, username, name, number, password, enabled) VALUES (?, 'lifecycle-delegate', '委派管理员', 'lifecycle-delegate', '', true)", DELEGATE_ID);
+        jdbc.update("""
+                INSERT INTO t_sys_user_assignment(id, user_id, org_id, position, is_primary, is_org_leader)
+                VALUES (?, ?, ?, '测试任职', true, false)
+                """, DELEGATE_ID, DELEGATE_ID, orgId);
         jdbc.update("INSERT INTO t_sys_role(id, name, number) VALUES (?, '用户生命周期测试', 'lifecycle-delegate-role')", ROLE_ID);
         jdbc.update("INSERT INTO t_sys_user_role(id, user_id, org_id, role_id) VALUES (?, ?, ?, ?)", ROLE_ID, DELEGATE_ID, orgId, ROLE_ID);
         jdbc.update("""
@@ -116,6 +138,7 @@ class UserLifecycleSecurityPostgresTests {
         jdbc.update("DELETE FROM t_sys_role_perms WHERE role_id=?", ROLE_ID);
         jdbc.update("DELETE FROM t_sys_user_role WHERE user_id=?", DELEGATE_ID);
         jdbc.update("DELETE FROM t_sys_role WHERE id=?", ROLE_ID);
+        jdbc.update("DELETE FROM t_sys_user_assignment WHERE user_id=?", DELEGATE_ID);
         jdbc.update("DELETE FROM t_sys_user WHERE id=?", DELEGATE_ID);
     }
 
@@ -168,12 +191,42 @@ class UserLifecycleSecurityPostgresTests {
         form.setNumber(existing.getNumber());
         form.setVersion(existing.getVersion());
         service.save(form);
-        assertFalse(mapper.selectById(DELEGATE_ID).getEnabled());
+        assertTrue(mapper.selectById(DELEGATE_ID).getEnabled());
+        assertEquals(existing.getCredentialGeneration() + 1,
+                mapper.selectById(DELEGATE_ID).getCredentialGeneration());
+        assertEquals(0, jdbc.queryForObject(
+                "SELECT count(*) FROM t_sys_user_assignment WHERE user_id=?", Integer.class, DELEGATE_ID));
         // 保留既有禁止删除当前用户规则，测试另一操作者的正常删除。
         databaseTransaction.executeWithoutResult(status -> {
             writer.save(form(null, "ordinary-lifecycle-test"), ROLE_ID);
             service.deleteById(ROLE_ID);
             assertNull(mapper.selectById(ROLE_ID));
+            status.setRollbackOnly();
+        });
+    }
+
+    @Test
+    void verifiedRegistrationCreatesPersonalOrOrganizationSessionAccordingToPolicy() {
+        databaseTransaction.executeWithoutResult(status -> {
+            when(registrationParameters.getRegistrationPolicy())
+                    .thenReturn(RegistrationPolicy.parse("UNASSIGNED"));
+            Long personalId = registration.register("registered-personal", "personal@example.invalid", "test-password");
+            UserEntity personal = mapper.selectById(personalId);
+            assertTrue(personal.getEnabled());
+            assertFalse(personal.getPasswordReset());
+            assertNotNull(personal.getEmailVerifiedAt());
+            var emailLogin = authentication.authenticate("PERSONAL@example.invalid", "test-password");
+            assertEquals(personalId, emailLogin.userId());
+            assertNull(emailLogin.orgId());
+            assertEquals(authentication.protectionIdentity("registered-personal"),
+                    authentication.protectionIdentity("PERSONAL@example.invalid"));
+
+            when(registrationParameters.getRegistrationPolicy()).thenReturn(
+                    RegistrationPolicy.parse("ORGANIZATION:" + orgId + ":注册成员"));
+            Long assignedId = registration.register("registered-assigned", "assigned@example.invalid", "test-password");
+            var assignedLogin = authentication.authenticate("registered-assigned", "test-password");
+            assertEquals(assignedId, assignedLogin.userId());
+            assertEquals(orgId, assignedLogin.orgId());
             status.setRollbackOnly();
         });
     }

@@ -163,7 +163,7 @@ export function UserProfileFields({
                 label="用户名"
                 rules={[{ required: true, message: '用户名不能为空' }]}
               >
-                <Input variant="underlined" disabled={!editable || !isAddNew} />
+                <Input variant="underlined" disabled={!editable} maxLength={100} />
               </Form.Item>
             </FormFieldCell>
             {isAddNew && (

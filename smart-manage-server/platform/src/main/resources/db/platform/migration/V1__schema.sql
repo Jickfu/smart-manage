@@ -25,11 +25,13 @@ CREATE FUNCTION public.advance_user_credential_generation() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    IF NEW.password IS DISTINCT FROM OLD.password
+    IF NEW.username IS DISTINCT FROM OLD.username
+        OR NEW.password IS DISTINCT FROM OLD.password
         OR NEW.password_reset IS DISTINCT FROM OLD.password_reset
         OR NEW.email IS DISTINCT FROM OLD.email
         OR NEW.email_verified_at IS DISTINCT FROM OLD.email_verified_at
-        OR NEW.enabled IS DISTINCT FROM OLD.enabled THEN
+        OR NEW.enabled IS DISTINCT FROM OLD.enabled
+        OR NEW.credential_generation = OLD.credential_generation + 1 THEN
         NEW.credential_generation := OLD.credential_generation + 1;
         -- MyBatis-Plus 可能已经递增 NEW.version；固定 OLD+1，不能重复递增。
         NEW.version := OLD.version + 1;

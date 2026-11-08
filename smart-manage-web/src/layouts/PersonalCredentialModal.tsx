@@ -15,10 +15,11 @@ import {
   updateCurrentUserPasswordByEmail,
   requestCurrentEmailCode,
   bindCurrentEmail,
+  renameCurrentUser,
 } from '@/api/user';
 import type { UserInfoVO } from '@/types/api';
 
-type CredentialType = 'PHONE' | 'EMAIL' | 'PASSWORD';
+export type CredentialType = 'PHONE' | 'EMAIL' | 'PASSWORD' | 'USERNAME';
 
 interface PersonalCredentialModalProps {
   type: CredentialType;
@@ -43,6 +44,14 @@ const TITLES: Record<CredentialType, string> = {
   PHONE: '更改手机号',
   EMAIL: '更改邮箱',
   PASSWORD: '更改密码',
+  USERNAME: '更改用户名',
+};
+
+const NEW_VALUE_LABELS: Record<CredentialType, string> = {
+  PHONE: '新手机号',
+  EMAIL: '新邮箱',
+  PASSWORD: '新密码',
+  USERNAME: '新用户名',
 };
 
 export default function PersonalCredentialModal({
@@ -111,6 +120,10 @@ export default function PersonalCredentialModal({
           await updateCurrentUserPassword(encryptedPassword, encryptedNewPassword);
         }
         feedback.success('密码已修改，请重新登录');
+        onPasswordChanged();
+      } else if (type === 'USERNAME') {
+        await renameCurrentUser(change.value.trim(), encryptedPassword);
+        feedback.success('用户名已修改，请重新登录');
         onPasswordChanged();
       } else if (type === 'EMAIL') {
         if (!emailCodeSent) {
@@ -233,7 +246,7 @@ export default function PersonalCredentialModal({
               <Form.Item
                 className="sm-edit-field-content"
                 name="value"
-                label={type === 'PHONE' ? '新手机号' : type === 'EMAIL' ? '新邮箱' : '新密码'}
+                label={NEW_VALUE_LABELS[type]}
                 tooltip={type === 'PASSWORD' ? passwordPolicyHint : undefined}
                 rules={[
                   ...(type === 'PASSWORD'

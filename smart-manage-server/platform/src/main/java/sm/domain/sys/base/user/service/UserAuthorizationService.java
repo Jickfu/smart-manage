@@ -79,7 +79,7 @@ public class UserAuthorizationService {
     public List<String> permissions(String prefix) {
         if (currentUserContext.isAdministrator()) return List.of("*");
         return permissionService.getUserPermissionsByPrefix(
-                currentUserContext.getUserId(), currentUserContext.getOrgId(), prefix);
+                currentUserContext.getUserId(), currentUserContext.getOptionalOrgId(), prefix);
     }
 
     private List<UserAssignmentVO> loadAssignments(Long userId) {

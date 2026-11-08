@@ -1,5 +1,6 @@
 package sm.domain.sys.base.attachment.controller;
 
+import sm.system.security.authorization.PersonalSessionAllowed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -41,6 +42,7 @@ public class AttachmentController {
     private final AttachmentService service;
     private final FileStorageServiceFactory storageFactory;
 
+    @PersonalSessionAllowed
     @PostMapping("/sys/base/attachment/upload")
     @Operation(summary = "上传附件", description = "上传文件到临时目录")
     public Result<AttachmentReference> upload(@RequestParam("file") MultipartFile file,

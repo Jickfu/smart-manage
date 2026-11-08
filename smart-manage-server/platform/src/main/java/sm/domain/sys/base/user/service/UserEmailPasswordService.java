@@ -142,8 +142,19 @@ public class UserEmailPasswordService {
         userCacheInvalidator.tryRefreshUsers(List.of(userId));
     }
 
+    void issueRegistrationCode(String email) {
+        issueAndSend("registration:" + digest(email), email, "注册", "security.registration-code");
+    }
+
+    boolean consumeRegistrationCode(String email, String code) {
+        return consumeCode("registration:" + digest(email), code);
+    }
+
     private void issueAndSend(UserCredentialSnapshot snapshot, String email, String purpose) {
-        String namespace = namespace(purpose, snapshot);
+        issueAndSend(namespace(purpose, snapshot), email, "密码", "security.password-code");
+    }
+
+    private void issueAndSend(String namespace, String email, String label, String scene) {
         int resendSeconds = positive(LoginProtectionParam.PASSWORD_EMAIL_CODE_RESEND_SECONDS);
         String resendKey = KEY_PREFIX + namespace + ":resend";
         if (!Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(
@@ -155,13 +166,13 @@ public class UserEmailPasswordService {
         String codeKey = KEY_PREFIX + namespace + ":code";
         redisTemplate.opsForValue().set(codeKey, digest(code), expireMinutes, TimeUnit.MINUTES);
         redisTemplate.delete(KEY_PREFIX + namespace + ":attempt");
-        String subject = "Smart Manage 密码验证码";
+        String subject = "Smart Manage " + label + "验证码";
         String text = "你的验证码是 " + code + "，" + expireMinutes + " 分钟内有效。请勿向任何人泄露。";
         String html = "<p>你的验证码是：<strong>" + code + "</strong></p><p>验证码 "
                 + expireMinutes + " 分钟内有效，请勿向任何人泄露。</p>";
         try {
             emailNotificationSender.enqueueSensitive(new SensitiveEmailNotificationCommand(
-                    "security.password-code", "password-code:" + UUID.randomUUID(),
+                    scene, scene + ":" + UUID.randomUUID(),
                     List.of(email), subject, html, text));
         } catch (RuntimeException exception) {
             redisTemplate.delete(List.of(codeKey, resendKey, KEY_PREFIX + namespace + ":attempt"));
@@ -170,7 +181,10 @@ public class UserEmailPasswordService {
     }
 
     private boolean consumeCode(String purpose, UserCredentialSnapshot snapshot, String code) {
-        String namespace = namespace(purpose, snapshot);
+        return consumeCode(namespace(purpose, snapshot), code);
+    }
+
+    private boolean consumeCode(String namespace, String code) {
         int maxAttempts = positive(LoginProtectionParam.PASSWORD_EMAIL_CODE_MAX_ATTEMPTS);
         int expireSeconds = positive(LoginProtectionParam.PASSWORD_EMAIL_CODE_EXPIRE_MINUTES) * 60;
         Long result = redisTemplate.execute(VERIFY_SCRIPT,
@@ -233,11 +247,11 @@ public class UserEmailPasswordService {
         return value;
     }
 
-    private static String normalizeEmail(String email) {
+    static String normalizeEmail(String email) {
         return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 
-    private static String digest(String value) {
+    static String digest(String value) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
                     .digest(value.getBytes(StandardCharsets.UTF_8)));

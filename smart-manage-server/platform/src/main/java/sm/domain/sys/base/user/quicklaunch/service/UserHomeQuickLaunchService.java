@@ -34,6 +34,7 @@ public class UserHomeQuickLaunchService {
     private final UserHomeQuickLaunchTxService txService;
 
     public List<QuickLaunchItemVO> list(QuickLaunchScopeForm form) {
+        if (currentUserContext.getOptionalOrgId() == null) return List.of();
         ScopeContext scopeContext = resolveScope(form);
         return mapper.selectCurrentUserItems(
                 currentUserContext.getUserId(),

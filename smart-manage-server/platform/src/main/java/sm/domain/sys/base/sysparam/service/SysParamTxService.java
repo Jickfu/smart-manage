@@ -6,9 +6,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.base.sysparam.model.entity.SysParamEntity;
+import sm.domain.sys.base.sysparam.model.RegistrationPolicy;
 import sm.domain.sys.base.sysparam.model.form.SysParamSaveForm;
 import sm.domain.sys.base.sysparam.mapper.SysParamMapper;
 import sm.domain.sys.base.feature.service.FeatureReferenceService;
+import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -24,9 +26,18 @@ import sm.system.response.ResultEnum;
 class SysParamTxService {
     private final SysParamMapper mapper;
     private final FeatureReferenceService featureReferenceService;
+    private final OrgReferenceReader orgReferenceReader;
 
     /** 新增/编辑，清除缓存 */
     public Long save(SysParamSaveForm form) {
+        return save(form, false);
+    }
+
+    public Long saveRegistrationPolicy(SysParamSaveForm form) {
+        return save(form, true);
+    }
+
+    private Long save(SysParamSaveForm form, boolean registrationPolicyCommand) {
         SysParamEntity entity;
         if (form.getId() != null) {
             entity = mapper.selectById(form.getId());
@@ -39,9 +50,17 @@ class SysParamTxService {
             if (!java.util.Objects.equals(entity.getVersion(), form.getVersion())) {
                 throw new BizException(ResultEnum.DATA_CONFLICT, "系统参数已被其他用户修改，请刷新后重试");
             }
+            boolean registrationParameter = RegistrationPolicy.PARAMETER.equals(entity.getNumber());
+            if (registrationParameter != registrationPolicyCommand) {
+                throw new BizException(ResultEnum.PERMISSION_ERROR, "邮箱自助注册策略需要独立的管理员命令");
+            }
             // 系统内置参数只允许修改 value
             if (Boolean.TRUE.equals(entity.getIsSystem())) {
                 validateInboxPollingInterval(entity.getNumber(), form.getValue());
+                if (registrationParameter) {
+                    RegistrationPolicy policy = RegistrationPolicy.parse(form.getValue());
+                    if (policy.orgId() != null) orgReferenceReader.requireAvailable(policy.orgId());
+                }
                 entity.setValue(form.getValue());
                 if (mapper.updateById(entity) == 0) {
                     throw new BizException(ResultEnum.DATA_CONFLICT, "系统参数已被其他用户修改，请刷新后重试");
@@ -49,7 +68,13 @@ class SysParamTxService {
                 return entity.getId();
             }
         } else {
+            if (registrationPolicyCommand) {
+                throw new BizException(ResultEnum.PERMISSION_ERROR, "不能手工新增内置注册策略");
+            }
             entity = new SysParamEntity();
+        }
+        if (RegistrationPolicy.PARAMETER.equals(form.getNumber())) {
+            throw new BizException(ResultEnum.PERMISSION_ERROR, "不能手工维护内置注册策略");
         }
         Long duplicateCount = mapper.selectCount(new LambdaQueryWrapper<SysParamEntity>()
                 .eq(SysParamEntity::getNumber, form.getNumber())

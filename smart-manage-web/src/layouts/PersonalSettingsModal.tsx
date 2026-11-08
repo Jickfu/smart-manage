@@ -31,7 +31,7 @@ interface ProfileValues {
   avatarUploadSessionId?: string;
 }
 
-type CredentialType = 'PHONE' | 'EMAIL' | 'PASSWORD';
+import type { CredentialType } from './PersonalCredentialModal';
 const AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export default function PersonalSettingsModal({
@@ -186,6 +186,18 @@ export default function PersonalSettingsModal({
                     <strong>{row.value}</strong>
                   </div>
                 ))}
+                {selectIsAdministrator({ userInfo }) ? (
+                  <div className="sm-personal-settings-row">
+                    <span>用户名</span>
+                    <strong>{userInfo?.username}</strong>
+                  </div>
+                ) : (
+                  <EditableRow
+                    label="用户名"
+                    value={userInfo?.username}
+                    onEdit={() => setCredentialType('USERNAME')}
+                  />
+                )}
                 <EditableRow
                   label="手机"
                   value={userInfo?.phone}
