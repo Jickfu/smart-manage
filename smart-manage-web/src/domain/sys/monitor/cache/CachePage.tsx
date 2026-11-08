@@ -58,6 +58,7 @@ export default function CachePage(_: PageComponentProps) {
 
   const columns: ColumnsType<ManagedCache> = [
     {
+      ellipsis: true,
       title: '已登记缓存',
       dataIndex: 'displayName',
       minWidth: 210,
@@ -70,6 +71,7 @@ export default function CachePage(_: PageComponentProps) {
       ),
     },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'state',
       width: 124,
@@ -79,6 +81,7 @@ export default function CachePage(_: PageComponentProps) {
       },
     },
     {
+      ellipsis: true,
       title: '策略',
       width: 120,
       render: (_, record) => (
@@ -89,6 +92,7 @@ export default function CachePage(_: PageComponentProps) {
       ),
     },
     {
+      ellipsis: true,
       title: '本周期读取',
       dataIndex: 'getCount',
       width: 150,
@@ -102,6 +106,7 @@ export default function CachePage(_: PageComponentProps) {
       ),
     },
     {
+      ellipsis: true,
       title: '命中率',
       dataIndex: 'hitRate',
       width: 150,
@@ -113,6 +118,7 @@ export default function CachePage(_: PageComponentProps) {
         ),
     },
     {
+      ellipsis: true,
       title: '性能',
       width: 140,
       render: (_, record) => (
@@ -123,6 +129,7 @@ export default function CachePage(_: PageComponentProps) {
       ),
     },
     {
+      ellipsis: true,
       title: '失败',
       dataIndex: 'failCount',
       width: 72,

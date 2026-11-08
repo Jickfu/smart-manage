@@ -8,25 +8,21 @@ import cn.dev33.satoken.filter.SaServletFilter;
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.stp.StpUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.HandlerMethod;
-import org.springframework.web.servlet.mvc.condition.PathPatternsRequestCondition;
-import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import sm.system.exception.ExceptionResultResolver;
 import sm.system.response.ResultEnum;
 import sm.system.security.web.BrowserRequestSecurity;
 import sm.system.security.SessionCredentialGuard;
+import sm.system.security.authorization.PersonalSessionAllowed;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Sa-Token 全局过滤器
@@ -55,11 +51,15 @@ public class SaTokenConfig {
 				.setAuth(obj -> {
 					SaRouter.match("/**")
 							.notMatch(noNeedLogin)
-							.notMatch(saIgnoreList())
 							.check(r -> {
+								HandlerMethod handler = resolveHandler();
+								if (hasHandlerAnnotation(handler, SaIgnore.class)) return;
 								StpUtil.checkLogin();
 								sessionCredentialGuard.checkCurrent();
 								browserRequestSecurity.validateCsrfToken();
+								if (handler != null && !hasHandlerAnnotation(handler, PersonalSessionAllowed.class)) {
+									sessionCredentialGuard.requireOrganization();
+								}
 							});
 				})
 				.setBeforeAuth(obj -> {
@@ -117,26 +117,17 @@ public class SaTokenConfig {
 				.setSameSite(cookieConfig.getSameSite()));
 	}
 
-	/**
-	 * 获取所有带有@SaIgnore注解的方法的路径
-	 */
-	@Bean
-	public List<String> saIgnoreList() {
-		List<String> list = new ArrayList<>();
-		Map<RequestMappingInfo, HandlerMethod> map = requestMappingHandlerMapping.getHandlerMethods();
-		for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : map.entrySet()) {
-			Method method = entry.getValue().getMethod();
-			SaIgnore saIgnore = method.getAnnotation(SaIgnore.class);
-			if (saIgnore == null) {
-				continue;
-			}
-			PathPatternsRequestCondition pathPatternsCondition = entry.getKey().getPathPatternsCondition();
-			if (pathPatternsCondition == null) {
-				continue;
-			}
-			Set<String> patternValues = pathPatternsCondition.getPatternValues();
-			list.addAll(patternValues);
-		}
-		return list;
-	}
+	/** 按实际 MVC 目标识别声明，避免公开 GET 路径同时放行同路径的受保护 POST。 */
+    // Filter 回调不声明受检异常；保留 MVC 原始异常类型，交由统一响应解析器分类。
+    @SneakyThrows(Exception.class)
+    private HandlerMethod resolveHandler() {
+        var chain = requestMappingHandlerMapping.getHandler(sm.system.util.ServletUtil.getRequest());
+        return chain != null && chain.getHandler() instanceof HandlerMethod handler ? handler : null;
+    }
+
+    private boolean hasHandlerAnnotation(HandlerMethod handler,
+            Class<? extends java.lang.annotation.Annotation> annotation) {
+        return handler != null && (AnnotatedElementUtils.hasAnnotation(handler.getMethod(), annotation)
+                || AnnotatedElementUtils.hasAnnotation(handler.getBeanType(), annotation));
+    }
 }

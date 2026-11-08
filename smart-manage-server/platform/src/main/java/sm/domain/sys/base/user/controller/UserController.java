@@ -1,5 +1,6 @@
 package sm.domain.sys.base.user.controller;
 
+import sm.system.security.authorization.PersonalSessionAllowed;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,6 +20,7 @@ import sm.domain.sys.base.user.model.form.UserRoleAssignmentSaveForm;
 import sm.domain.sys.base.user.model.form.CurrentUserThemeForm;
 import sm.domain.sys.base.user.model.form.CurrentOrganizationForm;
 import sm.domain.sys.base.user.model.form.CurrentUserPasswordForm;
+import sm.domain.sys.base.user.model.form.CurrentUserUsernameForm;
 import sm.domain.sys.base.user.model.form.CurrentUserPasswordVerifyForm;
 import sm.domain.sys.base.user.model.form.CurrentUserProfileForm;
 import sm.domain.sys.base.user.model.form.CurrentUserContactForm;
@@ -106,6 +108,7 @@ public class UserController {
 		return Result.success(userImportService.importUsers(file, mode, transactionMode));
 	}
 
+	@PersonalSessionAllowed
 	@GetMapping("/sys/base/user/avatar/{userId}")
 	public ResponseEntity<StreamingResponseBody> avatar(@PathVariable Long userId) {
 		AttachmentEntity attachment = userProfileService.requireAvatar(userId);
@@ -130,6 +133,7 @@ public class UserController {
 		return Result.success(service.listPage(form));
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/user/current/theme")
 	@Operation(summary = "保存个人主题", description = "保存当前登录用户选择的预置主题色")
 	public Result<String> updateCurrentTheme(@RequestBody @Valid CurrentUserThemeForm form) {
@@ -137,6 +141,7 @@ public class UserController {
 		return Result.success();
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/user/permissions")
 	@Operation(summary = "用户权限", description = "按前缀获取当前用户权限编码列表")
 	public Result<List<String>> permissions(@RequestBody @Valid UserPermissionsForm form) {
@@ -201,6 +206,7 @@ public class UserController {
 		return Result.success();
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/user/current/organization")
 	@Operation(summary = "切换当前组织", description = "切换到当前用户有效任职范围内的组织")
 	public Result<String> switchCurrentOrganization(@RequestBody @Valid CurrentOrganizationForm form) {
@@ -208,6 +214,7 @@ public class UserController {
 		return Result.success();
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/user/current/profile")
 	@Operation(summary = "保存个人资料", description = "当前用户修改姓名和头像")
 	public Result<UserInfoVO> updateCurrentProfile(@RequestBody @Valid CurrentUserProfileForm form) {
@@ -215,6 +222,7 @@ public class UserController {
 		return Result.success(userProfileService.current());
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/user/current/contact")
 	@Operation(summary = "修改个人联系方式", description = "当前用户通过密码二级认证修改手机号；邮箱使用独立验证绑定接口")
 	public Result<UserInfoVO> updateCurrentContact(@RequestBody @Valid CurrentUserContactForm form) {
@@ -222,12 +230,14 @@ public class UserController {
 		return Result.success(userProfileService.current());
 	}
 
+	@PersonalSessionAllowed
 	@GetMapping("/sys/base/user/current/password/publicKey")
 	@Operation(summary = "个人改密公钥")
 	public Result<String> currentPasswordPublicKey() {
 		return Result.success(browserPasswordCipher.publicKey());
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/user/current/password/verify")
 	@Operation(summary = "校验个人原密码", description = "当前用户进入修改密码下一步前校验原密码")
 	public Result<String> verifyCurrentPassword(@RequestBody @Valid CurrentUserPasswordVerifyForm form) {
@@ -235,6 +245,7 @@ public class UserController {
 		return Result.success();
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/user/current/password")
 	@Operation(summary = "修改个人密码", description = "验证原密码后修改当前用户密码")
 	public Result<String> updateCurrentPassword(@RequestBody @Valid CurrentUserPasswordForm form) {
@@ -242,6 +253,15 @@ public class UserController {
 		return Result.success();
 	}
 
+    @PersonalSessionAllowed
+    @PostMapping("/sys/base/user/current/username")
+    @Operation(summary = "修改个人用户名", description = "验证原密码后修改用户名，成功后须重新登录")
+    public Result<String> renameCurrentUser(@RequestBody @Valid CurrentUserUsernameForm form) {
+        userProfileService.renameCurrentUser(form.username(), form.currentPassword());
+        return Result.success();
+    }
+
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/user/current/password/email/code")
 	@Operation(summary = "发送个人改密邮箱验证码")
 	public Result<String> requestCurrentPasswordEmailCode() {
@@ -249,6 +269,7 @@ public class UserController {
 		return Result.success("验证码已发送到当前已验证邮箱");
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/user/current/password/email")
 	@Operation(summary = "通过邮箱验证码修改个人密码")
 	public Result<String> updateCurrentPasswordByEmail(
@@ -257,6 +278,7 @@ public class UserController {
 		return Result.success();
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/user/current/email/code")
 	@Operation(summary = "发送新邮箱验证验证码", description = "验证当前密码后向新邮箱发送验证码")
 	public Result<String> requestCurrentEmailCode(
@@ -265,6 +287,7 @@ public class UserController {
 		return Result.success("验证码已发送到新邮箱");
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/user/current/email/bind")
 	@Operation(summary = "验证并绑定新邮箱")
 	public Result<UserInfoVO> bindCurrentEmail(@RequestBody @Valid CurrentUserEmailBindForm form) {

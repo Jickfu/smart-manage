@@ -1,7 +1,7 @@
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useState } from 'react';
 import type { Key } from 'react';
-import { Alert, Button, Tag, Tree } from 'antd';
+import { Button, Tag, Tree } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -74,7 +74,7 @@ export default function CacheManagementPage(props: PageComponentProps) {
     void confirmOperation({
       type: 'delete',
       title: `删除 ${entries.length} 个缓存条目？`,
-      description: '删除后无法恢复，请确认这些缓存可以安全重建。',
+      description: `范围：${JSON.stringify(scopeLabel)}。\n删除后无法恢复，请确认这些缓存可以安全重建。`,
       confirmText: '确认删除',
       onConfirm: () => deleteMutation.mutateAsync(entries.map(entryKey)),
     });
@@ -105,15 +105,17 @@ export default function CacheManagementPage(props: PageComponentProps) {
         );
       },
     },
-    { title: '缓存', dataIndex: 'cacheDisplayName', width: 140 },
+    { ellipsis: true, title: '缓存', dataIndex: 'cacheDisplayName', width: 140 },
     {
+      ellipsis: true,
       title: '存储位置',
       dataIndex: 'storage',
       width: 110,
       render: (value) => <Tag color={value === 'LOCAL' ? 'blue' : 'purple'}>{value}</Tag>,
     },
-    { title: '类型', dataIndex: 'type', width: 100 },
+    { ellipsis: true, title: '类型', dataIndex: 'type', width: 100 },
     {
+      ellipsis: true,
       title: 'TTL',
       dataIndex: 'ttl',
       width: 110,
@@ -121,12 +123,14 @@ export default function CacheManagementPage(props: PageComponentProps) {
         value == null ? '-' : value === -1 ? '永久' : value === -2 ? '不存在' : `${value} 秒`,
     },
     {
+      ellipsis: true,
       title: '内存',
       dataIndex: 'memoryBytes',
       width: 110,
       render: (value) => (value == null ? '-' : `${value} B`),
     },
     {
+      ellipsis: true,
       title: 'Value',
       dataIndex: 'valueReadable',
       width: 100,
@@ -146,14 +150,13 @@ export default function CacheManagementPage(props: PageComponentProps) {
         pageSize={list.pageSize}
         quickSearchPlaceholder="搜索 Key 或缓存名称"
         filterSummary={scope.scopeType === 'ALL' ? undefined : scopeLabel}
-        toolbarExtra={
-          categoryOnly ? (
-            <Alert
-              type="info"
-              showIcon
-              title="该类别包含安全敏感数据，仅登记 Key 规则，不扫描或展示具体条目。"
-            />
-          ) : undefined
+        tableNotice={
+          categoryOnly
+            ? {
+                key: `cache-category-${scopeLabel}`,
+                title: '该类别包含安全敏感数据，仅登记 Key 规则，不扫描或展示具体条目。',
+              }
+            : undefined
         }
         treePanel={
           <ListTreePanel>

@@ -37,6 +37,7 @@ const Workbench = ({ appNumber, appActive, initialEntryNumber, onInitialEntryCon
   const capacityNotice = useWorkbenchStore((s) => s.capacityNotice);
   const consumeCapacityNotice = useWorkbenchStore((s) => s.consumeCapacityNotice);
   const openListTab = useWorkbenchStore((s) => s.openListTab);
+  const openSingletonEditTab = useWorkbenchStore((s) => s.openSingletonEditTab);
   const openCustomTab = useWorkbenchStore((s) => s.openCustomTab);
   const openExternalLinkTab = useWorkbenchStore((s) => s.openExternalLinkTab);
 
@@ -76,6 +77,8 @@ const Workbench = ({ appNumber, appActive, initialEntryNumber, onInitialEntryCon
         }
         if (componentRegistry[action.componentKey]?.pageType === 'CUSTOM') {
           openCustomTab(appNumber, action.componentKey);
+        } else if (componentRegistry[action.componentKey]?.pageType === 'EDIT') {
+          openSingletonEditTab(appNumber, action.componentKey);
         } else {
           openListTab(appNumber, action.componentKey);
         }
@@ -83,7 +86,7 @@ const Workbench = ({ appNumber, appActive, initialEntryNumber, onInitialEntryCon
         feedback.fromError(error, '菜单配置无效');
       }
     },
-    [appNumber, feedback, openCustomTab, openExternalLinkTab, openListTab],
+    [appNumber, feedback, openCustomTab, openExternalLinkTab, openListTab, openSingletonEditTab],
   );
 
   useEffect(() => {

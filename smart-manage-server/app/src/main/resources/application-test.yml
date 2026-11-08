@@ -115,8 +115,9 @@ jetcache:
         minIdle: 2
 
 sa-token:
+  # 普通登录总有效期 24 小时，连续无操作 12 小时后失效。
   timeout: 86400
-  active-timeout: 18000
+  active-timeout: 43200
   cookie:
     secure: false
 
@@ -156,6 +157,7 @@ smart-manage:
     http:
       connect-timeout: 3s
       request-timeout: 10s
+      max-response-bytes: 8388608
     cors:
       allowed-origins:
         - "http://localhost:*"

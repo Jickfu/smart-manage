@@ -1,5 +1,17 @@
 import type { PageForm } from '@/types/api';
 
+/** 全局默认角色配置，role 为空表示未设置。 */
+export interface RoleDefaultVO {
+  role: { id: string; number: string; name: string } | null;
+  version: number;
+}
+
+export interface RoleDefaultSaveForm {
+  roleId: string | null;
+  previousRoleId: string | null;
+  version: number;
+}
+
 /** 角色列表查询 */
 export interface RoleListForm extends PageForm {
   keyword?: string;

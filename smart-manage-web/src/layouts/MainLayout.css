@@ -1,7 +1,14 @@
-/* 主布局 — 全屏不可溢出 */
+/* 桌面壳层统一横滚，保留卡片四轨、应用导航及页面内容宽度。 */
+.sm-desktop-scroll {
+  height: 100vh;
+  overflow: auto hidden;
+}
+
 .sm-layout {
   --sm-header-height: 48px;
-  height: 100vh;
+  height: 100%;
+  min-width: var(--sm-desktop-min-width);
+  container: sm-desktop / inline-size;
   overflow: hidden;
 }
 

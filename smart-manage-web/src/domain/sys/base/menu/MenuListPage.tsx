@@ -1,3 +1,4 @@
+import { formatOperationTargets } from '@/domain/common/component/formatOperationTargets';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useCallback, useMemo, useState } from 'react';
 import { Button, Tag } from 'antd';
@@ -194,15 +195,20 @@ const MenuListPage = (props: PageComponentProps) => {
 
   const handleDelete = useCallback(() => {
     if (selectedRowKeys.length === 0) return;
+    const commandIds = selectedRowKeys.map(String);
+    const targets = commandIds.map((id) => {
+      const record = records.find((item) => item.id === id);
+      return record ? `${record.number} — ${record.name}` : `ID ${id}`;
+    });
     void confirmOperation({
       type: 'delete',
       title: '确认删除',
-      description: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
+      description: `将删除以下菜单，是否继续？\n${formatOperationTargets(targets)}`,
       confirmText: '删除',
       cancelText: '取消',
-      onConfirm: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
+      onConfirm: () => deleteMutation.mutateAsync(commandIds),
     });
-  }, [selectedRowKeys, deleteMutation, confirmOperation]);
+  }, [selectedRowKeys, records, deleteMutation, confirmOperation]);
 
   const columns: ColumnsType<MenuTreeVO> = [
     {
@@ -216,8 +222,9 @@ const MenuListPage = (props: PageComponentProps) => {
       ),
     },
     { title: '名称', dataIndex: 'name', ellipsis: true },
-    { title: '所属应用', dataIndex: 'appName', width: 100 },
+    { ellipsis: true, title: '所属应用', dataIndex: 'appName', width: 100 },
     {
+      ellipsis: true,
       title: '层级',
       dataIndex: 'level',
       width: 80,
@@ -226,6 +233,7 @@ const MenuListPage = (props: PageComponentProps) => {
     },
     { title: '路径', dataIndex: 'path', width: 180, ellipsis: true },
     {
+      ellipsis: true,
       title: '页面目标',
       dataIndex: 'targetType',
       width: 100,
@@ -240,6 +248,7 @@ const MenuListPage = (props: PageComponentProps) => {
     },
     { title: '外部链接', dataIndex: 'externalUrl', width: 220, ellipsis: true },
     {
+      ellipsis: true,
       title: '打开方式',
       dataIndex: 'externalOpenMode',
       width: 130,
@@ -247,8 +256,9 @@ const MenuListPage = (props: PageComponentProps) => {
         value === 'NEW_TAB' ? '新浏览器标签页' : value === 'IFRAME' ? '工作台内嵌页' : '-',
     },
     { title: '组件', dataIndex: 'component', ellipsis: true },
-    { title: '排序', dataIndex: 'sort', width: 60 },
+    { ellipsis: true, title: '排序', dataIndex: 'sort', width: 60 },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'enabled',
       width: 80,

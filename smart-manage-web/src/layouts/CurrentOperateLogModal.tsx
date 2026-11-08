@@ -13,17 +13,24 @@ interface CurrentOperateLogModalProps {
 }
 
 const COLUMNS: ColumnsType<OperateLogListVO> = [
-  { title: '发生时间', dataIndex: 'createTime', width: 180 },
-  { title: '操作', dataIndex: 'bizName', width: 180, render: (value) => value || '-' },
+  { ellipsis: true, title: '发生时间', dataIndex: 'createTime', width: 180 },
   {
+    ellipsis: true,
+    title: '操作',
+    dataIndex: 'bizName',
+    width: 180,
+    render: (value) => value || '-',
+  },
+  {
+    ellipsis: true,
     title: '结果',
     dataIndex: 'success',
     width: 80,
     render: (success: boolean) =>
       success ? <Tag color="success">成功</Tag> : <Tag color="error">失败</Tag>,
   },
-  { title: '耗时(ms)', dataIndex: 'durationMs', width: 100 },
-  { title: 'IP 地址', dataIndex: 'ip' },
+  { ellipsis: true, title: '耗时(ms)', dataIndex: 'durationMs', width: 100 },
+  { ellipsis: true, title: 'IP 地址', dataIndex: 'ip' },
 ];
 
 export default function CurrentOperateLogModal({ open, onClose }: CurrentOperateLogModalProps) {

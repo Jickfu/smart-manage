@@ -11,12 +11,12 @@
           AND b.enabled = true
     </select>
 
-    <select id="selectUserMenus" resultType="sm.domain.sys.base.menu.model.entity.MenuEntity">
+    <select id="selectUserMenus" resultType="sm.domain.sys.base.menu.model.entity.MenuEntity" flushCache="true" useCache="false">
         SELECT DISTINCT a.*
         FROM t_sys_menu a
         <if test="!admin">
             INNER JOIN t_sys_role_perms b ON b.permission_id = a.permission_id
-            INNER JOIN t_sys_user_role c ON c.role_id = b.role_id
+            INNER JOIN v_sys_user_effective_role c ON c.role_id = b.role_id
         </if>
         WHERE a.app_id = #{appId}
           AND a.enabled = true

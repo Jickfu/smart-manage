@@ -37,6 +37,7 @@ public class ExternalHttpException extends BizException {
         TIMEOUT,
         INTERRUPTED,
         HTTP_STATUS,
-        RESPONSE_PARSE
+        RESPONSE_PARSE,
+        RESPONSE_TOO_LARGE
     }
 }

@@ -7,9 +7,9 @@ import lombok.Data;
  * @author Chekfu
  */
 @Data
-@Schema(title = "角色列表视图")
+@Schema(description = "角色列表视图")
 public class RoleListVO {
-	@Schema(description = "id")
+	@Schema(description = "ID")
 	private Long id;
 
 	@Schema(description = "角色名称")

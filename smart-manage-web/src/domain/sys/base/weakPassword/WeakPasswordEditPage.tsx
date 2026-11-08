@@ -79,7 +79,7 @@ const WeakPasswordEditPage = ({ open, wordId, onClose }: Props) => {
   return (
     <ModalEditPage
       access={weakPasswordAccess}
-      title={isAddNew ? '新增弱口令' : '编辑弱口令'}
+      title="弱口令"
       open={open}
       onClose={onClose}
       fields={fields}

@@ -68,9 +68,3 @@
   justify-content: center;
   color: var(--ant-color-text-secondary);
 }
-
-@media (max-width: 1080px) {
-  .sm-thread-diagnostic-grid {
-    grid-template-columns: 1fr;
-  }
-}

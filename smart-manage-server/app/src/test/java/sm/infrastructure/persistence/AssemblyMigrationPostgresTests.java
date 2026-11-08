@@ -36,6 +36,15 @@ class AssemblyMigrationPostgresTests {
             assertNotNull(jdbc.queryForObject("SELECT to_regclass(?)", String.class, declaration.getProperty("table")),
                     "已装配领域必须实际建立迁移历史表");
         }
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM t_sys_feature_data_object "
+                + "WHERE to_regclass(format('%I.%I', schema_name, object_name)) IS NULL", Integer.class));
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM t_sys_feature_data_object data_object "
+                + "JOIN pg_namespace namespace ON namespace.nspname = data_object.schema_name "
+                + "JOIN pg_class catalog_object ON catalog_object.relnamespace = namespace.oid "
+                + "AND catalog_object.relname = data_object.object_name "
+                + "WHERE data_object.object_type IS DISTINCT FROM CASE catalog_object.relkind "
+                + "WHEN 'r' THEN 'TABLE' WHEN 'p' THEN 'PARTITIONED_TABLE' WHEN 'v' THEN 'VIEW' "
+                + "WHEN 'm' THEN 'MATERIALIZED_VIEW' WHEN 'f' THEN 'FOREIGN_TABLE' END", Integer.class));
         if (actualDomains.isEmpty()) {
             assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM t_sys_org", Integer.class));
         }

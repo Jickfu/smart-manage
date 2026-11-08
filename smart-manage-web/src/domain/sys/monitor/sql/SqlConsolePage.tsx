@@ -12,6 +12,7 @@ import { sqlApi } from './api';
 import { sqlAccess } from './permissions';
 import SqlEditor from './SqlEditor';
 import type { SqlEditorRef } from './SqlEditor';
+import SqlCatalogBrowser from './SqlCatalogBrowser';
 import type { SqlExecutionResult } from './types';
 import './sqlConsole.css';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
@@ -34,19 +35,21 @@ export default function SqlConsolePage(_props: PageComponentProps) {
   const [sqlText, setSqlText] = useState(DEFAULT_SQL);
   const [result, setResult] = useState<SqlExecutionResult>();
   const editorRef = useRef<SqlEditorRef>(null);
-  const { can } = usePermissionAccess(sqlAccess.prefix);
+  const { can, loading: permissionLoading } = usePermissionAccess(sqlAccess.prefix);
+  const canBrowseCatalog = can(sqlAccess.permissions.catalog);
   const executeMutation = useCommandMutation({
     mutationFn: sqlApi.execute,
     onSuccess: (data) => setResult(data),
   });
-  const execute = (candidate = sqlText.trim()) => {
-    if (!candidate) {
-      feedback.warning('请输入要执行的 SQL');
+  const execute = (candidate: string) => {
+    if (!candidate.trim()) {
+      feedback.warning('请先选中要执行的 SQL，再点击执行或按 Ctrl + E');
       return;
     }
-    const run = () => executeMutation.mutate(candidate);
+    if (permissionLoading || !can(sqlAccess.permissions.execute) || executeMutation.isPending)
+      return;
     if (!requiresConfirmation(candidate)) {
-      run();
+      executeMutation.mutate(candidate);
       return;
     }
     void confirmOperation({
@@ -54,7 +57,8 @@ export default function SqlConsolePage(_props: PageComponentProps) {
       title: '确认执行写入或结构变更 SQL？',
       description: '该操作可能修改数据库。多条语句仅允许纯 INSERT，并会在同一事务中执行。',
       confirmText: '确认执行',
-      onConfirm: run,
+      // 返回命令 Promise，确认框才能保持处理中锁定，并在失败时保留重试上下文。
+      onConfirm: () => executeMutation.mutateAsync(candidate),
     });
   };
   const tableColumns = useMemo<ColumnsType<unknown[]>>(
@@ -76,10 +80,74 @@ export default function SqlConsolePage(_props: PageComponentProps) {
       })),
     [result],
   );
+  const appendSql = (sql: string) => {
+    setSqlText((current) => `${current.trimEnd()}${current.trim() ? '\n\n' : ''}${sql}`);
+  };
+  const workspace = (
+    <Splitter
+      orientation="vertical"
+      className={canBrowseCatalog ? 'sm-sql-workspace-splitter' : 'sm-sql-console-splitter'}
+    >
+      <Splitter.Panel defaultSize="45%" min={180}>
+        <section className="sm-sql-console-panel">
+          <SqlEditor ref={editorRef} value={sqlText} onChange={setSqlText} onExecute={execute} />
+        </section>
+      </Splitter.Panel>
+      <Splitter.Panel min={180}>
+        <section className="sm-sql-console-panel sm-sql-result-panel">
+          <div className="sm-sql-result-summary">
+            <Typography.Text strong>执行结果</Typography.Text>
+            {result && (
+              <Space wrap>
+                <Tag color={result.type === 'ERROR' ? 'error' : 'success'}>{result.type}</Tag>
+                <span>{result.rowCount} 行</span>
+                <span>{result.executeDuration} ms</span>
+                {result.statementCount > 1 && <span>{result.statementCount} 条语句</span>}
+              </Space>
+            )}
+          </div>
+          {result?.type === 'QUERY' ? (
+            <>
+              {result.truncated && (
+                <Alert type="warning" showIcon title={`${result.message}，结果已截断`} />
+              )}
+              <Table<unknown[]>
+                className="sm-sql-result-table"
+                size="small"
+                rowKey={(_record, index) => String(index)}
+                columns={tableColumns}
+                dataSource={result.rows ?? []}
+                pagination={false}
+                sticky
+                scroll={{ x: 'max-content', y: 1 }}
+              />
+            </>
+          ) : result ? (
+            <Alert
+              type={result.type === 'ERROR' ? 'error' : 'success'}
+              showIcon
+              title={result.message || '执行完成'}
+              description={
+                result.statementRowCounts && result.statementRowCounts.length > 1
+                  ? `各语句影响行数：${result.statementRowCounts.join('、')}`
+                  : undefined
+              }
+            />
+          ) : (
+            <Empty description="执行 SQL 后在此查看结果" />
+          )}
+        </section>
+      </Splitter.Panel>
+    </Splitter>
+  );
   return (
     <EditPageShell
       title="SQL 控制台"
-      loading={false}
+      notice={{
+        key: 'sql-selection',
+        title: '请先选中要执行的 SQL，再点击执行或按 Ctrl + E；未选中时不会执行。',
+      }}
+      loading={permissionLoading}
       actions={
         <>
           {can(sqlAccess.permissions.execute) && (
@@ -110,64 +178,19 @@ export default function SqlConsolePage(_props: PageComponentProps) {
           >
             清空
           </Button>
-          <Typography.Text type="secondary" className="sm-sql-console-hint">
-            选中 SQL 后按 Ctrl + E 可执行选区
-          </Typography.Text>
         </>
       }
     >
-      <Splitter orientation="vertical" className="sm-sql-console-splitter">
-        <Splitter.Panel defaultSize="45%" min={180}>
-          <section className="sm-sql-console-panel">
-            <SqlEditor ref={editorRef} value={sqlText} onChange={setSqlText} onExecute={execute} />
-          </section>
-        </Splitter.Panel>
-        <Splitter.Panel min={180}>
-          <section className="sm-sql-console-panel sm-sql-result-panel">
-            <div className="sm-sql-result-summary">
-              <Typography.Text strong>执行结果</Typography.Text>
-              {result && (
-                <Space wrap>
-                  <Tag color={result.type === 'ERROR' ? 'error' : 'success'}>{result.type}</Tag>
-                  <span>{result.rowCount} 行</span>
-                  <span>{result.executeDuration} ms</span>
-                  {result.statementCount > 1 && <span>{result.statementCount} 条语句</span>}
-                </Space>
-              )}
-            </div>
-            {result?.type === 'QUERY' ? (
-              <>
-                {result.truncated && (
-                  <Alert type="warning" showIcon title={`${result.message}，结果已截断`} />
-                )}
-                <Table<unknown[]>
-                  className="sm-sql-result-table"
-                  size="small"
-                  rowKey={(_record, index) => String(index)}
-                  columns={tableColumns}
-                  dataSource={result.rows ?? []}
-                  pagination={false}
-                  sticky
-                  scroll={{ x: 'max-content', y: 1 }}
-                />
-              </>
-            ) : result ? (
-              <Alert
-                type={result.type === 'ERROR' ? 'error' : 'success'}
-                showIcon
-                title={result.message || '执行完成'}
-                description={
-                  result.statementRowCounts && result.statementRowCounts.length > 1
-                    ? `各语句影响行数：${result.statementRowCounts.join('、')}`
-                    : undefined
-                }
-              />
-            ) : (
-              <Empty description="执行 SQL 后在此查看结果" />
-            )}
-          </section>
-        </Splitter.Panel>
-      </Splitter>
+      {permissionLoading ? null : canBrowseCatalog ? (
+        <Splitter className="sm-sql-console-splitter">
+          <Splitter.Panel defaultSize={360} min={280} max={560}>
+            <SqlCatalogBrowser onAppendSql={appendSql} />
+          </Splitter.Panel>
+          <Splitter.Panel min={480}>{workspace}</Splitter.Panel>
+        </Splitter>
+      ) : (
+        workspace
+      )}
     </EditPageShell>
   );
 }

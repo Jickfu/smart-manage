@@ -1,5 +1,6 @@
 package sm.domain.sys.monitor.operatelog.controller;
 
+import sm.system.security.authorization.PersonalSessionAllowed;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import cn.dev33.satoken.stp.StpUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +32,7 @@ public class OperateLogController {
 		return Result.success(service.listPage(form));
 	}
 
+	@PersonalSessionAllowed
 	@PostMapping("/sys/log/operate/current/listPage")
 	@Operation(summary = "当前账号操作日志分页", description = "仅返回当前用户的概要信息")
 	public Result<PageData<OperateLogListVO>> currentListPage(@Valid @RequestBody OperateLogListForm form) {

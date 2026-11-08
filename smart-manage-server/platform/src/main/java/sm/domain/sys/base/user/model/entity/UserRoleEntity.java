@@ -7,18 +7,32 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import sm.system.entity.BaseEntity;
 
-/** 用户聚合内部的角色关联实体。 */
+/**
+ * 用户聚合内部的角色关联实体。
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_sys_user_role")
 public class UserRoleEntity extends BaseEntity {
 
+    /**
+     * ID
+     */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
+    /**
+     * 用户ID
+     */
     private Long userId;
 
+    /**
+     * 组织 ID
+     */
     private Long orgId;
 
+    /**
+     * 角色ID
+     */
     private Long roleId;
 }

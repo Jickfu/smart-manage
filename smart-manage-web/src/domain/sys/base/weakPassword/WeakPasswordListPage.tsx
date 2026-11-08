@@ -52,6 +52,7 @@ export default function WeakPasswordListPage(props: PageComponentProps) {
   });
   const columns: ColumnsType<WeakPasswordVO> = [
     {
+      ellipsis: true,
       title: '弱口令',
       dataIndex: 'word',
       width: 320,
@@ -69,7 +70,7 @@ export default function WeakPasswordListPage(props: PageComponentProps) {
       ),
     },
     { title: '描述', dataIndex: 'description', ellipsis: true },
-    { title: '更新时间', dataIndex: 'updateTime', width: 180 },
+    { ellipsis: true, title: '更新时间', dataIndex: 'updateTime', width: 180 },
   ];
   return (
     <>
@@ -104,7 +105,7 @@ export default function WeakPasswordListPage(props: PageComponentProps) {
               void confirmOperation({
                 type: 'delete',
                 title: '确认删除弱口令？',
-                description: '删除后，此词条将不再参与弱口令拦截。',
+                description: `词条：${JSON.stringify(record.word)}。\n删除后，此词条将不再参与弱口令拦截。`,
                 confirmText: '删除',
                 onConfirm: () =>
                   deleteMutation.mutateAsync({ id: record.id, version: record.version }),

@@ -8,15 +8,17 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
-/** 菜单管理范围树节点：领域 → 应用。 */
+/**
+ * 菜单管理范围树节点：领域 → 应用。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "菜单管理范围树节点")
 public class MenuCatalogNodeVO {
-    @Schema(description = "节点类型：DOMAIN、APPLICATION")
+    @Schema(description = "菜单目录节点类型")
     private String type;
-    @Schema(description = "节点ID")
+    @Schema(description = "ID")
     private Long id;
     @Schema(description = "稳定编码")
     private String number;

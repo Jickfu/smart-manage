@@ -4,6 +4,7 @@ import type { EditField } from './EditPage';
 
 export interface EditPageSection {
   key: string;
+  notice?: import('@/domain/common/component/PageNotice').PageNoticeConfig;
   label: ReactNode;
   content: (editable: boolean) => ReactNode;
   extra?: (editable: boolean) => ReactNode;

@@ -1,15 +1,22 @@
 package sm.domain.sys.base.attachment.model.form;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
-/** 按业务对象查询附件的接口入参。 */
+/**
+ * 按业务对象查询附件的接口入参。
+ */
+@Schema(description = "附件列表输入表单")
 @Data
 public class AttachmentListForm {
 
+    @Schema(description = "业务类型")
     @NotBlank(message = "业务类型不能为空")
     private String bizType;
 
+    @Schema(description = "业务ID")
     @NotBlank(message = "业务单据ID不能为空")
     private String bizId;
 }

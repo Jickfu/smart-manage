@@ -47,6 +47,7 @@ const AppModal = ({
   resizable = false,
   destroyOnHidden = true,
   keyboard = true,
+  wrapClassName,
   ...modalProps
 }: AppModalProps) => {
   const interactionRef = useRef<HTMLDivElement>(null);
@@ -117,7 +118,7 @@ const AppModal = ({
       }
       open={modalProps.open}
       onCancel={onCancel}
-      centered
+      wrapClassName={['sm-app-modal-scroll', wrapClassName].filter(Boolean).join(' ')}
       mask={{ closable: false }}
       className={modalClassName}
       closable={{ disabled: closeDisabled }}

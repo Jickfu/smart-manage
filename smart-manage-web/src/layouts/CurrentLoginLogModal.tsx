@@ -27,17 +27,20 @@ const EVENT_LABELS: Record<LoginEventType, string> = {
 
 const COLUMNS: ColumnsType<LoginLogListVO> = [
   {
+    ellipsis: true,
     title: '发生时间',
     dataIndex: 'createTime',
     width: 180,
   },
   {
+    ellipsis: true,
     title: '事件',
     dataIndex: 'eventType',
     width: 150,
     render: (eventType: LoginEventType) => EVENT_LABELS[eventType] ?? eventType,
   },
   {
+    ellipsis: true,
     title: '结果',
     dataIndex: 'success',
     width: 80,
@@ -45,6 +48,7 @@ const COLUMNS: ColumnsType<LoginLogListVO> = [
       success ? <Tag color="success">成功</Tag> : <Tag color="error">失败</Tag>,
   },
   {
+    ellipsis: true,
     title: 'IP 地址',
     dataIndex: 'ip',
   },

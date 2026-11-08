@@ -7,16 +7,27 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import sm.system.entity.BaseEntity;
 
-/** 角色聚合内部的权限关联实体。 */
+/**
+ * 角色聚合内部的权限关联实体。
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("t_sys_role_perms")
 public class RolePermissionEntity extends BaseEntity {
 
+    /**
+     * ID
+     */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
+    /**
+     * 角色ID
+     */
     private Long roleId;
 
+    /**
+     * 权限ID
+     */
     private Long permissionId;
 }

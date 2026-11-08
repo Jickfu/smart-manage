@@ -27,15 +27,17 @@ import './scriptHelp.css';
 type HelpSection = 'guide' | 'templates' | 'api';
 
 const fieldColumns: ColumnsType<ScriptApiField> = [
-  { title: '字段', dataIndex: 'name', width: 180 },
-  { title: '类型', dataIndex: 'type', width: 220 },
+  { ellipsis: true, title: '字段', dataIndex: 'name', width: 180 },
+  { ellipsis: true, title: '类型', dataIndex: 'type', width: 220 },
   {
+    ellipsis: true,
     title: '必填',
     dataIndex: 'required',
     width: 80,
     render: (required: boolean) => (required ? <Tag color="error">是</Tag> : '否'),
   },
   {
+    ellipsis: true,
     title: '约束',
     dataIndex: 'constraints',
     render: (constraints: string[]) => constraints.join('；') || '-',

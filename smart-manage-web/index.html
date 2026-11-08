@@ -9,6 +9,13 @@
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src http: https:; object-src 'none'; base-uri 'self'; form-action 'self'"
     />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <!-- 提前下载启动必需的图标目录，与入口脚本并行加载；凭据模式与 fetch 保持一致。 -->
+    <link
+      rel="preload"
+      href="/src/domain/common/component/iconCatalog.generated.json"
+      as="fetch"
+      crossorigin="anonymous"
+    />
     <title>Smart Manage</title>
   </head>
   <body>

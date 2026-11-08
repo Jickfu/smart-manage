@@ -7,6 +7,7 @@ import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.serializer.SerializationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -103,6 +104,10 @@ public final class ExceptionResultResolver {
         if (exception instanceof RedisConnectionFailureException) {
             log.error("Redis 连接失败", exception);
             return Result.error(ResultEnum.CONFIG_ERROR);
+        }
+        if (exception instanceof QueryTimeoutException) {
+            log.warn("数据库查询超时", exception);
+            return Result.error(ResultEnum.QUERY_TIMEOUT);
         }
         if (exception instanceof DataAccessException) {
             log.error("数据持久化异常", exception);

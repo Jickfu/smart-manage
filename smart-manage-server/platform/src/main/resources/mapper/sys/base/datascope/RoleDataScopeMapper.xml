@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="sm.domain.sys.base.datascope.mapper.RoleDataScopeMapper">
-    <select id="selectEffectiveRules" resultType="sm.domain.sys.base.datascope.model.entity.RoleDataScopeEntity">
+    <select id="selectEffectiveRules" resultType="sm.domain.sys.base.datascope.model.entity.RoleDataScopeEntity" flushCache="true" useCache="false">
         SELECT DISTINCT ON (a.id)
                COALESCE(c.id, b.id, -a.id) AS id,
                a.id AS role_id,
@@ -9,7 +9,7 @@
                #{action} AS action,
                COALESCE(c.scope_type, b.scope_type, a.default_data_scope) AS scope_type
         FROM t_sys_role a
-        INNER JOIN t_sys_user_role d ON d.role_id = a.id
+        INNER JOIN v_sys_user_effective_role d ON d.role_id = a.id
         LEFT JOIN t_sys_role_data_scope b
           ON b.role_id = a.id AND b.resource_type = #{resourceType} AND b.action IS NULL
         LEFT JOIN t_sys_role_data_scope c

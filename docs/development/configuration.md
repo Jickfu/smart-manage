@@ -32,6 +32,8 @@ smart-manage:
 
 环境变量继续负责具体部署实例的覆盖。是否归入环境文件按配置语义判断，不按当前值是否重复判断。`SmartManageConfigurationNamespaceTests` 同时防止已识别的环境配置重新进入公共文件。
 
+出站 HTTP 的连接超时、请求超时与 `smart-manage.infrastructure.http.max-response-bytes` 均属环境容量配置；内置环境默认响应上限为 8388608 字节，可由外部 YAML 或 `SMART_MANAGE_INFRASTRUCTURE_HTTP_MAX_RESPONSE_BYTES` 覆盖，必须为 1～2147483647。上限保护聚合响应大小，不代表并发内存预算或解压后正文限制；当前客户端不自动解压内容。超限拒绝不会自动重试。
+
 ## 修改 API context path
 
 后端 context path、浏览器 API 前缀和部署代理分别属于后端、前端与部署层。默认均使用 `/smart-manage-api`，当前开发代理和 Nginx 示例保留原请求路径，因此三者应保持一致；它们不是项目目录名、前端页面基路径或应用身份，修改时不需要重命名项目。
@@ -72,7 +74,7 @@ Axios 请求、界面配置图片、独立登录页与 Vite 开发代理均读�
 | --- | --- | --- |
 | `dev` | IDEA 和个人电脑开发运行 | 内置 `application-dev.yml` 加本机外部覆盖 |
 | `test` | 共享测试服务器 | 内置 `application-test.yml` 加服务器外部覆盖 |
-| `prod` | 生产部署 | Jar 同级 `config/application.yml` 和 `config/application-prod.yml` |
+| `prod` | 生产部署 | 内置公共与生产模板，加服务器外部覆盖；外部两个文件均非必须同时存在 |
 
 ## 本机开发
 
@@ -84,7 +86,7 @@ Spring Data Redis 与 JetCache 使用两套配置入口，两处地址、端口�
 
 ## 管理员首次初始化
 
-Flyway 只创建账号 `administrator` 和不可登录的空密码标记。首次启动自动生成 20 位安全随机临时密码，通过统一密码策略后执行一次数据库条件更新，并保留首次强制改密。明文只写入 `administrator-initial-password.txt`：IDEA 启动时文件位于 Run Configuration 的 Working directory，运行打包后的 JAR 时文件位于 JAR 同级目录。日志只输出文件绝对路径，不输出密码。
+Flyway 只创建账号 `administrator` 和不可登录的空密码标记。首次启动自动生成至少 20 位且不短于配置最小长度的安全随机临时密码，通过统一密码策略后执行一次数据库条件更新，并保留首次强制改密。明文只写入 `administrator-initial-password.txt`：IDEA 启动时文件位于 Run Configuration 的 Working directory，运行打包后的 JAR 时文件位于 JAR 同级目录。日志只输出文件绝对路径，不输出密码。
 
 文件创建后权限限制为当前运行用户读写；运维人员读取密码后必须删除。数据库仍为空密码但文件已存在时会复用文件内容，以覆盖文件已落盘但数据库更新前进程退出的恢复场景。多个实例共享同一运行目录时复用同一文件；运行目录不同时各自生成，未赢得数据库条件更新的实例会删除自己的无效文件。初始化完成后的启动不再生成或覆盖文件及数据库凭据。正常改密、重置走现有用户能力。
 
@@ -121,6 +123,34 @@ Flyway 只创建账号 `administrator` 和不可登录的空密码标记。首�
 
 ## 生产环境
 
+### Profile 选择与配置叠加
+
+仓库内 `application.yml` 默认选择 `dev`。生产部署建议在 JAR 同级的 `config/application.yml` 激活 `prod`：
+
+```yaml
+spring:
+  profiles:
+    active: prod
+```
+
+此时默认配置按以下顺序叠加，后者覆盖同名属性，未覆盖属性仍保留：
+
+1. JAR 内 `application.yml`：公共协议与架构配置；
+2. JAR 内 `application-prod.yml`：生产策略与环境模板；
+3. 工作目录下外部 `application.yml` 或 `config/application.yml`；
+4. 工作目录下外部 `application-prod.yml` 或 `config/application-prod.yml`；
+5. 操作系统环境变量、JVM 系统属性和命令行参数等更高优先级来源。
+
+因此仅提供外部 `config/application-prod.yml`，仍然会加载 JAR 内的两个文件，不是只加载生产文件，也无需复制公共模板到服务器。外部文件只填写实际覆盖项；未覆盖的必填占位符必须通过其他部署来源提供。
+
+也可以用 `--spring.profiles.active=prod` 或 `SPRING_PROFILES_ACTIVE=prod` 激活生产配置。`spring.profiles.active` 放在通用配置中，避免在多个入口维护相互矛盾的值。
+
+默认外部查找位置基于**进程工作目录**，不会自动追随 JAR 路径；systemd 的 `WorkingDirectory` 应固定为对应实例目录。从其他目录启动时，可通过 `--spring.config.additional-location=file:/opt/smart-manage/node-a/config/` 添加配置目录。目录路径以 `/` 结尾；不要仅用 `spring.config.location` 指向外部目录，因为它会替换默认搜索位置，可能遗漏 JAR 内的公共与生产策略。更复杂的位置组合以 [Spring Boot 外部配置规则](https://docs.spring.io/spring-boot/reference/features/external-config.html)为准。
+
+同机多实例各自使用独立目录与外部配置，选择同一 `prod` Profile；实例身份、端口、日志路径及共享设施要求见[支持的部署组合](../architecture/deployment.md#支持的部署组合)。
+
+### 部署材料与必要配置
+
 首次部署先按[生产密钥生成与部署](./production-keys.md)生成 SM2 密钥对和部署级 SM4 密钥。该指南包含 OpenAPI 凭据区别、配置接入、替换清单、备份及存量轮换边界。
 
 推荐部署目录：
@@ -130,15 +160,17 @@ smart-manage/
 ├─ smart-manage-server.jar
 ├─ config/
 │  ├─ application.yml
-│  └─ application-prod.yml
+│  ├─ application-prod.yml
+│  └─ deployment-keys.env
 ├─ logs/
 └─ smfiles/
 ```
 
-以仓库中的 `smart-manage-server/app/src/main/resources/application-prod.yml` 为配置项参考，在部署目录创建不纳入版本控制的
-`config/application.yml` 或 `config/application-prod.yml` 并填写真实配置。启动进程的工作目录必须是 Jar 所在目录。
-外部 YAML 优先于 Jar 内配置，因此生产部署可以使用外部 YAML、环境变量或外部密钥管理设施提供配置；
-Jar 内部 `${...}` 占位符用于强制检查不可缺省的生产配置。
+以仓库中的 `smart-manage-server/app/src/main/resources/application-prod.yml` 为参考，在部署目录的 `config/application-prod.yml` 填写生产连接信息和实例配置，并导入同目录的密钥文件。导入语法和文件权限见[部署密钥文件](./production-keys.md#部署密钥文件)。外部配置文件保存在仓库外。JAR 内的 `${...}` 占位符用于检查必填配置。
+
+配置齐备后，在 JAR 所在目录执行 `java -jar smart-manage-server.jar`。使用 systemd 托管时，将 `WorkingDirectory` 设为 JAR 所在目录，`ExecStart` 使用同一启动命令并指向部署的 JAR。采用文件导入时，Spring Boot 自行加载密钥。
+
+备份与迁移时，将对应版本的 JAR 与整个 `config/` 成套保管，并记录对应的数据库和附件恢复点。完整恢复范围见[备份、恢复与发布回退](../architecture/deployment.md#备份恢复与发布回退)。
 
 生产环境使用 `prod` Profile，必须显式配置：
 

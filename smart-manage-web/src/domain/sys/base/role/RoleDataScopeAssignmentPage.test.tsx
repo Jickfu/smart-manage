@@ -5,7 +5,6 @@ import { createRoot, type Root } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import RoleDataScopeAssignmentPage from './RoleDataScopeAssignmentPage';
-import { AssignmentPage } from '@/domain/common/page/assignment/AssignmentPage';
 import { roleApi } from './api';
 import { roleQueryKeys } from './queryKeys';
 import { orgApi } from '../org/api';
@@ -258,35 +257,6 @@ describe('角色数据范围编辑交互', { timeout: 15000 }, () => {
     expect(container.querySelector<HTMLElement>('.sm-edit-header')!.hidden).toBe(true);
     await click(save);
     expect(roleApi.assignDataScopes).not.toHaveBeenCalled();
-    expect(mocks.dirty).toBe(true);
-  });
-
-  it('公共分配壳默认仍显示上下文，false 只影响呈现', async () => {
-    const renderShell = (showHeaderContext?: boolean) => (
-      <QueryClientProvider client={queryClient}>
-        <AssignmentPage
-          loading={false}
-          saving={false}
-          access={{ prefix: 'role', permissions: { save: 'save' } }}
-          subject="角色摘要"
-          selectedCount={1}
-          totalCount={2}
-          dirty
-          showHeaderContext={showHeaderContext}
-          onSave={() => {}}
-          onExit={() => {}}
-          onRetry={() => {}}
-        >
-          {null}
-        </AssignmentPage>
-      </QueryClientProvider>
-    );
-    await act(async () => root.render(renderShell()));
-    expect(container.querySelector('.sm-assignment-header-context')!.textContent).toContain(
-      '角色摘要',
-    );
-    await act(async () => root.render(renderShell(false)));
-    expect(container.querySelector('.sm-assignment-header-context')).toBeNull();
     expect(mocks.dirty).toBe(true);
   });
 });

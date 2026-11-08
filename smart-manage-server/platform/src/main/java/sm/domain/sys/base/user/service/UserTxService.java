@@ -26,7 +26,6 @@ import sm.domain.sys.base.user.model.Gender;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import sm.system.helper.Argon2Helper;
-import sm.system.util.PasswordGeneratorUtil;
 
 import java.util.Objects;
 import java.util.List;
@@ -62,13 +61,39 @@ class UserTxService {
 
     /** 新增/编辑用户 */
     public Long save(UserSaveForm form) {
+        UserLifecyclePolicy.checkSave(form,
+                form.getId() == null ? null : mapper.selectById(form.getId()));
         return userWriter.save(form, form.getId());
     }
 
     /** 新增时允许上层预分配ID，供头像附件绑定使用。 */
     public Long save(UserSaveForm form, Long desiredId) {
+        UserLifecyclePolicy.checkSave(form,
+                form.getId() == null ? null : mapper.selectById(form.getId()));
         promoteAvatar(form.getAvatarAttachmentId(), form.getAttachmentUploadSessions(), desiredId);
         return userWriter.save(form, desiredId);
+    }
+
+    public void renameCurrentUser(Long userId, String username, String password) {
+        UserLifecyclePolicy.checkUsername(username);
+        UserEntity user = mapper.selectById(userId);
+        UserLifecyclePolicy.checkTarget(user);
+        if (user == null || !Boolean.TRUE.equals(user.getEnabled())
+                || !Argon2Helper.verify(user.getPassword(), password)) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "原密码不正确或账号不可用");
+        }
+        if (username.equals(user.getUsername())) {
+            throw new BizException(ResultEnum.PARAM_ERROR, "新用户名与当前用户名相同");
+        }
+        user.setUsername(username);
+        try {
+            // 版本条件阻止原密码校验后发生并发改密或禁用时继续改名。
+            if (mapper.updateById(user) != 1) {
+                throw new BizException(ResultEnum.DATA_CONFLICT, "用户信息已变更，请重试");
+            }
+        } catch (DuplicateKeyException exception) {
+            throw new BizException(ResultEnum.UNIQUE_CONFLICT, "用户名已存在");
+        }
     }
 
     /** 普通目标重置路径不得接收超级管理员，即使未来上层路由有误也必须拒绝。 */
@@ -89,8 +114,7 @@ class UserTxService {
         if (UserConstant.SUPER_ADMIN.equals(entity.getUsername()) != administratorTarget) {
             throw new BizException(ResultEnum.PERMISSION_ERROR, "目标用户不属于此凭据重置入口");
         }
-        String password = PasswordGeneratorUtil.generate(20);
-        passwordPolicyService.validate(password, entity.getUsername());
+        String password = passwordPolicyService.generate(entity.getUsername());
         entity.setPassword(Argon2Helper.encode(password));
         entity.setPasswordReset(true);
         if (mapper.updateById(entity) == 0) {
@@ -259,6 +283,9 @@ class UserTxService {
     }
 
     public void updateEnabled(List<Long> ids, boolean enabled) {
+        for (UserEntity target : mapper.selectByIds(ids)) {
+            UserLifecyclePolicy.checkTarget(target);
+        }
         if (!enabled && ids.contains(currentUserContext.getUserId())) {
             throw new BizException(ResultEnum.BILL_STATUS_ERROR, "不能禁用当前登录用户");
         }
@@ -266,20 +293,15 @@ class UserTxService {
         EnabledCommandUtil.update(mapper, UserEntity::getId, UserEntity::getEnabled, ids, enabled, "用户");
     }
 
-	/** 启用账号前必须确认每个用户都有唯一且可用的主职组织。 */
+	/** 启用有主职的账号前校验主职组织有效性；无任职的账号可以使用个人功能。 */
 	private void validateEnabledUserAssignments(List<Long> userIds) {
 		List<UserAssignmentEntity> primaryAssignments = userAssignmentMapper.selectList(
 				new LambdaQueryWrapper<UserAssignmentEntity>()
 						.in(UserAssignmentEntity::getUserId, userIds)
 						.eq(UserAssignmentEntity::getIsPrimary, true));
-		Set<Long> assignedUserIds = new HashSet<>();
 		Set<Long> organizationIds = new HashSet<>();
 		for (UserAssignmentEntity assignment : primaryAssignments) {
-			assignedUserIds.add(assignment.getUserId());
 			organizationIds.add(assignment.getOrgId());
-		}
-		if (!assignedUserIds.containsAll(userIds)) {
-			throw new BizException(ResultEnum.BILL_STATUS_ERROR, "启用用户前必须配置主职组织");
 		}
 		var organizations = orgReferenceReader.findByIds(organizationIds);
 		if (organizations.size() != organizationIds.size()
@@ -293,6 +315,7 @@ class UserTxService {
         if (id == null) {
             throw new BizException(ResultEnum.PARAM_ERROR, "用户ID不能为空");
         }
+        UserLifecyclePolicy.checkTarget(mapper.selectById(id));
         // 不能删除自己
         if (id.equals(currentUserContext.getUserId())) {
             throw new BizException(ResultEnum.BILL_STATUS_ERROR, "不能删除当前登录用户");

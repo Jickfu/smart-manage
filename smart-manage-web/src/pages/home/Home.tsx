@@ -4,6 +4,7 @@ import type { EChartsCoreOption } from 'echarts/core';
 import QuickLaunchCard from '@/domain/common/home/QuickLaunchCard';
 import HomeCardGrid from '@/domain/common/home/HomeCardGrid';
 import SmChart from '@/domain/common/chart/SmChart';
+import { chartCategoryColors } from '@/domain/common/chart/chartColors';
 import './Home.css';
 
 const exampleTag = <Tag color="blue">示例</Tag>;
@@ -12,8 +13,10 @@ const Home = () => {
   const chartOptions = useMemo<Record<'trend' | 'achievement' | 'execution', EChartsCoreOption>>(
     () => ({
       execution: {
+        color: [...chartCategoryColors],
         tooltip: { trigger: 'item' },
-        legend: { bottom: 0 },
+        // 960px 桌面四列布局下让三个图例保持单行，避免覆盖环形图。
+        legend: { bottom: 0, itemWidth: 14, itemGap: 8 },
         series: [
           {
             type: 'pie',
@@ -29,6 +32,7 @@ const Home = () => {
         ],
       },
       trend: {
+        color: [...chartCategoryColors],
         tooltip: { trigger: 'axis' },
         grid: { left: 38, right: 18, top: 20, bottom: 32 },
         xAxis: { type: 'category', data: ['1月', '2月', '3月', '4月', '5月', '6月'] },
@@ -36,13 +40,15 @@ const Home = () => {
         series: [
           {
             type: 'line',
-            smooth: true,
+            smooth: false,
+            connectNulls: false,
             data: [12, 18, 15, 26, 22, 34],
             areaStyle: { opacity: 0.18 },
           },
         ],
       },
       achievement: {
+        color: [...chartCategoryColors],
         series: [
           {
             type: 'gauge',

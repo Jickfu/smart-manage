@@ -25,11 +25,13 @@ CREATE FUNCTION public.advance_user_credential_generation() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    IF NEW.password IS DISTINCT FROM OLD.password
+    IF NEW.username IS DISTINCT FROM OLD.username
+        OR NEW.password IS DISTINCT FROM OLD.password
         OR NEW.password_reset IS DISTINCT FROM OLD.password_reset
         OR NEW.email IS DISTINCT FROM OLD.email
         OR NEW.email_verified_at IS DISTINCT FROM OLD.email_verified_at
-        OR NEW.enabled IS DISTINCT FROM OLD.enabled THEN
+        OR NEW.enabled IS DISTINCT FROM OLD.enabled
+        OR NEW.credential_generation = OLD.credential_generation + 1 THEN
         NEW.credential_generation := OLD.credential_generation + 1;
         -- MyBatis-Plus 可能已经递增 NEW.version；固定 OLD+1，不能重复递增。
         NEW.version := OLD.version + 1;
@@ -1378,6 +1380,51 @@ COMMENT ON COLUMN public.t_sys_feature.update_user IS '修改人';
 --
 
 COMMENT ON COLUMN public.t_sys_feature.version IS '乐观锁版本号';
+
+
+--
+-- Name: t_sys_feature_data_object; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.t_sys_feature_data_object (
+    id bigint NOT NULL,
+    feature_id bigint NOT NULL,
+    schema_name character varying(63) DEFAULT 'public'::character varying NOT NULL,
+    object_name character varying(63) NOT NULL,
+    object_type character varying(30) DEFAULT 'TABLE'::character varying NOT NULL,
+    object_role character varying(20) NOT NULL,
+    display_name character varying(100),
+    seq integer DEFAULT 99 NOT NULL,
+    CONSTRAINT ck_sys_feature_data_object_role CHECK (((object_role)::text = ANY ((ARRAY['PRIMARY'::character varying, 'DETAIL'::character varying, 'RELATION'::character varying, 'HISTORY'::character varying, 'LOG'::character varying])::text[]))),
+    CONSTRAINT ck_sys_feature_data_object_type CHECK (((object_type)::text = ANY ((ARRAY['TABLE'::character varying, 'PARTITIONED_TABLE'::character varying, 'VIEW'::character varying, 'MATERIALIZED_VIEW'::character varying, 'FOREIGN_TABLE'::character varying])::text[])))
+);
+
+
+COMMENT ON TABLE public.t_sys_feature_data_object IS '功能关联数据对象';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.id IS 'ID';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.feature_id IS '所属功能ID';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.schema_name IS '数据库模式名';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.object_name IS '数据对象名';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.object_type IS '对象类型';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.object_role IS '对象角色';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.display_name IS '显示名称';
+
+
+COMMENT ON COLUMN public.t_sys_feature_data_object.seq IS '排序';
 
 
 --
@@ -17298,6 +17345,14 @@ ALTER TABLE ONLY public.t_sys_feature
 
 
 --
+-- Name: t_sys_feature_data_object t_sys_feature_data_object_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_feature_data_object
+    ADD CONSTRAINT t_sys_feature_data_object_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: t_sys_file_artifact t_sys_file_artifact_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -20346,6 +20401,14 @@ ALTER TABLE ONLY public.t_sys_feature
 
 
 --
+-- Name: t_sys_feature_data_object uk_sys_feature_data_object; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_feature_data_object
+    ADD CONSTRAINT uk_sys_feature_data_object UNIQUE (feature_id, schema_name, object_name);
+
+
+--
 -- Name: t_sys_file_artifact uk_sys_file_artifact_object_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -20732,6 +20795,13 @@ CREATE INDEX idx_sys_email_task_dispatch ON public.t_sys_email_task USING btree 
 --
 
 CREATE INDEX idx_sys_feature_app ON public.t_sys_feature USING btree (app_id);
+
+
+--
+-- Name: idx_sys_feature_data_object_feature; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sys_feature_data_object_feature ON public.t_sys_feature_data_object USING btree (feature_id, seq, id);
 
 
 --
@@ -38941,6 +39011,14 @@ ALTER TABLE ONLY public.t_sys_feature
 
 
 --
+-- Name: t_sys_feature_data_object fk_sys_feature_data_object_feature; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.t_sys_feature_data_object
+    ADD CONSTRAINT fk_sys_feature_data_object_feature FOREIGN KEY (feature_id) REFERENCES public.t_sys_feature(id);
+
+
+--
 -- Name: t_sys_inbox_recipient fk_sys_inbox_recipient_message; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -39317,3 +39395,104 @@ COMMENT ON COLUMN public.t_sys_weak_password.create_time IS '创建时间';
 COMMENT ON COLUMN public.t_sys_weak_password.update_time IS '更新时间';
 COMMENT ON COLUMN public.t_sys_weak_password.create_user IS '创建人';
 COMMENT ON COLUMN public.t_sys_weak_password.update_user IS '修改人';
+
+-- 密码策略仅作用于后续凭据写入，保留已有密码及默认校验行为。
+CREATE TABLE public.t_sys_password_config (
+    id bigint PRIMARY KEY CHECK (id = 1),
+    min_length integer NOT NULL CHECK (min_length BETWEEN 4 AND 64),
+    complexity_enabled boolean NOT NULL,
+    version integer NOT NULL DEFAULT 0,
+    create_time timestamp DEFAULT now(),
+    update_time timestamp,
+    create_user bigint,
+    update_user bigint
+);
+COMMENT ON TABLE public.t_sys_password_config IS '全系统密码策略单例';
+COMMENT ON COLUMN public.t_sys_password_config.id IS 'ID';
+COMMENT ON COLUMN public.t_sys_password_config.min_length IS '密码最小长度';
+COMMENT ON COLUMN public.t_sys_password_config.complexity_enabled IS '是否启用四类字符复杂度';
+COMMENT ON COLUMN public.t_sys_password_config.version IS '乐观锁版本';
+COMMENT ON COLUMN public.t_sys_password_config.create_time IS '创建时间';
+COMMENT ON COLUMN public.t_sys_password_config.update_time IS '更新时间';
+COMMENT ON COLUMN public.t_sys_password_config.create_user IS '创建人';
+COMMENT ON COLUMN public.t_sys_password_config.update_user IS '修改人';
+
+-- 常驻任务按代码注册；共享期望状态不因重启而重置。
+CREATE TABLE public.t_sys_singleton_task (
+    id bigint PRIMARY KEY,
+    number varchar(120) NOT NULL UNIQUE,
+    name varchar(120) NOT NULL,
+    app_number varchar(120) NOT NULL REFERENCES public.t_sys_app(number),
+    description varchar(1000) NOT NULL,
+    controllable boolean NOT NULL,
+    requested boolean NOT NULL,
+    version integer NOT NULL DEFAULT 0,
+    state varchar(20) NOT NULL DEFAULT 'STOPPED' CHECK (state IN ('STOPPED','STARTING','RUNNING','STOPPING','FAILED')),
+    owner_instance_id varchar(120),
+    run_id varchar(36),
+    generation bigint NOT NULL DEFAULT 0,
+    started_at timestamp,
+    heartbeat_at timestamp,
+    retry_at timestamp,
+    last_error varchar(80)
+);
+CREATE TABLE public.t_sys_singleton_event (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    task_number varchar(120) NOT NULL REFERENCES public.t_sys_singleton_task(number),
+    occurred_at timestamp NOT NULL DEFAULT localtimestamp,
+    event_type varchar(30) NOT NULL,
+    instance_id varchar(120),
+    run_id varchar(36),
+    reason varchar(80)
+);
+CREATE INDEX idx_singleton_event_task ON public.t_sys_singleton_event(task_number, id DESC);
+COMMENT ON TABLE public.t_sys_singleton_task IS '集群单例任务共享控制与运行状态';
+COMMENT ON TABLE public.t_sys_singleton_event IS '集群单例任务近期运行事件，每任务保留最近200条';
+
+COMMENT ON COLUMN public.t_sys_singleton_task.id IS 'ID';
+COMMENT ON COLUMN public.t_sys_singleton_task.number IS '编码';
+COMMENT ON COLUMN public.t_sys_singleton_task.name IS '名称';
+COMMENT ON COLUMN public.t_sys_singleton_task.app_number IS '所属应用编码';
+COMMENT ON COLUMN public.t_sys_singleton_task.description IS '任务说明';
+COMMENT ON COLUMN public.t_sys_singleton_task.controllable IS '是否允许管理端启停';
+COMMENT ON COLUMN public.t_sys_singleton_task.requested IS '期望是否运行';
+COMMENT ON COLUMN public.t_sys_singleton_task.version IS '启停命令乐观锁版本';
+COMMENT ON COLUMN public.t_sys_singleton_task.state IS '实际运行状态';
+COMMENT ON COLUMN public.t_sys_singleton_task.owner_instance_id IS '当前执行实例';
+COMMENT ON COLUMN public.t_sys_singleton_task.run_id IS '本次运行身份';
+COMMENT ON COLUMN public.t_sys_singleton_task.generation IS '执行代际';
+COMMENT ON COLUMN public.t_sys_singleton_task.started_at IS '本次开始时间';
+COMMENT ON COLUMN public.t_sys_singleton_task.heartbeat_at IS '最近心跳时间';
+COMMENT ON COLUMN public.t_sys_singleton_task.retry_at IS '退避截止时间';
+COMMENT ON COLUMN public.t_sys_singleton_task.last_error IS '安全失败分类';
+COMMENT ON COLUMN public.t_sys_singleton_event.id IS 'ID';
+COMMENT ON COLUMN public.t_sys_singleton_event.task_number IS '任务编码';
+COMMENT ON COLUMN public.t_sys_singleton_event.occurred_at IS '事件时间';
+COMMENT ON COLUMN public.t_sys_singleton_event.event_type IS '事件类型';
+COMMENT ON COLUMN public.t_sys_singleton_event.instance_id IS '执行实例';
+COMMENT ON COLUMN public.t_sys_singleton_event.run_id IS '运行身份';
+COMMENT ON COLUMN public.t_sys_singleton_event.reason IS '安全原因分类';
+
+-- 默认角色独立于手工授权，空角色表示未设置；固定单例和版本共同保护并发切换。
+CREATE TABLE public.t_sys_role_default (
+    id bigint PRIMARY KEY CHECK (id = 1),
+    role_id bigint REFERENCES public.t_sys_role(id),
+    version integer NOT NULL DEFAULT 0
+);
+COMMENT ON TABLE public.t_sys_role_default IS '全局默认角色配置';
+COMMENT ON COLUMN public.t_sys_role_default.id IS 'ID';
+COMMENT ON COLUMN public.t_sys_role_default.role_id IS '默认角色ID，空表示未设置';
+COMMENT ON COLUMN public.t_sys_role_default.version IS '并发版本号';
+
+-- UNION 去重，默认角色只在有效任职组织中生效，不创建任职或手工角色关系。
+CREATE VIEW public.v_sys_user_effective_role AS
+SELECT a.user_id, a.org_id, a.role_id FROM public.t_sys_user_role a
+UNION
+SELECT a.user_id, a.org_id, b.role_id
+FROM public.t_sys_user_assignment a
+CROSS JOIN public.t_sys_role_default b
+INNER JOIN public.t_sys_user c ON c.id = a.user_id
+INNER JOIN public.t_sys_org d ON d.id = a.org_id
+WHERE b.role_id IS NOT NULL AND c.enabled = true
+  AND d.enabled = true AND d.archived = false AND c.username <> 'administrator';
+COMMENT ON VIEW public.v_sys_user_effective_role IS '用户组织有效角色：手工授权与默认角色的并集';

@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import { Spin } from 'antd';
 import App from './App';
 import { initializeIconCatalog } from './domain/common/component/iconCatalog';
 import './styles/global.css';
@@ -7,8 +8,9 @@ const root = createRoot(document.getElementById('root')!);
 
 async function startApplication() {
   root.render(
-    <div className="sm-app-initializing" role="status">
-      正在准备系统资源…
+    <div className="sm-app-initializing" role="status" aria-label="正在加载">
+      {/* 快速加载不显示过渡动画，避免启动时短暂闪烁。 */}
+      <Spin size="large" delay={300} />
     </div>,
   );
   try {

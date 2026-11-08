@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
+import { PageNotice, type PageNoticeConfig } from '@/domain/common/component/PageNotice';
 import { Empty, Pagination, Splitter } from 'antd';
 import './ListPage.css';
 
 interface ListTableShellProps {
+  notice?: PageNoticeConfig;
   table?: ReactNode;
   total?: number;
   selectedCount?: number;
@@ -22,6 +24,7 @@ interface ListTableShellProps {
  * 选择模型：当前仅支持"当前页选择"。跨页全选待后续独立模型实现。
  */
 const ListTableShell = ({
+  notice,
   table,
   total = 0,
   selectedCount = 0,
@@ -34,6 +37,7 @@ const ListTableShell = ({
 }: ListTableShellProps) => {
   const rightContent = (
     <div className="sm-list-table-content">
+      <PageNotice notice={notice} />
       {/* 元信息栏：总数 + 已选提示 + 分页 */}
       <div className="sm-list-table-meta">
         <div className="sm-list-table-count">
@@ -44,11 +48,12 @@ const ListTableShell = ({
           <Pagination
             size="small"
             showSizeChanger
+            showQuickJumper
+            showLessItems
             pageSizeOptions={['10', '20', '50', '100']}
             current={pageNum}
             pageSize={pageSize}
             total={total}
-            showTotal={(t) => `共 ${t} 条`}
             onChange={(nextPage, nextSize) => onPageChange?.(nextPage, nextSize)}
           />
         )}

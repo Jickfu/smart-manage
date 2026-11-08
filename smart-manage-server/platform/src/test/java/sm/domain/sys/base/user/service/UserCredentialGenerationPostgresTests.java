@@ -57,6 +57,7 @@ class UserCredentialGenerationPostgresTests {
         configuration.setMapUnderscoreToCamelCase(true);
         configuration.addMapper(UserMapper.class);
         configuration.addMapper(WeakPasswordMapper.class);
+        configuration.addMapper(sm.domain.sys.base.passwordconfig.mapper.PasswordConfigMapper.class);
         var interceptor = new MybatisPlusInterceptor();
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         var factory = new MybatisSqlSessionFactoryBean();
@@ -68,7 +69,7 @@ class UserCredentialGenerationPostgresTests {
         mapper = new SqlSessionTemplate(factory.getObject()).getMapper(UserMapper.class);
         var target = new UserTxService(mapper, mock(UserRoleMapper.class), mock(UserAssignmentMapper.class),
                 mock(OrgReferenceReader.class), mock(CurrentUserContext.class), mock(UserWriter.class),
-                new PasswordPolicyService(new SqlSessionTemplate(factory.getObject()).getMapper(WeakPasswordMapper.class)),
+                new PasswordPolicyService(new SqlSessionTemplate(factory.getObject()).getMapper(WeakPasswordMapper.class), new sm.domain.sys.base.passwordconfig.service.PasswordConfigService(new SqlSessionTemplate(factory.getObject()).getMapper(sm.domain.sys.base.passwordconfig.mapper.PasswordConfigMapper.class), null, org.mapstruct.factory.Mappers.getMapper(sm.domain.sys.base.passwordconfig.converter.PasswordConfigConverter.class))),
                 mock(AttachmentGateway.class));
         var proxy = new ProxyFactory(target);
         proxy.setProxyTargetClass(true);
@@ -116,6 +117,17 @@ class UserCredentialGenerationPostgresTests {
         assertEquals(0, mapper.updateById(staleEntity));
         assertThrows(BizException.class, () -> new UserSessionStateVerifier(mapper).verify(USER_ID, 0));
         assertDoesNotThrow(() -> new UserSessionStateVerifier(mapper).verify(USER_ID, 2));
+    }
+
+    @Test
+    void renamingAndRestoringUsernameNeverRestoresOldSession() {
+        service.renameCurrentUser(USER_ID, "renamed-credential-user", "initial-test-password");
+        assertEquals("renamed-credential-user", mapper.selectById(USER_ID).getUsername());
+        assertEquals(1L, snapshot().generation());
+
+        service.renameCurrentUser(USER_ID, "verify-credential-user", "initial-test-password");
+        assertEquals(2L, snapshot().generation());
+        assertThrows(BizException.class, () -> new UserSessionStateVerifier(mapper).verify(USER_ID, 0));
     }
 
     @Test

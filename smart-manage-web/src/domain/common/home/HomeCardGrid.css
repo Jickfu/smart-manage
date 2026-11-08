@@ -1,9 +1,8 @@
 .sm-home-card-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(240px, 1fr));
+  /* 最小桌面宽度下仍保持四轨，允许卡片按侧栏后的可用空间等分。 */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  overflow-x: auto;
-  overflow-y: hidden;
   padding-bottom: 4px;
 }
 

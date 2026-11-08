@@ -6,15 +6,21 @@ import { expect, it, vi } from 'vitest';
 import { AssignmentPage } from './AssignmentPage';
 import { ApiError } from '@/api/ApiError';
 
-vi.mock('../tab/useBeforeCloseGuard', () => ({ useBeforeCloseGuard: () => undefined }));
+const mocks = vi.hoisted(() => ({ dirty: false }));
 
-it('keeps assignment content mounted and blocks save after denial', async () => {
+vi.mock('../tab/useBeforeCloseGuard', () => ({
+  useBeforeCloseGuard: (_app: string, _tab: string, dirty: boolean) => {
+    mocks.dirty = dirty;
+  },
+}));
+
+it('保留分配内容、上下文和阻断后的保存边界', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const container = document.createElement('div');
   const root = createRoot(container);
   const queryClient = new QueryClient();
   const onSave = vi.fn();
-  const renderAssignment = async (error?: Error) =>
+  const renderAssignment = async (error?: Error, showHeaderContext?: boolean) =>
     act(async () =>
       root.render(
         <QueryClientProvider client={queryClient}>
@@ -22,6 +28,10 @@ it('keeps assignment content mounted and blocks save after denial', async () => 
             loading={false}
             saving={false}
             dirty
+            subject="角色摘要"
+            selectedCount={1}
+            totalCount={2}
+            showHeaderContext={showHeaderContext}
             onSave={onSave}
             onExit={() => undefined}
             onRetry={() => undefined}
@@ -35,6 +45,9 @@ it('keeps assignment content mounted and blocks save after denial', async () => 
     );
   try {
     await renderAssignment();
+    expect(container.querySelector('.sm-assignment-header-context')?.textContent).toContain(
+      '角色摘要',
+    );
     const input = container.querySelector('input');
     await renderAssignment(new ApiError({ source: 'API', message: '无权访问', apiCode: 100403 }));
     expect(container.querySelector('input')).toBe(input);
@@ -44,8 +57,10 @@ it('keeps assignment content mounted and blocks save after denial', async () => 
     )!;
     await act(async () => button.click());
     expect(onSave).not.toHaveBeenCalled();
-    await renderAssignment();
+    await renderAssignment(undefined, false);
     expect(container.querySelector('input')).toBe(input);
+    expect(container.querySelector('.sm-assignment-header-context')).toBeNull();
+    expect(mocks.dirty).toBe(true);
   } finally {
     await act(async () => root.unmount());
     queryClient.clear();

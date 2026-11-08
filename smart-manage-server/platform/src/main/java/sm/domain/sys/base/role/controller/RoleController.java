@@ -1,5 +1,7 @@
 package sm.domain.sys.base.role.controller;
 
+import sm.domain.sys.base.role.model.vo.RoleDefaultVO;
+import sm.domain.sys.base.role.model.form.RoleDefaultSaveForm;
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +24,7 @@ import sm.domain.sys.base.role.model.form.RoleDataScopeAssignForm;
 import sm.domain.sys.base.role.model.vo.RoleDataScopeWorkspaceVO;
 import sm.domain.sys.base.role.service.RoleService;
 import sm.system.form.IdForm;
+import sm.system.form.IdsForm;
 import sm.system.response.PageData;
 import sm.system.response.Result;
 
@@ -35,6 +38,22 @@ import sm.system.response.Result;
 @RequiredArgsConstructor
 public class RoleController {
 	private final RoleService service;
+
+    @GetMapping("/sys/base/role/defaultRole")
+    @SaCheckPermission(RolePermission.LIST)
+    @Operation(summary = "默认角色配置", description = "读取全局默认角色及配置并发版本")
+    public Result<RoleDefaultVO> defaultRole() {
+        return Result.success(service.defaultRole());
+    }
+
+    @PostMapping("/sys/base/role/setDefault")
+    @SaCheckPermission(RolePermission.SET_DEFAULT)
+    @Operation(summary = "设置默认角色", description = "设置、切换或取消全局默认角色")
+    public Result<String> setDefault(@RequestBody @Valid RoleDefaultSaveForm form) {
+        service.setDefault(form);
+        return Result.success();
+    }
+
 
 	@Operation(summary = "角色列表", description = "获取角色分页列表数据")
 	@PostMapping("/sys/base/role/listPage")
@@ -78,6 +97,14 @@ public class RoleController {
 		service.deleteById(form.getId());
 		return Result.success();
 	}
+
+    @Operation(summary = "批量删除角色", description = "同一事务删除整批角色，包含默认角色或任一目标失败时整体回滚")
+    @PostMapping("/sys/base/role/deleteBatch")
+    @SaCheckPermission(RolePermission.DELETE)
+    public Result<String> deleteBatch(@RequestBody @Valid IdsForm form) {
+        service.deleteByIds(form.getIds());
+        return Result.success();
+    }
 
 	@Operation(summary = "分配角色权限", description = "整体替换指定角色的权限关系")
 	@PostMapping("/sys/base/role/assignPermissions")

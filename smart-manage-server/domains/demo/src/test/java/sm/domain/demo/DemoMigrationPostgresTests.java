@@ -55,6 +55,10 @@ class DemoMigrationPostgresTests {
             assertNotNull(leaveStatusConstraint);
             assertTrue(leaveStatusConstraint.contains("'D'::bpchar"));
             assertEquals(Boolean.TRUE, jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM t_sys_feature WHERE feature_key LIKE 'demo/%')", Boolean.class));
+            assertEquals(2, jdbc.queryForObject("SELECT count(*) FROM t_sys_feature_data_object data_object "
+                    + "JOIN t_sys_feature feature ON feature.id = data_object.feature_id "
+                    + "WHERE feature.feature_key = 'demo/procurement/purchase-requisition' "
+                    + "AND to_regclass(data_object.schema_name || '.' || data_object.object_name) IS NOT NULL", Integer.class));
         } finally {
             verification.execute("DROP DATABASE " + database + " WITH (FORCE)");
         }

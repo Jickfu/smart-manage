@@ -34,7 +34,6 @@
 .sm-app-modal--resizable {
   min-width: 480px;
   min-height: 320px;
-  max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);
   overflow: auto;
   resize: both;
@@ -93,4 +92,23 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
+}
+/* 弹框保留声明宽度，空间不足时从左侧开始显示，由弹层独立滚动。 */
+.sm-app-modal-scroll {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+}
+
+.sm-app-modal-scroll .sm-app-modal {
+  top: 0;
+  flex: none;
+  max-width: none;
+  margin: auto;
+  padding-bottom: 0;
+}
+
+/* 缩放上限独立于桌面最小宽度，容纳 1120px 树形多选弹框；此规则必须在普通弹框之后。 */
+.sm-app-modal-scroll .sm-app-modal--resizable {
+  max-width: max(1160px, calc(100vw - 32px));
 }

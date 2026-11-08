@@ -94,7 +94,7 @@ public class TemporaryLoginService {
         String grantId = UUID.randomUUID().toString();
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(GRANT_MINUTES);
         TemporaryLoginGrant grant = new TemporaryLoginGrant(grantId, currentUserContext.getUserId(),
-                target.getId(), target.getUsername(), form.getReason().trim(), expiresAt);
+                target.getId(), target.getUsername(), authentication.credentialGeneration(), form.getReason().trim(), expiresAt);
         redisTemplate.opsForValue().set(
                 redisKey(credential), cacheJsonCodec.write(grant), GRANT_MINUTES, TimeUnit.MINUTES);
         RequestMeta requestMeta = requestMeta();
@@ -112,7 +112,8 @@ public class TemporaryLoginService {
         }
         UserAuthentication authentication = userAuthenticationService.authenticateTemporaryLogin(
                 grant.getTargetUserId(), grant.getTargetUsername());
-        if (!authentication.successful()) {
+        if (!authentication.successful() || grant.getTargetCredentialGeneration() == null
+                || !grant.getTargetCredentialGeneration().equals(authentication.credentialGeneration())) {
             throw new BizException(ResultEnum.UNAUTHORIZED, "用户名或密码错误");
         }
         LoginVO login = userSessionService.completeTemporaryLogin(authentication, grant.getIssuerUserId(),

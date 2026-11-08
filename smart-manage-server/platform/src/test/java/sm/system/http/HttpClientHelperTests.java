@@ -29,6 +29,113 @@ class HttpClientHelperTests {
     private HttpServer server;
     private HttpClientHelper helper;
 
+    @Test
+    @org.junit.jupiter.api.Timeout(10)
+    void boundsDeclaredAndChunkedResponsesBeforeParsing() throws Exception {
+        var properties = new HttpClientProperties();
+        properties.setMaxResponseBytes(8);
+        helper = new HttpClientHelper(HttpClient.newHttpClient(), JsonMapper.builder().build(), properties);
+        server.createContext("/exact", exchange -> respond(exchange, 200, "12345678"));
+        server.createContext("/declared", exchange -> respond(exchange, 200, "secret-too-long"));
+        server.createContext("/chunked", exchange -> {
+            exchange.sendResponseHeaders(200, 0);
+            try (var output = exchange.getResponseBody()) {
+                output.write("123456789".getBytes(StandardCharsets.UTF_8));
+            }
+        });
+        server.start();
+        assertEquals("12345678", helper.execute(HttpRequestSpec.get(uri("/exact")).build(), String.class).body());
+        for (String endpoint : List.of("/declared", "/chunked")) {
+            var failure = assertThrows(ExternalHttpException.class,
+                    () -> helper.execute(HttpRequestSpec.get(uri(endpoint)).build(), String.class));
+            assertEquals(ExternalHttpException.FailureType.RESPONSE_TOO_LARGE, failure.getFailureType());
+            assertFalse(failure.getMessage().contains("secret"));
+        }
+        assertThrows(IllegalArgumentException.class, () -> properties.setMaxResponseBytes(0));
+    }
+
+    @Test
+    @org.junit.jupiter.api.Timeout(10)
+    void bodylessResponsesIgnoreResourceLengthAndPreserveHttpStatusMeaning() {
+        var properties = new HttpClientProperties();
+        properties.setMaxResponseBytes(8);
+        helper = new HttpClientHelper(HttpClient.newHttpClient(), JsonMapper.builder().build(), properties);
+        server.createContext("/head", exchange -> {
+            exchange.getResponseHeaders().set("Content-Length", "9");
+            exchange.sendResponseHeaders(200, -1);
+            exchange.close();
+        });
+        server.createContext("/not-modified", exchange -> {
+            exchange.getResponseHeaders().set("Content-Length", "9");
+            exchange.sendResponseHeaders(304, -1);
+            exchange.close();
+        });
+        for (int status : List.of(204, 205)) {
+            server.createContext("/empty-" + status, exchange -> {
+                exchange.sendResponseHeaders(status, -1);
+                exchange.close();
+            });
+        }
+        server.start();
+        var head = helper.execute(HttpRequestSpec.builder("HEAD", uri("/head")).build(), byte[].class);
+        assertEquals(200, head.statusCode());
+        assertEquals(0, head.body().length);
+        var cached = helper.execute(HttpRequestSpec.get(uri("/not-modified"))
+                .failOnNonSuccess(false).build(), byte[].class);
+        assertEquals(304, cached.statusCode());
+        assertEquals(0, cached.body().length);
+        var statusFailure = assertThrows(ExternalHttpException.class,
+                () -> helper.execute(HttpRequestSpec.get(uri("/not-modified")).build(), byte[].class));
+        assertEquals(ExternalHttpException.FailureType.HTTP_STATUS, statusFailure.getFailureType());
+        assertEquals(304, statusFailure.getStatusCode());
+        for (int status : List.of(204, 205)) {
+            var empty = helper.execute(HttpRequestSpec.get(uri("/empty-" + status)).build(), byte[].class);
+            assertEquals(status, empty.statusCode());
+            assertEquals(0, empty.body().length);
+        }
+    }
+
+    @Test
+    void skippingDeclaredLengthStillRejectsUnexpectedActualBytes() {
+        var properties = new HttpClientProperties();
+        properties.setMaxResponseBytes(8);
+        helper = new HttpClientHelper(HttpClient.newHttpClient(), JsonMapper.builder().build(), properties);
+        record BodylessCase(String method, int status) { }
+        var cases = List.of(new BodylessCase("HEAD", 200), new BodylessCase("GET", 100),
+                new BodylessCase("GET", 101), new BodylessCase("GET", 199),
+                new BodylessCase("GET", 204), new BodylessCase("GET", 205), new BodylessCase("GET", 304));
+        for (var scenario : cases) {
+            var info = org.mockito.Mockito.mock(java.net.http.HttpResponse.ResponseInfo.class);
+            org.mockito.Mockito.when(info.statusCode()).thenReturn(scenario.status());
+            org.mockito.Mockito.when(info.headers()).thenReturn(java.net.http.HttpHeaders.of(
+                    java.util.Map.of("Content-Length", List.of("9")), (name, value) -> true));
+            var request = java.net.http.HttpRequest.newBuilder(uri("/unused"))
+                    .method(scenario.method(), java.net.http.HttpRequest.BodyPublishers.noBody()).build();
+            var subscriber = helper.createResponseBodySubscriber(request, info);
+            var upstream = org.mockito.Mockito.mock(java.util.concurrent.Flow.Subscription.class);
+            subscriber.onSubscribe(upstream);
+            var body = subscriber.getBody().toCompletableFuture();
+            assertFalse(body.isDone(), "无正文响应不能因资源声明长度而被拒绝: " + scenario);
+            subscriber.onNext(List.of(java.nio.ByteBuffer.wrap(new byte[9])));
+            var failure = assertThrows(java.util.concurrent.CompletionException.class, body::join);
+            assertEquals(ExternalHttpException.FailureType.RESPONSE_TOO_LARGE,
+                    ((ExternalHttpException) failure.getCause()).getFailureType());
+            org.mockito.Mockito.verify(upstream).cancel();
+        }
+    }
+
+    @Test
+    void rejectionCompletesBodyBeforeCancellingUpstream() {
+        var subscriber = new BoundedHttpBodySubscriber(8, 9);
+        var upstream = org.mockito.Mockito.mock(java.util.concurrent.Flow.Subscription.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            assertTrue(subscriber.getBody().toCompletableFuture().isCompletedExceptionally());
+            return null;
+        }).when(upstream).cancel();
+        subscriber.onSubscribe(upstream);
+        org.mockito.Mockito.verify(upstream).cancel();
+    }
+
     @BeforeEach
     void setUp() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);

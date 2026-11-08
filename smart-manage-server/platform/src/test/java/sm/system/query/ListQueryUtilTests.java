@@ -17,6 +17,30 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ListQueryUtilTests {
     @Test
+    void relativeRangesUseOneBeijingDateDespiteHostAndClockZone() {
+        var clock = java.time.Clock.fixed(java.time.Instant.parse("2026-12-31T16:00:00Z"),
+                java.time.ZoneId.of("America/Los_Angeles"));
+        PageForm form = new PageForm();
+        form.setFilters("[{\"field\":\"createdAt\",\"operator\":\"TODAY\"},"
+                + "{\"field\":\"createdAt\",\"operator\":\"THIS_MONTH\"}]");
+        var query = ListSqlQuery.of(form,
+                Map.of("createdAt", ListSqlQuery.dateTime("a.create_time", false)), clock);
+        assertEquals(LocalDate.of(2027, 1, 1), ListQueryUtil.businessToday(clock));
+        assertEquals(LocalDateTime.of(2027, 1, 1, 0, 0), query.conditions().getFirst().begin());
+        assertEquals(LocalDateTime.of(2027, 2, 1, 0, 0), query.conditions().getLast().endExclusive());
+
+        var wrapper = new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
+                sm.domain.sys.base.app.model.entity.AppEntity>();
+        com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(
+                new org.apache.ibatis.builder.MapperBuilderAssistant(new MybatisConfiguration(), "date-test"),
+                sm.domain.sys.base.app.model.entity.AppEntity.class);
+        ListQueryUtil.apply(wrapper, form, Map.of("createdAt", ListQueryUtil.dateTime(
+                sm.domain.sys.base.app.model.entity.AppEntity::getCreateTime, false)), clock);
+        wrapper.getSqlSegment();
+        assertTrue(wrapper.getParamNameValuePairs().containsValue(LocalDateTime.of(2027, 1, 1, 0, 0)));
+        assertTrue(wrapper.getParamNameValuePairs().containsValue(LocalDateTime.of(2027, 2, 1, 0, 0)));
+    }
+    @Test
     void sqlQueryUsesServerWhitelistAndNormalizesDateRange() {
         AppListForm form = new AppListForm();
         form.setFilters("[{\"field\":\"createdAt\",\"type\":\"date\","

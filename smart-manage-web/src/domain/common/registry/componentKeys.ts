@@ -21,6 +21,8 @@ export const componentKeys = {
   scriptLog: 'sys/monitor/script-log',
   scriptLogDetail: 'sys/monitor/script-log/detail',
   scriptHelp: 'sys/monitor/script-help',
+  schedulerSingleton: 'sys/scheduler/singleton',
+  schedulerSingletonDetail: 'sys/scheduler/singleton/detail',
   schedulerExecution: 'sys/scheduler/execution',
   schedulerExecutionDetail: 'sys/scheduler/execution/detail',
   schedulerJob: 'sys/scheduler/job',

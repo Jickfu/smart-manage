@@ -48,6 +48,7 @@ const OpenApiApplicationListPage = (props: PageComponentProps) => {
   });
   const columns: ColumnsType<OpenApiApplication> = [
     {
+      ellipsis: true,
       title: '系统编码',
       dataIndex: 'number',
       width: 180,
@@ -61,8 +62,9 @@ const OpenApiApplicationListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '系统名称', dataIndex: 'name', width: 200 },
+    { ellipsis: true, title: '系统名称', dataIndex: 'name', width: 200 },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'enabled',
       width: 90,
@@ -70,8 +72,15 @@ const OpenApiApplicationListPage = (props: PageComponentProps) => {
         <Tag color={enabled ? 'success' : 'default'}>{enabled ? '启用' : '停用'}</Tag>
       ),
     },
-    { title: '认证', dataIndex: 'authenticationType', width: 140, render: () => 'HMAC-SHA256' },
     {
+      ellipsis: true,
+      title: '认证',
+      dataIndex: 'authenticationType',
+      width: 140,
+      render: () => 'HMAC-SHA256',
+    },
+    {
+      ellipsis: true,
       title: '报文加密',
       dataIndex: 'encryptionAlgorithm',
       width: 140,
@@ -79,6 +88,7 @@ const OpenApiApplicationListPage = (props: PageComponentProps) => {
         ({ NONE: '无加密', AES_256_GCM: 'AES-256-GCM', SM4_GCM: 'SM4-GCM' })[value] ?? value,
     },
     {
+      ellipsis: true,
       title: 'IP 策略',
       dataIndex: 'ipPolicyMode',
       width: 110,

@@ -2,6 +2,7 @@ package sm.architecture;
 
 import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaModifier;
@@ -13,6 +14,7 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.transaction.annotation.Transactional;
 import sm.system.aop.log.BizLog;
 import sm.system.security.authorization.AdministratorOnly;
@@ -26,6 +28,125 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ArchitectureContractTests {
 
     private static JavaClasses productionClasses;
+
+    @Test
+    void apiModelsMustDescribeTypesAndDeclaredFields() {
+        classes().that().resideInAnyPackage(
+                        "..model.form..", "..model.vo..", "sm.system.form..", "sm.system.response")
+                .should(describeApiModel())
+                .check(productionClasses);
+    }
+
+    @Test
+    void modelDocumentationRejectsMissingAndTitleOnlyDescriptions() {
+        var invalidModels = new ClassFileImporter().importClasses(
+                MissingModelDescription.class, MissingFieldDescription.class, TitleOnlyDescription.class,
+                FieldDescriptionWithPeriod.class, MisplacedIdDescription.class, VerboseIdDescription.class,
+                UndocumentedChild.class);
+        for (JavaClass invalidModel : invalidModels) {
+            assertThrows(AssertionError.class, () -> classes().should(describeApiModel())
+                    .check(new ClassFileImporter().importClasses(invalidModel.reflect())));
+        }
+        classes().should(describeApiModel()).check(new ClassFileImporter().importClasses(
+                DocumentedRecord.class, DocumentedParent.class, DocumentedChild.class, DocumentedId.class));
+    }
+
+    private static ArchCondition<JavaClass> describeApiModel() {
+        return new ArchCondition<>("使用中文 Schema.description 描述模型及声明字段") {
+            @Override
+            public void check(JavaClass model, ConditionEvents events) {
+                // Lombok Builder 等生成类型不是接口数据模型。
+                if (model.isEnum() || model.isInterface() || model.isAnnotation()
+                        || model.isAnnotatedWith("lombok.Generated")) {
+                    return;
+                }
+                var fields = model.getFields().stream()
+                        .filter(field -> !field.getModifiers().contains(JavaModifier.STATIC)
+                                && !field.getModifiers().contains(JavaModifier.SYNTHETIC))
+                        .toList();
+                // 仅排除明确的反序列化技术协作者；无自有字段的继承模型仍需声明类型说明。
+                if (model.getEnclosingClass().isPresent() && fields.isEmpty()
+                        && model.isAssignableTo(tools.jackson.databind.ValueDeserializer.class)) {
+                    return;
+                }
+                // response 包还包含响应码与反馈级别等枚举；此处只检查数据载荷。
+                if (model.getPackageName().equals("sm.system.response")
+                        && !model.getSimpleName().equals("Result")
+                        && !model.getSimpleName().equals("PageData")) {
+                    return;
+                }
+                boolean documented = model.isAnnotatedWith(Schema.class)
+                        && containsChinese(model.getAnnotationOfType(Schema.class).description());
+                events.add(new SimpleConditionEvent(model, documented,
+                        model.getName() + " 必须具有中文类型 Schema.description"));
+                for (JavaField field : fields) {
+                    boolean fieldDocumented = field.isAnnotatedWith(Schema.class)
+                            && (containsChinese(field.getAnnotationOfType(Schema.class).description())
+                            || (field.getName().equals("id")
+                            && field.getAnnotationOfType(Schema.class).description().equals("ID")));
+                    events.add(new SimpleConditionEvent(field, fieldDocumented,
+                            field.getFullName() + " 必须具有中文字段 Schema.description"));
+                    if (field.isAnnotatedWith(Schema.class)) {
+                        if (field.getName().equals("id") && field.getRawType().isEquivalentTo(Long.class)) {
+                            events.add(new SimpleConditionEvent(field,
+                                    field.getAnnotationOfType(Schema.class).description().equals("ID"),
+                                    field.getFullName() + " 的说明应直接使用 ID"));
+                        }
+                        events.add(new SimpleConditionEvent(field,
+                                !field.getAnnotationOfType(Schema.class).description().stripTrailing().endsWith("。"),
+                                field.getFullName() + " 字段说明末尾不得添加句号"));
+                    }
+                }
+            }
+        };
+    }
+
+    private static boolean containsChinese(String description) {
+        return description != null && description.codePoints()
+                .anyMatch(character -> Character.UnicodeScript.of(character) == Character.UnicodeScript.HAN);
+    }
+
+    private static class MissingModelDescription {
+        @Schema(description = "名称")
+        private String name;
+    }
+
+    @Schema(description = "缺失字段说明的反例")
+    private static class MissingFieldDescription {
+        private String name;
+    }
+
+    @Schema(title = "只有标题的反例")
+    private static class TitleOnlyDescription {
+        @Schema(description = "名称")
+        private String name;
+    }
+
+    @Schema(description = "已填写说明的不可变模型")
+    private record DocumentedRecord(@Schema(description = "名称") String name) {}
+
+    @Schema(description = "主键允许使用通用缩写")
+    private record DocumentedId(@Schema(description = "ID") Long id) {}
+
+    @Schema(description = "字段说明多余句号反例")
+    private record FieldDescriptionWithPeriod(@Schema(description = "名称。") String name) {}
+
+    @Schema(description = "其他字段不得借用主键缩写反例")
+    private record MisplacedIdDescription(@Schema(description = "ID") String name) {}
+
+    @Schema(description = "主键说明添加多余修饰反例")
+    private record VerboseIdDescription(@Schema(description = "记录 ID") Long id) {}
+
+    @Schema(description = "声明公共字段的父模型")
+    private static class DocumentedParent {
+        @Schema(description = "名称")
+        private String name;
+    }
+
+    @Schema(description = "继承字段由父模型维护的子模型")
+    private static class DocumentedChild extends DocumentedParent {}
+
+    private static class UndocumentedChild extends DocumentedParent {}
 
     @Test
     void administratorPasswordTransactionHasOnlyGuardedCommandCaller() {

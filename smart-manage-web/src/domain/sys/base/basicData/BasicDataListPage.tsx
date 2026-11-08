@@ -155,6 +155,7 @@ const BasicDataListPage = (props: PageComponentProps) => {
   const selectedRecords = records.filter((record) => selectedRowKeys.includes(record.id));
   const columns: ColumnsType<BasicDataListVO> = [
     {
+      ellipsis: true,
       title: '编码',
       dataIndex: 'number',
       width: 150,
@@ -168,23 +169,26 @@ const BasicDataListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name', width: 180 },
+    { ellipsis: true, title: '名称', dataIndex: 'name', width: 180 },
     { title: '长名称', dataIndex: 'namePath', ellipsis: true },
     { title: '长编码', dataIndex: 'numberPath', width: 220, ellipsis: true },
-    { title: '级次', dataIndex: 'level', width: 72 },
+    { ellipsis: true, title: '级次', dataIndex: 'level', width: 72 },
     {
+      ellipsis: true,
       title: '叶子节点',
       dataIndex: 'isLeaf',
       width: 92,
       render: (value) => (value ? '是' : '否'),
     },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'enabled',
       width: 80,
       render: (value) => (value ? <Tag color="green">启用</Tag> : <Tag>停用</Tag>),
     },
     {
+      ellipsis: true,
       title: '系统预置',
       dataIndex: 'systemPreset',
       width: 92,

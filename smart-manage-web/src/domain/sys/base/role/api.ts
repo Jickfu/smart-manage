@@ -4,6 +4,8 @@ import type {
   RoleDataScopeRule,
   RoleDataScopeWorkspace,
   RoleDetailVO,
+  RoleDefaultVO,
+  RoleDefaultSaveForm,
   RoleListForm,
   RoleListVO,
   RoleSaveForm,
@@ -11,6 +13,14 @@ import type {
 } from './types';
 
 export const roleApi = {
+  defaultRole: () =>
+    request
+      .get<Result<RoleDefaultVO>>('/sys/base/role/defaultRole')
+      .then((response) => response.data.data),
+  setDefault: (form: RoleDefaultSaveForm) =>
+    request
+      .post<Result<string>>('/sys/base/role/setDefault', form)
+      .then((response) => response.data.data),
   listPage: (form: RoleListForm) =>
     request
       .post<Result<PageData<RoleListVO>>>('/sys/base/role/listPage', form)
@@ -40,6 +50,11 @@ export const roleApi = {
   delete: (id: string) =>
     request
       .post<Result<string>>('/sys/base/role/delete', { id })
+      .then((response) => response.data.data),
+
+  deleteBatch: (ids: string[]) =>
+    request
+      .post<Result<string>>('/sys/base/role/deleteBatch', { ids })
       .then((response) => response.data.data),
 
   assignPermissions: (roleId: string, permissionIds: string[]) =>

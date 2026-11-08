@@ -18,9 +18,11 @@ public class JobListForm extends PageForm {
     @Schema(description = "关键词：任务编码/名称")
     private String keyword;
 
+    @Schema(description = "所属领域ID")
     private Long domainId;
+    @Schema(description = "所属应用ID")
     private Long appId;
 
-    @Schema(description = "状态：ENABLED / PAUSED")
+    @Schema(description = "任务状态：ENABLED 启用、PAUSED 暂停")
     private String status;
 }

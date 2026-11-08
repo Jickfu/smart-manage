@@ -45,10 +45,10 @@ export interface UserInfoVO {
   email?: string;
   emailVerifiedAt?: string;
   phone?: string;
-  currentOrgId: string;
-  currentOrgName: string;
-  companyName: string;
-  rootOrgName: string;
+  currentOrgId?: string;
+  currentOrgName?: string;
+  companyName?: string;
+  rootOrgName?: string;
   assignments: UserAssignmentVO[];
 }
 

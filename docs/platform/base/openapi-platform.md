@@ -49,7 +49,7 @@ API 文档列表点击 API 名称后，以独立只读页签中的单一文档�
 | `X-Sm-Key-Id` | 凭据包 Key ID |
 | `X-Sm-Timestamp` | Unix 秒时间戳 |
 | `X-Sm-Nonce` | 每次请求唯一的 8～100 位字母数字及 `._-` 字符串 |
-| `X-Sm-Request-Id` | 调用方请求标识，规则同 nonce |
+| `X-Sm-Request-Id` | 调用方请求标识，规则同 nonce；所有模式都必须纳入 HMAC 覆盖 |
 | `Content-Type` | 固定为 `application/json`，不接受参数或其他等价写法 |
 | `Content-Digest` | `sha-256=:Base64(SHA-256(原始请求体)):` |
 | `Signature-Input` | 固定 RFC 9421 签名参数；不接受旧版私有格式 |
@@ -58,7 +58,7 @@ API 文档列表点击 API 名称后，以独立只读页签中的单一文档�
 固定 `Signature-Input` 为：
 
 ```text
-sm1=("@method" "@path" "@query" "content-type" "content-digest" "x-sm-key-id" "x-sm-timestamp" "x-sm-nonce");created={timestamp};keyid="{keyId}";nonce="{nonce}";alg="hmac-sha256"
+sm1=("@method" "@path" "@query" "content-type" "content-digest" "x-sm-key-id" "x-sm-timestamp" "x-sm-nonce" "x-sm-request-id");created={timestamp};keyid="{keyId}";nonce="{nonce}";alg="hmac-sha256"
 ```
 
 签名基串由 RFC 9421 实现按 Structured Fields 和组件规范化规则构造。HTTP 方法保留请求中的原始大小写，标准 `POST` 请求必须签为大写；路径不含域名和查询串：
@@ -72,12 +72,49 @@ sm1=("@method" "@path" "@query" "content-type" "content-digest" "x-sm-key-id" "x
 "x-sm-key-id": {keyId}
 "x-sm-timestamp": {timestamp}
 "x-sm-nonce": {nonce}
+"x-sm-request-id": {requestId}
 "@signature-params": {Signature-Input 去掉 sm1= 前缀}
 ```
 
-`@query` 覆盖包含前导 `?` 的原始查询串，不进行解码、参数排序或重新编码；请求没有查询串时固定签为 `?`。签名覆盖传输中的原始加密信封字节，而不是解密后的业务 JSON。调用方必须在序列化信封后计算摘要和签名，发送前不得再次格式化 JSON。
+`@query` 覆盖包含前导 `?` 的原始查询串，不进行解码、参数排序或重新编码；请求没有查询串时固定签为 `?`。签名覆盖传输中的原始请求体：AES/SM4 模式为加密信封字节，`NONE` 模式为直接发送的业务 JSON 字节。调用方必须在序列化后计算摘要和签名，发送前不得再次格式化 JSON。`x-sm-request-id` 的签名值必须取实际发送的请求头，不能改用 nonce；三种模式只修改该头都必须在 nonce 消费和业务分发之前验签失败。GCM AAD 继续绑定相同 requestId，但不能代替公共 HMAC 保护。
 
 服务端只接受一个标签为 `sm1` 的签名，并严格要求上述覆盖组件、顺序和 `created`、`keyid`、`nonce`、`alg` 参数及其顺序。`created`、`keyid`、`nonce` 必须分别与对应请求头一致；不提供旧版小写方法签名或缺少 nonce 元数据参数的兼容路径。
+
+### 客户端签名示例
+
+下面的 Python 示例只构造当前固定配置的请求头。`raw_body` 必须是最终发送的字节，`signing_secret` 是凭据包签名密钥 Base64 解码后的 32 字节；加密模式应先构造带相同 requestId 的 GCM 信封。keyId、nonce 和 requestId 必须符合上述字符规则，method、path、query 与实际 HTTP 请求保持一致。
+
+```python
+import base64
+import hashlib
+import hmac
+
+def signature_headers(raw_body, signing_secret, method, path, query,
+                      key_id, timestamp, nonce, request_id):
+    digest = "sha-256=:" + base64.b64encode(hashlib.sha256(raw_body).digest()).decode("ascii") + ":"
+    components = [
+        ("@method", method), ("@path", path), ("@query", query),
+        ("content-type", "application/json"), ("content-digest", digest),
+        ("x-sm-key-id", key_id), ("x-sm-timestamp", str(timestamp)),
+        ("x-sm-nonce", nonce), ("x-sm-request-id", request_id),
+    ]
+    covered = " ".join('"' + name + '"' for name, value in components)
+    parameters = (f'({covered});created={timestamp};keyid="{key_id}";'
+                  f'nonce="{nonce}";alg="hmac-sha256"')
+    signature_base = "\n".join('"' + name + '": ' + value for name, value in components)
+    signature_base += '\n"@signature-params": ' + parameters
+    signature = base64.b64encode(hmac.digest(signing_secret, signature_base.encode("utf-8"), "sha256")).decode("ascii")
+    return {
+        "Content-Type": "application/json", "Content-Digest": digest,
+        "X-Sm-Key-Id": key_id, "X-Sm-Timestamp": str(timestamp),
+        "X-Sm-Nonce": nonce, "X-Sm-Request-Id": request_id,
+        "Signature-Input": "sm1=" + parameters, "Signature": "sm1=:" + signature + ":",
+    }
+```
+
+### 签名格式升级
+
+补齐 requestId 覆盖后，服务端拒绝所有缺少 `x-sm-request-id` 的旧签名，包括 AES/SM4 模式；这是共用认证协议的安全升级，不改变业务 API 路径、业务 JSON 或凭据。部署前须清点所有调用方，同步更新其固定 `Signature-Input` 及签名基串，在测试环境分别验证三种模式，再协调客户端与服务端切换。旧客户端访问升级后的服务端会收到认证失败，不能通过接受旧覆盖列表降级兼容；回滚须同步回滚双方，且会重新暴露旧协议的 requestId 完整性缺口。
 
 ## 加密信封
 
@@ -143,7 +180,7 @@ Controller 的正常 `Result<T>` 完整序列化后作为响应加密明文，�
 
 - 浏览器非安全方法继续要求合法 Origin；`/openapi/**` 不要求 Origin，但没有完整签名、加密和授权时必须拒绝。
 - AES-256-GCM 与 SM4-GCM 均能往返解密；密文、标签、路径或查询串 AAD 任一变化必须失败。
-- 请求摘要、查询串、`Content-Type` 或签名变化必须失败；同一 `keyId + nonce` 只能成功消费一次。
+- 请求摘要、查询串、`Content-Type`、`X-Sm-Request-Id` 或签名变化必须失败；三种模式一致，且 requestId 验签失败不得消费 nonce、进入授权或建立代理上下文。同一 `keyId + nonce` 只能成功消费一次。
 - 非标准 Structured Fields、额外或缺失签名、覆盖组件/参数变化、旧版小写方法签名或缺少 nonce 元数据参数必须失败。
 - 停用应用、停用/过期凭据、下线版本、未授权操作、不可用代理身份或不匹配 IP 均默认拒绝。
 - 管理接口不返回任何历史密钥；一次性凭据关闭后不能再次读取。

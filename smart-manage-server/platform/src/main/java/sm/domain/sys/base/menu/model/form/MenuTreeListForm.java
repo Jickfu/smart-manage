@@ -5,7 +5,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import sm.system.form.PageForm;
 
-/** 菜单管理树形列表筛选条件。 */
+/**
+ * 菜单管理树形列表筛选条件。
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "菜单树形列表表单")

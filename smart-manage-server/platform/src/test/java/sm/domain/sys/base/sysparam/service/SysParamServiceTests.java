@@ -27,7 +27,7 @@ class SysParamServiceTests {
         SysParamCacheAccessor cacheAccessor = mock(SysParamCacheAccessor.class);
         when(cacheAccessor.getAll()).thenReturn(Map.of("SCRIPT_CONSOLE_TIMEOUT_SECONDS", "45"));
         SysParamService service = new SysParamService(
-                mock(SysParamMapper.class), mock(SysParamTxService.class), cacheAccessor,
+                mock(SysParamMapper.class), mock(SysParamTxService.class), mock(RegistrationPolicyAdminService.class), cacheAccessor,
                 new sm.domain.sys.base.feature.service.FeatureReferenceService(mock(FeatureMapper.class)));
 
         Integer value = service.getInt("SCRIPT_CONSOLE_TIMEOUT_SECONDS");

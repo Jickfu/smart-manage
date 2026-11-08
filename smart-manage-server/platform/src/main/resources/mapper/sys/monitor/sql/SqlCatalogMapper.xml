@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sm.domain.sys.monitor.sql.mapper.SqlCatalogMapper">
+    <sql id="catalogObjectColumns">
+        a.nspname AS schema_name,
+        b.relname AS object_name,
+        CASE b.relkind
+            WHEN 'r' THEN 'TABLE'
+            WHEN 'p' THEN 'PARTITIONED_TABLE'
+            WHEN 'v' THEN 'VIEW'
+            WHEN 'm' THEN 'MATERIALIZED_VIEW'
+            WHEN 'f' THEN 'FOREIGN_TABLE'
+        END AS object_type,
+        pg_catalog.obj_description(b.oid, 'pg_class') AS comment
+    </sql>
+
+    <sql id="catalogObjectFrom">
+        FROM pg_catalog.pg_namespace a
+        INNER JOIN pg_catalog.pg_class b ON b.relnamespace = a.oid
+    </sql>
+
+    <sql id="catalogObjectScope">
+        b.relkind IN ('r', 'p', 'v', 'm', 'f')
+        AND NOT b.relispartition
+        AND a.nspname != 'information_schema'
+        AND a.nspname !~ '^pg_'
+    </sql>
+
+    <select id="selectObjects" resultType="sm.domain.sys.monitor.sql.model.vo.SqlCatalogObjectVO">
+        SELECT <include refid="catalogObjectColumns"/>
+        <include refid="catalogObjectFrom"/>
+        WHERE <include refid="catalogObjectScope"/>
+        <if test="keyword != null">
+            AND (
+                b.relname ILIKE CONCAT('%', #{keyword}, '%')
+                OR COALESCE(pg_catalog.obj_description(b.oid, 'pg_class'), '') ILIKE CONCAT('%', #{keyword}, '%')
+                OR EXISTS (
+                    SELECT 1
+                    FROM pg_catalog.pg_attribute c
+                    WHERE c.attrelid = b.oid
+                      AND c.attnum &gt; 0
+                      AND NOT c.attisdropped
+                      AND (
+                          c.attname ILIKE CONCAT('%', #{keyword}, '%')
+                          OR COALESCE(pg_catalog.col_description(b.oid, c.attnum), '') ILIKE CONCAT('%', #{keyword}, '%')
+                      )
+                )
+            )
+        </if>
+        ORDER BY a.nspname, b.relname
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectObject" resultType="sm.domain.sys.monitor.sql.model.vo.SqlCatalogObjectVO">
+        SELECT <include refid="catalogObjectColumns"/>
+        <include refid="catalogObjectFrom"/>
+        WHERE <include refid="catalogObjectScope"/>
+          AND a.nspname = #{schemaName}
+          AND b.relname = #{objectName}
+    </select>
+
+    <select id="selectColumns" resultType="sm.domain.sys.monitor.sql.model.vo.SqlCatalogColumnVO">
+        SELECT c.attnum AS position,
+               c.attname AS column_name,
+               pg_catalog.format_type(c.atttypid, c.atttypmod) AS data_type,
+               NOT c.attnotnull AS nullable,
+               EXISTS (
+                   SELECT 1
+                   FROM pg_catalog.pg_constraint e
+                   WHERE e.conrelid = b.oid
+                     AND e.contype = 'p'
+                     AND c.attnum = ANY (e.conkey)
+               ) AS primary_key,
+               pg_catalog.pg_get_expr(d.adbin, d.adrelid) AS default_value,
+               pg_catalog.col_description(b.oid, c.attnum) AS comment
+        FROM pg_catalog.pg_namespace a
+        INNER JOIN pg_catalog.pg_class b ON b.relnamespace = a.oid
+        INNER JOIN pg_catalog.pg_attribute c ON c.attrelid = b.oid
+        LEFT JOIN pg_catalog.pg_attrdef d ON d.adrelid = b.oid AND d.adnum = c.attnum
+        WHERE <include refid="catalogObjectScope"/>
+          AND a.nspname = #{schemaName}
+          AND b.relname = #{objectName}
+          AND c.attnum &gt; 0
+          AND NOT c.attisdropped
+        ORDER BY c.attnum
+    </select>
+</mapper>

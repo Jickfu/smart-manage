@@ -73,6 +73,7 @@ export interface UserRoleAssignmentWorkspaceVO {
   username: string;
   number: string;
   organizations: UserRoleOrganizationVO[];
+  defaultRole: { id: string; number: string; name: string } | null;
 }
 
 export interface UserRoleAssignmentSaveForm {

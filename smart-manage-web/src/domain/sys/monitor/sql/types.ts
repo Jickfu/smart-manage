@@ -19,6 +19,39 @@ export interface SqlExecutionResult {
   statementRowCounts?: number[];
 }
 
+export type SqlCatalogObjectType =
+  | 'TABLE'
+  | 'PARTITIONED_TABLE'
+  | 'VIEW'
+  | 'MATERIALIZED_VIEW'
+  | 'FOREIGN_TABLE';
+
+export interface SqlCatalogObject {
+  schemaName: string;
+  objectName: string;
+  objectType: SqlCatalogObjectType;
+  comment?: string;
+}
+
+export interface SqlCatalogColumn {
+  position: number;
+  columnName: string;
+  dataType: string;
+  nullable: boolean;
+  primaryKey: boolean;
+  defaultValue?: string;
+  comment?: string;
+}
+
+export interface SqlCatalogResult {
+  objects: SqlCatalogObject[];
+  truncated: boolean;
+}
+
+export interface SqlCatalogDetail extends SqlCatalogObject {
+  columns: SqlCatalogColumn[];
+}
+
 export interface SqlLogListForm {
   pageNum: number;
   pageSize: number;

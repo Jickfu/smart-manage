@@ -1,3 +1,4 @@
+import { formatOperationTargets } from '@/domain/common/component/formatOperationTargets';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useCallback, useMemo, useState } from 'react';
@@ -181,6 +182,8 @@ const UserListPage = (props: PageComponentProps) => {
   const columns = useMemo<ColumnsType<UserListVO>>(
     () => [
       {
+        // 头像为非文本控件，保留其完整展示。
+        ellipsis: false,
         key: 'avatar',
         title: '头像',
         dataIndex: 'avatar',
@@ -195,6 +198,7 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        ellipsis: true,
         key: 'name',
         title: '姓名',
         dataIndex: 'name',
@@ -205,14 +209,17 @@ const UserListPage = (props: PageComponentProps) => {
           </button>
         ),
       },
-      { key: 'number', title: '工号', dataIndex: 'number', width: 120 },
+      { ellipsis: true, key: 'number', title: '工号', dataIndex: 'number', width: 120 },
       {
+        ellipsis: true,
         key: 'username',
         title: '用户名',
         dataIndex: 'username',
         width: 140,
       },
       {
+        // 多岗位需要逐项对应展示，保留业务分行，不对整列截断。
+        ellipsis: false,
         title: '部门',
         key: 'orgName',
         width: 150,
@@ -224,6 +231,8 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        // 多岗位需要逐项对应展示，保留业务分行，不对整列截断。
+        ellipsis: false,
         title: '部门长名称',
         key: 'orgNamePath',
         render: (_, record) => (
@@ -234,6 +243,8 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        // 多岗位需要逐项对应展示，保留业务分行，不对整列截断。
+        ellipsis: false,
         title: '职位',
         key: 'position',
         width: 140,
@@ -245,6 +256,8 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        // 多岗位需要逐项对应展示，保留业务分行，不对整列截断。
+        ellipsis: false,
         title: '负责人',
         key: 'isOrgLeader',
         width: 76,
@@ -261,6 +274,8 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        // 多岗位需要逐项对应展示，保留业务分行，不对整列截断。
+        ellipsis: false,
         title: '主职',
         key: 'isPrimary',
         width: 64,
@@ -277,6 +292,7 @@ const UserListPage = (props: PageComponentProps) => {
         ),
       },
       {
+        ellipsis: true,
         key: 'enabled',
         title: '账号状态',
         dataIndex: 'enabled',
@@ -346,15 +362,21 @@ const UserListPage = (props: PageComponentProps) => {
         quickSearchPlaceholder="搜索姓名/工号/用户名"
         filterSummary={keyword ? `关键字：${keyword}` : undefined}
         onAddNew={() => openAddNewTab(props.appNumber, USER_EDIT_KEY)}
-        onDelete={() =>
+        onDelete={() => {
+          if (selectedRowKeys.length === 0) return;
+          const commandIds = selectedRowKeys.map(String);
+          const targets = commandIds.map((id) => {
+            const record = records.find((item) => item.id === id);
+            return record ? record.username : `ID ${id}`;
+          });
           void confirmOperation({
             type: 'delete',
             title: '确认删除',
-            description: `确定删除选中的 ${selectedRowKeys.length} 个用户吗？`,
+            description: `将删除以下用户，是否继续？\n${formatOperationTargets(targets)}`,
             confirmText: '删除',
-            onConfirm: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
-          })
-        }
+            onConfirm: () => deleteMutation.mutateAsync(commandIds),
+          });
+        }}
         onEnable={() => enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: true })}
         onDisable={() =>
           enabledMutation.mutate({ ids: selectedRowKeys.map(String), enabled: false })

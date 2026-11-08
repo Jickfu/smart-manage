@@ -1,3 +1,4 @@
+import { formatOperationTargets } from '@/domain/common/component/formatOperationTargets';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useCallback, useMemo, useState } from 'react';
 import { Button } from 'antd';
@@ -85,6 +86,7 @@ const PermissionListPage = (props: PageComponentProps) => {
   }, []);
   const columns: ColumnsType<PermissionListVO> = [
     {
+      ellipsis: true,
       title: '编码',
       dataIndex: 'number',
       width: 240,
@@ -97,14 +99,15 @@ const PermissionListPage = (props: PageComponentProps) => {
           text
         ),
     },
-    { title: '名称', dataIndex: 'name' },
+    { ellipsis: true, title: '名称', dataIndex: 'name' },
     {
+      ellipsis: true,
       title: '所属功能',
       dataIndex: 'featureName',
       width: 160,
       render: (value) => value ?? '应用级权限',
     },
-    { title: '所属应用', dataIndex: 'appName', width: 160 },
+    { ellipsis: true, title: '所属应用', dataIndex: 'appName', width: 160 },
   ];
   const treeData = useMemo<DataNode[]>(() => {
     const featuresByApp = new Map<string, FeatureVO[]>();
@@ -173,13 +176,18 @@ const PermissionListPage = (props: PageComponentProps) => {
         onAddNew={() => openEdit(null)}
         onDelete={() => {
           if (selectedRowKeys.length === 0) return;
+          const commandIds = selectedRowKeys.map(String);
+          const targets = commandIds.map((id) => {
+            const record = records.find((item) => item.id === id);
+            return record ? `${record.number} — ${record.name}` : `ID ${id}`;
+          });
           void confirmOperation({
             type: 'delete',
             title: '确认删除',
-            description: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
+            description: `将删除以下权限，是否继续？\n${formatOperationTargets(targets)}`,
             confirmText: '删除',
             cancelText: '取消',
-            onConfirm: () => deleteMutation.mutateAsync(selectedRowKeys.map(String)),
+            onConfirm: () => deleteMutation.mutateAsync(commandIds),
           });
         }}
         onRefresh={async () => {

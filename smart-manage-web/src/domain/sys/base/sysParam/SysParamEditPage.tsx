@@ -14,6 +14,9 @@ import type { EditField } from '@/domain/common/page/edit/EditPage';
 import { OperationType } from '@/domain/common/page/types';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { useFeatureRefSelector } from '@/domain/sys/base/feature/refSelector';
+import { useOrgRefSelector } from '@/domain/sys/base/org/refSelector/useOrgRefSelector';
+import { orgApi } from '@/domain/sys/base/org/api';
+import { orgQueryKeys } from '@/domain/sys/base/org/queryKeys';
 import { sysParamApi } from './api';
 import { sysParamAccess } from './permissions';
 import { sysParamQueryKeys } from './queryKeys';
@@ -31,6 +34,27 @@ const SysParamEditPage = (props: PageComponentProps) => {
     enabled: Boolean(billId),
   });
   const detail = detailQuery.data;
+  const isRegistrationPolicy =
+    detail?.number === 'SELF_REGISTRATION_POLICY' && detail.isSystem === true;
+  const policy = isRegistrationPolicy
+    ? (detail.value ?? '').match(/^ORGANIZATION:([0-9]+):(.+)$/s)
+    : null;
+  const registrationOrgId = policy?.[1];
+  const registrationPosition = policy?.[2];
+  const registrationOrgSelector = useOrgRefSelector(undefined, isRegistrationPolicy);
+  const registrationOrgQuery = useQuery({
+    queryKey: orgQueryKeys.detail(registrationOrgId ?? null),
+    queryFn: () => orgApi.detail(registrationOrgId!),
+    enabled: Boolean(registrationOrgId),
+    retry: false,
+    meta: { errorPresentation: 'local-initial' },
+  });
+  const registrationOrganization = registrationOrgQuery.data;
+  const registrationMode = registrationOrgId
+    ? 'ORGANIZATION'
+    : detail?.value === 'UNASSIGNED'
+      ? 'UNASSIGNED'
+      : 'DISABLED';
   const fields = useMemo<EditField[]>(
     () => [
       {
@@ -55,7 +79,37 @@ const SysParamEditPage = (props: PageComponentProps) => {
         placeholder: '留空表示全局参数',
         refSelector: featureRefSelector,
       },
-      { label: '参数值', dataIndex: 'value', type: 'textarea', fullWidth: true },
+      ...(isRegistrationPolicy
+        ? ([
+            {
+              label: '注册策略',
+              dataIndex: 'registrationMode',
+              type: 'select',
+              options: [
+                { label: '关闭注册', value: 'DISABLED' },
+                { label: '开放注册，不分配部门', value: 'UNASSIGNED' },
+                { label: '开放注册，分配到指定组织', value: 'ORGANIZATION' },
+              ],
+              rules: [{ required: true, message: '请选择注册策略' }],
+            },
+            {
+              label: '注册组织',
+              dataIndex: 'registrationOrganization',
+              type: 'ref-selector',
+              refSelector: registrationOrgSelector,
+              tooltip: '选择分配到指定组织时必填',
+            },
+            {
+              label: '默认职位',
+              dataIndex: 'registrationPosition',
+              type: 'text',
+              tooltip: '选择分配到指定组织时必填',
+              rules: [{ max: 100, message: '职位不能超过100个字符' }],
+            },
+          ] satisfies EditField[])
+        : ([
+            { label: '参数值', dataIndex: 'value', type: 'textarea', fullWidth: true },
+          ] satisfies EditField[])),
       {
         label: '描述',
         dataIndex: 'description',
@@ -64,7 +118,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
         disabled: detail?.isSystem,
       },
     ],
-    [detail?.isSystem, featureRefSelector],
+    [detail?.isSystem, featureRefSelector, isRegistrationPolicy, registrationOrgSelector],
   );
   const initialValues = useMemo(
     () =>
@@ -73,21 +127,39 @@ const SysParamEditPage = (props: PageComponentProps) => {
             number: detail.number,
             name: detail.name,
             value: detail.value ?? '',
+            registrationMode,
+            registrationOrganization: registrationOrgId
+              ? {
+                  id: registrationOrgId,
+                  name: registrationOrganization?.name ?? `组织 ID ${registrationOrgId}`,
+                }
+              : undefined,
+            registrationPosition,
             description: detail.description ?? '',
             feature: detail.feature ?? null,
           }
         : {},
-    [detail],
+    [detail, registrationMode, registrationOrgId, registrationOrganization, registrationPosition],
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
       const feature = values.feature as { id?: string } | null;
+      let value = String(values.value ?? '');
+      if (isRegistrationPolicy) {
+        value = String(values.registrationMode);
+        if (value === 'ORGANIZATION') {
+          const organization = values.registrationOrganization as { id?: string } | undefined;
+          const position = String(values.registrationPosition ?? '').trim();
+          if (!organization?.id || !position) throw new Error('请选择注册组织并填写默认职位');
+          value = `ORGANIZATION:${organization.id}:${position}`;
+        }
+      }
       const savedId = await sysParamApi.save({
         id: billId,
         version: detail?.version,
         number: String(values.number).trim(),
         name: String(values.name).trim(),
-        value: String(values.value ?? ''),
+        value,
         description: String(values.description ?? ''),
         featureId: feature?.id,
       });
@@ -114,7 +186,7 @@ const SysParamEditPage = (props: PageComponentProps) => {
       initialValues={initialValues}
       operationType={operationType ?? OperationType.EDIT}
       closeGuard={{ appNumber, tabKey }}
-      loading={detailQuery.isLoading}
+      loading={detailQuery.isLoading || registrationOrgQuery.isLoading}
       error={getBlockingQueryError(detailQuery) as Error | null}
       onRetry={() => detailQuery.refetch()}
       onSave={async (values) => {

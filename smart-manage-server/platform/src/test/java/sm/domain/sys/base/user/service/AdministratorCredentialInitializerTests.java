@@ -21,6 +21,11 @@ class AdministratorCredentialInitializerTests {
     private final PasswordPolicyService policy = mock(PasswordPolicyService.class);
     private final AdministratorInitialPasswordFile passwordFile = mock(AdministratorInitialPasswordFile.class);
 
+    @org.junit.jupiter.api.BeforeEach
+    void configureGeneratedLength() {
+        when(policy.minimumGeneratedLength()).thenReturn(20);
+    }
+
     @BeforeAll
     static void initializeEntityMetadata() {
         TableInfoHelper.initTableInfo(new MapperBuilderAssistant(
@@ -31,7 +36,7 @@ class AdministratorCredentialInitializerTests {
     void rejectedInitialPasswordDoesNotWriteCredentials() {
         when(mapper.selectOne(any())).thenReturn(administrator(""));
         doThrow(new IllegalArgumentException("不符合密码策略")).when(policy).validate("weak", "administrator");
-        when(passwordFile.prepare()).thenReturn(prepared("weak"));
+        when(passwordFile.prepare(20)).thenReturn(prepared("weak"));
         assertThrows(IllegalArgumentException.class, () -> initializer().run(null));
         verify(mapper, never()).update(any());
     }
@@ -48,7 +53,7 @@ class AdministratorCredentialInitializerTests {
     @Test
     void initialPasswordFileFailurePreventsFirstStartup() {
         when(mapper.selectOne(any())).thenReturn(administrator(""));
-        when(passwordFile.prepare()).thenThrow(new IllegalStateException("无法准备管理员初始密码文件"));
+        when(passwordFile.prepare(20)).thenThrow(new IllegalStateException("无法准备管理员初始密码文件"));
         IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> initializer().run(null));
         assertTrue(exception.getMessage().contains("无法准备管理员初始密码文件"));
@@ -59,7 +64,7 @@ class AdministratorCredentialInitializerTests {
     void initialPasswordIsValidatedAndWrittenOnce() {
         when(mapper.selectOne(any())).thenReturn(administrator(""));
         when(mapper.update(any())).thenReturn(1);
-        when(passwordFile.prepare()).thenReturn(prepared("test-initial-password"));
+        when(passwordFile.prepare(20)).thenReturn(prepared("test-initial-password"));
         try (var hashing = mockStatic(Argon2Helper.class)) {
             hashing.when(() -> Argon2Helper.encode("test-initial-password")).thenReturn("encoded");
             initializer().run(null);
@@ -69,10 +74,25 @@ class AdministratorCredentialInitializerTests {
     }
 
     @Test
+    void initialPasswordLengthFollowsConfiguredMinimum() {
+        when(mapper.selectOne(any())).thenReturn(administrator(""));
+        when(mapper.update(any())).thenReturn(1);
+        when(policy.minimumGeneratedLength()).thenReturn(64);
+        String generated = "Ab7!".repeat(16);
+        when(passwordFile.prepare(64)).thenReturn(prepared(generated));
+        try (var hashing = mockStatic(Argon2Helper.class)) {
+            hashing.when(() -> Argon2Helper.encode(generated)).thenReturn("encoded");
+            initializer().run(null);
+        }
+        verify(passwordFile).prepare(64);
+        verify(policy).validate(generated, "administrator");
+    }
+
+    @Test
     void concurrentWinnerIsPreservedAndMissingWinnerFails() {
         when(mapper.selectOne(any())).thenReturn(administrator(""));
         when(mapper.update(any())).thenReturn(0);
-        when(passwordFile.prepare()).thenReturn(prepared("test-initial-password"));
+        when(passwordFile.prepare(20)).thenReturn(prepared("test-initial-password"));
         try (var hashing = mockStatic(Argon2Helper.class)) {
             hashing.when(() -> Argon2Helper.encode("test-initial-password")).thenReturn("encoded");
             hashing.when(() -> Argon2Helper.verify("winner", "test-initial-password")).thenReturn(true);

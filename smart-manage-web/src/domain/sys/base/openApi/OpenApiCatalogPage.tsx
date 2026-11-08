@@ -71,6 +71,7 @@ const OpenApiCatalogPage = (props: PageComponentProps) => {
   });
   const columns: ColumnsType<OpenApiRelease> = [
     {
+      ellipsis: true,
       title: 'API 名称',
       dataIndex: 'name',
       width: 220,
@@ -91,13 +92,14 @@ const OpenApiCatalogPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: 'API 编码', dataIndex: 'apiNumber', width: 220 },
-    { title: '版本', dataIndex: 'apiVersion', width: 90 },
-    { title: '方法', dataIndex: 'httpMethod', width: 90 },
-    { title: '路径', dataIndex: 'path', width: 360 },
-    { title: '功能', dataIndex: 'featureName', width: 140 },
-    { title: '所属应用', dataIndex: 'applicationName', width: 160 },
+    { ellipsis: true, title: 'API 编码', dataIndex: 'apiNumber', width: 220 },
+    { ellipsis: true, title: '版本', dataIndex: 'apiVersion', width: 90 },
+    { ellipsis: true, title: '方法', dataIndex: 'httpMethod', width: 90 },
+    { ellipsis: true, title: '路径', dataIndex: 'path', width: 360 },
+    { ellipsis: true, title: '功能', dataIndex: 'featureName', width: 140 },
+    { ellipsis: true, title: '所属应用', dataIndex: 'applicationName', width: 160 },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'status',
       width: 100,
@@ -110,6 +112,7 @@ const OpenApiCatalogPage = (props: PageComponentProps) => {
       ),
     },
     {
+      ellipsis: true,
       title: '代码注册',
       dataIndex: 'registered',
       width: 100,

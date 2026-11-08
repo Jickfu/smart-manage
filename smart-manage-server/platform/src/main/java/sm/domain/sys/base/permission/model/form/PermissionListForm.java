@@ -10,7 +10,7 @@ import sm.system.form.PageForm;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@Schema(title = "权限列表表单")
+@Schema(description = "权限列表表单")
 public class PermissionListForm extends PageForm {
 	@Schema(description = "按应用筛选")
 	private Long appId;

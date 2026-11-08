@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import sm.domain.sys.base.sysparam.mapper.SysParamMapper;
 import sm.domain.sys.base.sysparam.model.form.SysParamSaveForm;
 import sm.domain.sys.base.feature.mapper.FeatureMapper;
+import sm.domain.sys.base.org.contract.OrgReferenceReader;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 
@@ -25,7 +26,7 @@ class SysParamTxServiceTests {
         entity.setIsSystem(true);
         when(mapper.selectById(1L)).thenReturn(entity);
         when(mapper.updateById(entity)).thenReturn(1);
-        var service = new SysParamTxService(mapper, new sm.domain.sys.base.feature.service.FeatureReferenceService(mock(FeatureMapper.class)));
+        var service = new SysParamTxService(mapper, new sm.domain.sys.base.feature.service.FeatureReferenceService(mock(FeatureMapper.class)), mock(OrgReferenceReader.class));
         var form = new SysParamSaveForm();
         form.setId(1L);
         form.setVersion(0);
@@ -49,7 +50,7 @@ class SysParamTxServiceTests {
         form.setName("重复参数");
 
         assertThrows(BizException.class, () -> new SysParamTxService(mapper,
-                new sm.domain.sys.base.feature.service.FeatureReferenceService(mock(FeatureMapper.class)))
+                new sm.domain.sys.base.feature.service.FeatureReferenceService(mock(FeatureMapper.class)), mock(OrgReferenceReader.class))
                 .save(form));
     }
 
@@ -65,7 +66,7 @@ class SysParamTxServiceTests {
 
         BizException exception = assertThrows(BizException.class,
                 () -> new SysParamTxService(mapper,
-                        new sm.domain.sys.base.feature.service.FeatureReferenceService(featureMapper)).save(form));
+                        new sm.domain.sys.base.feature.service.FeatureReferenceService(featureMapper), mock(OrgReferenceReader.class)).save(form));
 
         assertEquals(ResultEnum.NOT_FOUND.getCode(), exception.getCode());
     }

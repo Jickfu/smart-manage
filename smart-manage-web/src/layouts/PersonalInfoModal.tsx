@@ -144,6 +144,7 @@ export default function PersonalInfoModal({
           dataSource={userInfo?.assignments ?? []}
           columns={[
             {
+              ellipsis: true,
               title: '#',
               width: 44,
               align: 'center',
@@ -152,8 +153,15 @@ export default function PersonalInfoModal({
             },
             { title: '部门', dataIndex: 'orgName', ellipsis: true },
             { title: '部门长名称', dataIndex: 'orgNamePath', ellipsis: true },
-            { title: '岗位', dataIndex: 'position', width: 140, render: (value) => value || '-' },
             {
+              ellipsis: true,
+              title: '岗位',
+              dataIndex: 'position',
+              width: 140,
+              render: (value) => value || '-',
+            },
+            {
+              ellipsis: true,
               title: '主职',
               dataIndex: 'isPrimary',
               width: 70,

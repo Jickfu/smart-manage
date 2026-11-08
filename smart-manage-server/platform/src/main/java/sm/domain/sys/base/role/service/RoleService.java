@@ -1,5 +1,8 @@
 package sm.domain.sys.base.role.service;
 
+import sm.domain.sys.base.role.model.vo.RoleDefaultVO;
+import sm.domain.sys.base.role.model.form.RoleDefaultSaveForm;
+import sm.domain.sys.base.role.mapper.RoleDefaultMapper;
 import sm.domain.sys.base.role.converter.RoleConverter;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -48,6 +51,7 @@ public class RoleService {
 			"name", ListQueryUtil.string(RoleEntity::getName, true),
 			"description", ListQueryUtil.string(RoleEntity::getDescription, false));
 	private final RoleMapper mapper;
+	private final RoleDefaultMapper defaultMapper;
 	private final RolePermissionMapper permissionMapper;
 	private final RoleTxService txService;
 	private final RoleConverter converter;
@@ -113,6 +117,18 @@ public class RoleService {
 		return vo;
 	}
 
+    public RoleDefaultVO defaultRole() {
+        // 单条查询取得配置与角色引用，避免并发切换、删除造成跨快照的详情读取。
+        RoleDefaultVO result = defaultMapper.selectConfiguration();
+        if (result == null) throw new BizException(ResultEnum.PERSISTENCE_ERROR, "默认角色配置缺失");
+        return result;
+    }
+
+    @BizLog("设置默认角色")
+    public void setDefault(RoleDefaultSaveForm form) {
+        txService.setDefault(form);
+    }
+
 	public RoleCreateNewDataVO createNewData() {
 		return new RoleCreateNewDataVO();
 	}
@@ -126,6 +142,11 @@ public class RoleService {
 	public void deleteById(Long id) {
 		txService.deleteById(id);
 	}
+
+    @BizLog("批量删除角色")
+    public void deleteByIds(List<Long> ids) {
+        txService.deleteByIds(ids);
+    }
 
 	@BizLog("分配角色权限")
 	public void assignPermissions(RolePermissionAssignForm form) {

@@ -145,7 +145,7 @@ export function BusinessAttachmentPanel({
     void confirmOperation({
       type: 'delete',
       title: '确认删除附件？',
-      description: '删除会立即生效，取消或关闭当前表单也无法恢复。',
+      description: `附件：${JSON.stringify(attachment.originalName)}。\n删除会立即生效，取消或关闭当前表单也无法恢复。`,
       confirmText: '删除',
       cancelText: '取消',
       onConfirm: async () => {

@@ -19,7 +19,7 @@ class LoginCacheJsonCodecTests {
     @Test
     void temporaryLoginGrantRoundTripDoesNotWriteJavaTypeMetadata() {
         TemporaryLoginGrant grant = new TemporaryLoginGrant(
-                "grant-id", 1L, 9L, "target", "排障", LocalDateTime.of(2026, 8, 26, 20, 0));
+                "grant-id", 1L, 9L, "target", 3L, "排障", LocalDateTime.of(2026, 8, 26, 20, 0));
 
         String json = codec.write(grant);
         TemporaryLoginGrant restored = codec.read(json, TemporaryLoginGrant.class);

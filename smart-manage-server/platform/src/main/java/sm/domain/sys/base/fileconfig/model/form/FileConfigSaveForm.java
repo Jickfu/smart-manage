@@ -13,14 +13,14 @@ import lombok.Data;
 @Schema(description = "文件配置保存表单")
 public class FileConfigSaveForm {
 
-    @Schema(description = "主键ID（新建时不传）")
+    @Schema(description = "ID")
     private Long id;
 
     @Schema(description = "乐观锁版本号，修改时必传")
     private Integer version;
 
     @NotBlank(message = "存储类型不能为空")
-    @Schema(description = "存储类型：LOCAL / FTP")
+    @Schema(description = "文件存储类型：LOCAL 本地、FTP、S3 兼容对象存储")
     private String storageType;
 
     @Schema(description = "本地目录路径")
@@ -44,10 +44,16 @@ public class FileConfigSaveForm {
     @Schema(description = "FTP 被动模式")
     private Boolean ftpPassiveMode;
 
+    @Schema(description = "S3兼容服务地址")
     private String s3Endpoint;
+    @Schema(description = "S3区域")
     private String s3Region;
+    @Schema(description = "S3私有Bucket")
     private String s3Bucket;
+    @Schema(description = "S3 访问标识（Access Key）")
     private String s3AccessKey;
+    @Schema(description = "S3 访问密钥，按现有敏感配置提交规则处理")
     private String s3SecretKey;
+    @Schema(description = "是否使用Path Style")
     private Boolean s3PathStyle;
 }

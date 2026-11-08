@@ -27,6 +27,7 @@ public class PermissionDetailVO {
 	@Schema(description = "编码")
 	private String number;
 
+	@Schema(description = "所属功能信息")
 	private ReferenceVO feature;
 
 	@Schema(description = "创建时间")

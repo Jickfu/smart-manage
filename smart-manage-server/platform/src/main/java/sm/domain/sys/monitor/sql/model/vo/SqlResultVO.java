@@ -12,7 +12,7 @@ import java.util.List;
 @Schema(description = "SQL 执行结果")
 public class SqlResultVO {
 
-    @Schema(description = "结果类型: QUERY / DML / DDL / ERROR")
+    @Schema(description = "SQL 执行结果类型：QUERY、DML、DDL、ERROR")
     private String type;
 
     @Schema(description = "列名列表（仅 QUERY 类型）")

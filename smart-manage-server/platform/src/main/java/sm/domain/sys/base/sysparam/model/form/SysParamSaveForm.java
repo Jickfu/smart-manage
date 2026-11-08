@@ -13,7 +13,7 @@ import lombok.Data;
 @Schema(description = "系统参数保存表单")
 public class SysParamSaveForm {
 
-    @Schema(description = "主键ID（新建时不传）")
+    @Schema(description = "ID")
     private Long id;
 
     @Schema(description = "乐观锁版本号，修改时必传")
@@ -27,7 +27,7 @@ public class SysParamSaveForm {
     @Schema(description = "参数名称")
     private String name;
 
-    @Schema(description = "参数值")
+    @Schema(description = "系统参数值，具体格式由所属参数定义")
     private String value;
 
     @Schema(description = "描述")

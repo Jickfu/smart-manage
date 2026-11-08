@@ -2,6 +2,8 @@
 
 本文维护桌面管理端 `smart-manage-web` 的页面实现、布局、交互和公共组件使用约定，不作为移动端布局规范。普通页面修改只读相关章节；新增或显著扩展模块再执行[模块开发指南](./module-development-guide.md)。依赖方向、权限和生命周期归[前端架构](../architecture/frontend.md)，注册协议归[页面注册约定](../architecture/page-registration-convention.md)，验证触发条件与命令归[质量验证](./verification.md)。
 
+已采纳的视觉选择与适配边界归[前端设计规范](../design/README.md)；本指南维护具体页面与组件接入。设计正文和本指南按职责互链，不分别维护相同视觉参数。
+
 公共组件的完整接口以当前源码为准，本文保留选择依据、特殊行为和必要示例；真实调用方见[模块样板目录](./module-pattern-catalog.md)。
 
 ## 页面形态选择
@@ -12,17 +14,24 @@
 - `CUSTOM` 仅用于通用列表与编辑模型无法表达的布局或交互，不用于绕过页面框架。
 - 页签标题与稳定身份遵守[页面注册约定](../architecture/page-registration-convention.md#页签标题)。`ModalEditPage` 标题只显示基础名称，不添加“新增”“编辑”“查看”“详情”等操作文字；弹窗本身不因此新增工作台注册项。
 
+页面框架导入本身不代表接入合规：仍须核对字段布局、引用选择、权限和版本、加载阻断、未保存处理及保存后同步。标题与普通字段的可确定声明由页面接入门禁检查；动态标题、跨组件字段和实体选择的业务含义仍需评审，不能把一次静态检查当作浏览器验收。
+
 ## 应用首页
 
 - 新应用只有在存在明确的应用级快捷入口、业务摘要、待办、趋势或运行状态时才实现专属首页；首页组件放在对应领域应用的 `home/` 目录，并通过 `pages/workbench/applicationHomeRegistry.ts` 注册。没有专属内容时使用工作台默认首页，不虚构业务能力。
 - 卡片行统一使用 `domain/common/home/HomeCardGrid`。该容器固定为四列轨道，卡片通过 `sm-home-card-span-1`、`sm-home-card-span-2`、`sm-home-card-span-3` 或 `sm-home-card-span-4` 表达等分、`1:3`、`2:2`、`3:1` 和整行布局；领域页面不得复制网格 CSS。
-- 屏幕变窄时必须保持同一行的列数和跨列比例，由 `HomeCardGrid` 提供行内横向滚动，不得通过媒体查询把卡片自动折到下一行。首页整体内容超出视口时仍由首页容器纵向滚动；卡片内部存在固定高度列表时由卡片内部滚动。
+- 窄窗口下保留同一行的列数和跨列比例，横向滚动由桌面主布局统一提供。首页整体内容超出可视高度时由首页容器纵向滚动；卡片内部存在固定高度列表时由卡片内部滚动。详见[窄窗口滚动](../design/desktop.md#窄窗口滚动)。
 - 文字指标卡的标题、主值和说明默认水平、垂直居中；同一卡片包含多个并列指标时使用稳定分割线区分。图表、表格和拓扑卡按内容特征布局，不强制套用文字指标卡结构。
+- 系统管理首页复用现有模块查询：启用用户按启用状态统计（不表示一定满足登录条件），组织统计未封存树节点（含各层级），角色统计已定义角色总数（不表示已分配授权次数）。各指标分别遵守对应列表权限；权限未就绪不请求，无权限不展示缓存数值，失败显示错误与重试，不将失败当成零。查询键复用所属模块，随既有维护命令失效。
 - 首页优先展示权限和数据范围内的真实业务数据；暂时没有安全、稳定的聚合接口时可以使用示例卡片，但每张示例卡必须明确显示“示例”，不得与真实数据混淆。
 - `QuickLaunchCard` 是可选的当前用户偏好能力，不是应用首页必备区块。只有应用菜单较多且用户确有高频快捷发起需求时才接入；不需要时直接省略，不渲染占位。系统首页是否使用该能力由系统首页需求决定。
 - 没有额外操作、筛选或状态信息时，不在应用首页顶部重复展示应用名称或说明性头部。
 
 ## 列表和命令
+
+`ListPage` 是展示与命令入口，`useListPageQuery` 管理查询。接入时将 Hook 的 `records` 传给 `dataSource`，`onSearch` 传给 `onQuickSearch`，分页参数与回调显式对应，并展开 `columnQueryProps` 接通服务端筛选和排序。Hook 不返回可直接展开到页面的完整 props，也不负责树范围、选择清理或领域命令。树等额外条件应进入实际查询键和请求参数，不能只改变树的选中外观。
+
+加载、阻断错误及重试由页面按实际查询接入；已有数据的刷新失败与首次加载失败按[请求错误协议](../architecture/frontend.md#请求错误协议与反馈)区分，优先复用 `getBlockingQueryError`，不直接把每次 `query.error` 都当作整页阻断。
 
 - 默认使用复选框；单记录命令在恰好选中一条时启用。只有业务语义天然互斥且无法用命令启用条件表达时才使用单选。
 - 默认不增加“操作”列。编辑或查看优先使用可点击的 `number` 等稳定业务标识，其他命令集中在页面操作区。
@@ -35,12 +44,18 @@
 - 特有查询参数通过 `filterContent` 接入时使用 `ListFilterFields` 与 `ListFilterField`，不得自定义固定宽度或复制布局。过滤区采用浅灰背景、四周细边框和白色完整边框控件；一、两项使用较宽列，所有字段从轨道左侧开始，首项左侧距离不随条件数量改变，最多三列，按面板可用宽度自动降至两列、一列。查询条件之外的统计信息放在工具栏。
 - 高频条件选中或清空后直接应用；审计日志保留结果、事件（登录日志）和时间范围，Trace ID 使用表头筛选。
 - 至少保留一个未设置 `width` 的业务列吸收剩余空间。
+- 普通只读列表的文本列必须显式使用 Ant Design `ellipsis: true`（或标准 `ellipsis` 配置对象），超宽文本保持单行省略，避免数据长短造成行高不一致。此规则适用于现有列表、新业务单据列表、CUSTOM 页面列表和只读弹框列表；不增加固定行高、强制裁剪或公共表格隐式默认值。
+- `ListPage` 的每个叶子列必须显式声明 `ellipsis`，分组表头本身无需声明。确需分行的业务内容或非文本控件可使用 `ellipsis: false`，但必须在该属性前给出简体中文业务原因注释；例如用户多岗位需要逐项对应展示。可编辑明细和展开详情按自身业务布局处理，不为统一外观破坏必要内容。
+- 关键金额和数量遵守[完整值要求](../design/foundations.md#关键金额与数量)，通过列宽、布局及现有有注释的业务例外处理，不全局关闭省略或放宽门禁；存量集中适配另行实施。
+- 自定义 `render` 仍须核对最终文本截断、列宽、点击与复制行为；`ellipsis` 不能替代业务内容设计，也不能保证任意嵌套组件自动省略。长文本完整内容通过标准提示或原有详情入口查看，不因省略丢失访问路径。标准列表的声明约束由模块约定脚本及测试校验，特殊渲染和业务例外仍需浏览器验收。
 - 左树必须具有符合业务语义的根节点并默认展开；组织树等已有稳定语义的结构必须与现有页面保持一致，不得擅自增加“全部”等虚构层级。
 - `ListPage.treePanel` 中的筛选树使用 `ListTreePanel` 包裹 `ListTree`；即使没有搜索框或底部筛选，也不能省略面板容器。头部和底部控件分别通过 `header`、`footer` 传入，树主体由公共组件统一提供内边距与横纵滚动。
 - 普通目录树采用 `virtual={false}`、`showLine={false}` 和 `blockNode`，长名称保持单行并通过面板横向滚动。确需虚拟化的大树必须另行验证可视高度、长名称和滚动行为，不能直接沿用 Ant Design 默认配置。
 - 左树验收须与同类页面（如应用管理）对比最终计算样式，核对内边距、节点缩进、选中背景以及内容溢出时的滚动；只确认外层面板宽度或树能显示，不算完成布局验收。
 
 ## 编辑页
+
+`EditPage` 必填 `title`、`sections` 和 `operationType`，普通字段通过 `editFormSection` 组合成分区；`ModalEditPage` 则使用 `fields`、`open`、`onClose` 和 `onSave`。两种模板的 props 不能互换，完整类型以各自源码为准。`initialValues` 是稳定的服务端快照，不能在渲染时内联重建等价对象；`editable`、权限、版本及外部脏状态仍由领域显式接入，不因用了模板就自动具备。
 
 页签晋升、保存回显、只读与脏数据保护遵守[单据页签生命周期](../architecture/frontend.md#单据页签生命周期)；以下只说明页面接入方式。
 
@@ -54,24 +69,49 @@
 - 标准新增/编辑页面使用 `useEditTabLifecycle` 处理新增识别、临时页签晋升和退出；领域页面继续拥有保存参数映射与 Query Key。
 - 保存 Mutation 的 `mutationFn` 只执行远端命令。远端成功后通过 `runEditSavePostCommit` 独立执行页签同步与缓存刷新，并按结果反馈；本地同步失败不得误报为保存失败，也不得阻止另一同步阶段尝试执行。
 
+### 详情侧栏
+
+`EditPage.sidePanel` 用于与单据详情并列的辅助业务区。顶部操作栏保持整页统一，左侧详情与右侧面板分别滚动，面板在窄布局下纵向排列。侧栏位于主表单及其禁用上下文之外，单据只读时侧栏自己的表单仍可按权限操作。侧栏调用方负责独立 Form、未提交内容提示与命令权限。审批布局采用“任务处理 / 审批记录”页签，提交按钮固定在面板底部。
+
 ### 页面与分区提示
 
-`EditPage.sidePanel` 用于与单据详情并列的辅助业务区。顶部操作栏保持整页统一；左侧详情与右侧面板分别滚动，面板在窄屏下改为纵向排列。侧栏位于主表单及其禁用上下文之外，单据只读不应禁用侧栏自己的表单。侧栏调用方负责独立 Form、未提交内容提示与命令权限；审批布局采用“任务处理 / 审批记录”页签，提交按钮固定在面板底部。普通页面不传侧栏时保持原布局。
+列表、编辑及 CUSTOM 页面按作用范围选择公共提示插槽，不允许业务页面自由决定整行提示的位置。提示采用 `PageNoticeConfig` 声明，由公共 `PageNotice` 使用 Ant Design Alert 的公开接口呈现；不虚构“提示信息”折叠卡片，不挤入按钮、标题或筛选摘要行。
 
-折叠卡片用于组织表单、明细和业务数据，不要求警告、提示或状态说明另建一张卡片。提示按作用范围就近展示，避免空标题、“提示信息”折叠卡片或多层容器增加视觉负担。
+| 作用范围 | 接入位置 | 布局语义 |
+| --- | --- | --- |
+| 列表整页 | `ListPage.notice` | `sm-list-top` 上方独占一行，覆盖搜索、命令及树表的共同说明 |
+| 列表表格 | `ListPage.tableNotice`（底层 `ListTableShell.notice`） | `sm-list-table-content` 内第一行、统计分页栏之前；左树右表时仅占右栏，随右栏宽度换行 |
+| 编辑整页 | `EditPage.notice` / `EditPageShell.notice` | `sm-edit-header` 上方独占一行；无操作栏时仍位于正文之前 |
+| 编辑分区 | `EditPageSection.notice` / `EditSectionCollapseItem.notice` | 对应卡片上方，与卡片组成一个视觉单元；折叠卡片不隐藏提示 |
 
-- **整页提示**：影响整张单据的说明或限制放在工具栏下方、首张内容卡片上方；与内容卡片左右边界对齐，占满内容行，紧贴首张卡片，不插入 10px 空隙。
-- **分区提示**：只影响某个分区的信息贴近对应卡片顶部，与该卡片组成一个视觉单元。仍需用户关注的提示不随卡片折叠而隐藏；仅解释展开内容的辅助说明可以放在分区内部。
-- **字段说明与校验**：字段用途、填写规则继续使用字段名旁的 Tooltip；校验错误由 Ant Design Form 就近呈现，不把普通字段帮助提升为整页横幅。
-- **操作反馈与请求错误**：保存、提交等反馈继续使用 `useOperationFeedback`，加载失败与权限阻断继续遵守既有请求错误协议，不额外复制一条页面提示。
+同一提示只选择一个范围，不在整页和分区重复展示。影响整页的限制不能放进右侧表格或某张卡片，局部说明不提升为整页横幅。仅解释展开内容的辅助说明可以放在分区正文顶部；字段用途仍使用字段 Tooltip，校验错误由 Form 就近呈现。操作反馈与请求错误继续遵守原有协议，不用说明插槽代替加载失败、权限阻断或保存反馈；页面阻断时隐藏业务提示。
 
-整行提示优先参考 Ant Design `Alert` 的 `banner` 模式，例如 `<Alert banner type="info" showIcon title="说明内容" />`。显式选择符合语义的 `type`：普通说明为 `info`，需要注意的约束为 `warning`，错误为 `error`，确认成功的状态为 `success`；不能因为 `banner` 默认采用 warning 就把普通说明渲染成警告。内容优先简短，长文允许自然换行，必要时使用 `description` 或操作入口，不固定高度或滚动播放。
+`toolbarExtra`、`actions`、`headerActions` 和分区 `extra` 用于操作、操作上下文控件或简短统计，禁止放置业务说明、警告和长段文字；`filterSummary` 仅用于当前筛选条件。CUSTOM 页面也应复用 `PageNotice` 并遵守上述独立行与作用范围。
 
-`banner` 是推荐表现形式，不是唯一模板。简短的次要说明可以使用低强调文本，复杂说明可以使用普通 Alert；选择应以关联范围、信息重要性和整体协调为依据。提示与关联卡片内部间距为 0，这一组合与其他独立内容块之间仍保持 10px。提示消失时不得留下空白占位，也不通过负 margin 抵消公共布局间距。
+提示声明包含稳定 `key`、`title`，可选 `description`、`type`、`closable` 和 `onClose`。默认 `type="info"`、显示图标、不可关闭；需要注意的约束用 `warning`，错误状态用 `error`，确认成功的状态用 `success`。默认使用 banner 表现，内容自然换行、允许长连续字符串断行，不固定高度、不单行省略、不横向滚动播放、不撑宽按钮区。间距遵守[设计基础](../design/foundations.md#空间与边界)，提示关闭后不保留占位。
 
-重要限制在条件解除前保持可见，不提供会让限制被遗忘的关闭入口；可忽略的辅助说明可允许关闭。提示只是说明，不替代按钮禁用、字段校验或服务端约束。
+重要限制在条件解除前必须可见，不能允许关闭。可忽略的辅助说明可以显式设置 `closable: true`，通过 `onClose` 接收关闭通知；关闭仅影响当前挂载的提示，切换保活页签不会重现，刷新或重新打开页面会恢复。不默认写入浏览器存储或用户偏好。业务对象或提示语义变化时更换 `key`，避免先前关闭状态隐藏新的提示；条件解除时传 `undefined`。提示不替代权限、按钮禁用、字段校验或服务端约束。
 
-上述规则定义展示目标，不表示当前 `EditPage` 已提供卡片外提示插槽。接入时先核对公共组件接口；若现有接口无法表达，应在公共编辑布局增加明确的提示扩展位置，不得为放置提示虚构业务 `sections`、直接插入 Ant Design 内部 DOM，或由领域页面各自修补卡片间距。
+```tsx
+<ListPage
+  {...listProps}
+  notice={{ key: 'page-help', title: '整页辅助说明', closable: true }}
+  tableNotice={{ key: selectedCategory, type: 'warning', title: '当前分类的限制说明' }}
+/>
+
+<EditPage
+  {...editProps}
+  notice={{ key: 'document-rule', title: '整张单据的规则说明' }}
+  sections={[
+    {
+      ...editFormSection('basic', '基本信息', fields),
+      notice: { key: 'basic-rule', title: '仅适用于基本信息的说明' },
+    },
+  ]}
+/>
+```
+
+示例变量由调用方提供。新增或修改提示须验证普通列表、左树右表、编辑页与分区折叠等实际涉及场景，包括长文本窄屏换行、关闭后无占位、提示身份变化重新显示及按钮区不受挤压；公共组件行为由测试保护，动态内容与实际布局仍须浏览器验收。
 
 ### 表格空状态
 
@@ -137,23 +177,15 @@
 
 ## 弹框、表格和视觉
 
-- 全局字号基线由 `smart-manage-web/src/styles/theme.ts` 统一维护：页面正文、表单标签、按钮及其他操作控件使用 `12px`，Input、InputNumber、Select、TreeSelect、Cascader、DatePicker、Mentions、ColorPicker 等可录入或选择控件的默认字段值使用 `14px`。`RefSelector`、`IconSelector` 等项目自定义输入控件必须与标准输入控件保持 `14px` 字段值；`EditableDetailTable` 是统一的紧凑输入边界，其单元格内标准及自定义输入控件统一使用 `12px`，不得由业务页面各自覆盖。其他 small 输入控件只有在经过验证的紧凑边界内才使用 `12px`。业务页面和公共组件不得为获得默认密度而重复声明 `font-size: 12px` 或 `font-size: var(--ant-font-size-sm)`，也不得通过局部 `ConfigProvider` 复制全局字号主题。
-- CSS 中的显式字号只用于不能由全局主题表达的视觉语义，并在实现和评审时分为标题或产品骨架、图标尺寸、特殊展示内容三类；页面标题、应用级导航、内容页签、卡片或分区标题等按既有同类样板保留层级，图标字号不得当作正文覆盖清理，品牌文字、数据主值、代码编辑器等特殊展示必须由真实视觉需要驱动。无法归入上述类别的字号声明视为可疑项，应先核对同类页面和最终计算样式，不得直接新增。
-- 新增或修改组件字号时，优先调整全局或对应 Ant Design 组件 token；只有局部语义确实不同且扩大主题影响范围不合理时才使用 CSS。清理重复覆盖后必须核对表单、表格、树、分页、弹层和自定义控件的最终计算字号，并确认标题层级、图标尺寸、行高、截断和垂直居中没有回归。
-- 系统内所有 Ant Design 表格统一由全局 `Table` 主题令牌提供四档行背景：普通行白色、仅悬停行中性灰色、选中行极淡主题色、选中且悬停行稍深主题色。`ListPage`、`RefSelector`、可编辑明细表和业务弹框表格不得各自覆盖这些状态或增加斑马纹；领域状态确需着色时使用业务 `rowClassName`，并确保选择反馈仍可辨识。
+基础色彩、字体、空间与边界统一见[设计基础](../design/foundations.md)；工具栏命令视觉、顺序与表格四档行背景见[桌面设计](../design/desktop.md)。这些规则已迁入设计正文，本节只保留接入契约。实现时先遵守[适配边界](../design/adaptation-boundaries.md)，不为视觉差异修改依赖内部结构。
+
 - 业务表单、命令参数和复杂结果展示弹框默认使用 `AppModal`。
 - 删除、清空、覆盖、提交等需要用户二次确认的操作统一通过 `useOperationConfirm` 调用，并显式选择 `delete`、`destructive`、`warning` 或 `normal` 风险类型。确认弹框由公共组件统一提供可拖动标题栏、风险色圆点、业务插画、`14px` 提示文案和底部按钮区；点击遮罩不得关闭。危险操作不得使用 Enter 确认，业务页面禁止直接使用 `Modal.confirm` 或 `Popconfirm`。
 - 保存、提交、审核、删除、复制等操作结果统一通过 `useOperationFeedback` 展示，顶部反馈正文统一使用 `14px`。反馈分为 `success`、`warning`、`error`、`info`：成功使用绿色，可由用户修正的输入或业务状态问题使用黄色，网络、安全、系统及未知失败使用红色，中性说明使用蓝色。反馈默认自动关闭；只有确需用户持续查看时由调用方设置 `autoClose: false`，此时右侧显示关闭按钮。顶部最多保留三条；业务页面禁止直接调用 Ant Design `message.*`。
 - 错误级别解释、安全失败优先级与反馈所有权遵守[请求错误协议与反馈](../architecture/frontend.md#请求错误协议与反馈)，页面不维护第二套错误码映射。
-- `ListPage`、`EditPage`、`EditPageShell` 和 CUSTOM 页面自定义顶部操作区中的普通命令按钮统一使用 `primary`；删除、清空、强制执行等会造成数据丢失、不可逆变更或明显安全风险的命令使用 `danger`。
-- 顶部操作区从左到右先放影响命令上下文的选择或配置控件，再放新增、保存、提交、执行等主要命令，然后放查看、复制、刷新等辅助命令，最后放删除、清空等危险命令。存在明确业务流程要求时可以调整，但必须保持相关命令相邻并说明原因。
 - 业务弹框中的标准控件以通用编辑页为视觉基准，默认使用下边框控件和稳定列宽；特殊宽度必须由真实布局需要驱动。
-- 未有明确需求时，按钮只显示文字，不添加图标。
 - 表单字段校验由 Ant Design Form 负责；没有明确的外部不可信数据校验需求时，不引入重复校验模型。
-- 页面内容区与工作台边界、独立的同级卡片或块状容器保持 `10px` 间隔；提示与其关联卡片组成一个视觉单元，内部不留间隙，具体见[页面与分区提示](#页面与分区提示)。使用通用壳层时不得重复叠加页面级 padding。
-- 页面头部没有操作、筛选或状态内容时不渲染空占位。
 - CUSTOM 页面中的数据表默认关闭表格内置底部分页，将分页放在所属卡片或区块右上角元信息区。
-- 表格表头上边框由全局样式统一提供；紧邻表格的标题栏或统计栏不再绘制下边框，避免两条分隔线叠加。同一区域还承载空状态或提示信息时，只在紧邻表格的状态下移除重复边框。
 - 固定高度表格建立从容器到 `.ant-table-body` 的完整 flex 高度链，使横向滚动条固定在内容区底部；禁止用固定 `scroll.y` 撑出伪布局。
 - TSX 中禁止 CSS 和内联 `style`；自定义类名以 `sm-` 开头。
 
@@ -166,20 +198,57 @@
 - 同一数组内业务 key 必须唯一，同一内置引用不能重复；重复声明直接报配置错误。业务 key 与内置名称使用不同命名空间，可以同名。
 - 迁移旧调用时，在原业务按钮数组中显式补齐所需内置引用；直接使用 `PermissionActions` 的调用方也应自行声明危险命令的位置。
 
-```tsx
+以下片段假定 `listProps`、`editProps` 已完成查询、权限和生命周期接入，业务 action 和回调由调用方提供；不构成可直接运行的完整页面。展开基础属性在前，显式操作声明在后，避免同名属性覆盖示例意图。
+
+```tsx contract=page-actions
+<>
 <ListPage
+  {...listProps}
   onRefresh={handleRefresh}
   toolbarActions={[registerAction, renewAction, { builtin: 'refresh' }, deleteAction]}
-  {...listProps}
 />
 
 <EditPage
+  {...editProps}
   onSave={handleSave}
   onExit={handleExit}
   headerActions={[{ builtin: 'save' }, previewAction, { builtin: 'exit' }]}
-  {...editProps}
 />
+</>
 ```
+
+### 异步确认与结果反馈
+
+风险确认由调用方提供本次操作的安全对象标识、影响范围和后果，文案与提交参数使用同一份对象快照。批量操作明确总数；摘要未展开全部对象时明确剩余数量，跨页对象无已加载名称时可直接显示其 ID，不用当前页记录数代替命令范围。只做文案格式化可复用 `formatOperationTargets`，确认组件不推断领域字段。不得为说明对象展示真实密码、令牌、密钥、完整缓存值或原始敏感请求正文，隐私边界遵守[数据脱敏](../architecture/data-masking.md)。
+
+`useOperationConfirm` 需要应用级 `OperationConfirmProvider`；反馈使用现有 Ant Design App 上下文，不在每个业务页面重复挂载 Provider。`confirmOperation(options)` 返回 `Promise<boolean>`，成功执行确认回调后为 `true`，取消或已有确认流程占用时为 `false`。回调拒绝时保留弹框、恢复可重试状态，不会立即把外层 Promise 结算为失败；回调返回 `false` 也不表示取消，它仍是一次正常完成。
+
+命令必须在 `onConfirm` 内返回或等待完整 Promise；不要使用 `onConfirm: () => mutation.mutate(...)`，也不要先等待弹框关闭再执行命令，否则等待期间的防关闭、重试和重复提交控制失去命令生命周期。错误提示由领域 Mutation 按既有错误所有权处理，确认组件不自动展示错误；不要在 Mutation、调用方 catch 和反馈 Hook 中重复提示。
+
+下例的 `deleteRecords` 代表已接入领域 Mutation 的异步命令：失败提示由它负责，成功提示仅在这里负责。实际页面若已在 Mutation 中提示成功，应省略这里的重复提示。
+
+```tsx contract=operation-confirm
+import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
+import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
+
+export function useDeleteWithConfirmation(deleteRecords: (ids: string[]) => Promise<void>) {
+  const confirmOperation = useOperationConfirm();
+  const feedback = useOperationFeedback();
+  return (selectedIds: string[]) => {
+    const commandIds = [...selectedIds];
+    return confirmOperation({
+      type: 'delete',
+      description: `确认删除选中的 ${commandIds.length} 条记录？`,
+      onConfirm: async () => {
+        await deleteRecords(commandIds);
+        feedback.success('删除成功');
+      },
+    });
+  };
+}
+```
+
+片段只说明确认时序，不提供通用删除能力；空选择、命令权限、对象范围和刷新后的选择清理按实际页面处理。调用 Hook 必须遵守 React Hook 规则。`feedback.success/warning/error/info/fromError` 不返回消息 key，需要主动关闭或更新同一条提示时传入稳定 `options.key`，再调用 `feedback.close(key)`；错误分类继续复用 `fromError`，不自行映射错误码。
 
 ### 弹框页脚按钮
 

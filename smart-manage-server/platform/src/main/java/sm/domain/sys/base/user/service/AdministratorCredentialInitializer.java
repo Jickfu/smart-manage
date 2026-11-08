@@ -28,7 +28,8 @@ class AdministratorCredentialInitializer implements ApplicationRunner {
         if (administrator == null) { throw new IllegalStateException("缺少 administrator 管理员账号"); }
         // 已初始化时不再生成或读取临时密码文件，重启不能修改既有凭据。
         if (!"".equals(administrator.getPassword())) { return; }
-        AdministratorInitialPasswordFile.PreparedPassword preparedPassword = initialPasswordFile.prepare();
+        AdministratorInitialPasswordFile.PreparedPassword preparedPassword =
+                initialPasswordFile.prepare(passwordPolicyService.minimumGeneratedLength());
         String initialPassword = preparedPassword.password();
         passwordPolicyService.validate(initialPassword, "administrator");
         String encoded = Argon2Helper.encode(initialPassword);

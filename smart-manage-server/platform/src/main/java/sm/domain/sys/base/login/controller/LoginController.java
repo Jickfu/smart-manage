@@ -1,5 +1,6 @@
 package sm.domain.sys.base.login.controller;
 
+import sm.system.security.authorization.PersonalSessionAllowed;
 import cn.dev33.satoken.annotation.SaIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -42,6 +43,7 @@ public class LoginController {
 	}
 
 	@Operation(summary = "当前会话", description = "获取当前登录用户和会话绑定的 CSRF Token")
+	@PersonalSessionAllowed
 	@GetMapping("/sys/base/session")
 	public Result<SessionVO> session() {
 		return Result.success(service.session());
@@ -94,6 +96,7 @@ public class LoginController {
 	}
 
 	@Operation(summary = "用户登出", description = "退出当前登录")
+	@PersonalSessionAllowed
 	@PostMapping("/sys/base/logout")
 	public Result<String> logout() {
 		service.logout();

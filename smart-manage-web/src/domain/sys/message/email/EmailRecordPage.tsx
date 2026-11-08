@@ -67,6 +67,7 @@ const EmailRecordPage = (props: PageComponentProps) => {
   });
   const columns: ColumnsType<EmailRecord> = [
     {
+      ellipsis: true,
       title: '主题',
       dataIndex: 'subject',
       render: (value: string, record) => (
@@ -93,8 +94,9 @@ const EmailRecordPage = (props: PageComponentProps) => {
       ellipsis: true,
       render: (value: string[]) => value.join('; '),
     },
-    { title: '发信账号', dataIndex: 'accountNumber', width: 140 },
+    { ellipsis: true, title: '发信账号', dataIndex: 'accountNumber', width: 140 },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'status',
       width: 120,
@@ -112,8 +114,8 @@ const EmailRecordPage = (props: PageComponentProps) => {
         </Tag>
       ),
     },
-    { title: '尝试', dataIndex: 'attemptCount', width: 80 },
-    { title: '创建时间', dataIndex: 'createTime', width: 180 },
+    { ellipsis: true, title: '尝试', dataIndex: 'attemptCount', width: 80 },
+    { ellipsis: true, title: '创建时间', dataIndex: 'createTime', width: 180 },
   ];
   return (
     <ListPage<EmailRecord>
@@ -140,7 +142,7 @@ const EmailRecordPage = (props: PageComponentProps) => {
             void confirmOperation({
               type: 'normal',
               title: '确认创建新的重发任务？',
-              description: '系统将根据原邮件内容创建一条新的发送任务，是否继续？',
+              description: `原邮件记录 ID：${selected.id}。\n系统将根据原邮件内容创建一条新的发送任务，是否继续？`,
               confirmText: '重新发送',
               onConfirm: () => command.mutateAsync('retry'),
             }),

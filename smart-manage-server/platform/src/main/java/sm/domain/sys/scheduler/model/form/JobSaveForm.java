@@ -14,7 +14,7 @@ import lombok.Data;
 @Schema(description = "任务保存表单")
 public class JobSaveForm {
 
-    @Schema(description = "ID（新增时不传）")
+    @Schema(description = "ID")
     private Long id;
 
     @Schema(description = "乐观锁版本号，修改时必填")

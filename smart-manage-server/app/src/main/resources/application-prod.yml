@@ -14,8 +14,9 @@ server:
 sa-token:
   # 防御性生产覆盖：禁止 Sa-Token 内置监听器把完整会话 token 写入日志。
   is-log: false
+  # 普通登录总有效期 24 小时，连续无操作 12 小时后失效。
   timeout: 86400
-  active-timeout: 18000
+  active-timeout: 43200
   cookie:
     secure: true
 
@@ -97,6 +98,11 @@ jetcache:
       password: ${SMART_MANAGE_REDIS_PASSWORD}
       database: ${SMART_MANAGE_REDIS_DATABASE:1}
       timeout: 1000
+      # JetCache 初始化要求连接池存在可绑定属性，不能依赖空配置的默认值。
+      poolConfig:
+        maxTotal: 20
+        maxIdle: 10
+        minIdle: 2
 
 springdoc:
   api-docs:
@@ -141,6 +147,7 @@ smart-manage:
     http:
       connect-timeout: 3s
       request-timeout: 10s
+      max-response-bytes: 8388608
     cors:
       allowed-origins:
         - ${SMART_MANAGE_CORS_ALLOWED_ORIGIN}

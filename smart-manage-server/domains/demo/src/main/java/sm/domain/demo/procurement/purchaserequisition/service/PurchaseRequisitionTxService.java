@@ -124,7 +124,8 @@ class PurchaseRequisitionTxService {
             attachmentGateway.deleteForAggregate(PurchaseRequisitionResourceRegistration.RESOURCE_TYPE,
                     String.valueOf(id));
         } catch (java.io.IOException exception) {
-            throw new BizException(ResultEnum.PERSISTENCE_ERROR, "采购申请附件删除失败: " + exception.getMessage());
+            // 外部异常原文仅保留在服务端原因链，客户端使用固定安全说明。
+            throw new BizException(ResultEnum.PERSISTENCE_ERROR, "采购申请附件删除失败", exception);
         }
         entryMapper.delete(new LambdaQueryWrapper<PurchaseRequisitionEntryEntity>()
                 .eq(PurchaseRequisitionEntryEntity::getParentId, id));
@@ -170,7 +171,8 @@ class PurchaseRequisitionTxService {
             // 与采购申请写操作加入同一数据库事务；对象键不因 TEMP 提升而移动。
             attachmentGateway.promoteForAggregate(attachmentCommand);
         } catch (java.io.IOException exception) {
-            throw new BizException(ResultEnum.PERSISTENCE_ERROR, "采购申请附件确认失败: " + exception.getMessage());
+            // 外部异常原文仅保留在服务端原因链，客户端使用固定安全说明。
+            throw new BizException(ResultEnum.PERSISTENCE_ERROR, "采购申请附件确认失败", exception);
         }
     }
 }

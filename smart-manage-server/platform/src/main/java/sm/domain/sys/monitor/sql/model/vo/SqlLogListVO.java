@@ -23,7 +23,7 @@ public class SqlLogListVO {
 	@Schema(description = "执行耗时(ms)")
 	private Integer executeDuration;
 
-	@Schema(description = "结果类型")
+	@Schema(description = "SQL 执行结果类型：QUERY、DML、DDL、ERROR")
 	private String resultType;
 
 	@Schema(description = "行数")

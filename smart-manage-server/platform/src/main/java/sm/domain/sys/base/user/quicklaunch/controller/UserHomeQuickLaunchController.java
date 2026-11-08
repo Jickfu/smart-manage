@@ -1,5 +1,6 @@
 package sm.domain.sys.base.user.quicklaunch.controller;
 
+import sm.system.security.authorization.PersonalSessionAllowed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -22,6 +23,7 @@ import java.util.List;
 public class UserHomeQuickLaunchController {
     private final UserHomeQuickLaunchService service;
 
+    @PersonalSessionAllowed
     @PostMapping("/sys/base/user/current/home-quick-launch/list")
     @Operation(summary = "首页快速发起列表")
     public Result<List<QuickLaunchItemVO>> list(@RequestBody @Valid QuickLaunchScopeForm form) {

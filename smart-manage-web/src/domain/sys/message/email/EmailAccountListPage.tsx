@@ -91,6 +91,7 @@ const EmailAccountListPage = (props: PageComponentProps) => {
   });
   const columns: ColumnsType<EmailAccount> = [
     {
+      ellipsis: true,
       title: '编码',
       dataIndex: 'number',
       width: 160,
@@ -104,10 +105,11 @@ const EmailAccountListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name', width: 180 },
-    { title: '发件地址', dataIndex: 'fromAddress' },
-    { title: '安全模式', dataIndex: 'securityMode', width: 110 },
+    { ellipsis: true, title: '名称', dataIndex: 'name', width: 180 },
+    { ellipsis: true, title: '发件地址', dataIndex: 'fromAddress' },
+    { ellipsis: true, title: '安全模式', dataIndex: 'securityMode', width: 110 },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'enabled',
       width: 90,
@@ -116,6 +118,7 @@ const EmailAccountListPage = (props: PageComponentProps) => {
       ),
     },
     {
+      ellipsis: true,
       title: '默认账号',
       dataIndex: 'defaultAccount',
       width: 100,

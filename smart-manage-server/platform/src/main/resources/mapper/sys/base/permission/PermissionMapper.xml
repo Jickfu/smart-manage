@@ -84,7 +84,7 @@
         SELECT DISTINCT a.number
         FROM t_sys_permission a
         INNER JOIN t_sys_role_perms b ON b.permission_id = a.id
-        INNER JOIN t_sys_user_role c ON c.role_id = b.role_id
+        INNER JOIN v_sys_user_effective_role c ON c.role_id = b.role_id
         WHERE c.user_id = #{userId}
           AND c.org_id = #{orgId}
         <if test="prefix != null and prefix != ''">

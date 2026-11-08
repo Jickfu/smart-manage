@@ -36,6 +36,9 @@
         WHERE id = #{id} AND enabled = true AND password_reset = true
           AND credential_generation = #{generation}
     </update>
+    <update id="revokeCredentialsAfterAssignmentRemoval">
+        UPDATE t_sys_user SET credential_generation = credential_generation + 1 WHERE id = #{id}
+    </update>
     <select id="selectSecurityState" resultType="sm.domain.sys.base.user.model.entity.UserEntity" flushCache="true" useCache="false">
         SELECT a.id, a.enabled, a.credential_generation FROM t_sys_user a WHERE a.id = #{id}
     </select>

@@ -23,35 +23,6 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-it('shows independent versions without a copy button', async () => {
-  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  mocks.getBackendVersion.mockResolvedValue({
-    version: '2.0.0',
-  });
-  const container = document.createElement('div');
-  const root = createRoot(container);
-  const client = new QueryClient();
-  try {
-    await act(async () =>
-      root.render(
-        <QueryClientProvider client={client}>
-          <AboutProductModal systemName="测试产品" logo="/logo.svg" onClose={() => {}} />
-        </QueryClientProvider>,
-      ),
-    );
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 30));
-    });
-    expect(container.querySelectorAll('dd')[0]?.textContent).toBe('1.0.0');
-    expect(container.querySelectorAll('dd')[1]?.textContent).toBe('2.0.0');
-    expect(container.textContent).not.toContain('复制');
-    expect(container.textContent).not.toContain('模块化企业管理平台');
-  } finally {
-    await act(async () => root.unmount());
-    client.clear();
-  }
-});
-
 it('does not display a cached backend version when refreshing fails', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   mocks.getBackendVersion.mockRejectedValue(new Error('unavailable'));

@@ -48,7 +48,7 @@
         WHERE a.id = #{id}
     </select>
 
-    <select id="selectUserDomainApps" resultType="sm.domain.sys.base.app.model.vo.DomainAppRowVO">
+    <select id="selectUserDomainApps" resultType="sm.domain.sys.base.app.model.vo.DomainAppRowVO" flushCache="true" useCache="false">
         SELECT DISTINCT b.id AS domain_id, b.name AS domain_name, b.number AS domain_number,
                b.seq AS domain_seq, a.id AS app_id, a.name AS app_name,
                a.number AS app_number, a.icon AS app_icon, a.icon_color AS app_icon_color,
@@ -57,7 +57,7 @@
         LEFT JOIN t_sys_domain b ON b.id = a.domain_id
         INNER JOIN t_sys_menu c ON c.app_id = a.id
         INNER JOIN t_sys_role_perms d ON d.permission_id = c.permission_id
-        INNER JOIN t_sys_user_role e ON e.role_id = d.role_id
+        INNER JOIN v_sys_user_effective_role e ON e.role_id = d.role_id
         WHERE e.user_id = #{userId}
           AND e.org_id = #{orgId}
           AND a.enabled = true
@@ -76,14 +76,14 @@
         ORDER BY a.seq, b.seq, b.id
     </select>
 
-    <select id="selectUserAppByNumber" resultType="sm.domain.sys.base.app.model.vo.AppVO">
+    <select id="selectUserAppByNumber" resultType="sm.domain.sys.base.app.model.vo.AppVO" flushCache="true" useCache="false">
         SELECT DISTINCT a.id, b.number AS domain_number, a.number, a.name, a.icon,
                a.icon_color, a.seq, a.description
         FROM t_sys_app a
         LEFT JOIN t_sys_domain b ON b.id = a.domain_id
         INNER JOIN t_sys_menu c ON c.app_id = a.id
         INNER JOIN t_sys_role_perms d ON d.permission_id = c.permission_id
-        INNER JOIN t_sys_user_role e ON e.role_id = d.role_id
+        INNER JOIN v_sys_user_effective_role e ON e.role_id = d.role_id
         WHERE e.user_id = #{userId}
           AND e.org_id = #{orgId}
           AND a.number = #{appNumber}

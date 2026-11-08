@@ -1,5 +1,6 @@
 package sm.domain.sys.message.inbox.controller;
 
+import sm.system.security.authorization.PersonalSessionAllowed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,6 +18,7 @@ import sm.domain.sys.message.inbox.model.vo.InboxUnreadSummaryVO;
 import sm.domain.sys.message.inbox.service.InboxService;
 import sm.system.response.Result;
 
+@PersonalSessionAllowed
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "个人消息中心", description = "当前登录用户站内消息接口")

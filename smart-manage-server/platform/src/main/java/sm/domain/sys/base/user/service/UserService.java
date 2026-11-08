@@ -83,6 +83,7 @@ public class UserService {
 	@CacheInvalidate(name = BaseCacheName.USER_INFO, key = "#form.id", condition = "#form.id != null")
 	public Long save(UserSaveForm form) {
 		UserEntity previous = form.getId() == null ? null : mapper.selectById(form.getId());
+		UserLifecyclePolicy.checkSave(form, previous);
 		Long userId = previous == null ? IdWorker.getId() : previous.getId();
 		Long temporaryAvatarId = findTemporaryAvatarId(form.getAvatarAttachmentId());
 		Long savedId;
@@ -104,6 +105,7 @@ public class UserService {
 	@CacheInvalidate(name = BaseCacheName.USER_INFO, key = "#id")
 	public void deleteById(Long id) {
 		UserEntity user = mapper.selectById(id);
+		UserLifecyclePolicy.checkTarget(user);
 		txService.deleteById(id);
 		if (user != null) deleteAvatarForCompensation(user.getAvatarAttachmentId());
 		userCacheInvalidator.tryRefreshUsers(List.of(id));
@@ -111,14 +113,23 @@ public class UserService {
 
 	@BizLog("启用用户")
 	public void enable(List<Long> ids) {
+		checkLifecycleTargets(ids);
 		txService.updateEnabled(ids, true);
 		userCacheInvalidator.tryRefreshUsers(ids);
 	}
 
 	@BizLog("禁用用户")
 	public void disable(List<Long> ids) {
+		checkLifecycleTargets(ids);
 		txService.updateEnabled(ids, false);
 		userCacheInvalidator.tryRefreshUsers(ids);
+	}
+
+	/** 批量命令在任何写入之前检查全部目标，混入管理员时整体拒绝。 */
+	private void checkLifecycleTargets(List<Long> ids) {
+		for (UserEntity target : mapper.selectByIds(ids)) {
+			UserLifecyclePolicy.checkTarget(target);
+		}
 	}
 
 	/** 查询用户基础详情和全部任职；角色关系必须通过带组织上下文的独立查询获取。 */
@@ -209,8 +220,8 @@ public class UserService {
 	 */
 	public UserCreateNewDataVO createNewData() {
 		UserCreateNewDataVO vo = new UserCreateNewDataVO();
-		// 未分配组织的用户只能以禁用状态暂存。
-		vo.setEnabled(false);
+		// 普通用户可在无组织的情况下使用个人功能。
+		vo.setEnabled(true);
 		// 可根据业务需要设置默认角色等
 		return vo;
 	}

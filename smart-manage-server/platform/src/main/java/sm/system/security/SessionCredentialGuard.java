@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
+import sm.system.security.context.CurrentUserContext;
 
 /** 在进入业务前校验登录时的凭据代际，旧令牌即使仍在 Redis 中也没有访问权限。 */
 @Component
@@ -12,6 +13,11 @@ import sm.system.response.ResultEnum;
 public class SessionCredentialGuard {
     public static final String GENERATION_CLAIM = "credentialGeneration";
     private final AuthenticatedSessionStateVerifier verifier;
+    private final CurrentUserContext currentUserContext;
+
+    public void requireOrganization() {
+        currentUserContext.getOrgId();
+    }
 
     public void checkCurrent() {
         var session = StpUtil.getStpLogic().getTokenSession(false);

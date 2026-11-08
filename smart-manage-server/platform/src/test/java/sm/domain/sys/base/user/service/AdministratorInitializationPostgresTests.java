@@ -63,8 +63,9 @@ class AdministratorInitializationPostgresTests {
     }
 
     private AdministratorCredentialInitializer initializer(UserMapper mapper, PasswordPolicyService policy, String password) {
+        when(policy.minimumGeneratedLength()).thenReturn(20);
         AdministratorInitialPasswordFile passwordFile = mock(AdministratorInitialPasswordFile.class);
-        when(passwordFile.prepare()).thenReturn(new AdministratorInitialPasswordFile.PreparedPassword(
+        when(passwordFile.prepare(20)).thenReturn(new AdministratorInitialPasswordFile.PreparedPassword(
                 password, Path.of(AdministratorInitialPasswordFile.FILE_NAME).toAbsolutePath()));
         return new AdministratorCredentialInitializer(mapper, policy, passwordFile);
     }

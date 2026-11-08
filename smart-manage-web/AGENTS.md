@@ -2,7 +2,7 @@
 
 本文件适用于桌面管理端 `smart-manage-web`，同时继承根目录 `AGENTS.md`。其中 UI、路由和页签规则不自动适用于其他客户端。
 
-前端架构、技术基线和目录规则以[前端架构](../docs/architecture/frontend.md)为权威来源。普通页面实现、样式和交互修改按需阅读[前端页面指南](../docs/development/frontend-page-guide.md)相关章节。
+前端架构、技术基线和目录规则以[前端架构](../docs/architecture/frontend.md)为权威来源。视觉与适配按[前端设计规范](../docs/design/README.md)及[组件适配边界](../docs/design/adaptation-boundaries.md)执行，普通页面具体实现和交互接入按需阅读[前端页面指南](../docs/development/frontend-page-guide.md)相关章节。设计建议不自动成为生效要求，存量实现状态与规范要求分别核实。
 
 新增或显著扩展业务模块才进入[模块开发指南](../docs/development/module-development-guide.md)，并从[模块样板目录](../docs/development/module-pattern-catalog.md)选择相关维度的参考实现。小范围修复、纯重命名或不改变模块边界的局部调整无需完整模块流程；已加载且未变化的规则无需重复读取。
 

@@ -7,6 +7,7 @@ import lombok.Data;
 @Data
 @Schema(description = "主键 id")
 public class IdForm {
+	@Schema(description = "ID")
 	@NotNull(message = "id 不能为空")
 	private Long id;
 }

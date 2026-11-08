@@ -76,13 +76,3 @@
   align-self: start;
   padding-top: 44px;
 }
-
-@media (max-width: 900px) {
-  .sm-openapi-document {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .sm-openapi-document__anchor {
-    display: none;
-  }
-}

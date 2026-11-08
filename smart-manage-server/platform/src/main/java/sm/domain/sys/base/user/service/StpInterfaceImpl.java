@@ -25,8 +25,8 @@ public class StpInterfaceImpl implements StpInterface {
 			return List.of("*");
 		}
 		long userId = Long.parseLong(String.valueOf(loginId));
-		Long orgId = currentUserContext.getOrgId();
-		return authorizationAccessor.get(userId, orgId).getPermissionNumbers();
+		Long orgId = currentUserContext.getOptionalOrgId();
+		return orgId == null ? List.of() : authorizationAccessor.get(userId, orgId).getPermissionNumbers();
 	}
 
 	@Override
@@ -35,6 +35,7 @@ public class StpInterfaceImpl implements StpInterface {
 			return List.of("administrator");
 		}
 		long userId = Long.parseLong(String.valueOf(loginId));
-		return authorizationAccessor.get(userId, currentUserContext.getOrgId()).getRoleNumbers();
+		Long orgId = currentUserContext.getOptionalOrgId();
+		return orgId == null ? List.of() : authorizationAccessor.get(userId, orgId).getRoleNumbers();
 	}
 }

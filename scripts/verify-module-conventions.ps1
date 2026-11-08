@@ -4,8 +4,8 @@
 
 .DESCRIPTION
 当前检查内容：
-1. 模块开发指南、前端页面指南、模式目录及模块开发 skill 等治理文件必须存在。
-2. 根目录及前后端 AGENTS.md 必须正确路由到模块开发指南，前端 AGENTS.md 还必须路由到前端页面指南。
+1. 统一规范首页、前后端与移动端规范入口、协作导航、模块开发指南、前端页面指南、模式目录及模块开发 skill 等治理文件必须存在。
+2. 根目录及前后端 AGENTS.md 必须正确路由到模块开发指南；根目录、前端 AGENTS.md 和模块 skill 还必须路由到设计规范，前端同时保留页面指南入口；跨端任务入口保留后端、移动端及质量正文引用，移动端保留安全、数据权限和隐私正文引用；模块指南及 skill 保留移动端入口。
 3. 模块开发 skill 必须调用本脚本。
 4. 领域 TSX 文件禁止使用内联 style。
 5. 前端操作反馈必须统一使用 useOperationFeedback。
@@ -15,8 +15,13 @@
 9. 前端 CSS 禁止重复声明全局 12px 默认字号或 fontSizeSM。
 10. AppModal 页脚禁止 Space、Flex、div 包裹按钮，PermissionActions 必须显式关闭分组。
 11. 后端领域聚合、前端领域目录和迁移身份必须一致。
+12. 标准列表叶子列必须显式声明 ellipsis，关闭时必须用中文注释说明业务原因。
+13. ModalEditPage 使用基础名称；带标签普通字段使用标准字段容器与内容类。
+14. 仓库 Markdown 本地链接和章节锚点必须有效。
+15. 生效设计正文使用项目术语，不出现外部参考品牌名称。
 
-页脚检查使用前端 TypeScript 依赖；执行前须在 smart-manage-web 中完成 pnpm install --frozen-lockfile。
+页脚和列表列检查使用前端 TypeScript 依赖，文档链接检查使用前端锁定的 CommonMark/GFM 解析器；
+执行前须在 smart-manage-web 中完成 pnpm install --frozen-lockfile。
 
 本脚本只负责适合源码静态扫描的确定性约束。Java 架构边界由 ArchUnit 测试校验；
 业务状态、数据安全和交互语义仍需通过代码评审及风险驱动测试验证。
@@ -117,6 +122,18 @@ function Assert-NoFileMatch {
 $requiredFiles = @(
     'docs/development/module-development-guide.md',
     'docs/development/frontend-page-guide.md',
+    'docs/design-entry.md',
+    'docs/backend/README.md',
+    'docs/mobile/README.md',
+    'docs/development/collaboration.md',
+    'docs/design/README.md',
+    'docs/design/adaptation-boundaries.md',
+    'docs/design/foundations.md',
+    'docs/design/desktop.md',
+    'docs/design/mobile.md',
+    'docs/design/charts.md',
+    'docs/design/implementation.md',
+    'docs/design/examples.md',
     'docs/development/module-pattern-catalog.md',
     'scripts/verify-domain-assembly.ps1',
     '.agents/skills/smart-manage-module/SKILL.md',
@@ -130,7 +147,35 @@ Assert-FileContains 'AGENTS.md' 'docs/development/module-development-guide\.md' 
 Assert-FileContains 'smart-manage-server/platform/AGENTS.md' 'module-development-guide\.md' 'Backend AGENTS.md does not route to the module development guide'
 Assert-FileContains 'smart-manage-web/AGENTS.md' 'module-development-guide\.md' 'Frontend AGENTS.md does not route to the module development guide'
 Assert-FileContains 'smart-manage-web/AGENTS.md' '\.\./docs/development/frontend-page-guide\.md' 'Frontend AGENTS.md does not route to the frontend page guide (../docs/development/frontend-page-guide.md)'
+Assert-FileContains 'AGENTS.md' 'docs/design/README\.md' 'Root AGENTS.md does not route to the frontend design specification'
+Assert-FileContains 'AGENTS.md' 'docs/design/adaptation-boundaries\.md' 'Root AGENTS.md does not route to the component adaptation boundaries'
+Assert-FileContains 'smart-manage-web/AGENTS.md' '\.\./docs/design/README\.md' 'Frontend AGENTS.md does not route to the frontend design specification'
+Assert-FileContains 'smart-manage-web/AGENTS.md' '\.\./docs/design/adaptation-boundaries\.md' 'Frontend AGENTS.md does not route to the component adaptation boundaries'
+Assert-FileContains '.agents/skills/smart-manage-module/SKILL.md' '\.\./\.\./\.\./docs/design/README\.md' 'Module skill does not route to the frontend design specification'
+Assert-FileContains '.agents/skills/smart-manage-module/SKILL.md' '\.\./\.\./\.\./docs/design/adaptation-boundaries\.md' 'Module skill does not route to the component adaptation boundaries'
 Assert-FileContains '.agents/skills/smart-manage-module/SKILL.md' 'scripts\\verify-module-conventions\.ps1|scripts/verify-module-conventions\.ps1' 'Module skill does not invoke the convention verifier'
+
+# 跨端任务入口必须保留到各自权威正文的引用，文件存在不能替代路由完整性。
+$taskRoutes = @{
+    'AGENTS.md' = @('docs/development/collaboration.md', 'docs/backend/README.md', 'docs/mobile/README.md')
+    'docs/development/collaboration.md' = @('../backend/README.md', '../mobile/README.md', './frontend-page-guide.md', './module-development-guide.md', './verification.md')
+    'docs/mobile/README.md' = @('../design/adaptation-boundaries.md', '../backend/README.md', '../development/verification.md', '../architecture/security.md', '../architecture/data-permission.md', '../architecture/data-masking.md')
+    'docs/backend/README.md' = @('../architecture/backend.md', '../development/module-development-guide.md', '../development/verification.md')
+    'docs/development/module-development-guide.md' = @('../mobile/README.md', '../architecture/feature-and-permission.md', './verification.md')
+    '.agents/skills/smart-manage-module/SKILL.md' = @('../../../docs/mobile/README.md', '../../../docs/development/verification.md')
+}
+foreach ($routeSource in $taskRoutes.Keys) {
+    foreach ($routeTarget in $taskRoutes[$routeSource]) {
+        Assert-FileContains $routeSource ([regex]::Escape($routeTarget)) "Required documentation route is missing: $routeSource -> $routeTarget"
+    }
+}
+
+# 来源与历史留在提案目录，生效设计正文使用项目自己的术语。
+Assert-NoFileMatch `
+    -RelativeDirectory 'docs/design' `
+    -Filter '*.md' `
+    -Pattern 'kdesign' `
+    -Message 'Frontend design documents must use project terminology'
 
 # 当前源码树就是默认完整装配，前后端领域及迁移身份必须同步。
 $global:LASTEXITCODE = 0
@@ -179,6 +224,25 @@ $footerVerifier = Resolve-RepositoryPath 'smart-manage-web/scripts/modal-footer-
 & node $footerVerifier $frontendSourceRoot
 if ($LASTEXITCODE -ne 0) {
     Add-Violation 'AppModal footer convention verification failed; install frontend dependencies and fix the reported footer violations'
+}
+
+# 列表截断由列声明负责；检查规范，不为运行时表格强制行高或增加隐式默认值。
+$listColumnVerifier = Resolve-RepositoryPath 'smart-manage-web/scripts/list-column-conventions.mjs'
+& node $listColumnVerifier $frontendSourceRoot
+if ($LASTEXITCODE -ne 0) {
+    Add-Violation 'List column ellipsis convention verification failed; explicitly declare ellipsis and explain business exceptions'
+}
+
+# 页面模板和文档链接复用同一检查入口，避免 CI 与本地规则漂移。
+$pageVerifier = Resolve-RepositoryPath 'smart-manage-web/scripts/page-conventions.mjs'
+& node $pageVerifier (Join-Path $frontendSourceRoot 'domain')
+if ($LASTEXITCODE -ne 0) {
+    Add-Violation 'Page template convention verification failed; fix modal titles and ordinary field layouts'
+}
+$documentVerifier = Resolve-RepositoryPath 'scripts/verify-doc-links.mjs'
+& node $documentVerifier $resolvedRoot
+if ($LASTEXITCODE -ne 0) {
+    Add-Violation 'Documentation local link/anchor verification failed'
 }
 
 # Controller 权限声明必须引用模块权限常量，禁止散落权限编码字面量。
@@ -231,4 +295,4 @@ if ($violations.Count -gt 0) {
     exit 1
 }
 
-Write-Host "Module convention verification passed for domain assembly, governance routing (including the frontend page guide), $($registrationFiles.Count) page registration file(s), frontend operation interactions, AppModal footers, typography, inline styles, and backend permission constants." -ForegroundColor Green
+Write-Host "Module convention verification passed for domain assembly, governance routing (including shared, frontend, backend and mobile documentation routes), design terminology, $($registrationFiles.Count) page registration file(s), frontend operation interactions, AppModal footers, page templates, documentation links, list column ellipsis, typography, inline styles, and backend permission constants." -ForegroundColor Green

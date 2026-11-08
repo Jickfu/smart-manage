@@ -49,7 +49,7 @@ class TemporaryLoginServiceTests {
 
     @Test
     void usernameMismatchStillConsumesGrantAndCannotCreateSession() {
-        TemporaryLoginGrant grant = new TemporaryLoginGrant("grant", 1L, 9L, "target",
+        TemporaryLoginGrant grant = new TemporaryLoginGrant("grant", 1L, 9L, "target", 3L,
                 "排障", LocalDateTime.now().plusMinutes(5));
         when(loginRedisAccessor.getAndDelete(startsWith("sys:base:temporary-login:"))).thenReturn("grant-json");
         when(cacheJsonCodec.read("grant-json", TemporaryLoginGrant.class)).thenReturn(grant);

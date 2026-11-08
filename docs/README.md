@@ -1,6 +1,6 @@
 # Smart Manage 文档
 
-本文档集按架构、开发操作、领域语义和提案分区。相同内容只保留一个权威来源，其他位置使用链接引用。
+本文档集按架构、设计、开发操作、领域语义和提案分区。相同内容只保留一个权威来源，其他位置使用链接引用。
 架构总览可以保留稳定结论的简短摘要，检查清单可以将权威规则转换为验收项；摘要和清单必须链接权威文档，不得独立扩展或改写规则。
 
 ## 按任务阅读
@@ -13,7 +13,9 @@
 | --- | --- | --- |
 | 理解项目整体设计 | [架构总览](./architecture/overview.md) | 对应的前端、后端、安全或部署架构 |
 | 修改普通后端代码 | [后端架构](./architecture/backend.md)、[质量验证](./development/verification.md) | 对应领域模块文档 |
-| 修改桌面管理端页面或交互 | [前端架构](./architecture/frontend.md)、[前端页面指南](./development/frontend-page-guide.md)、[质量验证](./development/verification.md) | [页面注册约定](./architecture/page-registration-convention.md)、[模块样板目录](./development/module-pattern-catalog.md) |
+| 修改桌面管理端页面或交互 | [前端架构](./architecture/frontend.md)、[前端设计规范](./design/README.md)、[前端页面指南](./development/frontend-page-guide.md)、[质量验证](./development/verification.md) | [页面注册约定](./architecture/page-registration-convention.md)、[模块样板目录](./development/module-pattern-catalog.md) |
+| 设计前端、调整视觉或组件适配 | [前端设计规范](./design/README.md)、[组件适配与升级边界](./design/adaptation-boundaries.md) | 按端阅读设计章节；未采纳试样不作新硬要求 |
+| 手机浏览器、小程序的规划与接入 | [移动端规范](./mobile/README.md)、[质量验证](./development/verification.md#移动端验证边界) | 按实际接口补读后端、安全、对象范围和隐私契约；不套用桌面页面注册与组件契约 |
 | 新增或显著扩展业务模块 | [模块开发指南](./development/module-development-guide.md)、[模块样板目录](./development/module-pattern-catalog.md)、对应领域文档 | 新聚合再使用[业务聚合检查清单](./development/business-aggregate-checklist.md) |
 | 认证、权限或高风险能力 | [安全架构](./architecture/security.md) | [登录保护](./architecture/login-protection.md)、[功能与权限](./architecture/feature-and-permission.md)、[数据权限](./architecture/data-permission.md)、[数据脱敏](./architecture/data-masking.md) |
 | 数据库或迁移 | [数据库开发](./development/database.md)、[质量验证](./development/verification.md) | 日志分区再阅读[日志数据生命周期](./architecture/log-lifecycle.md) |
@@ -45,6 +47,22 @@
 `architecture/` 只描述当前已经生效的设计和边界，不记录实施计划或历史进度。
 
 ## 开发规范
+
+- [统一规范浏览首页](./design-entry.md)
+- [后端规范](./backend/README.md)
+- [移动端规范](./mobile/README.md)
+- [协作与质量](./development/collaboration.md)
+
+### 前端设计
+
+- [前端设计规范](./design/README.md)
+- [组件适配与升级边界](./design/adaptation-boundaries.md)
+- [设计基础](./design/foundations.md)、[桌面设计](./design/desktop.md)
+- [移动端规范](./mobile/README.md)、[图表规范](./design/charts.md)
+- [开发与验收入口](./design/implementation.md)、[页面示例](./design/examples.md)、[图表示例](./design/chart-examples.md)
+- [独立浏览入口与维护](./development/design-docs-site.md)
+
+`design/` 维护前端设计契约与通用示例；移动端正文归 `mobile/`。未采纳的设计选择集中于设计提案，不在架构、指南和 AGENTS 中复制。
 
 ### 环境与质量
 
@@ -86,7 +104,7 @@
 - [系统参数](./platform/base/system-parameter.md)
 - [界面配置](./platform/base/ui-config.md)
 - [用户管理](./platform/base/user.md)
-- [弱口令管理与固定密码策略](./platform/base/weak-password.md)
+- [弱口令管理与密码策略](./platform/base/weak-password.md)
 
 监控应用（monitor）：
 
@@ -102,6 +120,7 @@
 调度应用（scheduler）：
 
 - [任务调度](./platform/scheduler/job.md)
+- [集群单例常驻任务与接入](./platform/scheduler/singleton.md)
 
 消息应用（message）：
 
@@ -114,7 +133,7 @@
 
 - [采购申请](../smart-manage-server/domains/demo/docs/procurement/purchase-requisition.md)
 
-桌面管理端的技术基线、页面形态和页签规则只适用于 `smart-manage-web`；其他客户端在实现时另行明确适用规范，不把选型讨论写成当前架构。
+桌面管理端的技术基线、页面形态和页签规则只适用于 `smart-manage-web`；手机浏览器和小程序遵循[移动端规范](./mobile/README.md)，具体运行方案按客户端明确，不把选型讨论写成当前架构。
 
 模块文档不要求与运行时 Feature 一一对应。新增或修改领域文档时，应按上述边界审查，避免复制由代码、迁移或配置维护的易变清单。
 
@@ -122,6 +141,7 @@
 
 - [项目路线图](./roadmap.md)
 
-`roadmap.md` 只记录已批准但尚未完成的项目级事项。`proposals/` 保留方案背景与后续设想，不作为生效规则；已采纳约束以对应架构和领域文档为准。
+`roadmap.md` 只记录已批准但尚未完成的项目级事项。`proposals/` 保留方案背景与后续设想，不作为生效规则；已采纳约束以对应架构、设计、开发和领域文档为准。
 
 - [Excel 导入导出方案背景与后续边界](./proposals/excel-import-export.md)
+- [待议设计建议](./proposals/frontend-design-spec/README.md)

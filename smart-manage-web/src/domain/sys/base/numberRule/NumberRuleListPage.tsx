@@ -10,6 +10,7 @@ import ListPage from '@/domain/common/page/list/ListPage';
 import ListTree from '@/domain/common/page/list/ListTree';
 import ListTreePanel from '@/domain/common/page/list/ListTreePanel';
 import { useListPageQuery } from '@/domain/common/page/list/useListPageQuery';
+import { formatOperationTargets } from '@/domain/common/component/formatOperationTargets';
 import { useListSelection } from '@/domain/common/page/list/useListSelection';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { useEnabledMutation } from '@/domain/common/page/command/useEnabledMutation';
@@ -150,6 +151,7 @@ const NumberRuleListPage = (props: PageComponentProps) => {
   });
   const columns: ColumnsType<NumberRuleVO> = [
     {
+      ellipsis: true,
       title: '规则键',
       dataIndex: 'ruleKey',
       width: 260,
@@ -170,18 +172,20 @@ const NumberRuleListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name', width: 150 },
-    { title: '功能', dataIndex: 'featureName', width: 150 },
-    { title: '编号格式', dataIndex: 'pattern' },
-    { title: '作用域', dataIndex: 'scopeType', width: 90 },
-    { title: '引用数', dataIndex: 'usageCount', width: 80 },
+    { ellipsis: true, title: '名称', dataIndex: 'name', width: 150 },
+    { ellipsis: true, title: '功能', dataIndex: 'featureName', width: 150 },
+    { ellipsis: true, title: '编号格式', dataIndex: 'pattern' },
+    { ellipsis: true, title: '作用域', dataIndex: 'scopeType', width: 90 },
+    { ellipsis: true, title: '引用数', dataIndex: 'usageCount', width: 80 },
     {
+      ellipsis: true,
       title: '默认规则',
       dataIndex: 'defaultRule',
       width: 90,
       render: (value) => (value ? <Tag color="blue">默认</Tag> : '-'),
     },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'enabled',
       width: 80,
@@ -220,15 +224,21 @@ const NumberRuleListPage = (props: PageComponentProps) => {
       }
       onAddNew={() => openAddNewTab(props.appNumber, componentKeys.numberRuleEdit)}
       onEnable={() => enabledMutation.mutate({ ids: selectedIds, enabled: true })}
-      onDisable={() =>
+      onDisable={() => {
+        const commandIds = [...selectedIds];
+        if (commandIds.length === 0) return;
+        const targets = commandIds.map((id) => {
+          const record = records.find((item) => item.id === id);
+          return record ? `${record.ruleKey} — ${record.name}` : `ID ${id}`;
+        });
         void confirmOperation({
           type: 'warning',
           title: '确认停用所选编号规则？',
-          description: '正在使用的规则会被后端拒绝停用，请先切换对应业务引用。',
+          description: `${formatOperationTargets(targets)}\n正在使用的规则会被后端拒绝停用，请先切换对应业务引用。`,
           confirmText: '停用',
-          onConfirm: () => enabledMutation.mutateAsync({ ids: selectedIds, enabled: false }),
-        })
-      }
+          onConfirm: () => enabledMutation.mutateAsync({ ids: commandIds, enabled: false }),
+        });
+      }}
       enabledCommandLoading={enabledMutation.isPending}
       toolbarActions={[
         { builtin: 'add' },

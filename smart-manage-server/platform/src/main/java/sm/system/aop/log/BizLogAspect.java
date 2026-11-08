@@ -10,8 +10,9 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import sm.system.security.context.CurrentOperatorProvider;
-import sm.system.util.ServletUtil;
 import sm.system.util.TraceIdUtil;
 import sm.system.web.ClientIpResolver;
 import tools.jackson.core.JacksonException;
@@ -50,14 +51,17 @@ public class BizLogAspect {
         String userAgent = null;
         String requestUri = null;
         String requestMethod = null;
-        try {
-            var req = ServletUtil.getRequest();
-            ip = clientIpResolver.resolve(req);
-            userAgent = req.getHeader("User-Agent");
-            requestUri = req.getRequestURI();
-            requestMethod = req.getMethod();
-        } catch (Exception e) {
-            log.warn("获取请求元数据失败", e);
+        // 定时任务等非 Web 调用是正常入口，仅在真实 Servlet 请求上下文中读取 HTTP 元数据。
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
+            try {
+                var request = attributes.getRequest();
+                ip = clientIpResolver.resolve(request);
+                userAgent = request.getHeader("User-Agent");
+                requestUri = request.getRequestURI();
+                requestMethod = request.getMethod();
+            } catch (Exception exception) {
+                log.warn("获取请求元数据失败", exception);
+            }
         }
 
         Long userId = currentOperatorProvider.getCurrentUserIdOrNull();

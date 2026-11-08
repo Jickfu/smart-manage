@@ -106,6 +106,10 @@ class LoginProtectionService {
         // IP 维度反映来源整体风险，登录成功后仍按窗口自然过期。
     }
 
+    public void assertLoginAllowed(String accountIdentity, String clientIp) {
+        assertNotBlocked(identity(accountIdentity, clientIp));
+    }
+
     private void assertNotBlocked(IdentityKeys identity) {
         if (Boolean.TRUE.equals(redisTemplate.hasKey(pairBlockKey(identity)))) {
             throw new BizException(ResultEnum.REQUEST_LIMIT, "当前账号和网络登录失败次数过多");

@@ -106,6 +106,7 @@ export type EditField = EditFieldBase &
 
 interface EditPageProps {
   title: string;
+  notice?: import('@/domain/common/component/PageNotice').PageNoticeConfig;
   /** 页面正文卡片完全由调用方声明，EditPage 只负责统一壳层、Form 与折叠布局。 */
   sections: EditPageSection[];
   /** 从服务端数据稳定派生的初始值；引用变化代表新快照，不得内联构造等价对象。 */
@@ -157,6 +158,7 @@ const EditPage = ({
   sidePanel,
   sidePanelLabel,
   title,
+  notice,
   sections,
   initialValues,
   editable: domainEditable = true,
@@ -301,6 +303,7 @@ const EditPage = ({
       sidePanel={sidePanel}
       sidePanelLabel={sidePanelLabel}
       title={title}
+      notice={notice}
       loading={loading}
       error={error}
       onRetry={onRetry}
@@ -361,6 +364,7 @@ const EditPage = ({
             items={sections.map((section) => ({
               key: section.key,
               label: section.label,
+              notice: section.notice,
               children: section.content(fieldsEditable),
               extra: (expanded: boolean) =>
                 expanded ? section.extra?.(fieldsEditable) : undefined,

@@ -5,7 +5,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ModalEditPage from '@/domain/common/page/edit/ModalEditPage';
 import type { EditField } from '@/domain/common/page/edit/EditPage';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
+import { usePermissionAccess } from '@/domain/common/page/access/usePermissionAccess';
 import { featureApi } from './api';
+import { FeatureDataObjectTable } from './FeatureDataObjectTable';
 import { featureAccess } from './permissions';
 import { featureQueryKeys } from './queryKeys';
 
@@ -18,11 +20,19 @@ interface Props {
 const FeatureEditPage = ({ open, featureId, onClose }: Props) => {
   const feedback = useOperationFeedback();
   const queryClient = useQueryClient();
+  const { can, loading: permissionLoading } = usePermissionAccess(featureAccess.prefix);
+  const canReadDataObjects = can(featureAccess.permissions.dataObjects);
   const query = useQuery({
     meta: { errorPresentation: 'local-initial' },
     queryKey: featureQueryKeys.detail(featureId),
     queryFn: () => featureApi.detail(featureId!),
     enabled: Boolean(open && featureId),
+  });
+  const dataObjectQuery = useQuery({
+    meta: { errorPresentation: 'local-initial' },
+    queryKey: featureQueryKeys.dataObjects(featureId),
+    queryFn: () => featureApi.dataObjects(featureId!),
+    enabled: Boolean(open && featureId && canReadDataObjects),
   });
   const initialValues = useMemo(() => (query.data ? { ...query.data } : undefined), [query.data]);
   const fields = useMemo<EditField[]>(
@@ -46,8 +56,19 @@ const FeatureEditPage = ({ open, featureId, onClose }: Props) => {
       },
       { label: '目录可见', dataIndex: 'visible', type: 'switch' },
       { label: '描述', dataIndex: 'description', type: 'textarea', fullWidth: true },
+      ...(canReadDataObjects
+        ? [
+            {
+              label: '关联数据对象',
+              dataIndex: 'dataObjects',
+              type: 'custom' as const,
+              fullWidth: true,
+              content: <FeatureDataObjectTable entries={dataObjectQuery.data ?? []} />,
+            },
+          ]
+        : []),
     ],
-    [],
+    [canReadDataObjects, dataObjectQuery.data],
   );
   const saveMutation = useCommandMutation({
     mutationFn: async (values: Record<string, unknown>) => {
@@ -74,9 +95,14 @@ const FeatureEditPage = ({ open, featureId, onClose }: Props) => {
       initialValues={initialValues}
       onSave={saveMutation.mutateAsync}
       saving={saveMutation.isPending}
-      loading={query.isLoading}
-      error={getBlockingQueryError(query) as Error | null}
-      onRetry={() => query.refetch()}
+      error={
+        (getBlockingQueryError(query) ?? getBlockingQueryError(dataObjectQuery)) as Error | null
+      }
+      onRetry={() =>
+        Promise.all([query.refetch(), ...(canReadDataObjects ? [dataObjectQuery.refetch()] : [])])
+      }
+      loading={query.isLoading || permissionLoading || dataObjectQuery.isLoading}
+      width={900}
       access={featureAccess}
     />
   );

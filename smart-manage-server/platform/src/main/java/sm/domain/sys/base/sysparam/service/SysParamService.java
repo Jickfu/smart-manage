@@ -2,6 +2,7 @@ package sm.domain.sys.base.sysparam.service;
 
 import com.alicp.jetcache.anno.CacheInvalidate;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import sm.domain.sys.base.sysparam.model.vo.SysParamCreateNewDataVO;
 import sm.domain.sys.base.sysparam.model.vo.SysParamVO;
 import sm.domain.sys.base.sysparam.model.vo.SysParamDetailVO;
 import sm.domain.sys.base.sysparam.model.entity.SysParamEntity;
+import sm.domain.sys.base.sysparam.model.RegistrationPolicy;
 import sm.domain.sys.base.feature.service.FeatureReferenceService;
 import sm.domain.sys.base.feature.model.entity.FeatureEntity;
 import sm.domain.sys.base.common.model.vo.ReferenceVO;
@@ -42,6 +44,7 @@ public class SysParamService {
             "isSystem", ListSqlQuery.bool("a.is_system", false));
     private final SysParamMapper mapper;
     private final SysParamTxService txService;
+    private final RegistrationPolicyAdminService registrationPolicyAdminService;
     private final SysParamCacheAccessor cacheAccessor;
     private final FeatureReferenceService featureReferenceService;
 
@@ -87,6 +90,12 @@ public class SysParamService {
     @CacheInvalidate(name = BaseCacheName.SYS_PARAM,
             key = "T(sm.domain.sys.base.common.constant.BaseCacheName).ALL_KEY")
     public Long save(SysParamSaveForm form) {
+        if (form.getId() != null) {
+            SysParamEntity existing = mapper.selectById(form.getId());
+            if (existing != null && RegistrationPolicy.PARAMETER.equals(existing.getNumber())) {
+                return registrationPolicyAdminService.save(form);
+            }
+        }
         return txService.save(form);
     }
 
@@ -99,6 +108,14 @@ public class SysParamService {
     }
 
     // ==================== 消费端（带缓存） ====================
+
+    /** 注册开关和归属使用数据库当前值，关闭后拒绝新提交。 */
+    public RegistrationPolicy getRegistrationPolicy() {
+        SysParamEntity entity = mapper.selectOne(new LambdaQueryWrapper<SysParamEntity>()
+                .eq(SysParamEntity::getNumber, RegistrationPolicy.PARAMETER)
+                .eq(SysParamEntity::getIsSystem, true));
+        return RegistrationPolicy.parse(entity == null ? "DISABLED" : entity.getValue());
+    }
 
     /** 获取字符串值 */
     public String getString(String number) {

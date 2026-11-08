@@ -16,7 +16,7 @@ import sm.domain.sys.base.menu.model.enums.MenuTargetTypeEnum;
 @Data
 @Schema(description = "菜单保存")
 public class MenuSaveForm {
-	@Schema(description = "id，为空则新增")
+	@Schema(description = "ID")
 	private Long id;
 
 	@Schema(description = "乐观锁版本，编辑时必填")

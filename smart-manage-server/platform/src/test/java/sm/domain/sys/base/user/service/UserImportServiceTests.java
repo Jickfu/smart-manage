@@ -113,7 +113,10 @@ class UserImportServiceTests {
         when(orgReferenceReader.findAll()).thenReturn(List.of());
         when(validator.validate(any())).thenReturn(Set.of());
         UserImportService service = new UserImportService(excelWorkbookService, userMapper, orgReferenceReader,
-                importTxService, fileArtifactService, validator, userCacheInvalidator);
+                importTxService, fileArtifactService, validator,
+                new sm.domain.sys.base.weakpassword.service.PasswordPolicyService(
+                    mock(sm.domain.sys.base.weakpassword.mapper.WeakPasswordMapper.class),
+                    sm.domain.sys.base.passwordconfig.service.PasswordPolicyFixtures.defaults()), userCacheInvalidator);
         return new Fixture(service, userMapper, importTxService, fileArtifactService, userCacheInvalidator);
     }
 

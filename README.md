@@ -138,6 +138,8 @@ pnpm build
 
 - [文档总览](./docs/README.md)
 - [架构概览](./docs/architecture/overview.md)
+- [前端设计规范](./docs/design/README.md)
+- [设计规范浏览入口](./tools/design-docs/README.md)
 - [模块开发指南](./docs/development/module-development-guide.md)
 - [开发与贡献](./CONTRIBUTING.md)
 - [项目路线图](./docs/roadmap.md)

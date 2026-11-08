@@ -15,6 +15,7 @@ public class TemporaryLoginGrant {
     private Long issuerUserId;
     private Long targetUserId;
     private String targetUsername;
+    private Long targetCredentialGeneration;
     private String reason;
     private LocalDateTime expiresAt;
 }

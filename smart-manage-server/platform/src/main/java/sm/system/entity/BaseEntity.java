@@ -8,17 +8,18 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
+ * 审计基类持久化实体。
  * @author Chekfu
  */
 @Data
 public class BaseEntity implements Serializable {
 
-	/*
+	/**
 	 * 创建时间
 	 */
 	@TableField(fill = FieldFill.INSERT)
 	private LocalDateTime createTime;
-	/*
+	/**
 	 * 更新时间
 	 */
 	@TableField(fill = FieldFill.UPDATE)

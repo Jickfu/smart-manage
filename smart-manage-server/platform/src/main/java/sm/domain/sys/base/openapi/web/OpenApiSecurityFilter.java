@@ -109,7 +109,7 @@ public class OpenApiSecurityFilter extends OncePerRequestFilter {
             requestBytes = envelopeBytes.length;
             material = accessService.authenticate(keyId, clientIp);
             signatureVerifier.verify(envelopeBytes, request.getMethod(), path, query, contentType,
-                    keyId, created, nonce,
+                    keyId, created, nonce, requestId,
                     request.getHeader("Content-Digest"), request.getHeader("Signature-Input"),
                     request.getHeader("Signature"), material.signingSecret());
             nonceService.consume(keyId, nonce);

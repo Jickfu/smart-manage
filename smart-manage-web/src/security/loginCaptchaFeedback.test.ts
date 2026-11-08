@@ -6,6 +6,10 @@ import { sm2 } from 'sm-crypto';
 const html = readFileSync('login.html', 'utf8');
 const script = html.match(/<script>([\s\S]*?)<\/script>/)![1]!;
 const fetchMock = vi.fn();
+const policyResponse = {
+  ok: true,
+  json: async () => ({ code: 0, data: { minLength: 15, maxLength: 64, complexityEnabled: false } }),
+};
 const runtime = window as unknown as {
   captchaChallenge: Record<string, unknown> | null;
   captchaLoading: boolean;
@@ -71,12 +75,14 @@ it.each(['submitLogin', 'changePassword', 'resetPasswordByEmail'] as const)(
         json: async () =>
           url.endsWith('/password/publicKey')
             ? { code: 0, data: keyPair.publicKey }
-            : { code: 1, msg: '测试响应' },
+            : url.endsWith('/password/policy')
+              ? await policyResponse.json()
+              : { code: 1, msg: '测试响应' },
       }));
       runtime.passwordChangeTicket = 'test-ticket';
       await runtime[entry]('test-ticket');
       await vi.advanceTimersByTimeAsync(0);
-      const request = fetchMock.mock.calls.find(([url]) => !url.endsWith('/password/publicKey'));
+      const request = fetchMock.mock.calls.find(([, options]) => options?.method === 'POST');
       expect(request).toBeDefined();
       const payload = JSON.parse(request![1].body);
       expect(sm2.doDecrypt(payload.password ?? payload.newPassword, keyPair.privateKey, 1)).toBe(
@@ -98,18 +104,87 @@ it.each(['submitLogin', 'changePassword', 'resetPasswordByEmail'] as const)(
       null,
     ]) {
       fetchMock.mockClear();
-      fetchMock.mockImplementation(async () => {
+      fetchMock.mockImplementation(async (url: string) => {
+        if (url.endsWith('/password/policy')) return policyResponse;
         if (!response) throw new Error('test-only network failure');
         return response;
       });
       await runtime[entry]('test-ticket');
       await vi.advanceTimersByTimeAsync(0);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(fetchMock.mock.calls[0]?.[0]).toContain('/password/publicKey');
+      const keyRequests = fetchMock.mock.calls.filter(([url]) =>
+        url.endsWith('/password/publicKey'),
+      );
+      expect(keyRequests).toHaveLength(1);
+      expect(fetchMock.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
       expect(element('errorMsgText').textContent).toBe('获取密码加密公钥失败，请稍后重试');
       for (const id of ['loginBtn', 'changePasswordBtn', 'resetPasswordByEmailBtn']) {
         expect(element<HTMLButtonElement>(id).disabled).toBe(false);
       }
+    }
+  },
+);
+
+it.each(['changePassword', 'resetPasswordByEmail'] as const)(
+  '%s 在策略慢请求期间立即阻止重复提交',
+  async (entry) => {
+    preparePasswordForms();
+    fetchMock.mockClear();
+    let resolvePolicy!: (response: typeof policyResponse) => void;
+    const keyPair = sm2.generateKeyPairHex();
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.endsWith('/password/policy'))
+        return new Promise<typeof policyResponse>((resolve) => {
+          resolvePolicy = resolve;
+        });
+      return {
+        ok: true,
+        json: async () =>
+          url.endsWith('/password/publicKey')
+            ? { code: 0, data: keyPair.publicKey }
+            : { code: 1, msg: '测试响应' },
+      };
+    });
+    const firstSubmit = runtime[entry]();
+    const buttonId = entry === 'changePassword' ? 'changePasswordBtn' : 'resetPasswordByEmailBtn';
+    expect(element<HTMLButtonElement>(buttonId).disabled).toBe(true);
+    const secondSubmit = runtime[entry]();
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/password/policy'))).toHaveLength(
+      1,
+    );
+    resolvePolicy(policyResponse);
+    await Promise.all([firstSubmit, secondSubmit]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(
+      fetchMock.mock.calls.filter(([, options]) => options?.method === 'POST').map(([url]) => url),
+    ).toEqual([
+      expect.stringContaining(
+        entry === 'changePassword' ? '/login/change-password' : '/password/email/reset',
+      ),
+    ]);
+    expect(element<HTMLButtonElement>(buttonId).disabled).toBe(false);
+  },
+);
+
+it.each(['changePassword', 'resetPasswordByEmail'] as const)(
+  '%s 策略加载失败或本地校验失败后恢复按钮且不提交密码',
+  async (entry) => {
+    preparePasswordForms();
+    const buttonId = entry === 'changePassword' ? 'changePasswordBtn' : 'resetPasswordByEmailBtn';
+    for (const response of [
+      { ok: false, json: async () => ({}) },
+      {
+        ok: true,
+        json: async () => ({
+          code: 0,
+          data: { minLength: 64, maxLength: 64, complexityEnabled: true },
+        }),
+      },
+    ]) {
+      fetchMock.mockClear();
+      fetchMock.mockResolvedValue(response);
+      await runtime[entry]();
+      expect(element<HTMLButtonElement>(buttonId).disabled).toBe(false);
+      expect(fetchMock.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
     }
   },
 );

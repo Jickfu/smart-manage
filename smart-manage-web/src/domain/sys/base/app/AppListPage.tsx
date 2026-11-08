@@ -114,6 +114,7 @@ const AppListPage = (props: PageComponentProps) => {
 
   const columns: ColumnsType<AppListVO> = [
     {
+      ellipsis: true,
       title: '编码',
       dataIndex: 'number',
       width: 150,
@@ -123,17 +124,18 @@ const AppListPage = (props: PageComponentProps) => {
         </Button>
       ),
     },
-    { title: '名称', dataIndex: 'name', width: 200 },
-    { title: '所属领域', dataIndex: 'domainName', width: 120 },
-    { title: '排序', dataIndex: 'seq', width: 80 },
+    { ellipsis: true, title: '名称', dataIndex: 'name', width: 200 },
+    { ellipsis: true, title: '所属领域', dataIndex: 'domainName', width: 120 },
+    { ellipsis: true, title: '排序', dataIndex: 'seq', width: 80 },
     {
+      ellipsis: true,
       title: '状态',
       dataIndex: 'enabled',
       width: 80,
       render: (value) => (value ? <Tag color="green">启用</Tag> : <Tag color="default">停用</Tag>),
     },
     { title: '描述', dataIndex: 'description', ellipsis: true },
-    { title: '创建时间', dataIndex: 'createTime', width: 180 },
+    { ellipsis: true, title: '创建时间', dataIndex: 'createTime', width: 180 },
   ];
 
   const treePanel = (

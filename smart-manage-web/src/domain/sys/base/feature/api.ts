@@ -1,6 +1,6 @@
 import request from '@/api/request';
 import type { PageData, Result } from '@/types/api';
-import type { FeatureListForm, FeatureSaveForm, FeatureVO } from './types';
+import type { FeatureDataObject, FeatureListForm, FeatureSaveForm, FeatureVO } from './types';
 
 export const featureApi = {
   listPage: (form: FeatureListForm) =>
@@ -14,6 +14,10 @@ export const featureApi = {
   detail: (id: string) =>
     request
       .post<Result<FeatureVO>>('/sys/base/feature/detail', { id })
+      .then((response) => response.data.data),
+  dataObjects: (id: string) =>
+    request
+      .post<Result<FeatureDataObject[]>>('/sys/base/feature/data-object/list', { id })
       .then((response) => response.data.data),
   save: (form: FeatureSaveForm) =>
     request
