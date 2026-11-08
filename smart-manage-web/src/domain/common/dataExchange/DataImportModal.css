@@ -111,13 +111,3 @@
 .sm-data-import-notice {
   margin-top: 16px;
 }
-
-@media (max-width: 900px) {
-  .sm-data-import-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sm-data-import-section {
-    min-height: auto;
-  }
-}

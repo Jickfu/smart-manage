@@ -68,46 +68,48 @@ const MainLayout = () => {
   const consumeStartupEntry = useCallback(() => setPendingEntryNumber(undefined), []);
 
   return (
-    <Layout className="sm-layout">
-      <Header />
-      <Content className="sm-layout-content">
-        <ol className="sm-views">
-          {/* 首页 */}
-          <PersistentView appKey="home">{renderLazyPage(<Home />)}</PersistentView>
+    <div className="sm-desktop-scroll">
+      <Layout className="sm-layout">
+        <Header />
+        <Content className="sm-layout-content">
+          <ol className="sm-views">
+            {/* 首页 */}
+            <PersistentView appKey="home">{renderLazyPage(<Home />)}</PersistentView>
 
-          {/* 应用选择页 */}
-          <PersistentView appKey="apps">{renderLazyPage(<AppsView />)}</PersistentView>
+            {/* 应用选择页 */}
+            <PersistentView appKey="apps">{renderLazyPage(<AppsView />)}</PersistentView>
 
-          {tabs.some((tab) => tab.type === 'inbox' && tab.loaded) && (
-            <PersistentView appKey="builtin:inbox">
-              {renderLazyPage(
-                <InboxCenter
-                  navigationRevision={inboxTarget.revision}
-                  initialSection={inboxTarget.section}
-                  initialReceipt={inboxTarget.receipt}
-                />,
-              )}
-            </PersistentView>
-          )}
+            {tabs.some((tab) => tab.type === 'inbox' && tab.loaded) && (
+              <PersistentView appKey="builtin:inbox">
+                {renderLazyPage(
+                  <InboxCenter
+                    navigationRevision={inboxTarget.revision}
+                    initialSection={inboxTarget.section}
+                    initialReceipt={inboxTarget.receipt}
+                  />,
+                )}
+              </PersistentView>
+            )}
 
-          {/* 动态应用工作台 — 每个已打开的应用一个 li */}
-          {loadedAppTabs.map((tab) => (
-            <PersistentView key={tab.key} appKey={tab.key}>
-              {renderLazyPage(
-                <Workbench
-                  appNumber={tab.key}
-                  appActive={activeHeaderTabKey === tab.key}
-                  initialEntryNumber={
-                    tab.key === startupTarget.appNumber ? pendingEntryNumber : undefined
-                  }
-                  onInitialEntryConsumed={consumeStartupEntry}
-                />,
-              )}
-            </PersistentView>
-          ))}
-        </ol>
-      </Content>
-    </Layout>
+            {/* 动态应用工作台 — 每个已打开的应用一个 li */}
+            {loadedAppTabs.map((tab) => (
+              <PersistentView key={tab.key} appKey={tab.key}>
+                {renderLazyPage(
+                  <Workbench
+                    appNumber={tab.key}
+                    appActive={activeHeaderTabKey === tab.key}
+                    initialEntryNumber={
+                      tab.key === startupTarget.appNumber ? pendingEntryNumber : undefined
+                    }
+                    onInitialEntryConsumed={consumeStartupEntry}
+                  />,
+                )}
+              </PersistentView>
+            ))}
+          </ol>
+        </Content>
+      </Layout>
+    </div>
   );
 };
 

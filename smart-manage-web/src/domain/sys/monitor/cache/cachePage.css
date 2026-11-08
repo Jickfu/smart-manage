@@ -118,20 +118,3 @@
   color: var(--ant-color-error);
   font-weight: 600;
 }
-
-@media (max-width: 1000px) {
-  .sm-cache-overview > .ant-card-body {
-    grid-template-columns: 1fr;
-  }
-  .sm-cache-overview-section {
-    padding: 14px 0;
-  }
-  .sm-cache-overview-section:first-child {
-    padding-top: 0;
-    border-right: 0;
-    border-bottom: 1px solid var(--ant-color-border-secondary);
-  }
-  .sm-cache-overview-section:last-child {
-    padding-bottom: 0;
-  }
-}

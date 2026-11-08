@@ -2,8 +2,6 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(240px, 1fr));
   gap: 10px;
-  overflow-x: auto;
-  overflow-y: hidden;
   padding-bottom: 4px;
 }
 
