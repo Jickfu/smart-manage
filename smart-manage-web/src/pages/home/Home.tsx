@@ -15,7 +15,8 @@ const Home = () => {
       execution: {
         color: [...chartCategoryColors],
         tooltip: { trigger: 'item' },
-        legend: { bottom: 0 },
+        // 960px 桌面四列布局下让三个图例保持单行，避免覆盖环形图。
+        legend: { bottom: 0, itemWidth: 14, itemGap: 8 },
         series: [
           {
             type: 'pie',

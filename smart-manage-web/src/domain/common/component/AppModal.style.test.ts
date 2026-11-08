@@ -23,6 +23,6 @@ it('普通弹框保留声明宽度，可缩放弹框仍受最大宽度约束', (
 
   expect(getComputedStyle(document.getElementById('ordinary')!).maxWidth).toBe('none');
   expect(getComputedStyle(document.getElementById('resizable')!).maxWidth).toBe(
-    'max(var(--sm-desktop-min-width), calc(100vw - 32px))',
+    'max(1160px, calc(100vw - 32px))',
   );
 });

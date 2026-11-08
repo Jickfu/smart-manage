@@ -108,7 +108,7 @@
   padding-bottom: 0;
 }
 
-/* 必须在普通弹框规则之后，保留用户拖拽缩放的宽度上限。 */
+/* 缩放上限独立于桌面最小宽度，容纳 1120px 树形多选弹框；此规则必须在普通弹框之后。 */
 .sm-app-modal-scroll .sm-app-modal--resizable {
-  max-width: max(var(--sm-desktop-min-width), calc(100vw - 32px));
+  max-width: max(1160px, calc(100vw - 32px));
 }
