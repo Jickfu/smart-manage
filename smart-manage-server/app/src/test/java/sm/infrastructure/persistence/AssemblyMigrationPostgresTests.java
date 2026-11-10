@@ -15,6 +15,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import sm.infrastructure.scheduler.QuartzConfiguration;
 
 import javax.sql.DataSource;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -50,6 +51,13 @@ class AssemblyMigrationPostgresTests {
                 WHERE table_schema='public' AND table_name LIKE 't_sys_monitor_%'
                   AND data_type='timestamp with time zone'
                 """, Integer.class));
+        var ruleTime = LocalDateTime.parse("2026-08-25T14:45:23.512402");
+        assertEquals(ruleTime, jdbc.queryForObject("""
+                SELECT create_time FROM t_sys_monitor_alert_rule WHERE rule_code='HOST_CPU_HIGH'
+                """, LocalDateTime.class));
+        assertEquals(ruleTime, jdbc.queryForObject("""
+                SELECT update_time FROM t_sys_monitor_alert_rule WHERE rule_code='HOST_CPU_HIGH'
+                """, LocalDateTime.class));
         var history = jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank");
         var platform = Flyway.configure().dataSource(source).locations("classpath:db/platform/migration")
                 .cleanDisabled(true).validateMigrationNaming(true).load();
