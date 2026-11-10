@@ -4,6 +4,7 @@ import {
   Alert,
   Button,
   Card,
+  Form,
   Input,
   InputNumber,
   Pagination,
@@ -16,6 +17,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { usePermissionAccess } from '@/domain/common/page/access/usePermissionAccess';
 import { useOperationConfirm } from '@/domain/common/component/useOperationConfirm';
@@ -109,24 +111,6 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
               setPageNum(1);
             }}
           />
-          <InputNumber
-            value={thresholdInput ?? snapshotQuery.data?.thresholdMs}
-            min={100}
-            max={60000}
-            disabled={!can('config')}
-            onChange={(value) => setThresholdInput(value ?? undefined)}
-          />
-          <Typography.Text>ms</Typography.Text>
-          {can('config') && (
-            <Button
-              type="primary"
-              loading={thresholdMutation.isPending}
-              disabled={!effectiveInstanceId}
-              onClick={() => thresholdMutation.mutate()}
-            >
-              应用阈值
-            </Button>
-          )}
           <Button
             type="primary"
             loading={snapshotQuery.isFetching}
@@ -163,6 +147,38 @@ export default function SlowSqlMonitorPage({ active }: PageComponentProps) {
             title={`实例 ${snapshotQuery.data.instanceId} 的 Druid 内存聚合统计`}
             description={`采样时间 ${snapshotQuery.data.sampleTime}，当前阈值 ${snapshotQuery.data.thresholdMs} ms。数据在实例重启或清空后不可恢复；阈值变化不会追溯逐次执行记录。`}
           />
+          <Form layout="vertical" variant="underlined" className="sm-edit-form">
+            <FormFieldGrid>
+              <FormFieldCell>
+                <Form.Item
+                  className="sm-edit-field-content"
+                  label="慢 SQL 阈值"
+                  htmlFor="slow-sql-threshold"
+                >
+                  <InputNumber
+                    id="slow-sql-threshold"
+                    className="sm-edit-control-full"
+                    suffix="ms"
+                    value={thresholdInput ?? snapshotQuery.data.thresholdMs}
+                    min={100}
+                    max={60000}
+                    disabled={!can('config')}
+                    onChange={(value) => setThresholdInput(value ?? undefined)}
+                  />
+                </Form.Item>
+              </FormFieldCell>
+            </FormFieldGrid>
+            {can('config') && (
+              <Button
+                type="primary"
+                loading={thresholdMutation.isPending}
+                disabled={!effectiveInstanceId}
+                onClick={() => thresholdMutation.mutate()}
+              >
+                应用阈值
+              </Button>
+            )}
+          </Form>
           <Card
             className="sm-slow-sql-card"
             title={

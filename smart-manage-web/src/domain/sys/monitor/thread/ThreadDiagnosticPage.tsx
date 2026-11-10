@@ -5,6 +5,7 @@ import {
   Alert,
   Button,
   Card,
+  Form,
   Input,
   InputNumber,
   Pagination,
@@ -17,6 +18,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import type { PageComponentProps } from '@/domain/common/page/types';
 import { EditPageShell } from '@/domain/common/page/EditPageShell';
+import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { usePermissionAccess } from '@/domain/common/page/access/usePermissionAccess';
 import { threadDiagnosticApi } from './api';
@@ -164,25 +166,6 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
               setPageNum(1);
             }}
           />
-          <Space size={10}>
-            <Typography.Text>采样时间</Typography.Text>
-            <InputNumber
-              min={200}
-              max={5000}
-              value={sampleMillis}
-              onChange={(value) => setSampleMillis(value ?? 1000)}
-            />
-            <Typography.Text>ms</Typography.Text>
-          </Space>
-          <Space size={10}>
-            <Typography.Text>热点数量</Typography.Text>
-            <InputNumber
-              min={1}
-              max={50}
-              value={limit}
-              onChange={(value) => setLimit(value ?? 10)}
-            />
-          </Space>
           <Button type="primary" onClick={() => void listQuery.refetch()}>
             刷新列表
           </Button>
@@ -221,6 +204,43 @@ export default function ThreadDiagnosticPage({ active }: PageComponentProps) {
           title="JDK 原生线程诊断"
           description="展示指定在线实例的平台线程、实时堆栈、CPU 热点和锁信息；采集结果是瞬时快照，不代表持久化监控历史。"
         />
+        <Form layout="vertical" variant="underlined" className="sm-edit-form">
+          <FormFieldGrid>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                label="采样时间"
+                htmlFor="thread-sample-time"
+              >
+                <InputNumber
+                  id="thread-sample-time"
+                  className="sm-edit-control-full"
+                  suffix="ms"
+                  min={200}
+                  max={5000}
+                  value={sampleMillis}
+                  onChange={(value) => setSampleMillis(value ?? 1000)}
+                />
+              </Form.Item>
+            </FormFieldCell>
+            <FormFieldCell>
+              <Form.Item
+                className="sm-edit-field-content"
+                label="热点数量"
+                htmlFor="thread-hot-limit"
+              >
+                <InputNumber
+                  id="thread-hot-limit"
+                  className="sm-edit-control-full"
+                  min={1}
+                  max={50}
+                  value={limit}
+                  onChange={(value) => setLimit(value ?? 10)}
+                />
+              </Form.Item>
+            </FormFieldCell>
+          </FormFieldGrid>
+        </Form>
         <div className="sm-thread-diagnostic-grid">
           <Card
             className="sm-thread-diagnostic-card"
