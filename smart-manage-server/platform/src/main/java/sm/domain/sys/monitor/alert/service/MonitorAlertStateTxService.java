@@ -2,12 +2,14 @@ package sm.domain.sys.monitor.alert.service;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import java.math.BigDecimal;
-import java.time.*;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sm.system.time.BusinessTime;
 
 @Service
 @RequiredArgsConstructor
@@ -17,7 +19,7 @@ class MonitorAlertStateTxService {
 
   void evaluate(MonitorAlertEvaluation evaluation) {
     if (!eligible(evaluation)) return;
-    Instant now = Instant.now();
+    LocalDateTime now = LocalDateTime.now(BusinessTime.ZONE);
     List<Map<String, Object>> active =
         jdbcTemplate.queryForList(
             """
@@ -42,7 +44,7 @@ AND status IN ('PENDING','FIRING') FOR UPDATE
           UPDATE t_sys_monitor_alert_incident SET status='CLOSED',close_reason='PENDING_CLEARED',
           last_evaluated_at=?,last_value=?,peak_value=?,summary=?,version=version+1 WHERE id=?
           """,
-          jdbcTime(now),
+          now,
           lastValue,
           peak,
           evaluation.summary(),
@@ -60,8 +62,8 @@ AND status IN ('PENDING','FIRING') FOR UPDATE
 UPDATE t_sys_monitor_alert_incident SET status='RECOVERED',recovered_at=?,last_evaluated_at=?,
 last_value=?,peak_value=?,summary=?,version=version+1 WHERE id=?
 """,
-          jdbcTime(now),
-          jdbcTime(now),
+          now,
+          now,
           lastValue,
           peak,
           evaluation.summary(),
@@ -69,7 +71,7 @@ last_value=?,peak_value=?,summary=?,version=version+1 WHERE id=?
       if (evaluation.emailEnabled()) enqueue(incidentId, "RECOVERY", 1, now);
       return;
     }
-    Instant startedAt = instant(incident.get("started_at"));
+    LocalDateTime startedAt = localTime(incident.get("started_at"));
     if ("PENDING".equals(status)
         && !now.isBefore(startedAt.plusSeconds(evaluation.durationSeconds()))) {
       jdbcTemplate.update(
@@ -77,18 +79,18 @@ last_value=?,peak_value=?,summary=?,version=version+1 WHERE id=?
 UPDATE t_sys_monitor_alert_incident SET status='FIRING',fired_at=?,last_evaluated_at=?,last_value=?,
 peak_value=?,summary=?,last_notified_at=?,notification_count=?,version=version+1 WHERE id=?
 """,
-          jdbcTime(now),
-          jdbcTime(now),
+          now,
+          now,
           lastValue,
           peak,
           evaluation.summary(),
-          evaluation.emailEnabled() ? jdbcTime(now) : null,
+          evaluation.emailEnabled() ? now : null,
           evaluation.emailEnabled() ? 1 : 0,
           incidentId);
       if (evaluation.emailEnabled()) enqueue(incidentId, "FIRING", 1, now);
       return;
     }
-    Instant lastNotifiedAt = instant(incident.get("last_notified_at"));
+    LocalDateTime lastNotifiedAt = localTime(incident.get("last_notified_at"));
     int notificationCount = ((Number) incident.get("notification_count")).intValue();
     boolean repeat =
         "FIRING".equals(status)
@@ -100,11 +102,11 @@ peak_value=?,summary=?,last_notified_at=?,notification_count=?,version=version+1
 UPDATE t_sys_monitor_alert_incident SET last_evaluated_at=?,last_value=?,peak_value=?,summary=?,
 last_notified_at=?,notification_count=?,version=version+1 WHERE id=?
 """,
-        jdbcTime(now),
+        now,
         lastValue,
         peak,
         evaluation.summary(),
-        repeat ? jdbcTime(now) : jdbcTime(lastNotifiedAt),
+        repeat ? now : lastNotifiedAt,
         repeat ? notificationCount + 1 : notificationCount,
         incidentId);
     if (repeat)
@@ -116,7 +118,7 @@ last_notified_at=?,notification_count=?,version=version+1 WHERE id=?
     jdbcTemplate.update(
         """
         UPDATE t_sys_monitor_alert_incident SET status='CLOSED',close_reason='METRIC_UNAVAILABLE',
-        last_evaluated_at=now(),version=version+1
+        last_evaluated_at=LOCALTIMESTAMP,version=version+1
         WHERE rule_id=? AND scope_type=? AND scope_id=? AND status='PENDING'
         """,
         ruleId,
@@ -141,7 +143,7 @@ last_notified_at=?,notification_count=?,version=version+1 WHERE id=?
     return !lifecycle.isEmpty() && "ACTIVE".equals(lifecycle.getFirst());
   }
 
-  private void createPending(MonitorAlertEvaluation evaluation, Instant now) {
+  private void createPending(MonitorAlertEvaluation evaluation, LocalDateTime now) {
     long incidentId = IdWorker.getId();
     String cycleKey = now.toString() + ":" + incidentId;
     jdbcTemplate.update(
@@ -156,8 +158,8 @@ VALUES(?,?,?,?,?,'PENDING',?,?,?,?,?,?,0,?,0)
         evaluation.scopeType(),
         evaluation.scopeId(),
         cycleKey,
-        jdbcTime(now),
-        jdbcTime(now),
+        now,
+        now,
         evaluation.value(),
         evaluation.value(),
         evaluation.threshold(),
@@ -168,15 +170,15 @@ VALUES(?,?,?,?,?,'PENDING',?,?,?,?,?,?,0,?,0)
           UPDATE t_sys_monitor_alert_incident SET status='FIRING',fired_at=?,last_notified_at=?,
           notification_count=?,version=version+1 WHERE id=?
           """,
-          jdbcTime(now),
-          evaluation.emailEnabled() ? jdbcTime(now) : null,
+          now,
+          evaluation.emailEnabled() ? now : null,
           evaluation.emailEnabled() ? 1 : 0,
           incidentId);
       if (evaluation.emailEnabled()) enqueue(incidentId, "FIRING", 1, now);
     }
   }
 
-  private void enqueue(long incidentId, String type, int sequence, Instant now) {
+  private void enqueue(long incidentId, String type, int sequence, LocalDateTime now) {
     jdbcTemplate.update(
         """
 INSERT INTO t_sys_monitor_alert_notification(id,incident_id,notification_type,sequence_no,status,
@@ -186,8 +188,8 @@ attempt_count,next_attempt_time,create_time) VALUES(?,?,?,?,'PENDING',0,?,?)
         incidentId,
         type,
         sequence,
-        jdbcTime(now),
-        jdbcTime(now));
+        now,
+        now);
   }
 
   private BigDecimal decimal(Object value) {
@@ -202,13 +204,8 @@ attempt_count,next_attempt_time,create_time) VALUES(?,?,?,?,'PENDING',0,?,?)
     return first.max(second);
   }
 
-  private Instant instant(Object value) {
-    if (value instanceof java.sql.Timestamp timestamp) return timestamp.toInstant();
-    if (value instanceof OffsetDateTime offset) return offset.toInstant();
-    return value instanceof Instant instant ? instant : null;
-  }
-
-  private OffsetDateTime jdbcTime(Instant value) {
-    return value == null ? null : OffsetDateTime.ofInstant(value, ZoneOffset.UTC);
+  private LocalDateTime localTime(Object value) {
+    // queryForList 将 PostgreSQL 的无偏移 timestamp 读为 JDBC Timestamp。
+    return value == null ? null : ((Timestamp) value).toLocalDateTime();
   }
 }

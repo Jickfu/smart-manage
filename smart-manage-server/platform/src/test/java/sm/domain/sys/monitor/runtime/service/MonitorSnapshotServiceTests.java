@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashSet;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,7 @@ import sm.domain.sys.monitor.common.service.MonitorInstanceRegistry;
 import sm.domain.sys.monitor.common.config.MonitorProperties;
 import sm.domain.sys.monitor.runtime.model.vo.HostSnapshotVO;
 import sm.domain.sys.monitor.runtime.model.vo.HostObservationSourceVO;
+import sm.domain.sys.monitor.runtime.model.vo.InstanceSnapshotVO;
 import tools.jackson.databind.json.JsonMapper;
 
 class MonitorSnapshotServiceTests {
@@ -84,13 +86,17 @@ class MonitorSnapshotServiceTests {
         source("host-a", "api-02", now, .88, false, null));
     assertEquals(.88, service.currentCanonicalHost("host-a").getCpu().getUsage());
 
+    // 对外时间只显示到秒，Redis 仍要按同一秒内的实际采样顺序选择。
+    Instant sameSecond = now.minusSeconds(1).truncatedTo(ChronoUnit.SECONDS);
     configureSources(
         sortedSet,
         values,
         jsonMapper,
-        source("host-a", "api-01", now.minusSeconds(5), .95, true, .90),
-        source("host-a", "api-02", now, .97, true, .91));
-    assertEquals(.97, service.currentCanonicalHost("host-a").getCpu().getUsage());
+        source("host-a", "api-01", sameSecond.plusMillis(100), .95, true, .90),
+        source("host-a", "api-02", sameSecond.plusMillis(900), .97, true, .91));
+    canonical = service.currentCanonicalHost("host-a");
+    assertEquals(.97, canonical.getCpu().getUsage());
+    assertEquals(sameSecond.plusMillis(900), canonical.getSampleTime());
 
     configureSources(
         sortedSet,
@@ -133,6 +139,25 @@ class MonitorSnapshotServiceTests {
         properties);
   }
 
+  @Test
+  void snapshotJsonUsesBeijingWallTimeForManagementAndRoundTrips() {
+    var mapper = JsonMapper.builder().build();
+    var snapshot = new InstanceSnapshotVO();
+    var instant = Instant.parse("2026-12-31T16:30:00Z");
+    snapshot.setSampleTime(instant);
+    var runtime = new InstanceSnapshotVO.RuntimeInfo();
+    runtime.setStartTime(instant);
+    snapshot.setRuntime(runtime);
+
+    var json = mapper.valueToTree(snapshot);
+    assertEquals(
+        "2027-01-01 00:30:00", json.get("sampleTime").asText());
+    assertEquals(
+        "2027-01-01 00:30:00", json.get("runtime").get("startTime").asText());
+    assertEquals(
+        instant, mapper.treeToValue(json, InstanceSnapshotVO.class).getSampleTime());
+  }
+
   private HostSnapshotVO host(String hostId, Instant sampleTime) {
     HostSnapshotVO snapshot = new HostSnapshotVO();
     snapshot.setHostId(hostId);
@@ -163,6 +188,7 @@ class MonitorSnapshotServiceTests {
     HostObservationSourceVO source = new HostObservationSourceVO();
     source.setHostId(hostId);
     source.setInstanceId(instanceId);
+    source.setObservedAt(snapshot.getSampleTime());
     source.setSnapshot(snapshot);
     return source;
   }

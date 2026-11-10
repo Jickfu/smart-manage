@@ -18,7 +18,7 @@ class MonitorInstanceLifecycleTxService {
     int changed =
         jdbcTemplate.update(
             """
-            UPDATE t_sys_monitor_instance SET lifecycle='RETIRED',retired_at=now()
+            UPDATE t_sys_monitor_instance SET lifecycle='RETIRED',retired_at=LOCALTIMESTAMP
             WHERE instance_id=? AND lifecycle='ACTIVE'
             """,
             instanceId);
@@ -26,13 +26,13 @@ class MonitorInstanceLifecycleTxService {
     jdbcTemplate.update(
         """
         UPDATE t_sys_monitor_alert_incident SET status='CLOSED',close_reason='INSTANCE_RETIRED',
-        last_evaluated_at=now(),version=version+1
+        last_evaluated_at=LOCALTIMESTAMP,version=version+1
                 WHERE scope_type='INSTANCE' AND scope_id=? AND status IN ('PENDING','FIRING')
         """,
         instanceId);
     jdbcTemplate.update(
         """
-        UPDATE t_sys_monitor_alert_notification SET status='SKIPPED',completed_time=now(),
+        UPDATE t_sys_monitor_alert_notification SET status='SKIPPED',completed_time=LOCALTIMESTAMP,
         error_message='应用实例已退役',claimed_time=NULL
         WHERE notification_type IN ('FIRING','REPEAT') AND status IN ('PENDING','PROCESSING')
         AND incident_id IN (SELECT id FROM t_sys_monitor_alert_incident

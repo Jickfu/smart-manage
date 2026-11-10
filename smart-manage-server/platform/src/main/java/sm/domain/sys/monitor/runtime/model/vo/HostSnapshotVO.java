@@ -1,10 +1,12 @@
 package sm.domain.sys.monitor.runtime.model.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 import java.util.List;
 import lombok.Data;
+import sm.system.time.BusinessTime;
 
 /**
  * 物理/虚拟主机遥测，不包含任何 JVM 实例指标。
@@ -17,6 +19,7 @@ public class HostSnapshotVO {
   @Schema(description = "主机名称")
   private String hostname;
   @Schema(description = "采样时间")
+  @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = BusinessTime.ZONE_NAME)
   private Instant sampleTime;
   @Schema(description = "运行时长，单位毫秒")
   private long uptimeMs;

@@ -9,10 +9,10 @@ import org.springframework.util.StringUtils;
 import sm.system.exception.BizException;
 import sm.system.form.PageForm;
 import sm.system.response.ResultEnum;
+import sm.system.time.BusinessTime;
 
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.time.ZoneId;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -124,7 +124,7 @@ public final class ListQueryUtil {
 
     // 与调度和日期展示一致；一次查询固定日期，避免午夜多个条件使用不同基准。
     static LocalDate businessToday(Clock clock) {
-        return LocalDate.now(clock.withZone(ZoneId.of("Asia/Shanghai")));
+        return LocalDate.now(clock.withZone(BusinessTime.ZONE));
     }
 
     public static boolean hasSort(PageForm form) {

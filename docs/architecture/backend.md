@@ -162,7 +162,9 @@ Entity 表达持久化模型，Form 表达输入，VO 表达接口输出；不�
 
 ### 业务时间
 
-当前管理端的相对日期筛选、Cron 执行、Cron 预览和下次触发时间统一使用 `Asia/Shanghai`，不依赖 JVM 默认时区；JSON 的 GMT+8 配置不等于 Java 日期计算或 Quartz 已设置时区。一次查询只获取一次基准日期，时间边界测试使用固定 Clock，覆盖北京时间午夜、月末和跨年。业务日期与绝对事件时间不得混用。
+平台固定使用 `Asia/Shanghai`。单据日期使用 Java `LocalDate`、PostgreSQL `date`、JSON `yyyy-MM-dd`。业务日期时间使用 Java `LocalDateTime`、PostgreSQL `timestamp without time zone`、JSON `yyyy-MM-dd HH:mm:ss`，统一解释为北京时间。浏览器只在需要换算或计算当前日期时处理时区，普通显示和提交沿用接口的无偏移格式。
+
+应用启动固定 JVM 默认时区，pgJDBC 以此初始化 PostgreSQL 会话。相对日期筛选、Cron 执行、Cron 预览和下次触发时间使用同一业务时区。一次查询只获取一次基准日期，时间边界测试使用固定 Clock，覆盖北京时间午夜、月末和跨年。签名、心跳新鲜度及耗时等内部技术逻辑可继续使用瞬间或时长，进入业务日期时间边界时转换为北京时间。
 
 ### 字段与实现
 

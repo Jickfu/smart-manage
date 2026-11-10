@@ -1,13 +1,5 @@
-import {
-  ColorPicker,
-  DatePicker,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Switch,
-  TreeSelect,
-} from 'antd';
+import { ColorPicker, Form, Input, InputNumber, Select, Switch, TreeSelect } from 'antd';
+import { BeijingDatePicker as DatePicker } from '@/domain/common/component/BeijingDatePicker';
 import RefSelector from '@/domain/common/component/RefSelector';
 import IconSelector from '@/domain/common/component/IconSelector';
 import type { EditField } from './EditPage';

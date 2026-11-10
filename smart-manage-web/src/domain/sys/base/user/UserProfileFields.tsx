@@ -1,6 +1,7 @@
 import { usePasswordPolicy } from '@/security/usePasswordPolicy';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
-import { Button, DatePicker, Form, Input, Select, Upload } from 'antd';
+import { Button, Form, Input, Select, Upload } from 'antd';
+import { BeijingDatePicker as DatePicker } from '@/domain/common/component/BeijingDatePicker';
 import type { UploadProps } from 'antd';
 import { businessAttachmentApi } from '@/domain/common/attachment/api';
 import { UserAvatar } from './UserAvatar';

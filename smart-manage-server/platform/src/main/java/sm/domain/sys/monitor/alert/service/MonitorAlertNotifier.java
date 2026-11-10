@@ -26,8 +26,8 @@ class MonitorAlertNotifier {
   private List<Long> claim(int limit) {
     return jdbcTemplate.queryForList(
         """
-UPDATE t_sys_monitor_alert_notification SET status='PROCESSING',claimed_time=now(),attempt_count=attempt_count+1
-WHERE id IN (SELECT id FROM t_sys_monitor_alert_notification WHERE status='PENDING' AND next_attempt_time<=now()
+UPDATE t_sys_monitor_alert_notification SET status='PROCESSING',claimed_time=LOCALTIMESTAMP,attempt_count=attempt_count+1
+WHERE id IN (SELECT id FROM t_sys_monitor_alert_notification WHERE status='PENDING' AND next_attempt_time<=LOCALTIMESTAMP
 ORDER BY id FOR UPDATE SKIP LOCKED LIMIT ?) RETURNING id
 """,
         Long.class,
@@ -126,7 +126,7 @@ AND ((notification.notification_type='RECOVERY' AND incident.status='RECOVERED')
                   text));
       jdbcTemplate.update(
           "UPDATE t_sys_monitor_alert_notification SET"
-              + " status='SUCCESS',email_task_id=?,completed_time=now(),error_message=NULL WHERE"
+              + " status='SUCCESS',email_task_id=?,completed_time=LOCALTIMESTAMP,error_message=NULL WHERE"
               + " id=? AND status='PROCESSING'",
           taskId,
           notificationId);
@@ -138,7 +138,7 @@ AND ((notification.notification_type='RECOVERY' AND incident.status='RECOVERED')
       jdbcTemplate.update(
           """
 UPDATE t_sys_monitor_alert_notification SET status=CASE WHEN attempt_count>=10 THEN 'FAILED' ELSE 'PENDING' END,
-next_attempt_time=now()+interval '5 minutes',error_message=?,claimed_time=NULL WHERE id=? AND status='PROCESSING'
+next_attempt_time=LOCALTIMESTAMP+interval '5 minutes',error_message=?,claimed_time=NULL WHERE id=? AND status='PROCESSING'
 """,
           message.substring(0, Math.min(500, message.length())),
           notificationId);
@@ -161,15 +161,15 @@ next_attempt_time=now()+interval '5 minutes',error_message=?,claimed_time=NULL W
   private void recoverClaims() {
     jdbcTemplate.update(
         """
-UPDATE t_sys_monitor_alert_notification SET status='PENDING',claimed_time=NULL,next_attempt_time=now()
-WHERE status='PROCESSING' AND claimed_time<now()-interval '5 minutes'
+UPDATE t_sys_monitor_alert_notification SET status='PENDING',claimed_time=NULL,next_attempt_time=LOCALTIMESTAMP
+WHERE status='PROCESSING' AND claimed_time<LOCALTIMESTAMP-interval '5 minutes'
 """);
   }
 
   private void markSkipped(Long id, String reason) {
     jdbcTemplate.update(
         "UPDATE t_sys_monitor_alert_notification SET"
-            + " status='SKIPPED',completed_time=now(),error_message=? WHERE id=?",
+            + " status='SKIPPED',completed_time=LOCALTIMESTAMP,error_message=? WHERE id=?",
         reason,
         id);
   }

@@ -1,8 +1,7 @@
 package sm.domain.sys.monitor.alert.service;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.LocalDateTime;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -11,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import sm.domain.sys.monitor.alert.model.form.MonitorAlertRuleSaveForm;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
+import sm.system.time.BusinessTime;
 
 @Service
 @RequiredArgsConstructor
@@ -47,7 +47,7 @@ WHERE id=? AND version=?
             form.repeatIntervalSeconds(),
             form.emailEnabled(),
             trim(form.description()),
-            OffsetDateTime.now(ZoneOffset.UTC),
+            LocalDateTime.now(BusinessTime.ZONE),
             userId,
             form.id(),
             form.version());
@@ -56,13 +56,13 @@ WHERE id=? AND version=?
       jdbcTemplate.update(
           """
           UPDATE t_sys_monitor_alert_incident SET status='CLOSED',close_reason='RULE_DISABLED',
-          last_evaluated_at=now(),version=version+1
+          last_evaluated_at=LOCALTIMESTAMP,version=version+1
           WHERE rule_id=? AND status IN ('PENDING','FIRING')
           """,
           form.id());
       jdbcTemplate.update(
           """
-          UPDATE t_sys_monitor_alert_notification SET status='SKIPPED',completed_time=now(),
+          UPDATE t_sys_monitor_alert_notification SET status='SKIPPED',completed_time=LOCALTIMESTAMP,
           error_message='告警规则已停用',claimed_time=NULL
           WHERE notification_type IN ('FIRING','REPEAT') AND status IN ('PENDING','PROCESSING')
           AND incident_id IN (SELECT id FROM t_sys_monitor_alert_incident WHERE rule_id=?)
@@ -87,7 +87,7 @@ WHERE id=? AND version=?
             IdWorker.getId(),
             form.id(),
             recipientUserId,
-            OffsetDateTime.now(ZoneOffset.UTC));
+            LocalDateTime.now(BusinessTime.ZONE));
       }
     }
     if (Boolean.TRUE.equals(form.emailEnabled())

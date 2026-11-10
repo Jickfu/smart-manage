@@ -126,21 +126,25 @@
 
 ## 表单字段布局
 
-普通表单字段统一使用 `FormFieldGrid` 与 `FormFieldCell`；标准 `EditPage` 通过 `EditFormFields` 间接复用，手写字段保持以下结构：
+普通业务输入统一使用 `sm-edit-fields` 字段区布局。该规则适用于标准编辑页、CUSTOM 页面和弹框，字段区即使只有一个输入控件也使用同一布局。一个字段区由一个 `FormFieldGrid` 渲染，每个字段各用一个 `FormFieldCell`。标准 `EditPage` 通过 `EditFormFields` 复用，手写表单可以直接使用这两个布局组件。
 
 ```tsx
-<FormFieldGrid maxColumns={2}>
-  <FormFieldCell columnSpan={2}>
-    <Form.Item className="sm-edit-field-content">...</Form.Item>
-  </FormFieldCell>
-</FormFieldGrid>
+<Form layout="vertical" variant="underlined" className="sm-edit-form">
+  <FormFieldGrid>
+    <FormFieldCell>
+      <Form.Item name="name" label="名称" className="sm-edit-field-content">
+        <Input />
+      </Form.Item>
+    </FormFieldCell>
+  </FormFieldGrid>
+</Form>
 ```
 
 - 页面默认四列上限，普通弹框使用 `maxColumns={2}`，窄参数弹框使用 `maxColumns={1}`；两列和单列容器整体居中，内部字段仍从左向右排列。
 - `FormFieldCell` 默认占一列，使用 `columnSpan={2 | 3}` 或 `fullWidth` 跨列；`Form.Item` 必须是其直接子元素并使用 `sm-edit-field-content`。
 - 非校验类字段说明通过字段名右侧的圆圈问号悬浮显示：通用 `EditField.tooltip` 接受调用方提供的内容或 Ant Design Tooltip 配置，普通编辑页、弹窗编辑页及只读字段统一支持；手写字段使用 `Form.Item.tooltip`。不要用字段下方的 `extra` 承载这类说明而改变表单行高。校验错误仍由 Form 在字段下方展示。
-- 字段宽度、间距、断点和跨列计算属于公共布局契约，领域页面不得直接拼装或覆盖内部 `sm-edit-*` 类；新布局需求应先确认边界再扩展公共组件。
-- 头像、分区标题、提示和按钮区由外层布局组织；查询筛选器、隐藏字段、可编辑表格单元格、代码编辑器及专用控制台不套用字段容器。
+- 字段宽度、间距、占比、断点和跨列计算由公共布局统一维护，领域页面不得自行拼装布局类、覆盖内部样式或为普通输入另设一套样式。一个输入控件沿用字段区所在场景的列数规则。
+- 头像、分区标题、提示和按钮区由外层布局组织。查询筛选器、工具栏搜索、隐藏字段、可编辑表格单元格、代码编辑器和专用控制台有各自的布局约定，属于字段区布局的例外。
 
 ## 实体引用选择
 

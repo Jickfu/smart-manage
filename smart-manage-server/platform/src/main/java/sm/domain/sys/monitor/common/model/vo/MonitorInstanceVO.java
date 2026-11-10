@@ -2,6 +2,7 @@ package sm.domain.sys.monitor.common.model.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.time.LocalDateTime;
 import lombok.Data;
 
 /**
@@ -23,9 +24,9 @@ public class MonitorInstanceVO {
   @Schema(description = "应用实例当前是否在线")
   private boolean online;
   @Schema(description = "应用实例启动时间")
-  private String startTime;
+  private LocalDateTime startTime;
   @Schema(description = "最后发现时间")
-  private String lastSeenTime;
+  private LocalDateTime lastSeenTime;
   @Schema(description = "是否为处理当前请求的应用实例")
   private boolean current;
 }

@@ -26,6 +26,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.7
         version: 6.43.7
+      '@rc-component/picker':
+        specifier: 1.12.0
+        version: 1.12.0(dayjs@1.11.21)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@tanstack/react-query':
         specifier: ^5.101.0
         version: 5.101.0(react@19.2.7)

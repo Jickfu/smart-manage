@@ -1,4 +1,5 @@
-import { DatePicker, Select } from 'antd';
+import { Select } from 'antd';
+import { BeijingDatePicker as DatePicker } from '@/domain/common/component/BeijingDatePicker';
 import { ListFilterFields, ListFilterField } from '@/domain/common/page/list/ListFilterFields';
 import type { AuditLogFilters } from './types';
 

@@ -24,6 +24,7 @@ import sm.system.exception.BizException;
 import sm.system.aop.log.BizLog;
 import sm.system.response.PageData;
 import sm.system.response.ResultEnum;
+import sm.system.time.BusinessTime;
 import sm.system.security.authorization.AdministratorOnly;
 import sm.system.query.ListSqlQuery;
 import sm.domain.sys.base.app.service.AppReferenceService;
@@ -219,7 +220,7 @@ public class JobService implements SmartInitializingSingleton {
         try {
             CronExpression expression = new CronExpression(cronExpression.trim());
             java.util.Date cursor = java.util.Date.from(clock.instant());
-            java.time.ZoneId zoneId = java.time.ZoneId.of("Asia/Shanghai");
+            java.time.ZoneId zoneId = BusinessTime.ZONE;
             expression.setTimeZone(java.util.TimeZone.getTimeZone(zoneId));
             java.util.ArrayList<java.time.LocalDateTime> result = new java.util.ArrayList<>(5);
             for (int index = 0; index < 5; index++) {
@@ -264,7 +265,7 @@ public class JobService implements SmartInitializingSingleton {
                 .withIdentity(ManagedJobIdentity.triggerKey(entity.getId()))
                 .forJob(jobDetail.getKey())
                 .withSchedule(CronScheduleBuilder.cronSchedule(entity.getCronExpression())
-                        .inTimeZone(java.util.TimeZone.getTimeZone("Asia/Shanghai"))
+                        .inTimeZone(java.util.TimeZone.getTimeZone(BusinessTime.ZONE))
                         .withMisfireHandlingInstructionDoNothing())
                 .build();
         try {
@@ -339,7 +340,7 @@ public class JobService implements SmartInitializingSingleton {
             Trigger trigger = scheduler.getTrigger(triggerKey);
             if (trigger != null && trigger.getNextFireTime() != null) {
                 vo.setNextFireTime(trigger.getNextFireTime().toInstant()
-                        .atZone(java.time.ZoneId.of("Asia/Shanghai")).toLocalDateTime());
+                        .atZone(BusinessTime.ZONE).toLocalDateTime());
             }
         } catch (SchedulerException e) {
             log.debug("获取下次触发时间失败: {}", entity.getJobName(), e);

@@ -2,6 +2,7 @@ package sm.domain.sys.monitor.runtime.model.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.time.Instant;
 import lombok.Data;
 
 /**
@@ -14,6 +15,8 @@ public class HostObservationSourceVO {
   private String hostId;
   @Schema(description = "应用实例唯一标识")
   private String instanceId;
+  @Schema(description = "内部观测时刻，供跨节点排序和新鲜度计算")
+  private Instant observedAt;
   @Schema(description = "遥测快照")
   private HostSnapshotVO snapshot;
 }

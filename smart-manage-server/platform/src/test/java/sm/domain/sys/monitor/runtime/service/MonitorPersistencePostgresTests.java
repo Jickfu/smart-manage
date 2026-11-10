@@ -6,8 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
@@ -99,6 +98,11 @@ class MonitorPersistencePostgresTests {
             Integer.class,
             HOST_ID));
     assertEquals(
+        LocalDateTime.parse("2020-01-02T14:30:30"),
+        jdbcTemplate.queryForObject(
+            "SELECT sample_time FROM t_sys_monitor_host_history WHERE host_id=?",
+            LocalDateTime.class, HOST_ID));
+    assertEquals(
         .8,
         jdbcTemplate.queryForObject(
             "SELECT cpu_usage FROM t_sys_monitor_host_history WHERE host_id=?",
@@ -122,8 +126,8 @@ class MonitorPersistencePostgresTests {
 
   @Test
   void historyQueryUsesNumericRatiosMatchingWorstMountAndWorstMinuteLatency() {
-    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    OffsetDateTime bucketStart =
+    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime bucketStart =
         now.truncatedTo(ChronoUnit.HOURS).plusMinutes((now.getMinute() / 5L) * 5L).minusMinutes(10);
     insertHost(bucketStart.plusMinutes(1), 5, 10, .95, "/data");
     insertHost(bucketStart.plusMinutes(2), 5, 10, .70, "/backup");
@@ -133,6 +137,8 @@ class MonitorPersistencePostgresTests {
 
     var hostPoint = historyService.history("HOST", HOST_ID, "6h").getFirst();
     var instancePoint = historyService.history("INSTANCE", INSTANCE_A, "6h").getFirst();
+    assertEquals(bucketStart, hostPoint.getSampleTime());
+    assertEquals(bucketStart, instancePoint.getSampleTime());
     assertEquals(.5, hostPoint.getMemoryUsage(), .000001);
     assertEquals(.95, hostPoint.getFilesystemUsage(), .000001);
     assertEquals("/data", hostPoint.getWorstMount());
@@ -148,7 +154,7 @@ class MonitorPersistencePostgresTests {
 
   @Test
   void cleanupDeletesSamplesOutsideRetention() {
-    OffsetDateTime old = OffsetDateTime.now(ZoneOffset.UTC).minusDays(8);
+    LocalDateTime old = LocalDateTime.now().minusDays(8);
     insertHost(old, 5, 10, .5, "/old");
     insertInstance(old, 5, 10, 5, 10, 1, 1);
     properties.getHistory().setRetentionDays(7);
@@ -266,7 +272,7 @@ VALUES
   }
 
   private void insertHost(
-      OffsetDateTime sampleTime,
+      LocalDateTime sampleTime,
       long memoryUsed,
       long memoryTotal,
       double filesystemUsage,
@@ -288,7 +294,7 @@ VALUES(?,?,?,?,?,?,?,?)
   }
 
   private void insertInstance(
-      OffsetDateTime sampleTime,
+      LocalDateTime sampleTime,
       long heapUsed,
       long heapMax,
       int active,

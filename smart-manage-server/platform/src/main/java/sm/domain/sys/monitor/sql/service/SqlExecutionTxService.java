@@ -10,6 +10,7 @@ import sm.domain.sys.monitor.sql.model.vo.SqlColumnVO;
 import sm.domain.sys.monitor.sql.model.vo.SqlResultVO;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
+import sm.system.time.BusinessTime;
 
 import javax.sql.DataSource;
 import java.sql.Array;
@@ -48,6 +49,10 @@ class SqlExecutionTxService {
             result = plan.statements().size() > 1
                     ? executeInsertBatch(connection, plan)
                     : executeSingle(connection, plan, maxRows);
+            // 控制台 SQL 可以通过 set_config 修改会话时区，审计与后续业务复用连接前恢复北京时间。
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("SET TIME ZONE '" + BusinessTime.ZONE_NAME + "'");
+            }
         } catch (SQLException exception) {
             rollbackExecution(connection, executionStart);
             result = errorResult(plan, exception);

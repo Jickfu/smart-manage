@@ -2,19 +2,21 @@ package sm.domain.sys.monitor.common.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-/** 使用真实 PostgreSQL 驱动验证 timestamptz 参数绑定和目录 UPSERT。 */
+/** 使用真实 PostgreSQL 驱动验证北京时间参数绑定和目录 UPSERT。 */
 @EnabledIfSystemProperty(named = "smartManage.postgresIntegration", matches = "true")
 class MonitorCatalogAccessorPostgresTests {
   private static final String INSTANCE_ID = "verify-monitor-instance";
   private static final String HOST_ID = "verify-monitor-host";
 
   @Test
-  void touchBindsPostgresTimestampWithTimeZone() {
+  void touchStoresUnzonedBeijingStartAndLastSeenTimes() {
     DriverManagerDataSource dataSource =
         new DriverManagerDataSource(
             System.getProperty("smartManage.testDbUrl"),
@@ -32,16 +34,22 @@ class MonitorCatalogAccessorPostgresTests {
     instance.setArch("amd64");
     instance.setApplicationName("smart-manage");
     instance.setApplicationVersion("test");
-    instance.setStartTime(System.currentTimeMillis() - 1000);
-    instance.setLastSeenTime(System.currentTimeMillis());
+    instance.setStartTime(Instant.parse("2026-12-31T15:59:59Z").toEpochMilli());
+    instance.setLastSeenTime(Instant.parse("2026-12-31T16:00:00Z").toEpochMilli());
 
     try {
       accessor.touch(instance);
       assertEquals(
-          1,
+          LocalDateTime.parse("2026-12-31T23:59:59"),
           jdbcTemplate.queryForObject(
-              "SELECT count(*) FROM t_sys_monitor_instance WHERE instance_id=?",
-              Integer.class,
+              "SELECT last_start_time FROM t_sys_monitor_instance WHERE instance_id=?",
+              LocalDateTime.class,
+              INSTANCE_ID));
+      assertEquals(
+          LocalDateTime.parse("2027-01-01T00:00:00"),
+          jdbcTemplate.queryForObject(
+              "SELECT last_seen_time FROM t_sys_monitor_instance WHERE instance_id=?",
+              LocalDateTime.class,
               INSTANCE_ID));
     } finally {
       jdbcTemplate.update("DELETE FROM t_sys_monitor_instance WHERE instance_id=?", INSTANCE_ID);

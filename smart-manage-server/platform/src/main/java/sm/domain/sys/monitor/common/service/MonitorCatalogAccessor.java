@@ -1,11 +1,12 @@
 package sm.domain.sys.monitor.common.service;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import sm.system.time.BusinessTime;
 
 /** 将 Redis 在线态同步为可追溯目录；内部地址刻意不持久化。 */
 @Component
@@ -14,9 +15,9 @@ class MonitorCatalogAccessor {
   private final JdbcTemplate jdbcTemplate;
 
   void touch(MonitorInstanceRegistry.RegisteredInstance instance) {
-    OffsetDateTime seenTime =
-        OffsetDateTime.ofInstant(
-            java.time.Instant.ofEpochMilli(instance.getLastSeenTime()), ZoneOffset.UTC);
+    LocalDateTime seenTime =
+        LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(instance.getLastSeenTime()), BusinessTime.ZONE);
     jdbcTemplate.update(
         """
 INSERT INTO t_sys_monitor_host(id,host_id,host_name,os_name,os_version,arch,first_seen_time,last_seen_time)
@@ -47,14 +48,14 @@ last_start_time=EXCLUDED.last_start_time,lifecycle='ACTIVE',retired_at=NULL
         instance.getApplicationVersion(),
         seenTime,
         seenTime,
-        OffsetDateTime.ofInstant(
-            java.time.Instant.ofEpochMilli(instance.getStartTime()), ZoneOffset.UTC));
+        LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(instance.getStartTime()), BusinessTime.ZONE));
   }
 
   void reactivateIfRetired(String instanceId) {
     jdbcTemplate.update(
         """
-        UPDATE t_sys_monitor_instance SET lifecycle='ACTIVE',retired_at=NULL,last_seen_time=now()
+        UPDATE t_sys_monitor_instance SET lifecycle='ACTIVE',retired_at=NULL,last_seen_time=LOCALTIMESTAMP
         WHERE instance_id=? AND lifecycle='RETIRED'
         """,
         instanceId);

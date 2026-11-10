@@ -2,6 +2,7 @@ package sm.domain.sys.monitor.common.service;
 
 import java.lang.management.ManagementFactory;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
 import oshi.SystemInfo;
 import sm.domain.sys.monitor.common.config.MonitorProperties;
 import sm.domain.sys.monitor.common.model.vo.MonitorInstanceVO;
+import sm.system.time.BusinessTime;
 import sm.system.exception.BizException;
 import sm.system.response.ResultEnum;
 import tools.jackson.databind.json.JsonMapper;
@@ -216,8 +218,8 @@ return 0
     result.setApplicationVersion(registeredInstance.getApplicationVersion());
     result.setLifecycle("ACTIVE");
     result.setOnline(true);
-    result.setStartTime(Instant.ofEpochMilli(registeredInstance.getStartTime()).toString());
-    result.setLastSeenTime(Instant.ofEpochMilli(registeredInstance.getLastSeenTime()).toString());
+    result.setStartTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(registeredInstance.getStartTime()), BusinessTime.ZONE));
+    result.setLastSeenTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(registeredInstance.getLastSeenTime()), BusinessTime.ZONE));
     result.setCurrent(isCurrent(registeredInstance.getInstanceId()));
     return result;
   }
