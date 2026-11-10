@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import { DATE_TIME_FORMAT, parseBeijingTime } from '@/domain/common/component/beijingTime';
 import { createHistoryCharts } from './historyCharts';
 
 it.each([
@@ -7,10 +8,10 @@ it.each([
   ['24h', 10],
   ['7d', 30],
 ] as const)('%s 整桶缺失断线且不修改原始数据', (range, minutes) => {
-  const start = Date.parse('2026-12-31T23:30:00+08:00');
+  const start = parseBeijingTime('2026-12-31 23:30:00');
   const points = [
-    { sampleTime: new Date(start).toISOString(), processCpuUsage: 0 },
-    { sampleTime: new Date(start + 3 * minutes * 60000).toISOString(), processCpuUsage: 0.5 },
+    { sampleTime: start.format(DATE_TIME_FORMAT), processCpuUsage: 0 },
+    { sampleTime: start.add(3 * minutes, 'minute').format(DATE_TIME_FORMAT), processCpuUsage: 0.5 },
   ];
   const original = structuredClone(points);
   const chart = createHistoryCharts('INSTANCE', points, range)[0]!;
@@ -22,8 +23,8 @@ it.each([
 
 it('相邻桶和已有空值保持原意，空结果不虚构记录', () => {
   const points = [
-    { sampleTime: '2027-01-01T00:00:00+08:00', processCpuUsage: undefined },
-    { sampleTime: '2027-01-01T00:01:00+08:00', processCpuUsage: 0 },
+    { sampleTime: '2027-01-01 00:00:00', processCpuUsage: undefined },
+    { sampleTime: '2027-01-01 00:01:00', processCpuUsage: 0 },
   ];
   const chart = createHistoryCharts('INSTANCE', points, '1h')[0]!;
   const series = chart.option.series as Array<{ data: unknown[] }>;

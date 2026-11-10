@@ -1,7 +1,8 @@
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useMemo, useRef, useState } from 'react';
 import type { Key } from 'react';
-import { DatePicker, Form, Input, InputNumber } from 'antd';
+import { Form, Input, InputNumber } from 'antd';
+import { BeijingDatePicker as DatePicker } from '@/domain/common/component/BeijingDatePicker';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormListFieldData, FormListOperation } from 'antd/es/form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

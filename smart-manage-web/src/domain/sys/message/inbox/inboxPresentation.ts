@@ -1,4 +1,3 @@
-import dayjs from 'dayjs';
 import type { InboxLevel, InboxReceiptKey } from './types';
 
 export const inboxLevelLabels: Record<InboxLevel, string> = {
@@ -8,8 +7,7 @@ export const inboxLevelLabels: Record<InboxLevel, string> = {
 };
 
 /** 时间只在展示层格式化，微秒收件键必须原样提交。 */
-export const formatInboxTime = (value: string) =>
-  dayjs(value.slice(0, 19)).format('YYYY-MM-DD HH:mm');
+export const formatInboxTime = (value: string) => value.slice(0, 16).replace('T', ' ');
 export const inboxReceiptId = (receipt: InboxReceiptKey) =>
   `${receipt.receivedTime}:${receipt.messageId}`;
 

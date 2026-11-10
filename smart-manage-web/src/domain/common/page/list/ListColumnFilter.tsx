@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import dayjs, { type Dayjs } from 'dayjs';
-import { Button, Checkbox, DatePicker, Input } from 'antd';
+import type { Dayjs } from 'dayjs';
+import { Button, Checkbox, Input } from 'antd';
+import { BeijingDatePicker as DatePicker } from '@/domain/common/component/BeijingDatePicker';
+import { DATE_FORMAT, parseBeijingTime } from '@/domain/common/component/beijingTime';
 import type {
   DateFilterOperator,
   ListFilterCondition,
@@ -81,11 +83,16 @@ const ListColumnFilter = ({
   );
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(() =>
     value?.operator === 'BETWEEN' && value.values?.length === 2
-      ? [dayjs(String(value.values[0])), dayjs(String(value.values[1]))]
+      ? [
+          parseBeijingTime(String(value.values[0]), DATE_FORMAT),
+          parseBeijingTime(String(value.values[1]), DATE_FORMAT),
+        ]
       : null,
   );
   const [equalDate, setEqualDate] = useState<Dayjs | null>(() =>
-    value?.operator === 'EQ' && value.value ? dayjs(String(value.value)) : null,
+    value?.operator === 'EQ' && value.value
+      ? parseBeijingTime(String(value.value), DATE_FORMAT)
+      : null,
   );
 
   const apply = () => {

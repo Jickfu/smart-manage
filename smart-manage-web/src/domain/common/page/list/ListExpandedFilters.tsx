@@ -1,5 +1,6 @@
-import { DatePicker, Input, Select } from 'antd';
-import dayjs from 'dayjs';
+import { Input, Select } from 'antd';
+import { BeijingDatePicker as DatePicker } from '@/domain/common/component/BeijingDatePicker';
+import { DATE_FORMAT, parseBeijingTime } from '@/domain/common/component/beijingTime';
 import { ListFilterFields, ListFilterField } from './ListFilterFields';
 import {
   resolveListFilterOptions,
@@ -55,7 +56,14 @@ export default function ListExpandedFilters({ features, fields, filters, onChang
           control = (
             <DatePicker.RangePicker
               allowClear
-              value={range?.length === 2 ? [dayjs(range[0]), dayjs(range[1])] : null}
+              value={
+                range?.length === 2
+                  ? [
+                      parseBeijingTime(range[0]!, DATE_FORMAT),
+                      parseBeijingTime(range[1]!, DATE_FORMAT),
+                    ]
+                  : null
+              }
               onChange={(dates) =>
                 update(
                   field,

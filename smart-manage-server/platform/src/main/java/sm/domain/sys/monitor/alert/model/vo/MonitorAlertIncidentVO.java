@@ -3,7 +3,7 @@ package sm.domain.sys.monitor.alert.model.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @Schema(description = "监控告警事件输出模型")
 public record MonitorAlertIncidentVO(
@@ -24,11 +24,11 @@ public record MonitorAlertIncidentVO(
     @Schema(description = "非恢复性关闭原因：条件清除、实例退役、规则停用或指标不可用")
     String closeReason,
     @Schema(description = "异常开始时间")
-    OffsetDateTime startedAt,
+    LocalDateTime startedAt,
     @Schema(description = "触发时间")
-    OffsetDateTime firedAt,
+    LocalDateTime firedAt,
     @Schema(description = "恢复时间")
-    OffsetDateTime recoveredAt,
+    LocalDateTime recoveredAt,
     @Schema(description = "最近指标值，使用该规则的原始单位，展示文本见对应 Display 字段")
     BigDecimal lastValue,
     @Schema(description = "峰值指标值，使用该规则的原始单位，展示文本见对应 Display 字段")

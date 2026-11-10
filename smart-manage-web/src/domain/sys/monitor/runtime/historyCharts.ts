@@ -1,5 +1,6 @@
 import type { EChartsCoreOption } from 'echarts/core';
 import type { ColumnsType } from 'antd/es/table';
+import { DATE_TIME_FORMAT, parseBeijingTime } from '@/domain/common/component/beijingTime';
 import { chartCategoryColors } from '@/domain/common/chart/chartColors';
 import { monitorHistoryValues } from './formatters';
 import type { HistoryPoint } from './types';
@@ -40,14 +41,13 @@ export function createHistoryCharts(
   for (const point of points) {
     const previous = plotPoints.at(-1);
     if (previous) {
+      const end = parseBeijingTime(point.sampleTime);
       for (
-        let timestamp = Date.parse(previous.sampleTime) + step;
-        timestamp < Date.parse(point.sampleTime);
-        timestamp += step
+        let bucket = parseBeijingTime(previous.sampleTime).add(step, 'millisecond');
+        bucket.isBefore(end);
+        bucket = bucket.add(step, 'millisecond')
       ) {
-        plotPoints.push({
-          sampleTime: new Date(timestamp).toISOString(),
-        });
+        plotPoints.push({ sampleTime: bucket.format(DATE_TIME_FORMAT) });
       }
     }
     plotPoints.push(point);
@@ -124,12 +124,7 @@ export function createHistoryCharts(
       xAxis: {
         type: 'category',
         boundaryGap: false,
-        data: plotPoints.map((item) =>
-          new Date(Date.parse(item.sampleTime) + 8 * 60 * 60_000)
-            .toISOString()
-            .replace('T', ' ')
-            .slice(0, 16),
-        ),
+        data: plotPoints.map((item) => item.sampleTime.slice(0, 16)),
       },
       yAxis: { type: 'value' },
       series: definitions.map(([name, key, , multiplier]) => ({

@@ -1,7 +1,8 @@
 import { ListFilterFields, ListFilterField } from '@/domain/common/page/list/ListFilterFields';
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useState } from 'react';
-import { Button, DatePicker, Select, Tag } from 'antd';
+import { Button, Select, Tag } from 'antd';
+import { BeijingDatePicker as DatePicker } from '@/domain/common/component/BeijingDatePicker';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useQuery } from '@tanstack/react-query';

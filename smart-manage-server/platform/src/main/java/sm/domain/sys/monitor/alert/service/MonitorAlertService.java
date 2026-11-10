@@ -101,9 +101,9 @@ JOIN t_sys_monitor_alert_rule b ON b.id=a.rule_id
                     rs.getString("scope_id"),
                     rs.getString("status"),
                     rs.getString("close_reason"),
-                    rs.getObject("started_at", java.time.OffsetDateTime.class),
-                    rs.getObject("fired_at", java.time.OffsetDateTime.class),
-                    rs.getObject("recovered_at", java.time.OffsetDateTime.class),
+                    rs.getObject("started_at", java.time.LocalDateTime.class),
+                    rs.getObject("fired_at", java.time.LocalDateTime.class),
+                    rs.getObject("recovered_at", java.time.LocalDateTime.class),
                     rs.getBigDecimal("last_value"),
                     rs.getBigDecimal("peak_value"),
                     valueFormatter.format(

@@ -127,7 +127,7 @@
                         测试进程必须显式加载 inline mock maker agent。
                         mockito.version 继承自 Spring Boot parent。
                     -->
-                    <argLine>-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+                    <argLine>-Duser.timezone=Asia/Shanghai -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
                 </configuration>
             </plugin>
         </plugins>

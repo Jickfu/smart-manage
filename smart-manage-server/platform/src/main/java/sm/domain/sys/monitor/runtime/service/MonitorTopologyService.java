@@ -1,6 +1,7 @@
 package sm.domain.sys.monitor.runtime.service;
 
 import java.sql.ResultSet;
+import java.time.LocalDateTime;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -39,10 +40,8 @@ FROM t_sys_monitor_instance ORDER BY instance_id
           value.setOnline(live != null);
           value.setCurrent(registry.isCurrent(value.getInstanceId()));
           if (live == null) {
-            value.setStartTime(
-                toIso(rs.getObject("last_start_time", java.time.OffsetDateTime.class)));
-            value.setLastSeenTime(
-                toIso(rs.getObject("last_seen_time", java.time.OffsetDateTime.class)));
+            value.setStartTime(rs.getObject("last_start_time", LocalDateTime.class));
+            value.setLastSeenTime(rs.getObject("last_seen_time", LocalDateTime.class));
           }
           return value;
         });
@@ -95,10 +94,6 @@ FROM t_sys_monitor_instance WHERE host_id=? AND lifecycle='ACTIVE' ORDER BY inst
     return online;
   }
 
-  private String toIso(java.time.OffsetDateTime value) {
-    return value == null ? null : value.toInstant().toString();
-  }
-
   private MonitorTopologyVO host(ResultSet rs) throws java.sql.SQLException {
     var value = new MonitorTopologyVO();
     value.setHostId(rs.getString("host_id"));
@@ -115,8 +110,8 @@ FROM t_sys_monitor_instance WHERE host_id=? AND lifecycle='ACTIVE' ORDER BY inst
     value.setApplicationName(rs.getString("application_name"));
     value.setApplicationVersion(rs.getString("application_version"));
     value.setLifecycle(rs.getString("lifecycle"));
-    value.setLastSeenTime(rs.getObject("last_seen_time", java.time.OffsetDateTime.class));
-    value.setRetiredAt(rs.getObject("retired_at", java.time.OffsetDateTime.class));
+    value.setLastSeenTime(rs.getObject("last_seen_time", LocalDateTime.class));
+    value.setRetiredAt(rs.getObject("retired_at", LocalDateTime.class));
     MonitorInstanceVO live = online.get(value.getInstanceId());
     value.setOnline(live != null);
     value.setCurrent(live != null && live.isCurrent());

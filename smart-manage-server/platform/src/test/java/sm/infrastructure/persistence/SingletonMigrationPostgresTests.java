@@ -22,7 +22,7 @@ class SingletonMigrationPostgresTests {
             created = true;
             var source = new DriverManagerDataSource(url.substring(0, url.lastIndexOf('/') + 1) + database, username, password);
             var flyway = Flyway.configure().dataSource(source).locations("classpath:db/platform/migration").cleanDisabled(true).load();
-            assertEquals(2, flyway.migrate().migrationsExecuted);
+            assertEquals(3, flyway.migrate().migrationsExecuted);
             var jdbc = new JdbcTemplate(source);
             jdbc.update("UPDATE t_sys_password_config SET min_length=22,complexity_enabled=true,version=version+1 WHERE id=1");
             var before = jdbc.queryForMap("SELECT * FROM t_sys_password_config WHERE id=1");

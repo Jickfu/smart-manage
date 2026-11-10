@@ -1,12 +1,20 @@
 package sm.infrastructure.persistence;
 
+import com.alibaba.druid.spring.boot4.autoconfigure.DruidDataSourceAutoConfigure;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.flyway.autoconfigure.FlywayMigrationStrategy;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+
+import sm.infrastructure.scheduler.QuartzConfiguration;
+
+import javax.sql.DataSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,10 +22,34 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfSystemProperty(named = "smartManage.postgresIntegration", matches = "true")
 class AssemblyMigrationPostgresTests {
     @Test
+    void applicationDataSourcesUseBeijingSessions() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(
+                        DataSourceAutoConfiguration.class, DruidDataSourceAutoConfigure.class))
+                .withUserConfiguration(DruidDataSourceConfig.class, QuartzConfiguration.class)
+                .withPropertyValues(
+                        "spring.datasource.url=" + System.getProperty("smartManage.testDbUrl"),
+                        "spring.datasource.username=" + System.getProperty("smartManage.testDbUser"),
+                        "spring.datasource.password=" + System.getProperty("smartManage.testDbPassword"))
+                .run(context -> {
+                    for (String beanName : java.util.List.of("dataSource", "quartzDataSource", "flywayDataSource")) {
+                        var jdbc = new JdbcTemplate(context.getBean(beanName, DataSource.class));
+                        assertEquals("Asia/Shanghai", jdbc.queryForObject("SHOW TimeZone", String.class), beanName);
+                    }
+                });
+    }
+
+    @Test
     void selectedAssemblyMigratesAndRestartsWithoutChangingPlatformHistory() throws Exception {
         var source = new DriverManagerDataSource(System.getProperty("smartManage.testDbUrl"),
                 System.getProperty("smartManage.testDbUser"), System.getProperty("smartManage.testDbPassword"));
         var jdbc = new JdbcTemplate(source);
+        assertEquals("Asia/Shanghai", jdbc.queryForObject("SHOW TimeZone", String.class));
+        assertEquals(0, jdbc.queryForObject("""
+                SELECT count(*) FROM information_schema.columns
+                WHERE table_schema='public' AND table_name LIKE 't_sys_monitor_%'
+                  AND data_type='timestamp with time zone'
+                """, Integer.class));
         var history = jdbc.queryForList("SELECT * FROM flyway_schema_history ORDER BY installed_rank");
         var platform = Flyway.configure().dataSource(source).locations("classpath:db/platform/migration")
                 .cleanDisabled(true).validateMigrationNaming(true).load();

@@ -168,7 +168,7 @@ smart-manage/
 
 以仓库中的 `smart-manage-server/app/src/main/resources/application-prod.yml` 为参考，在部署目录的 `config/application-prod.yml` 填写生产连接信息和实例配置，并导入同目录的密钥文件。导入语法和文件权限见[部署密钥文件](./production-keys.md#部署密钥文件)。外部配置文件保存在仓库外。JAR 内的 `${...}` 占位符用于检查必填配置。
 
-配置齐备后，在 JAR 所在目录执行 `java -jar smart-manage-server.jar`。使用 systemd 托管时，将 `WorkingDirectory` 设为 JAR 所在目录，`ExecStart` 使用同一启动命令并指向部署的 JAR。采用文件导入时，Spring Boot 自行加载密钥。
+配置齐备后，在 JAR 所在目录执行 `java -jar smart-manage-server.jar`。使用 systemd 托管时，将 `WorkingDirectory` 设为 JAR 所在目录，`ExecStart` 使用同一启动命令并指向部署的 JAR。采用文件导入时，Spring Boot 自行加载密钥。应用启动时固定 JVM 为 `Asia/Shanghai`，pgJDBC 随 JVM 初始化连接会话时区。部署配置不得为应用连接覆盖 `TimeZone`，可在实际连接中用 `SHOW TimeZone` 核对。
 
 备份与迁移时，将对应版本的 JAR 与整个 `config/` 成套保管，并记录对应的数据库和附件恢复点。完整恢复范围见[备份、恢复与发布回退](../architecture/deployment.md#备份恢复与发布回退)。
 

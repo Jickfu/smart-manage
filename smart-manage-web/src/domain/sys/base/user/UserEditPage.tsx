@@ -1,8 +1,10 @@
 import { getBlockingQueryError } from '@/api/queryErrorFeedback';
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useMemo, useRef, useState } from 'react';
+import { DATE_FORMAT, parseBeijingTime } from '@/domain/common/component/beijingTime';
 import dayjs from 'dayjs';
-import { DatePicker, Form, Input, Select, Table } from 'antd';
+import { Form, Input, Select, Table } from 'antd';
+import { BeijingDatePicker as DatePicker } from '@/domain/common/component/BeijingDatePicker';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCommandMutation } from '@/domain/common/page/command/useCommandMutation';
 import { usePermissionAccess } from '@/domain/common/page/access/usePermissionAccess';
@@ -54,7 +56,9 @@ const UserEditPage = (props: PageComponentProps) => {
             name: currentUser.name,
             number: currentUser.number ?? '',
             gender: currentUser.gender,
-            birthday: currentUser.birthday ? dayjs(currentUser.birthday) : undefined,
+            birthday: currentUser.birthday
+              ? parseBeijingTime(currentUser.birthday, DATE_FORMAT)
+              : undefined,
             companyName: currentUser.companyName,
             currentOrgName: currentUser.currentOrgName,
             email: currentUser.email ?? '',
@@ -67,7 +71,9 @@ const UserEditPage = (props: PageComponentProps) => {
               name: detail.name,
               number: detail.number,
               gender: detail.gender,
-              birthday: detail.birthday ? dayjs(detail.birthday) : undefined,
+              birthday: detail.birthday
+                ? parseBeijingTime(detail.birthday, DATE_FORMAT)
+                : undefined,
               email: detail.email ?? '',
               phone: detail.phone ?? '',
               emailChanged: 'false',

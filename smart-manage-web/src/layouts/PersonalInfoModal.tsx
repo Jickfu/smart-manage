@@ -1,7 +1,9 @@
 import { useOperationFeedback } from '@/domain/common/component/useOperationFeedback';
 import { useEffect, useState } from 'react';
-import dayjs from 'dayjs';
-import { Button, DatePicker, Form, Input, Select, Table } from 'antd';
+import type { Dayjs } from 'dayjs';
+import { DATE_FORMAT, parseBeijingTime } from '@/domain/common/component/beijingTime';
+import { Button, Form, Input, Select, Table } from 'antd';
+import { BeijingDatePicker as DatePicker } from '@/domain/common/component/BeijingDatePicker';
 import AppModal from '@/domain/common/component/AppModal';
 import { FormFieldCell, FormFieldGrid } from '@/domain/common/page/edit/FormFieldLayout';
 import { updateCurrentUserProfile } from '@/api/user';
@@ -17,7 +19,7 @@ interface PersonalInfoModalProps {
 interface PersonalInfoValues {
   name: string;
   gender?: 'MALE' | 'FEMALE';
-  birthday?: dayjs.Dayjs;
+  birthday?: Dayjs;
 }
 
 /** 本人资料使用独立登录态接口，不依赖系统管理应用、菜单或用户管理权限。 */
@@ -36,7 +38,7 @@ export default function PersonalInfoModal({
     form.setFieldsValue({
       name: userInfo.name,
       gender: userInfo.gender,
-      birthday: userInfo.birthday ? dayjs(userInfo.birthday) : undefined,
+      birthday: userInfo.birthday ? parseBeijingTime(userInfo.birthday, DATE_FORMAT) : undefined,
     });
   }, [form, open, userInfo]);
 

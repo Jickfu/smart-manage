@@ -11,10 +11,10 @@ import sm.domain.sys.scheduler.model.entity.JobEntity;
 import sm.domain.sys.scheduler.model.entity.JobLogEntity;
 import sm.domain.sys.scheduler.model.vo.SchedulerSummaryVO;
 import sm.domain.sys.scheduler.model.vo.SchedulerTrendVO;
+import sm.system.time.BusinessTime;
 
 import java.time.LocalDate;
 import java.time.Clock;
-import java.time.ZoneId;
 import sm.domain.sys.scheduler.model.vo.SchedulerDailyCountVO;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +38,7 @@ public class SchedulerHomeService {
         long totalJobs = jobMapper.selectCount(new LambdaQueryWrapper<>());
         long enabledJobs = jobMapper.selectCount(new LambdaQueryWrapper<JobEntity>()
                 .eq(JobEntity::getStatus, JobStatus.ENABLED.name()));
-        LocalDate today = LocalDate.now(clock.withZone(ZoneId.of("Asia/Shanghai")));
+        LocalDate today = LocalDate.now(clock.withZone(BusinessTime.ZONE));
         List<SchedulerDailyCountVO> counts = jobLogMapper.selectDailyCounts(
                 today.minusDays(6).atStartOfDay(), today.plusDays(1).atStartOfDay());
         Map<LocalDate, List<SchedulerDailyCountVO>> logsByDate = counts.stream()

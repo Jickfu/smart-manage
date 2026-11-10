@@ -2,14 +2,14 @@ package sm.domain.sys.monitor.runtime.model.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import lombok.Data;
 
 @Schema(description = "监控历史采样点输出模型")
 @Data
 public class MonitorHistoryPointVO {
   @Schema(description = "采样时间")
-  private OffsetDateTime sampleTime;
+  private LocalDateTime sampleTime;
   @Schema(description = "主机 CPU 使用率，原始比值 0～1；不可用时为 null")
   private Double cpuUsage;
   @Schema(description = "主机内存使用率，原始比值 0～1；不可用时为 null")

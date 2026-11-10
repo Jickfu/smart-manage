@@ -116,7 +116,7 @@ public class MonitorSnapshotService {
   private boolean validSource(
       String hostId, String expectedInstanceId, HostObservationSourceVO source) {
     HostSnapshotVO snapshot = source == null ? null : source.getSnapshot();
-    Instant sampleTime = snapshot == null ? null : snapshot.getSampleTime();
+    Instant sampleTime = source == null ? null : source.getObservedAt();
     boolean identityMatches =
         source != null
             && snapshot != null
@@ -137,11 +137,12 @@ public class MonitorSnapshotService {
 
   private HostSnapshotVO assembleCanonicalHost(
       String hostId, List<HostObservationSourceVO> sources) {
-    HostSnapshotVO base = newest(sources, snapshot -> true).getSnapshot();
+    HostObservationSourceVO latest = newest(sources, snapshot -> true);
+    HostSnapshotVO base = latest.getSnapshot();
     HostSnapshotVO result = new HostSnapshotVO();
     result.setHostId(hostId);
     result.setHostname(base.getHostname());
-    result.setSampleTime(base.getSampleTime());
+    result.setSampleTime(latest.getObservedAt());
     result.setUptimeMs(base.getUptimeMs());
     result.setOs(base.getOs());
 
@@ -209,7 +210,7 @@ public class MonitorSnapshotService {
       List<HostObservationSourceVO> sources, Predicate<HostSnapshotVO> validMetric) {
     return sources.stream()
         .filter(source -> validMetric.test(source.getSnapshot()))
-        .max(Comparator.comparing(source -> source.getSnapshot().getSampleTime()))
+        .max(Comparator.comparing(HostObservationSourceVO::getObservedAt))
         .orElse(null);
   }
 

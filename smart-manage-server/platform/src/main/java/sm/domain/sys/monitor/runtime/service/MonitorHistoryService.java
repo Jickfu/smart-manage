@@ -22,14 +22,14 @@ public class MonitorHistoryService {
       return jdbcTemplate.query(
           "SELECT date_bin(INTERVAL '"
               + resolved.bucket
-              + "',sample_time,TIMESTAMPTZ '2000-01-01') sample_time,avg(cpu_usage)"
+              + "',sample_time,TIMESTAMP '2000-01-01') sample_time,avg(cpu_usage)"
               + " cpu_usage,avg(memory_used::numeric/nullif(memory_total,0))"
               + " memory_usage,max(worst_filesystem_usage) filesystem_usage, (array_agg(worst_mount"
               + " ORDER BY worst_filesystem_usage DESC NULLS LAST,sample_time DESC))[1]"
               + " worst_mount, avg(disk_read_rate) disk_read_rate,avg(disk_write_rate)"
               + " disk_write_rate,avg(network_receive_rate)"
               + " network_receive_rate,avg(network_transmit_rate) network_transmit_rate FROM"
-              + " t_sys_monitor_host_history WHERE host_id=? AND sample_time>=now()-INTERVAL '"
+              + " t_sys_monitor_host_history WHERE host_id=? AND sample_time>=LOCALTIMESTAMP-INTERVAL '"
               + resolved.lookback
               + "' GROUP BY 1 ORDER BY 1",
           (rs, row) -> host(rs),
@@ -38,14 +38,14 @@ public class MonitorHistoryService {
       return jdbcTemplate.query(
           "SELECT date_bin(INTERVAL '"
               + resolved.bucket
-              + "',sample_time,TIMESTAMPTZ '2000-01-01') sample_time,avg(process_cpu)"
+              + "',sample_time,TIMESTAMP '2000-01-01') sample_time,avg(process_cpu)"
               + " process_cpu,avg(heap_used::numeric/nullif(heap_max,0))"
               + " heap_usage,avg(http_request_rate) http_request_rate,avg(http_5xx_rate)"
               + " http_5xx_rate,max(http_p95_ms) http_p95_ms,max(http_p99_ms)"
               + " http_p99_ms,avg(thread_count) thread_count,avg(blocked_thread_count)"
               + " blocked_thread_count,avg(db_active::numeric/nullif(db_max,0))"
               + " db_pool_usage,avg(db_waiting) db_waiting FROM t_sys_monitor_instance_history"
-              + " WHERE instance_id=? AND sample_time>=now()-INTERVAL '"
+              + " WHERE instance_id=? AND sample_time>=LOCALTIMESTAMP-INTERVAL '"
               + resolved.lookback
               + "' GROUP BY 1 ORDER BY 1",
           (rs, row) -> instance(rs),
@@ -83,7 +83,7 @@ public class MonitorHistoryService {
 
   private MonitorHistoryPointVO base(ResultSet rs) throws java.sql.SQLException {
     var value = new MonitorHistoryPointVO();
-    value.setSampleTime(rs.getObject("sample_time", java.time.OffsetDateTime.class));
+    value.setSampleTime(rs.getObject("sample_time", java.time.LocalDateTime.class));
     return value;
   }
 

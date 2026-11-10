@@ -15,6 +15,7 @@ import sm.domain.sys.monitor.common.service.MonitorInstanceRegistry;
 import sm.domain.sys.monitor.runtime.model.vo.HostObservationSourceVO;
 import sm.domain.sys.monitor.runtime.model.vo.HostSnapshotVO;
 import sm.domain.sys.monitor.runtime.model.vo.InstanceSnapshotVO;
+import sm.system.time.BusinessTime;
 import tools.jackson.databind.json.JsonMapper;
 
 /** 唯一采样源：每周期只采集一次，再原子发布给 Redis、历史和告警消费者。 */
@@ -60,6 +61,7 @@ class MonitorSnapshotSampler {
     HostObservationSourceVO source = new HostObservationSourceVO();
     source.setHostId(hostId);
     source.setInstanceId(instanceId);
+    source.setObservedAt(host.getSampleTime());
     source.setSnapshot(host);
     redisTemplate
         .opsForValue()
@@ -85,8 +87,8 @@ class MonitorSnapshotSampler {
   }
 
   private void persistHost(HostSnapshotVO snapshot) {
-    OffsetDateTime sample = OffsetDateTime.ofInstant(snapshot.getSampleTime(), ZoneOffset.UTC);
-    OffsetDateTime bucket = sample.truncatedTo(ChronoUnit.MINUTES);
+    LocalDateTime sample = LocalDateTime.ofInstant(snapshot.getSampleTime(), BusinessTime.ZONE);
+    LocalDateTime bucket = sample.truncatedTo(ChronoUnit.MINUTES);
     java.util.List<HostSnapshotVO.FilesystemInfo> filesystems =
         snapshot.isFilesystemsAvailable() ? snapshot.getFilesystems() : java.util.List.of();
     HostSnapshotVO.FilesystemInfo worst =
@@ -130,8 +132,8 @@ WHERE EXCLUDED.sample_time>=t_sys_monitor_host_history.sample_time
   }
 
   private void persistInstance(InstanceSnapshotVO snapshot) {
-    OffsetDateTime sample = OffsetDateTime.ofInstant(snapshot.getSampleTime(), ZoneOffset.UTC);
-    OffsetDateTime bucket = sample.truncatedTo(ChronoUnit.MINUTES);
+    LocalDateTime sample = LocalDateTime.ofInstant(snapshot.getSampleTime(), BusinessTime.ZONE);
+    LocalDateTime bucket = sample.truncatedTo(ChronoUnit.MINUTES);
     long gcCount =
         snapshot.getGc().stream()
             .mapToLong(InstanceSnapshotVO.GcInfo::getCollectionCount)
@@ -188,10 +190,10 @@ WHERE EXCLUDED.sample_time>=t_sys_monitor_instance_history.sample_time
         component(snapshot, "redis"));
   }
 
-  @Scheduled(cron = "${smart-manage.domain.sys.monitor.history.cleanup-cron}")
+  @Scheduled(cron = "${smart-manage.domain.sys.monitor.history.cleanup-cron}", zone = BusinessTime.ZONE_NAME)
   void cleanupHistory() {
-    OffsetDateTime cutoff =
-        OffsetDateTime.now(ZoneOffset.UTC).minusDays(properties.getHistory().getRetentionDays());
+    LocalDateTime cutoff =
+        LocalDateTime.now(BusinessTime.ZONE).minusDays(properties.getHistory().getRetentionDays());
     jdbcTemplate.update("DELETE FROM t_sys_monitor_host_history WHERE sample_time < ?", cutoff);
     jdbcTemplate.update("DELETE FROM t_sys_monitor_instance_history WHERE sample_time < ?", cutoff);
   }

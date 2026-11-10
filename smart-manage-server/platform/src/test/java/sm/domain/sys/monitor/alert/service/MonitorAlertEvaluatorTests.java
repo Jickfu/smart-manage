@@ -237,6 +237,7 @@ class MonitorAlertEvaluatorTests {
     HostObservationSourceVO source = new HostObservationSourceVO();
     source.setHostId("host-a");
     source.setInstanceId(instanceId);
+    source.setObservedAt(snapshot.getSampleTime());
     source.setSnapshot(snapshot);
     return source;
   }

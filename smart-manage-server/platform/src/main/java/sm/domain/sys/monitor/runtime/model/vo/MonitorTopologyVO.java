@@ -2,7 +2,7 @@ package sm.domain.sys.monitor.runtime.model.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
 
@@ -38,8 +38,8 @@ public class MonitorTopologyVO {
     @Schema(description = "是否为处理当前请求的应用实例")
     private boolean current;
     @Schema(description = "最后发现时间")
-    private OffsetDateTime lastSeenTime;
+    private LocalDateTime lastSeenTime;
     @Schema(description = "退役时间")
-    private OffsetDateTime retiredAt;
+    private LocalDateTime retiredAt;
   }
 }
