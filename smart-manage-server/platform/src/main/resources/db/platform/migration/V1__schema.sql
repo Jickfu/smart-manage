@@ -6085,14 +6085,14 @@ CREATE TABLE public.t_sys_monitor_alert_incident (
     scope_id character varying(100) NOT NULL,
     status character varying(20) NOT NULL,
     cycle_key character varying(80) NOT NULL,
-    started_at timestamp with time zone NOT NULL,
-    fired_at timestamp with time zone,
-    recovered_at timestamp with time zone,
-    last_evaluated_at timestamp with time zone NOT NULL,
+    started_at timestamp without time zone NOT NULL,
+    fired_at timestamp without time zone,
+    recovered_at timestamp without time zone,
+    last_evaluated_at timestamp without time zone NOT NULL,
     last_value numeric(20,6),
     peak_value numeric(20,6),
     threshold numeric(20,6) NOT NULL,
-    last_notified_at timestamp with time zone,
+    last_notified_at timestamp without time zone,
     notification_count integer DEFAULT 0 NOT NULL,
     summary character varying(500) NOT NULL,
     version integer DEFAULT 0 NOT NULL,
@@ -6253,12 +6253,12 @@ CREATE TABLE public.t_sys_monitor_alert_notification (
     sequence_no integer NOT NULL,
     status character varying(20) NOT NULL,
     attempt_count integer DEFAULT 0 NOT NULL,
-    next_attempt_time timestamp with time zone NOT NULL,
-    claimed_time timestamp with time zone,
+    next_attempt_time timestamp without time zone NOT NULL,
+    claimed_time timestamp without time zone,
     email_task_id bigint,
     error_message character varying(500),
-    create_time timestamp with time zone NOT NULL,
-    completed_time timestamp with time zone,
+    create_time timestamp without time zone NOT NULL,
+    completed_time timestamp without time zone,
     CONSTRAINT ck_monitor_alert_notification_status CHECK (((status)::text = ANY ((ARRAY['PENDING'::character varying, 'PROCESSING'::character varying, 'SUCCESS'::character varying, 'RETRY'::character varying, 'FAILED'::character varying, 'SKIPPED'::character varying])::text[])))
 );
 
@@ -6372,8 +6372,8 @@ CREATE TABLE public.t_sys_monitor_alert_rule (
     email_enabled boolean NOT NULL,
     description character varying(500),
     version integer DEFAULT 0 NOT NULL,
-    create_time timestamp with time zone NOT NULL,
-    update_time timestamp with time zone NOT NULL,
+    create_time timestamp without time zone NOT NULL,
+    update_time timestamp without time zone NOT NULL,
     create_user bigint,
     update_user bigint,
     value_kind character varying(20) NOT NULL,
@@ -6557,7 +6557,7 @@ CREATE TABLE public.t_sys_monitor_alert_rule_recipient (
     id bigint NOT NULL,
     rule_id bigint NOT NULL,
     user_id bigint NOT NULL,
-    create_time timestamp with time zone NOT NULL
+    create_time timestamp without time zone NOT NULL
 );
 
 
@@ -6607,8 +6607,8 @@ CREATE TABLE public.t_sys_monitor_host (
     os_name character varying(100),
     os_version character varying(200),
     arch character varying(50),
-    first_seen_time timestamp with time zone NOT NULL,
-    last_seen_time timestamp with time zone NOT NULL
+    first_seen_time timestamp without time zone NOT NULL,
+    last_seen_time timestamp without time zone NOT NULL
 );
 
 
@@ -6682,8 +6682,8 @@ COMMENT ON COLUMN public.t_sys_monitor_host.last_seen_time IS '最后发现时�
 CREATE TABLE public.t_sys_monitor_host_history (
     id bigint NOT NULL,
     host_id character varying(100) NOT NULL,
-    sample_bucket timestamp with time zone NOT NULL,
-    sample_time timestamp with time zone NOT NULL,
+    sample_bucket timestamp without time zone NOT NULL,
+    sample_time timestamp without time zone NOT NULL,
     cpu_usage numeric(8,6),
     load_average numeric(12,4),
     memory_total bigint,
@@ -6844,11 +6844,11 @@ CREATE TABLE public.t_sys_monitor_instance (
     host_id character varying(100) NOT NULL,
     application_name character varying(200) NOT NULL,
     application_version character varying(100),
-    first_seen_time timestamp with time zone NOT NULL,
-    last_seen_time timestamp with time zone NOT NULL,
-    last_start_time timestamp with time zone NOT NULL,
+    first_seen_time timestamp without time zone NOT NULL,
+    last_seen_time timestamp without time zone NOT NULL,
+    last_start_time timestamp without time zone NOT NULL,
     lifecycle character varying(20) DEFAULT 'ACTIVE'::character varying NOT NULL,
-    retired_at timestamp with time zone,
+    retired_at timestamp without time zone,
     CONSTRAINT ck_monitor_instance_lifecycle CHECK (((lifecycle)::text = ANY ((ARRAY['ACTIVE'::character varying, 'RETIRED'::character varying])::text[])))
 );
 
@@ -6938,8 +6938,8 @@ CREATE TABLE public.t_sys_monitor_instance_history (
     id bigint NOT NULL,
     instance_id character varying(100) NOT NULL,
     host_id character varying(100) NOT NULL,
-    sample_bucket timestamp with time zone NOT NULL,
-    sample_time timestamp with time zone NOT NULL,
+    sample_bucket timestamp without time zone NOT NULL,
+    sample_time timestamp without time zone NOT NULL,
     process_cpu numeric(8,6),
     heap_used bigint,
     heap_max bigint,
