@@ -5,7 +5,7 @@
   flex-direction: column;
   flex-grow: 0;
   flex-shrink: 0;
-  width: 122px;
+  width: max-content;
   background-color: var(--sm-color-nav);
   color: #d9d9d9;
   overflow: hidden;
@@ -15,11 +15,18 @@
   width: 50px;
 }
 
-.sm-workspace-sidebar-content {
+.sm-workspace-sidebar-content,
+.sm-workspace-sidebar-status {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+}
+
+/* 加载、错误和空状态沿用原侧栏宽度，折叠后随容器收窄。 */
+.sm-workspace-sidebar-status {
+  width: 122px;
+  max-width: 100%;
 }
 
 /* 菜单滚动区 */
@@ -56,17 +63,14 @@
   cursor: pointer;
 }
 
-.sm-workspace-sidebar .ant-menu {
-  width: 122px;
-}
-
-.sm-workspace-sidebar--collapsed .ant-menu {
-  width: 50px;
-}
-
-.sm-workspace-sidebar .ant-menu-item,
-.sm-workspace-sidebar .ant-menu-submenu-title {
-  padding-inline: 14px !important;
+/* 由浏览器按一级菜单的实际排版确定侧栏宽度，目录箭头使用 Menu 自带的留白。 */
+.sm-sidebar-label {
+  display: inline-block;
+  max-inline-size: 6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 .sm-workspace-sidebar--collapsed .ant-menu-item,

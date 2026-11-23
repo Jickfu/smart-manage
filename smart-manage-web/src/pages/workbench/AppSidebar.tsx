@@ -30,21 +30,23 @@ function findMenuItem(items: MenuVO[], key: string): MenuVO | null {
 }
 
 /** 递归渲染菜单项 */
-function renderMenuTree(items: MenuVO[]): Required<MenuProps>['items'] {
+function renderMenuTree(items: MenuVO[], inSidebar = true): Required<MenuProps>['items'] {
   return items.map((item) => {
     const key = item.id;
+    // 弹层独立布局，仅限制直接显示在侧栏中的菜单名称。
+    const label = inSidebar ? <span className="sm-sidebar-label">{item.name}</span> : item.name;
     if (item.routes?.length) {
       return {
         key,
-        label: item.name,
+        label,
         icon: resolveIcon(item.icon) ?? <FolderOutlined />,
-        children: renderMenuTree(item.routes),
+        children: renderMenuTree(item.routes, false),
         popupClassName: 'sm-workspace-sidebar-popup',
       };
     }
     return {
       key,
-      label: item.name,
+      label,
       icon: resolveIcon(item.icon),
     };
   });
@@ -52,6 +54,8 @@ function renderMenuTree(items: MenuVO[]): Required<MenuProps>['items'] {
 
 const AppSidebar = ({ menuTree, loading, error, onRetry, onItemClick }: Props) => {
   const [collapsed, setCollapsed] = useState(false);
+
+  const hasMenu = !loading && !error && Boolean(menuTree?.routes?.length);
 
   const handleClick: MenuProps['onClick'] = (info) => {
     if (error || !menuTree?.routes) return;
@@ -62,7 +66,7 @@ const AppSidebar = ({ menuTree, loading, error, onRetry, onItemClick }: Props) =
 
   return (
     <div className={`sm-workspace-sidebar ${collapsed ? 'sm-workspace-sidebar--collapsed' : ''}`}>
-      <div className="sm-workspace-sidebar-content">
+      <div className={hasMenu ? 'sm-workspace-sidebar-content' : 'sm-workspace-sidebar-status'}>
         <div className="sm-workspace-sidebar-menu">
           {error ? (
             <div className="sm-sidebar-error">
@@ -78,6 +82,7 @@ const AppSidebar = ({ menuTree, loading, error, onRetry, onItemClick }: Props) =
           ) : (
             <Menu
               mode="vertical"
+              style={{ width: '100%' }}
               selectable={false}
               onClick={handleClick}
               items={renderMenuTree(menuTree.routes)}
