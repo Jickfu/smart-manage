@@ -59,7 +59,7 @@ class AdministratorInitialPasswordFile {
             }
             String password = PasswordGeneratorUtil.generate(passwordLength);
             try {
-                Files.writeString(passwordFile, password + System.lineSeparator(), StandardCharsets.UTF_8,
+                Files.writeString(passwordFile, password, StandardCharsets.UTF_8,
                         java.nio.file.StandardOpenOption.CREATE_NEW,
                         java.nio.file.StandardOpenOption.WRITE);
             } catch (FileAlreadyExistsException exception) {

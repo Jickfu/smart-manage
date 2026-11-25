@@ -43,7 +43,7 @@ class AdministratorInitialPasswordFileTests {
         assertEquals(temporaryDirectory.resolve("administrator-initial-password.txt"),
                 preparedPassword.path());
         assertEquals(20, preparedPassword.password().length());
-        assertEquals(preparedPassword.password(), Files.readString(preparedPassword.path()).strip());
+        assertEquals(preparedPassword.password(), Files.readString(preparedPassword.path()));
     }
 
     @Test
